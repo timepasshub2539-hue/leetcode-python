@@ -1,4 +1,3 @@
-```markdown
 # Shift 2D Grid — LeetCode 1260 (Python)
 
 A clean, O(m×n) Python solution using the flatten-and-rotate pattern.
@@ -87,4 +86,3 @@ result.
 
 📖 Full written deep-dive (intuition, dry run, common mistakes, follow-ups):
 part of the **Daily Python LeetCode** series.
-```
