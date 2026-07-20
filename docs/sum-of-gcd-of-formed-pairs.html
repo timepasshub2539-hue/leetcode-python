@@ -18,11 +18,341 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Sum of GCD of Formed Pairs — LeetCode Daily Python Solution (Two Pointers Eats It Alive)</h1><span class='badge' style='background:#2dd4bf22;color:#2dd4bf'>↔️ Two Pointers</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/3gWg0kmRDQQ' allowfullscreen></iframe></div><article><p>Chapters:
-0:00 Two pointers eats this &#x27;Medium&#x27; alive
-0:16 Why this pattern pays your rent
-0:34 What the problem actually asks
-0:50 Meet the tools — thirty seconds
-1:09 The core trick: squeeze from bot</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/3gWg0kmRDQQ' target='_blank'>▶ Watch on YouTube</a></div><h2 class='ph1' style='font-size:1.4rem'>Similar problems</h2><div class='grid'><a class='card' href='sequential-digits.html'><div class='body'><h3>Sequential Digits Explained in Python — Sliding Window Over a String (LeetCode 1291)</h3><span class='badge' style='background:#2dd4bf22;color:#2dd4bf'>↔️ Two Pointers</span></div></a></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Sum of GCD of Formed Pairs — LeetCode Daily Python Solution (Two Pointers Eats It Alive)</h1><span class='badge' style='background:#2dd4bf22;color:#2dd4bf'>↔️ Two Pointers</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/3gWg0kmRDQQ' allowfullscreen></iframe></div><article><h1>SEO PACKAGE</h1>
+<h3>1. SEO Title</h3>
+<p>Sum of GCD of Formed Pairs: Two Pointers Python Solution (LeetCode Explained)</p>
+<h3>2. SEO Subtitle</h3>
+<p>A step-by-step breakdown of how sorting plus a running max turns a confusing pairing problem into a clean O(n log n) two-pointer solution.</p>
+<h3>3. Featured Quote</h3>
+<p>"Sorting turns the whole pairing ritual into two fingers walking toward each other."</p>
+<h3>4. Meta Description</h3>
+<p>Learn the Sum of GCD of Formed Pairs LeetCode problem with a clear Python two-pointer solution, prefix max intuition, complexity analysis, and edge cases.</p>
+<h3>5. URL Slug</h3>
+<p>sum-of-gcd-of-formed-pairs-python-two-pointers</p>
+<h3>6. Keywords</h3>
+<p>LeetCode, Python, GCD, greatest common divisor, two pointers, coding interview, algorithms, data structures, prefix max, sorting algorithms, math.gcd, interview preparation, Amazon interview questions, Google interview questions, time complexity, space complexity, brute force vs optimal, Python interview problems, daily coding challenge, array pairing problem</p>
+<h3>7. Tags</h3>
+<p>LeetCode, Python, TwoPointers, GCD, CodingInterview, Algorithms, DataStructures, DailyChallenge, InterviewPrep, SoftwareEngineering, ProblemSolving, PythonTips</p>
+<hr />
+<h1>MAIN ARTICLE</h1>
+<h2>Introduction</h2>
+<p>Some LeetCode problems look intimidating because of how they're worded, not because of how hard they actually are. "Sum of GCD of Formed Pairs" is a great example. The name alone — prefix maximums, formed pairs, greatest common divisors — makes it sound like it needs three different algorithms stitched together. It doesn't. Once you see the trick, it collapses into a single pass, one sort, and two pointers walking toward each other from opposite ends of an array.</p>
+<p>This matters beyond the problem itself. The "pair the smallest thing with the largest thing" pattern shows up constantly in real interviews at companies like Amazon and Google, and it mirrors real systems too — a job scheduler pairing the heaviest task with the lightest available machine, a load balancer matching requests to capacity, a matchmaking system pairing skill levels. Once you internalize this pattern, a whole family of "meet in the middle" problems becomes recognizable on sight instead of scary.</p>
+<p>By the end of this article, you'll understand not just how to solve this specific problem, but why sorting plus two pointers is often the fastest path from "confusing pairing rule" to "boring, predictable loop."</p>
+<h2>Problem Overview</h2>
+<p>You're given an array of integers, <code>nums</code>. First, build a new array called the prefix GCD array. For each index <code>i</code>, compute the greatest common divisor of <code>nums[i]</code> and the largest value seen anywhere in <code>nums[0..i]</code> (including <code>nums[i]</code> itself). This gives you a transformed array of the same length.</p>
+<p>Next, sort this prefix GCD array. Then repeatedly form pairs by taking the smallest remaining value and the largest remaining value, computing the GCD of each pair, and summing all those GCDs together. If the array has an odd length, the middle element is left unpaired and ignored.</p>
+<p>Return the total sum.</p>
+<p>The tricky part isn't the GCD — it's realizing that "smallest paired with largest, repeatedly" is exactly what a sorted array with two pointers gives you for free.</p>
+<h2>Example</h2>
+<p><strong>Input:</strong> <code>nums = [3, 6, 2, 8]</code></p>
+<p><strong>Step 1 — Build the prefix GCD array:</strong></p>
+<table>
+<thead>
+<tr>
+<th>i</th>
+<th>nums[i]</th>
+<th>running max so far</th>
+<th>gcd(nums[i], running max)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>3</td>
+<td>3</td>
+<td>gcd(3, 3) = 3</td>
+</tr>
+<tr>
+<td>1</td>
+<td>6</td>
+<td>6</td>
+<td>gcd(6, 6) = 6</td>
+</tr>
+<tr>
+<td>2</td>
+<td>2</td>
+<td>6</td>
+<td>gcd(2, 6) = 2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>8</td>
+<td>8</td>
+<td>gcd(8, 8) = 8</td>
+</tr>
+</tbody>
+</table>
+<p>Prefix GCD array: <code>[3, 6, 2, 8]</code></p>
+<p><strong>Step 2 — Sort it:</strong> <code>[2, 3, 6, 8]</code></p>
+<p><strong>Step 3 — Pair smallest with largest:</strong>
+- Outer pair: <code>gcd(2, 8) = 2</code>
+- Inner pair: <code>gcd(3, 6) = 3</code></p>
+<p><strong>Total:</strong> <code>2 + 3 = 5</code> ✅ matches the expected answer.</p>
+<p><strong>Second example:</strong> <code>nums = [2, 2]</code>
+- Running max stays <code>2</code> both times, so the prefix array is <code>[2, 2]</code>.
+- Sorted: <code>[2, 2]</code>.
+- One pair: <code>gcd(2, 2) = 2</code>.
+- Answer: <code>2</code>.</p>
+<p>This second example is worth sitting with. It shows that duplicate values don't break the logic — the smallest and largest can legitimately be the same number, and the GCD of a number with itself is just that number.</p>
+<h2>Intuition</h2>
+<p>The problem gives you two separate ideas bundled together, so the key move is to solve them one at a time instead of trying to hold both in your head at once.</p>
+<p><strong>First idea: the prefix GCD step.</strong> As you scan left to right, keep a single variable tracking the largest value seen so far. At each index, update that running max first, then take the GCD of the current number with the running max. The order matters — the running max has to include the current element before you compute anything, otherwise you're comparing against a max that's one step behind.</p>
+<p>Notice something convenient: whenever a number becomes the new record-holder, you're computing <code>gcd(x, x)</code>, which is just <code>x</code>. So the prefix GCD array often looks a lot like the original array, except numbers that come after a bigger number get "pulled down" toward that bigger number's factors.</p>
+<p><strong>Second idea: the pairing step.</strong> "Pair the smallest remaining with the largest remaining, repeat" is a classic tell. Whenever you see that phrase, sort first. Once sorted, "smallest with largest" is just index <code>0</code> with the last index, then index <code>1</code> with the second-to-last index, and so on. That's not a coincidence — sorting is exactly what turns an abstract pairing rule into a concrete, predictable index pattern. Two pointers, one starting at the front and one at the back, walk toward each other and meet somewhere in the middle. If the length is odd, they land on the same middle index and simply stop, which naturally skips the unpaired element without any special-casing.</p>
+<p>Think of it like a dance instructor lining up a class by height and pairing the shortest student with the tallest, then the second-shortest with the second-tallest, working inward. The sorted order does all the organizational work; you just need two fingers.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Follow the problem statement literally. Build the prefix GCD array, sort it, then repeatedly pop the first element and the last element from the list, compute their GCD, and add it to the total.</p>
+<p><strong>Algorithm:</strong>
+1. Build the prefix GCD array as described.
+2. Sort it.
+3. While the list has more than one element, remove the first and last elements, compute their GCD, add to the sum.</p>
+<p><strong>Advantages:</strong>
+- Directly mirrors the problem description — easy to explain out loud in an interview.
+- Obviously correct, since it does exactly what's asked.</p>
+<p><strong>Disadvantages:</strong>
+- Popping from the front of a Python list (<code>list.pop(0)</code>) shifts every remaining element over by one position. Do that repeatedly and the simulation quietly becomes quadratic.</p>
+<p><strong>Time complexity:</strong> O(n²) in the worst case, dominated by repeated front-pops.
+<strong>Space complexity:</strong> O(n) for the prefix GCD array and the sorted copy.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach keeps the same two ideas — prefix GCD, then pair smallest with largest — but implements the pairing step with two pointers instead of list mutation, avoiding the quadratic shifting entirely.</p>
+<p><strong>Step-by-step:</strong></p>
+<ol>
+<li><strong>Build the prefix GCD array.</strong> Walk through <code>nums</code> once, maintaining a running max <code>mx</code>. At each index, update <code>mx = max(mx, nums[i])</code>, then compute <code>math.gcd(nums[i], mx)</code> and store it.</li>
+<li><strong>Sort the prefix GCD array.</strong> This arranges values so that "smallest with largest" becomes "first index with last index."</li>
+<li><strong>Two pointers.</strong> Set <code>i = 0</code> and <code>j = len(array) - 1</code>. While <code>i &lt; j</code>, add <code>gcd(array[i], array[j])</code> to the total, then move <code>i</code> forward and <code>j</code> backward.</li>
+<li><strong>Return the total.</strong></li>
+</ol>
+<p>The <code>i &lt; j</code> condition (strictly less than, not less-than-or-equal) is doing quiet but important work. When the array length is odd, both pointers eventually land on the same middle index — the loop stops right there, leaving that element unpaired, exactly as the problem requires. There's no need to check for odd length separately.</p>
+<pre><code>sorted array: [2, 3, 6, 8]
+                i           j
+step 1: gcd(2, 8) = 2   →  i=1, j=2
+step 2: gcd(3, 6) = 3   →  i=2, j=1  (i &lt; j fails, stop)
+total = 5
+</code></pre>
+<h2>Python Code</h2>
+<pre><code class="language-python">from math import gcd
+
+
+def sum_of_gcd_of_formed_pairs(nums: list[int]) -&gt; int:
+    # Step 1: build prefix GCD array using a running max
+    prefix_gcd = []
+    mx = 0
+    for num in nums:
+        mx = max(mx, num)
+        prefix_gcd.append(gcd(num, mx))
+
+    # Step 2: sort so smallest-with-largest becomes first-with-last
+    prefix_gcd.sort()
+
+    # Step 3: two pointers squeeze inward, summing gcds
+    total = 0
+    i, j = 0, len(prefix_gcd) - 1
+    while i &lt; j:
+        total += gcd(prefix_gcd[i], prefix_gcd[j])
+        i += 1
+        j -= 1
+
+    return total
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>from math import gcd</code>: uses Python's built-in GCD implementation instead of writing one by hand — it's faster and already correct.</li>
+<li><code>mx = 0</code>: starting the running max at <code>0</code> is safe because <code>gcd(num, 0) == num</code> for any positive <code>num</code>, so the very first element always produces itself.</li>
+<li><code>mx = max(mx, num)</code> happens <strong>before</strong> <code>gcd(num, mx)</code> — this ordering guarantees the running max always includes the current element, which is what "prefix max up to and including index i" means.</li>
+<li><code>prefix_gcd.sort()</code>: an in-place O(n log n) sort — this single line is what turns the pairing rule into an index pattern.</li>
+<li><code>i, j = 0, len(prefix_gcd) - 1</code>: pointers start at the two ends of the sorted array.</li>
+<li><code>while i &lt; j</code>: strict inequality — this is the line that makes odd-length arrays "just work" without extra code.</li>
+<li><code>i += 1; j -= 1</code>: pointers converge one step at a time until they meet or cross.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using <code>nums = [3, 6, 2, 8]</code>:</p>
+<ol>
+<li><strong>Build prefix GCD:</strong>
+   - <code>num=3</code>: <code>mx=3</code>, <code>gcd(3,3)=3</code> → <code>[3]</code>
+   - <code>num=6</code>: <code>mx=6</code>, <code>gcd(6,6)=6</code> → <code>[3, 6]</code>
+   - <code>num=2</code>: <code>mx=6</code>, <code>gcd(2,6)=2</code> → <code>[3, 6, 2]</code>
+   - <code>num=8</code>: <code>mx=8</code>, <code>gcd(8,8)=8</code> → <code>[3, 6, 2, 8]</code></li>
+<li><strong>Sort:</strong> <code>[2, 3, 6, 8]</code></li>
+<li><strong>Two pointers:</strong>
+   - <code>i=0, j=3</code>: <code>gcd(2,8)=2</code>, total=2 → <code>i=1, j=2</code>
+   - <code>i=1, j=2</code>: <code>gcd(3,6)=3</code>, total=5 → <code>i=2, j=1</code> (loop stops)</li>
+<li><strong>Return <code>5</code></strong> — matches the expected result.</li>
+</ol>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time: O(n log n)</strong> — building the prefix GCD array is a single O(n) pass (each <code>gcd</code> call is effectively O(log(max value)), which doesn't change the overall order). Sorting dominates at O(n log n). The two-pointer sweep is O(n). Total: O(n log n).</li>
+<li><strong>Space: O(n)</strong> — for the prefix GCD array (Python's <code>sort()</code> is in-place, so no extra copy is needed beyond that array itself).</li>
+</ul>
+<p>This is correct because the only step that isn't linear is the sort, and nothing in the problem lets you avoid ordering the values before pairing smallest with largest.</p>
+<h2>Alternative Solutions</h2>
+<p>The brute-force simulation described earlier (pop first and last elements repeatedly) is a reasonable thing to mention first in an interview — it's obviously correct and shows you understand the problem before optimizing. But it costs O(n²) in the worst case because <code>list.pop(0)</code> shifts every remaining element.</p>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Time</th>
+<th>Space</th>
+<th>When to use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pop-both-ends simulation</td>
+<td>O(n²)</td>
+<td>O(n)</td>
+<td>Whiteboard warm-up, small inputs</td>
+</tr>
+<tr>
+<td>Two pointers (optimal)</td>
+<td>O(n log n)</td>
+<td>O(n)</td>
+<td>Anything with real input size, this is what you should ship</td>
+</tr>
+</tbody>
+</table>
+<p>At the upper constraint (around 10⁵ elements), the quadratic version becomes noticeably slow, while the two-pointer version stays fast because it's bounded by the sort.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Single element (<code>nums = [5]</code>):</strong> <code>i</code> and <code>j</code> start equal, the <code>while i &lt; j</code> loop never executes, and the function returns <code>0</code> — no special casing required.</li>
+<li><strong>All duplicates (<code>nums = [2, 2]</code>):</strong> shown above — returns <code>2</code>, confirming that identical smallest/largest values still pair correctly.</li>
+<li><strong>Odd-length array:</strong> the middle element is automatically skipped when <code>i</code> and <code>j</code> meet, exactly matching the problem's intent.</li>
+<li><strong>Large values (up to 10⁹):</strong> <code>math.gcd</code> runs in time proportional to the logarithm of the input values (via the Euclidean algorithm), so even large numbers are cheap.</li>
+<li><strong>Already sorted or reverse-sorted input:</strong> doesn't matter — the array gets sorted internally regardless of its starting order.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Using <code>i &lt;= j</code> instead of <code>i &lt; j</code>.</strong> This pairs the middle element with itself on odd-length arrays, silently producing a wrong (too high) answer. This is a real mistake that has shipped to production before — treat it as a permanent lesson.</li>
+<li><strong>Updating the running max after computing the GCD instead of before.</strong> This makes the running max lag by one index, breaking the "prefix max including the current element" definition.</li>
+<li><strong>Popping from the front of a Python list in a loop.</strong> Works correctly but silently degrades to O(n²) — fine for small inputs, a real problem at scale.</li>
+<li><strong>Forgetting to sort before pairing.</strong> Without sorting, "smallest with largest" has no clean index-based meaning, and the two-pointer trick doesn't apply.</li>
+<li><strong>Writing a custom GCD function instead of using <code>math.gcd</code>.</strong> Not wrong, but slower and an unnecessary place to introduce bugs when a debugged, optimized version already ships with Python.</li>
+<li><strong>Assuming the prefix GCD array is always sorted before you sort it.</strong> It isn't — the running max can create local dips (as seen with <code>2</code> after <code>6</code> in the walkthrough), so the explicit sort step is not optional.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Why does updating the running max before computing the GCD matter?</li>
+<li>Can you solve the pairing step without sorting? (Answer: not efficiently — sorting is what makes the index relationship exist.)</li>
+<li>What's the time complexity if you used a custom GCD function with a loop instead of <code>math.gcd</code>?</li>
+<li>How would you handle this if <code>nums</code> could contain zero or negative numbers?</li>
+<li>Can you convert the two-pointer loop into a one-liner using <code>zip</code> and slicing?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Two Sum II – Input Array Is Sorted (LeetCode 167):</strong> same two-pointer-on-sorted-array pattern, different target condition.</li>
+<li><strong>Boats to Save People (LeetCode 881):</strong> classic "pair smallest with largest under a constraint" using two pointers.</li>
+<li><strong>Container With Most Water (LeetCode 11):</strong> two pointers squeezing inward, but optimizing area instead of summing pairs.</li>
+<li><strong>3Sum (LeetCode 15):</strong> builds on sort-then-two-pointers as an inner loop after fixing one element.</li>
+</ul>
+<p>All of these share the same root idea: sort first, then let two pointers do the pairing logic instead of nested loops.</p>
+<h2>Key Takeaways</h2>
+<ul>
+<li>When a problem describes a pairing rule involving "smallest with largest," sort first — it converts an abstract rule into a concrete index pattern.</li>
+<li>A running max computed left-to-right, updated <em>before</em> use, is a common building block worth recognizing on sight.</li>
+<li><code>i &lt; j</code> versus <code>i &lt;= j</code> is not a stylistic choice — it's the line that decides whether odd-length inputs are handled correctly.</li>
+<li>Reach for <code>math.gcd</code> instead of hand-rolling it; the standard library is faster and already correct.</li>
+<li>Brute-force simulations are worth stating out loud in an interview, but know their hidden costs (like O(n²) list shifting) before defending them as your final answer.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>For the full live walkthrough — including the pause-and-predict moment on <code>[2, 2]</code> and a side-by-side trace of both solutions — watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of the Daily Python LeetCode series, where one problem gets solved from scratch every day — plain-English intuition first, clean Python second, no shortcuts on the explanation. The goal isn't just to pass a test case; it's to build the kind of pattern recognition that makes the next fifty similar problems easier.</p>
+<h2>Call To Action</h2>
+<p>If this walkthrough helped the trick click, subscribe on YouTube so tomorrow's problem shows up automatically, and subscribe to the Substack for the written breakdown alongside every video. Drop a comment with your own trace of an edge case — trying to break the solution is the fastest way to actually understand it. And if you know someone prepping for interviews, send this one their way.</p>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>"Sum of GCD of Formed Pairs" sounds like it needs three algorithms. It needs one loop, one sort, and two pointers.</p>
+<p>The problem asks you to build a prefix GCD array (each number paired with the largest value seen so far), then repeatedly combine the smallest remaining value with the largest remaining value and sum up the GCDs.</p>
+<p>The trick is recognizing that "smallest with largest, repeatedly" is exactly what you get for free once an array is sorted. Index 0 pairs with the last index, index 1 pairs with the second-to-last, and so on — two pointers walking toward each other handle the rest.</p>
+<p>One subtle detail decides correctness: the loop condition has to be <code>i &lt; j</code>, not <code>i &lt;= j</code>. With <code>&lt;=</code>, an odd-length array ends up pairing its middle element with itself, quietly inflating the answer. I've seen that exact bug ship on a Friday.</p>
+<p>The result is an O(n log n) solution — the sort is the bottleneck, everything else is linear. Compare that to the "obvious" brute-force simulation of popping from both ends of a list, which quietly becomes O(n²) because popping from the front of a Python list shifts every remaining element.</p>
+<p>This pattern — sort, then two pointers converging — shows up constantly: matching smallest-with-largest, pairing under a sum constraint, boat-loading problems, container-with-most-water. Once you've internalized it once, you start recognizing it everywhere.</p>
+<p>Full breakdown with code and dry runs in the comments.</p>
+<h1>Python #LeetCode #CodingInterview #Algorithms #SoftwareEngineering</h1>
+<h2>Twitter/X Thread</h2>
+<p>1/ A LeetCode "Medium" that looks scary on paper collapses into 15 lines once you see the trick. Let's break down Sum of GCD of Formed Pairs. 🧵</p>
+<p>2/ The problem: build a prefix GCD array (each number combined with the max seen so far), then repeatedly pair the smallest remaining value with the largest and sum the GCDs.</p>
+<p>3/ Sounds like it needs custom pairing logic. It doesn't. "Smallest with largest, repeatedly" is exactly what a sorted array gives you for free.</p>
+<p>4/ Sort the array. Now index 0 is your smallest, the last index is your largest. Two pointers, one at each end, walking inward, handle every pair.</p>
+<p>5/ Step 1 in code: track a running max as you scan left to right, and take gcd(num, running_max) at each step. Update the max BEFORE computing the gcd — order matters.</p>
+<p>6/ Step 2: sort the resulting array.</p>
+<p>7/ Step 3: <code>while i &lt; j: total += gcd(arr[i], arr[j]); i+=1; j-=1</code></p>
+<p>8/ That <code>i &lt; j</code> (not <code>&lt;=</code>) is the whole trick for odd-length arrays. Both pointers land on the middle element and the loop just stops — no special case needed.</p>
+<p>9/ Complexity: O(n log n), dominated by the sort. The naive "pop from both ends of a list" simulation looks equivalent but is secretly O(n²) — front-pops shift the whole list.</p>
+<p>10/ Lesson: whenever you see "pair smallest with largest," sort first. It turns a confusing rule into two fingers on a number line. Full code + walkthrough in today's video.</p>
+<h2>Facebook Post</h2>
+<p>Ever look at a coding problem and think "that's way too much going on for one problem"? Today's one was like that — prefix maximums, GCDs, and a pairing rule all mixed together.</p>
+<p>Turns out the whole thing boils down to: keep a running max as you scan the list, sort what you get, then use two fingers — one from each end — walking toward the middle. Fifteen lines of Python, and it runs in O(n log n).</p>
+<p>The fun part was the "gotcha": using <code>i &lt;= j</code> instead of <code>i &lt; j</code> pairs the middle element with itself on odd-length lists and quietly gives the wrong answer. Small detail, big consequence.</p>
+<p>New problem breakdown every day — today's video walks through the full solution, a brute-force alternative, and why the two-pointer version wins at scale.</p>
+<h2>Reddit Summary</h2>
+<p>Problem: Sum of GCD of Formed Pairs. You build a "prefix GCD" array where each element is <code>gcd(nums[i], max(nums[0..i]))</code>, then you sort that array and repeatedly sum <code>gcd(smallest_remaining, largest_remaining)</code>.</p>
+<p>The core insight: "pair smallest with largest, repeatedly" is exactly what a sorted array + two pointers gives you — <code>i</code> starts at 0, <code>j</code> starts at the end, they walk toward each other. No need to simulate popping from a list.</p>
+<p>Implementation notes:
+- Track the running max and update it <em>before</em> computing the gcd at each index (order matters for correctness).
+- Use <code>math.gcd</code> instead of writing your own.
+- Loop condition must be <code>i &lt; j</code> (strict), not <code>i &lt;= j</code> — with <code>&lt;=</code>, odd-length arrays pair the middle element with itself.</p>
+<p>Complexity: O(n log n), bottlenecked by the sort. A naive simulation that pops from both ends of a Python list is O(n²) in the worst case because front-pops shift the whole array.</p>
+<p>Edge cases worth testing: single-element input (returns 0, no special case needed), duplicate values (smallest == largest still works), odd-length arrays (middle element auto-skipped).</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># Sum of GCD of Formed Pairs — Python Solution
+
+## Problem
+
+Given an integer array `nums`:
+1. Build a prefix GCD array where `prefix[i] = gcd(nums[i], max(nums[0..i]))`.
+2. Sort the prefix GCD array.
+3. Repeatedly pair the smallest remaining value with the largest remaining value, summing `gcd(smallest, largest)` for each pair. If the array length is odd, the middle element is left unpaired.
+
+Return the total sum.
+
+## Intuition
+
+&quot;Pair smallest with largest, repeatedly&quot; is exactly what a sorted array plus two pointers gives you for free — index `0` with the last index, index `1` with the second-to-last, and so on. Sorting turns an abstract pairing rule into a concrete two-pointer sweep.
+
+The prefix GCD array itself just needs a running max, updated *before* each GCD computation so it always reflects the max including the current element.
+
+## Approach
+
+1. Single pass to build the prefix GCD array using a running max.
+2. Sort the array — O(n log n).
+3. Two pointers (`i` from the left, `j` from the right) sum `gcd(arr[i], arr[j])` while `i &lt; j`. The strict inequality automatically skips the middle element on odd-length arrays.
+
+## Python Solution
+
+```python
+from math import gcd
+
+
+def sum_of_gcd_of_formed_pairs(nums: list[int]) -&gt; int:
+    prefix_gcd = []
+    mx = 0
+    for num in nums:
+        mx = max(mx, num)
+        prefix_gcd.append(gcd(num, mx))
+
+    prefix_gcd.sort()
+
+    total = 0
+    i, j = 0, len(prefix_gcd) - 1
+    while i &lt; j:
+        total += gcd(prefix_gcd[i], prefix_gcd[j])
+        i += 1
+        j -= 1
+
+    return total
+</code></pre>
+<h2>Complexity</h2>
+<ul>
+<li><strong>Time:</strong> O(n log n) — dominated by the sort; the prefix pass and two-pointer sweep are both O(n).</li>
+<li><strong>Space:</strong> O(n) for the prefix GCD array.</li>
+</ul>
+<h2>Video</h2>
+<p>Full walkthrough with dry runs and a brute-force comparison: {LINK}</p>
+<h2>Article</h2>
+<p>Complete write-up with intuition, complexity analysis, and edge cases: see the accompanying article in this repo/series.
+```</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/3gWg0kmRDQQ' target='_blank'>▶ Watch on YouTube</a></div><h2 class='ph1' style='font-size:1.4rem'>Similar problems</h2><div class='grid'><a class='card' href='sequential-digits.html'><div class='body'><h3>Sequential Digits Explained in Python — Sliding Window Over a String (LeetCode 1291)</h3><span class='badge' style='background:#2dd4bf22;color:#2dd4bf'>↔️ Two Pointers</span></div></a></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>

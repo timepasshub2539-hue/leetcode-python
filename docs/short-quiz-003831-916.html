@@ -8,6 +8,346 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Getting Started: Installing Python and Running Code #shorts</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/1o3TDY4Y1ns' allowfullscreen></iframe></div><article><p>Ever wondered what actually happens when you &#x27;install Python&#x27;? This quick lesson walks you through the real question, gives you a moment to pause and think it through, then reveals the answer with a s</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/1o3TDY4Y1ns' target='_blank'>▶ Watch on YouTube</a></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Getting Started: Installing Python and Running Code #shorts</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/1o3TDY4Y1ns' allowfullscreen></iframe></div><article><h1>SEO PACKAGE</h1>
+<h2>1. SEO Title</h2>
+<p>Python Installation Explained: Why "python" vs "python3" vs "py" Actually Matters</p>
+<h2>2. SEO Subtitle</h2>
+<p>A quick beginner's guide to understanding which command actually runs your Python script on Windows, Mac, and Linux — and why the answer isn't as obvious as it seems.</p>
+<h2>3. Featured Quote</h2>
+<p>"Installing Python isn't the finish line — knowing which command runs it is where most beginners quietly get stuck."</p>
+<h2>4. Meta Description</h2>
+<p>Confused about python, python3, or py after installing Python? Here's a clear breakdown of what each command does and why it differs by OS.</p>
+<h2>5. URL Slug</h2>
+<p><code>python-command-python3-py-explained-beginners</code></p>
+<h2>6. Keywords</h2>
+<p>python installation, python3 vs python, py launcher windows, running python scripts, python command line, python beginners guide, install python windows, install python mac, python environment setup, python interpreter basics, python for beginners, coding interview prep, learn python from scratch, python setup guide, python launcher explained, terminal commands python, python path issues, python version management, software engineering basics, developer education</p>
+<h2>7. Tags</h2>
+<p>Python, Python Basics, Coding for Beginners, Python Installation, Command Line, Developer Tools, Learn to Code, Programming Fundamentals, Python Setup, Software Engineering, Python Interpreter, Beginner Tutorial</p>
+<hr />
+<h1>MAIN ARTICLE</h1>
+<h2>Introduction</h2>
+<p>Every developer remembers the first time they installed Python and then sat staring at a terminal, unsure what to type next. It seems like it should be trivial — you installed the language, so surely just typing <code>python</code> should work everywhere, right? Not quite.</p>
+<p>This is one of those deceptively small details that trips up almost every beginner, and honestly, a fair number of experienced developers who switch operating systems for the first time. It rarely comes up as a formal interview question, but it absolutely shows up in real onboarding situations: a new hire joins a team, pulls the setup docs, runs <code>python script.py</code>, and gets <code>command not found</code>. Suddenly they're debugging their <em>environment</em> instead of their <em>code</em> — which is a frustrating way to start.</p>
+<p>Understanding why this happens teaches you something deeper than "which command to type." It teaches you how operating systems handle executables, how Python versioning actually works under the hood, and why tooling differs so much between Windows, macOS, and Linux. That foundation pays off every time you set up a new machine, onboard a teammate, or debug a "works on my machine" issue.</p>
+<h2>Problem Overview</h2>
+<p>Here's the situation: you've just installed Python on your computer. You open a terminal and want to run a script. The question is simple on the surface — which command actually executes your Python file?</p>
+<p>The intuitive answer is <code>python</code>. But depending on your operating system and how Python was installed, that single command might:</p>
+<ul>
+<li>Work perfectly</li>
+<li>Not exist at all</li>
+<li>Point to an old Python 2 installation (on older systems)</li>
+<li>Point to a completely different program</li>
+</ul>
+<p>The real answer depends on your OS:</p>
+<ul>
+<li><strong>Windows</strong>: <code>python</code> usually works, but Windows also ships a special launcher called <code>py</code>, which is often the more reliable choice.</li>
+<li><strong>macOS</strong>: <code>python</code> may not point to anything, or may point to a system-level Python 2 leftover. <code>python3</code> is almost always the safe, correct command.</li>
+<li><strong>Linux</strong>: Similar story to macOS — <code>python3</code> is the dependable choice on most modern distributions.</li>
+</ul>
+<p>So the "trick" in this lesson isn't really a trick — it's a reminder that installing a language and knowing how your OS exposes that language on the command line are two separate skills.</p>
+<h2>Example</h2>
+<p>Let's walk through three scenarios, one per OS, so the difference is concrete.</p>
+<p><strong>Scenario 1: Windows</strong></p>
+<pre><code>C:\Users\dev&gt; python hello.py
+Hello, World!
+</code></pre>
+<p>This works fine on most Windows installations because the official Python installer registers <code>python</code> in your system PATH by default.</p>
+<p>But Windows also gives you this option:</p>
+<pre><code>C:\Users\dev&gt; py hello.py
+Hello, World!
+</code></pre>
+<p><strong>Scenario 2: macOS</strong></p>
+<pre><code>$ python hello.py
+zsh: command not found: python
+</code></pre>
+<pre><code>$ python3 hello.py
+Hello, World!
+</code></pre>
+<p>On modern macOS, <code>python</code> is frequently unavailable (or reserved), so <code>python3</code> is the command that actually works.</p>
+<p><strong>Scenario 3: Linux</strong></p>
+<pre><code>$ python hello.py
+Command 'python' not found, did you mean:
+  command 'python3' from deb python3
+</code></pre>
+<pre><code>$ python3 hello.py
+Hello, World!
+</code></pre>
+<p>Same pattern as macOS. The system is explicitly nudging you toward <code>python3</code>.</p>
+<h2>Intuition</h2>
+<p>Think about what "installing Python" actually means to your operating system. It's not magic — it's placing an executable file somewhere on disk and (ideally) registering that location in your system's PATH, the list of directories your terminal searches when you type a command.</p>
+<p>The naming of that executable is a <em>convention</em>, not a law of nature. Python's maintainers made a deliberate choice years ago, during the Python 2 to Python 3 transition, to avoid silently overwriting the <code>python</code> command on Unix-like systems. Many machines still had Python 2 installed as part of the OS itself (older macOS and Linux distributions relied on it for internal scripts). Overwriting <code>python</code> with Python 3 could have broken system tools.</p>
+<p>So the community landed on a convention: keep <code>python</code> pointing at whatever legacy version might exist, and use <code>python3</code> to explicitly mean "the Python 3 interpreter." Windows didn't have this legacy Python 2 baggage baked into the OS in the same way, so the official installer was free to bind <code>python</code> directly to whatever version you installed.</p>
+<p>Windows then added something extra: the <code>py</code> launcher. Instead of picking one fixed executable, <code>py</code> reads a small marker (or defaults to the latest installed version) and picks the <em>correct</em> interpreter for you — even if you have multiple Python versions installed side by side. That's genuinely useful once you're juggling Python 3.9 for one project and Python 3.12 for another.</p>
+<p>Once you see it this way, the "trick" disappears. It's not that Python behaves inconsistently — it's that each OS exposes the interpreter through a slightly different naming convention, shaped by its own history.</p>
+<h2>Brute Force Solution</h2>
+<p>There isn't really a "brute force algorithm" here since this isn't a data structures problem — but there is a brute-force <em>mental model</em> beginners often use, and it's worth examining why it fails.</p>
+<p><strong>Idea</strong>: Assume <code>python</code> always works, everywhere, because that's the "obvious" command name.</p>
+<p><strong>Approach</strong>:
+1. Install Python.
+2. Type <code>python</code> in the terminal.
+3. Assume it will run your script.</p>
+<p><strong>Advantages</strong>:
+- Simple to remember.
+- Works out of the box on many Windows machines.</p>
+<p><strong>Disadvantages</strong>:
+- Fails silently or loudly on macOS and Linux.
+- Can point to the wrong Python version if multiple are installed.
+- Leads to confusing errors like <code>ModuleNotFoundError</code> when <code>pip</code> and <code>python</code> are quietly pointing to different installations.</p>
+<p><strong>Time and space complexity</strong>: Not applicable — this is an environment configuration issue, not a computational one. But the "cost" here is developer time lost to debugging, which is arguably worse than an inefficient algorithm.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach is to check your specific OS and use the command that's guaranteed to work, rather than assuming.</p>
+<table>
+<thead>
+<tr>
+<th>OS</th>
+<th>Reliable Command</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Windows</td>
+<td><code>py</code></td>
+<td>Official launcher, auto-selects installed version</td>
+</tr>
+<tr>
+<td>Windows (alt)</td>
+<td><code>python</code></td>
+<td>Works if PATH was configured during install</td>
+</tr>
+<tr>
+<td>macOS</td>
+<td><code>python3</code></td>
+<td>Avoids legacy/reserved <code>python</code> naming conflicts</td>
+</tr>
+<tr>
+<td>Linux</td>
+<td><code>python3</code></td>
+<td>Same reasoning as macOS</td>
+</tr>
+</tbody>
+</table>
+<p>A more robust habit, regardless of OS, is to verify before you assume:</p>
+<pre><code>python --version
+python3 --version
+py --version
+</code></pre>
+<p>Whichever command returns a valid Python 3.x version number is the one to use consistently for that machine. This small verification step removes the guesswork entirely and prevents the classic "which Python is <code>pip install</code> even using" confusion down the line.</p>
+<h2>Python Code</h2>
+<p>Since this lesson is about environment setup rather than an algorithm, the "code" here is a small diagnostic script you can run to confirm your setup — useful for onboarding docs or a first-day setup guide.</p>
+<pre><code class="language-python">import shutil
+import subprocess
+
+
+def find_python_commands():
+    &quot;&quot;&quot;Check which Python launcher commands are available on this machine.&quot;&quot;&quot;
+    candidates = [&quot;python&quot;, &quot;python3&quot;, &quot;py&quot;]
+    available = []
+
+    for cmd in candidates:
+        path = shutil.which(cmd)
+        if path is None:
+            continue
+
+        result = subprocess.run(
+            [cmd, &quot;--version&quot;],
+            capture_output=True,
+            text=True,
+        )
+        version = result.stdout.strip() or result.stderr.strip()
+        available.append((cmd, path, version))
+
+    return available
+
+
+if __name__ == &quot;__main__&quot;:
+    found = find_python_commands()
+
+    if not found:
+        print(&quot;No Python command found on PATH. Check your installation.&quot;)
+    else:
+        print(&quot;Available Python commands on this system:\n&quot;)
+        for cmd, path, version in found:
+            print(f&quot;  {cmd:&lt;8} -&gt; {version}  ({path})&quot;)
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>shutil.which(cmd)</code> checks whether a given command exists anywhere on your system PATH, returning the full path if found, or <code>None</code> if not. This mirrors exactly what your terminal does when you type a command.</li>
+<li>We loop over the three realistic candidates: <code>python</code>, <code>python3</code>, and <code>py</code>, since those cover Windows, macOS, and Linux.</li>
+<li><code>subprocess.run([cmd, "--version"], ...)</code> actually invokes each command to confirm it runs and to capture its reported version — some tools print the version to <code>stdout</code>, others to <code>stderr</code>, so we check both.</li>
+<li>The script prints a clean summary table showing every valid Python entry point available on the machine, along with its file path and version.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Suppose you run this script on a Windows machine with Python 3.11 installed via the official installer.</p>
+<ol>
+<li><code>shutil.which("python")</code> finds <code>C:\Users\dev\AppData\Local\Programs\Python\Python311\python.exe</code>.</li>
+<li><code>shutil.which("python3")</code> returns <code>None</code> — Windows doesn't register this by default.</li>
+<li><code>shutil.which("py")</code> finds <code>C:\Windows\py.exe</code>, the official launcher.</li>
+<li>For each found command, we run <code>--version</code> and capture the output, e.g. <code>Python 3.11.4</code>.</li>
+<li>Final output:</li>
+</ol>
+<pre><code>Available Python commands on this system:
+
+  python   -&gt; Python 3.11.4  (C:\Users\dev\AppData\Local\Programs\Python\Python311\python.exe)
+  py       -&gt; Python 3.11.4  (C:\Windows\py.exe)
+</code></pre>
+<p>This confirms both <code>python</code> and <code>py</code> work identically on this machine — but on a Mac, the same script would likely show only <code>python3</code> populated.</p>
+<h2>Complexity Analysis</h2>
+<p>This isn't an algorithmic problem in the traditional Big-O sense, but it's worth reasoning about the diagnostic script:</p>
+<ul>
+<li><strong>Time complexity</strong>: O(1) relative to input size — we check a fixed, small set of three candidate commands regardless of machine configuration. Each <code>subprocess.run</code> call has real-world latency (process spawn time), but that's constant per command, not something that scales with any "n."</li>
+<li><strong>Space complexity</strong>: O(1) — we store at most three tuples of command, path, and version string.</li>
+</ul>
+<p>These are correct because the work done is bounded by the fixed list of candidate executable names, not by any variable-sized input.</p>
+<h2>Alternative Solutions</h2>
+<p>An alternative to checking manually is using tools designed specifically for managing multiple Python versions:</p>
+<ul>
+<li><strong>pyenv</strong> (macOS/Linux) and <strong>pyenv-win</strong> (Windows) let you install and switch between multiple Python versions cleanly, without relying on OS-level naming quirks.</li>
+<li><strong>Virtual environments</strong> (<code>venv</code> or <code>virtualenv</code>) sidestep the global command confusion entirely by creating an isolated Python and pip binary scoped to your project.</li>
+</ul>
+<p><strong>Comparison</strong>: The diagnostic script above is great for quickly understanding what's currently on your system. Tools like <code>pyenv</code> or virtual environments are better long-term solutions once you're working across multiple projects with different Python version requirements. Think of the script as a flashlight to see what you have, and <code>pyenv</code>/<code>venv</code> as the actual fix for managing it.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>No Python installed at all</strong>: All three commands return <code>None</code> from <code>shutil.which</code>. The script correctly reports nothing found.</li>
+<li><strong>Python 2 leftover on the system</strong>: <code>python</code> might exist but point to Python 2.7. The version check catches this — always confirm the version string, don't just confirm the command exists.</li>
+<li><strong>Multiple Python versions installed on Windows</strong>: <code>py</code> will pick a default version, but you can target a specific one with <code>py -3.9</code> or <code>py -3.12</code>, which is worth knowing when working across legacy projects.</li>
+<li><strong>PATH not updated after install</strong>: Especially common on Windows if "Add Python to PATH" was unchecked during installation — <code>python</code> and <code>py</code> might both fail even though Python is technically installed.</li>
+<li><strong>Corporate/restricted environments</strong>: Some managed machines alias <code>python</code> to a wrapper script or restrict <code>subprocess</code> calls; the diagnostic script should still run safely since it only invokes <code>--version</code>.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Assuming <code>python</code> works identically across every operating system.</li>
+<li>Not checking <code>python --version</code> after installation to confirm which version is actually active.</li>
+<li>Installing Python without adding it to PATH, then wondering why the terminal can't find it.</li>
+<li>Mixing <code>pip</code> and <code>pip3</code> inconsistently, ending up installing packages into a different Python environment than the one actually being run.</li>
+<li>Ignoring the <code>py</code> launcher on Windows entirely, missing out on its convenient version-targeting (<code>py -3.10</code>).</li>
+<li>Not realizing that IDEs (VS Code, PyCharm) can be configured to use a completely different Python interpreter than what your terminal defaults to, causing "it works in my editor but not in the terminal" confusion.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What's the difference between <code>python</code> and <code>python3</code> on Unix-based systems, and why does that distinction exist historically?</li>
+<li>How does the operating system locate an executable when you type a command in the terminal?</li>
+<li>What is a virtual environment, and why is it recommended over installing packages globally?</li>
+<li>How would you configure a project so that both <code>python</code> and <code>pip</code> reliably point to the correct interpreter?</li>
+<li>What issues can arise when multiple Python versions are installed on the same machine, and how would you resolve version conflicts?</li>
+</ul>
+<h2>Similar Problems</h2>
+<p>While this isn't a LeetCode-style algorithm problem, the same "understand the environment before writing code" mindset applies directly to:</p>
+<ul>
+<li><strong>Setting up virtual environments</strong> — understanding <code>venv</code>, <code>pip</code>, and dependency isolation.</li>
+<li><strong>Debugging PATH and environment variable issues</strong> — a recurring theme in DevOps and backend engineering.</li>
+<li><strong>Cross-platform scripting problems</strong> — like LeetCode's file-system or path-manipulation problems, where OS-specific quirks (path separators, case sensitivity) matter just as much as the core algorithm.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Installing Python and knowing how to <em>invoke</em> Python are two separate skills — don't assume they're the same.</li>
+<li><code>python</code>, <code>python3</code>, and <code>py</code> exist because of historical decisions around the Python 2 to 3 transition and OS-specific tooling choices.</li>
+<li>Always verify with <code>--version</code> rather than assuming a command works.</li>
+<li>On Windows, the <code>py</code> launcher is often the most reliable and flexible option.</li>
+<li>Small environment details like this are exactly the kind of thing that silently costs new developers hours — understanding the "why" prevents that friction permanently.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with visuals and a quick-fire quiz format, check out the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of the <strong>Daily Python LeetCode</strong> series — short, focused breakdowns of Python fundamentals, coding interview problems, and the everyday developer gotchas that rarely get explained clearly. Whether you're brand new to coding or brushing up before interviews, the series is designed to build real intuition, not just memorized answers.</p>
+<h2>Call To Action</h2>
+<p>If this cleared something up for you, subscribe on YouTube for more daily Python lessons, and subscribe to the Substack newsletter for deeper written breakdowns like this one. Drop a comment with the OS you use and whether <code>python</code>, <code>python3</code>, or <code>py</code> works for you — and share this with a fellow beginner who just installed Python for the first time.</p>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>Here's a question that trips up almost every developer at some point: after installing Python, which command actually runs your script?</p>
+<p>The intuitive answer is <code>python</code> — but the real answer depends entirely on your operating system. On Windows, <code>python</code> usually works, and there's also a dedicated <code>py</code> launcher that automatically selects the correct installed version. On macOS and Linux, <code>python</code> is frequently unavailable or reserved, making <code>python3</code> the reliable choice.</p>
+<p>This isn't a random inconsistency. It traces back to the Python 2 to Python 3 transition, when many Unix-based systems relied on Python 2 for internal tooling. To avoid breaking those systems, the community adopted a convention: keep <code>python</code> pointing at legacy installations, and use <code>python3</code> explicitly for the newer interpreter. Windows, without that legacy baggage, went a different direction — and added the <code>py</code> launcher for extra flexibility across multiple installed versions.</p>
+<p>The lesson here goes beyond a single command. It's a reminder that environment setup is its own skill, separate from writing code. Understanding how your OS locates executables, how PATH works, and how version conflicts happen will save you hours of confusing debugging — especially when onboarding onto a new team or setting up a fresh machine.</p>
+<p>Small details like this are exactly what the Daily Python LeetCode series is built around: clear, practical explanations of the things that quietly trip up developers at every level.</p>
+<p>What command do you use — <code>python</code>, <code>python3</code>, or <code>py</code>? Curious how it varies across everyone's setup.</p>
+<h2>Twitter/X Thread</h2>
+<p>1/ You just installed Python. Quick question: which command actually runs your script? The answer isn't as obvious as you think.</p>
+<p>2/ Most beginners type <code>python</code> and assume it'll just work. On some systems, it does. On others, it fails completely.</p>
+<p>3/ Here's the twist: it depends entirely on your operating system.</p>
+<p>4/ On Windows, <code>python</code> usually works because the official installer registers it on your PATH by default.</p>
+<p>5/ Windows also ships a <code>py</code> launcher — a smarter command that auto-selects the correct Python version if you have multiple installed.</p>
+<p>6/ On macOS, <code>python</code> is often unavailable or reserved. The reliable command is <code>python3</code>.</p>
+<p>7/ Same story on Linux. <code>python3</code> is the safe bet on virtually every modern distro.</p>
+<p>8/ Why the difference? It goes back to the Python 2 → 3 transition. Many Unix systems relied on Python 2 internally, so <code>python</code> was left alone to avoid breaking things.</p>
+<p>9/ <code>python3</code> became the explicit way to say "run the newer version," while Windows had no such legacy conflict to worry about.</p>
+<p>10/ The real lesson: installing a language and knowing how to invoke it are two different skills. Always verify with <code>--version</code> before you assume. Small habit, huge time saver.</p>
+<h2>Facebook Post</h2>
+<p>Ever install Python and then just... stare at the terminal, not sure what to type? You're not alone. Turns out the command you need — <code>python</code>, <code>python3</code>, or <code>py</code> — actually depends on whether you're on Windows, Mac, or Linux. There's a neat little bit of programming history behind why that is, and once you understand it, you'll never second-guess your setup again. Full breakdown (with examples for every OS) in the latest lesson — perfect if you're just getting started with coding!</p>
+<h2>Reddit Summary</h2>
+<p>Wrote up a quick explainer on something that trips up a lot of new Python users: after installing Python, which command actually runs it? Short answer — it depends on your OS. Windows usually works with <code>python</code>, and also has a <code>py</code> launcher that auto-picks the right installed version. macOS and Linux generally need <code>python3</code>, since <code>python</code> is often reserved or missing due to legacy Python 2 compatibility reasons from the 2-to-3 transition era. Included a small diagnostic script using <code>shutil.which</code> and <code>subprocess</code> to check which commands are actually available and working on your machine, plus a rundown of common mistakes (PATH not set, mixing up <code>pip</code>/<code>pip3</code>, IDE using a different interpreter than your terminal, etc). Hope it saves someone the same confusion.</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># Python Command Basics: python vs python3 vs py
+
+## Problem
+After installing Python, which command should you actually use to run a script —
+`python`, `python3`, or `py`? The answer depends on your operating system, and
+assuming the wrong one leads to confusing &quot;command not found&quot; errors.
+
+## Intuition
+Installing Python places an executable on disk; whether it's exposed as `python`,
+`python3`, or `py` is a naming convention shaped by OS history. Unix-based systems
+kept `python` reserved for legacy Python 2 tooling during the Python 2 → 3
+transition, making `python3` the safe explicit choice. Windows had no such legacy
+conflict, so `python` typically works out of the box, and Windows additionally
+ships a `py` launcher that auto-selects the correct installed version.
+
+## Approach
+1. Never assume `python` works — verify first.
+2. Run `python --version`, `python3 --version`, and `py --version`.
+3. Use whichever command returns a valid Python 3.x version consistently.
+4. On Windows, prefer `py` for automatic version selection across multiple installs.
+5. On macOS/Linux, prefer `python3`.
+
+## Python Solution
+
+```python
+import shutil
+import subprocess
+
+
+def find_python_commands():
+    &quot;&quot;&quot;Check which Python launcher commands are available on this machine.&quot;&quot;&quot;
+    candidates = [&quot;python&quot;, &quot;python3&quot;, &quot;py&quot;]
+    available = []
+
+    for cmd in candidates:
+        path = shutil.which(cmd)
+        if path is None:
+            continue
+
+        result = subprocess.run(
+            [cmd, &quot;--version&quot;],
+            capture_output=True,
+            text=True,
+        )
+        version = result.stdout.strip() or result.stderr.strip()
+        available.append((cmd, path, version))
+
+    return available
+
+
+if __name__ == &quot;__main__&quot;:
+    found = find_python_commands()
+
+    if not found:
+        print(&quot;No Python command found on PATH. Check your installation.&quot;)
+    else:
+        print(&quot;Available Python commands on this system:\n&quot;)
+        for cmd, path, version in found:
+            print(f&quot;  {cmd:&lt;8} -&gt; {version}  ({path})&quot;)
+</code></pre>
+<h2>Complexity</h2>
+<ul>
+<li><strong>Time</strong>: O(1) — fixed set of three candidate commands checked regardless of system.</li>
+<li><strong>Space</strong>: O(1) — stores at most three results.</li>
+</ul>
+<h2>Video</h2>
+<p>Watch the full breakdown here: {LINK}</p>
+<h2>Article</h2>
+<p>Full written lesson with examples, dry run, and common mistakes: see the linked
+article in this repository's description.
+```</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/1o3TDY4Y1ns' target='_blank'>▶ Watch on YouTube</a></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>

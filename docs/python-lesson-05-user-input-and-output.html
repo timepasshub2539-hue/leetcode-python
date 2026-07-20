@@ -20,12 +20,391 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 5: User Input &amp; Output — input(), f-strings &amp; Your First Interactive Program</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/me3yycaPiAo' allowfullscreen></iframe></div><article><p>Chapters:
-0:00 Lesson 5: Talking to Your Program
-0:19 The Words We Will Use
-0:42 input() Is Like a Doorbell
-1:03 Your First input()
-1:22 Here&#x27;s the Trick: input() Always Gives Text
-1:48 The Journey of</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/me3yycaPiAo' target='_blank'>▶ Watch on YouTube</a></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 5: User Input &amp; Output — input(), f-strings &amp; Your First Interactive Program</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/me3yycaPiAo' allowfullscreen></iframe></div><article><h1>SEO PACKAGE</h1>
+<h2>1. SEO Title</h2>
+<p>Python input() and f-strings Explained: Build Your First Interactive Program</p>
+<h2>2. SEO Subtitle</h2>
+<p>A beginner-friendly guide to reading user input, converting types safely, and formatting clean output with f-strings in Python.</p>
+<h2>3. Featured Quote</h2>
+<p>"input() always hands you a string — even when the user types a number. Convert first, compute second."</p>
+<h2>4. Meta Description</h2>
+<p>Learn Python's input() function, why it always returns strings, and how to format output with f-strings. Build a real interactive program step by step.</p>
+<h2>5. URL Slug</h2>
+<p>python-input-output-f-strings-interactive-program</p>
+<h2>6. Keywords</h2>
+<p>python input function, python f-strings, python output formatting, read user input python, python type conversion, int() python, float() python, python print sep end, python interactive program, python for beginners, python string to int, python beginner tutorial, python string formatting, python format method, command line arguments python, python value error, python type casting, learn python step by step, python basics series, python coding interview</p>
+<h2>7. Tags</h2>
+<p>Python, Python Basics, Beginners, Learn Python, Coding Interview, f-strings, User Input, Data Structures, Algorithms, Software Engineering, Python Tutorial, Programming Fundamentals</p>
+<hr />
+<h1>MAIN ARTICLE</h1>
+<h2>Introduction</h2>
+<p>Every program you've written so far has been a monologue — it runs, prints something, and ends. It never listens. Real software isn't like that. Command-line tools ask for a filename. Signup forms ask for an email. Even a simple tip calculator needs to know the bill amount before it can do anything useful.</p>
+<p>This is the lesson where your Python programs start listening. You'll learn <code>input()</code>, the function that pauses execution and waits for a human to respond, and you'll learn why it hands you back something you probably weren't expecting: plain text, always, no matter what the user typed.</p>
+<p>This distinction — that input is always a string — is one of the most common sources of bugs for beginners, and it also shows up in technical interviews. Interviewers frequently ask candidates to parse and validate user-supplied input before processing it, because it tests whether you understand that data doesn't arrive in the shape you want by default. You have to shape it yourself.</p>
+<p>By the end of this lesson you'll be able to read data from a user, safely convert it into numbers, and print it back out in clean, professional-looking output using f-strings — the same formatting tool used throughout production Python codebases today.</p>
+<h2>Problem Overview</h2>
+<p>Strip away the code and the task is simple: get a program to hold a two-way conversation with whoever is running it.</p>
+<p>That breaks into three smaller problems:</p>
+<ol>
+<li><strong>Reading input</strong> — pause the program, show the user a prompt, and capture whatever they type.</li>
+<li><strong>Converting types</strong> — turn that captured text into a usable number when the situation calls for math.</li>
+<li><strong>Formatting output</strong> — take variables and turn them into a readable, well-structured sentence or report.</li>
+</ol>
+<p>Get all three right, and you have the foundation for practically any interactive command-line program: calculators, quizzes, form validators, small games, data-entry tools — all of it is built from this same read → convert → compute → print rhythm.</p>
+<h2>Example</h2>
+<pre><code class="language-python">name = input(&quot;What's your name? &quot;)
+print(f&quot;Hello, {name}!&quot;)
+</code></pre>
+<p>If the user types <code>Kai</code> and presses Enter:</p>
+<pre><code>What's your name? Kai
+Hello, Kai!
+</code></pre>
+<p>Nothing surprising there — <code>name</code> holds the text <code>"Kai"</code>, and the f-string drops it into the greeting.</p>
+<p>Now the interesting case:</p>
+<pre><code class="language-python">age = input(&quot;How old are you? &quot;)
+print(age + 1)
+</code></pre>
+<p>If the user types <code>25</code>, this crashes:</p>
+<pre><code>TypeError: can only concatenate str (not &quot;int&quot;) to str
+</code></pre>
+<p>Even though <code>25</code> <em>looks</em> like a number on the screen, Python stored it as the string <code>"25"</code>. You can't add an integer to a string, so this line fails. Fix it by converting explicitly:</p>
+<pre><code class="language-python">age = int(input(&quot;How old are you? &quot;))
+print(age + 1)
+</code></pre>
+<p>Now <code>age</code> is a real integer, and <code>age + 1</code> correctly produces <code>26</code>.</p>
+<h2>Intuition</h2>
+<p>Think about what <code>input()</code> is actually doing under the hood: it's reading raw keystrokes from a terminal. A terminal doesn't know or care whether the user typed a name, a number, or an equation — it only knows how to send characters. So Python makes a deliberate, consistent choice: <code>input()</code> always returns a <code>str</code>, full stop, no exceptions. That consistency is a feature, not a limitation — it means you never have to guess what type you're getting back.</p>
+<p>The job of turning that text into something you can compute with belongs to <em>you</em>, using <code>int()</code> or <code>float()</code>. Picture it as a small pipeline: raw keystrokes go in on the left as text, pass through a converter function in the middle, and come out the other side as a genuine number you can add, subtract, or compare.</p>
+<p>This two-step separation — read as text, then convert deliberately — is actually a good design pattern that shows up everywhere in software: never trust incoming data to already be in the shape you need. Validate and convert it at the boundary, before it touches your business logic. <code>input()</code> teaches that habit from day one.</p>
+<p>Once you have real numbers, formatting the result back into human-readable text is the second half of the puzzle. f-strings solve this by letting you write your sentence exactly as it should read, with variables dropped directly into place using curly braces — no error-prone string concatenation, no counting <code>%s</code> placeholders.</p>
+<h2>Brute Force Solution</h2>
+<p>There isn't really a "brute force" algorithm here in the traditional sense, but there is a clumsier way to do output formatting that's worth naming so you can recognize why f-strings are better.</p>
+<p><strong>Idea:</strong> Build the output string by concatenating pieces together with <code>+</code>.</p>
+<pre><code class="language-python">name = input(&quot;What's your name? &quot;)
+age = int(input(&quot;How old are you? &quot;))
+print(&quot;Hello, &quot; + name + &quot;! You are &quot; + str(age) + &quot; years old.&quot;)
+</code></pre>
+<p><strong>Algorithm:</strong> Manually stitch each variable into the surrounding text using <code>+</code>, remembering to wrap non-string values in <code>str()</code> first.</p>
+<p><strong>Advantages:</strong>
+- Works in every version of Python, no special syntax needed.
+- Conceptually simple — it's just string addition.</p>
+<p><strong>Disadvantages:</strong>
+- Every non-string value needs an explicit <code>str()</code> wrapper, or you get a <code>TypeError</code>.
+- Hard to read once you have more than two or three variables.
+- Easy to miss a space or lose track of quote marks.
+- No built-in way to control number formatting (like rounding to 2 decimal places) without extra function calls.</p>
+<p><strong>Time complexity:</strong> O(n) where n is the total length of the final string — same as any approach, since you must produce every character.</p>
+<p><strong>Space complexity:</strong> O(n) for the resulting string, plus temporary intermediate strings created at each <code>+</code> operation, which the f-string approach avoids.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach uses f-strings for output and explicit type conversion for input. Here's the shape of it:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Tool</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Show a prompt, wait for the user</td>
+<td><code>input("...")</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Convert text to a number (if needed)</td>
+<td><code>int(...)</code> or <code>float(...)</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Do any computation</td>
+<td>normal operators</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Build a clean output string</td>
+<td>f-string with <code>{}</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>Display the result</td>
+<td><code>print(...)</code></td>
+</tr>
+</tbody>
+</table>
+<p>The key insight is that steps 1 and 2 are often combined into a single line — you wrap the entire <code>input()</code> call in <code>int()</code> so the conversion happens immediately, before the text value ever gets a chance to be misused:</p>
+<pre><code class="language-python">birth_year = int(input(&quot;What year were you born? &quot;))
+</code></pre>
+<p>For output, an f-string lets you embed the expression <code>{value}</code> directly inside the string, and even apply formatting instructions right there using a colon, like <code>{price:.2f}</code> to round a decimal to two places.</p>
+<p><code>print()</code> also gives you two extra dials that most beginners never learn:</p>
+<ul>
+<li><code>sep</code> — controls what's inserted <em>between</em> multiple printed items (default is a space).</li>
+<li><code>end</code> — controls what's printed <em>after</em> everything (default is a newline).</li>
+</ul>
+<pre><code class="language-python">print(&quot;2024&quot;, &quot;07&quot;, &quot;21&quot;, sep=&quot;-&quot;)        # 2024-07-21
+print(&quot;Loading&quot;, end=&quot;...&quot;)               # stays on the same line
+print(&quot;done&quot;)
+</code></pre>
+<h2>Python Code</h2>
+<pre><code class="language-python">def run_interactive_intro() -&gt; None:
+    &quot;&quot;&quot;Ask for a name and birth year, then greet the user with their age.&quot;&quot;&quot;
+    name = input(&quot;What's your name? &quot;)
+    birth_year = int(input(&quot;What year were you born? &quot;))
+
+    current_year = 2026
+    age = current_year - birth_year
+
+    print(f&quot;Hello, {name}! You are approximately {age} years old.&quot;)
+
+
+def tip_calculator() -&gt; None:
+    &quot;&quot;&quot;Read a bill amount and tip percentage, then print the total.&quot;&quot;&quot;
+    bill = float(input(&quot;What was the bill amount? $&quot;))
+    tip_percent = float(input(&quot;What percentage would you like to tip? &quot;))
+
+    tip_amount = bill * (tip_percent / 100)
+    total = bill + tip_amount
+
+    print(f&quot;Tip: ${tip_amount:.2f} | Total: ${total:.2f}&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    run_interactive_intro()
+    tip_calculator()
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>input("What's your name? ")</code> displays the prompt text and pauses execution until the user presses Enter, returning whatever they typed as a <code>str</code>.</li>
+<li><code>int(input(...))</code> chains two calls together: <code>input()</code> runs first and returns text, then <code>int()</code> immediately converts that text into an integer. If the user types something non-numeric, this line raises a <code>ValueError</code>.</li>
+<li><code>current_year - birth_year</code> is ordinary integer subtraction — this only works because <code>birth_year</code> was converted to an <code>int</code> in the previous line, not left as a string.</li>
+<li><code>f"Hello, {name}! You are approximately {age} years old."</code> is an f-string: the <code>f</code> prefix right before the opening quote tells Python to evaluate anything inside <code>{}</code> and substitute the result into the string.</li>
+<li><code>float(input(...))</code> follows the same pattern as <code>int()</code>, but produces a decimal number — necessary here because bill amounts and percentages aren't whole numbers.</li>
+<li><code>{tip_amount:.2f}</code> is an f-string format specifier: <code>.2f</code> means "format as a fixed-point decimal with 2 digits after the point," which is exactly what you want for currency.</li>
+<li>The <code>if __name__ == "__main__":</code> guard ensures these functions only run when the file is executed directly, not when imported elsewhere — standard practice in any real Python codebase.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Trace <code>tip_calculator()</code> with the user typing <code>50</code> for the bill and <code>20</code> for the tip percentage:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Expression</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>input("What was the bill amount? $")</code></td>
+<td><code>"50"</code> (string)</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>float("50")</code></td>
+<td><code>50.0</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>input("What percentage...? ")</code></td>
+<td><code>"20"</code> (string)</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>float("20")</code></td>
+<td><code>20.0</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>tip_percent / 100</code></td>
+<td><code>0.2</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>bill * 0.2</code></td>
+<td><code>10.0</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>bill + tip_amount</code></td>
+<td><code>60.0</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>f"Tip: ${tip_amount:.2f} | Total: ${total:.2f}"</code></td>
+<td><code>"Tip: $10.00 | Total: $60.00"</code></td>
+</tr>
+</tbody>
+</table>
+<p>Final printed output: <code>Tip: $10.00 | Total: $60.00</code></p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time complexity:</strong> O(1) for the arithmetic itself — a fixed number of operations regardless of input size. Reading input and formatting output are O(k) where k is the length of the typed or printed string, which is effectively constant for typical use.</li>
+<li><strong>Space complexity:</strong> O(1) beyond the input string itself — you're storing a handful of scalar variables (<code>name</code>, <code>bill</code>, <code>tip_percent</code>, <code>tip_amount</code>, <code>total</code>), not a growing data structure.</li>
+</ul>
+<p>These are the correct bounds because nothing in this program loops over a collection or recurses — it's a straight-line sequence of read, convert, compute, and print operations.</p>
+<h2>Alternative Solutions</h2>
+<p><strong>The <code>.format()</code> method</strong> works everywhere f-strings do syntactically but is more verbose:</p>
+<pre><code class="language-python">print(&quot;Tip: ${:.2f} | Total: ${:.2f}&quot;.format(tip_amount, total))
+</code></pre>
+<p>It's still seen in older codebases and is worth recognizing, but for new code, f-strings are strictly better: shorter, easier to read, and just as fast.</p>
+<p><strong>The <code>%</code> formatting style</strong> is a holdover from Python 2 that behaves like C's <code>printf</code>:</p>
+<pre><code class="language-python">print(&quot;Tip: $%.2f | Total: $%.2f&quot; % (tip_amount, total))
+</code></pre>
+<p>You'll encounter this in legacy code and some logging libraries, but don't write it fresh — it's harder to read and easier to get wrong with multiple values.</p>
+<p><strong>Command-line arguments</strong> (via <code>sys.argv</code> or the <code>argparse</code> module) are an alternative to <code>input()</code> entirely — values are supplied when the program starts rather than requested interactively. This suits automation and scripting where no human is present to answer prompts, but it's the wrong tool when a person is directly using your program.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty input:</strong> pressing Enter with nothing typed gives <code>input()</code> an empty string <code>""</code>. Converting that with <code>int("")</code> raises a <code>ValueError</code>.</li>
+<li><strong>Non-numeric text where a number is expected:</strong> <code>int("twenty")</code> raises <code>ValueError: invalid literal for int() with base 10: 'twenty'</code>.</li>
+<li><strong>Leading/trailing whitespace:</strong> <code>int("  25  ")</code> actually succeeds — <code>int()</code> strips whitespace automatically — but comparing raw strings like <code>name == "Kai "</code> would fail unexpectedly if you forget to <code>.strip()</code> text input.</li>
+<li><strong>Very large numbers:</strong> Python's <code>int</code> has no fixed size limit (unlike many languages), so extremely large input numbers won't overflow — but <code>float</code> still has standard floating-point precision limits.</li>
+<li><strong>Negative numbers:</strong> <code>int(input(...))</code> handles a typed <code>-5</code> correctly, but if your logic assumes only positive values (like an age), you'll want to validate that separately.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting to convert input before doing math.</strong> <code>input()</code> always returns a string, so <code>age + 1</code> on unconverted input either crashes or silently misbehaves.</li>
+<li><strong>Multiplying a string instead of a number.</strong> <code>"5" * 3</code> doesn't triple the value five — it produces <code>"555"</code>, since Python interprets <code>*</code> on a string as repetition.</li>
+<li><strong>Forgetting the <code>f</code> prefix on an f-string.</strong> Without it, <code>"{name}"</code> prints the literal curly braces instead of substituting the variable.</li>
+<li><strong>Not handling <code>ValueError</code> when the user types something unexpected.</strong> A production program should wrap conversions in a <code>try/except</code> rather than letting the whole program crash.</li>
+<li><strong>Confusing <code>int()</code> and <code>float()</code>.</strong> Using <code>int()</code> on a value like <code>"19.99"</code> raises a <code>ValueError</code> — decimal-looking text needs <code>float()</code>.</li>
+<li><strong>Assuming <code>sep</code> and <code>end</code> only take spaces or newlines.</strong> They accept any string, including empty ones (<code>end=""</code>), which is useful for building output on a single line.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you validate that user input is a positive integer before using it?</li>
+<li>What's the difference between <code>int()</code> and <code>float()</code> when converting a string like <code>"3.0"</code>?</li>
+<li>How would you handle a <code>ValueError</code> gracefully instead of crashing the program?</li>
+<li>Why does Python force <code>input()</code> to always return a string rather than guessing the type?</li>
+<li>How would you rewrite this program to keep prompting until the user provides valid input?</li>
+<li>What's the difference in behavior between <code>input()</code> and reading from <code>sys.argv</code>?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 8: String to Integer (atoi)</strong> — directly tests manual string-to-number conversion logic, the same core idea behind why <code>int()</code> can fail on malformed input.</li>
+<li><strong>LeetCode 65: Valid Number</strong> — reinforces understanding of what does and doesn't count as a valid numeric string.</li>
+<li><strong>LeetCode 415: Add Strings</strong> — builds intuition for treating digit characters as data rather than assuming they behave like numbers.</li>
+<li><strong>LeetCode 6: ZigZag Conversion</strong> — a good follow-up for practicing string formatting and construction logic beyond simple f-strings.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li><code>input()</code> pauses your program and always returns a string — no exceptions, ever.</li>
+<li>Convert with <code>int()</code> or <code>float()</code> before doing arithmetic on user input.</li>
+<li>f-strings (<code>f"..."</code>) are the modern, readable way to format output in Python; prefer them over <code>.format()</code> or <code>%</code> formatting in new code.</li>
+<li><code>print()</code>'s <code>sep</code> and <code>end</code> parameters give you fine control over spacing and line breaks.</li>
+<li>The rhythm behind almost every interactive program: <strong>read, convert, compute, print.</strong></li>
+</ul>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with live demonstrations of every mistake and fix covered here, watch the video: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of the <strong>Daily Python LeetCode</strong> series — a daily, beginner-friendly walk through Python fundamentals and interview-style problem solving, one concept at a time. Each lesson builds directly on the last, so today's <code>input()</code> and f-string skills will show up again the moment we start reading user-driven problems and formatting solutions in upcoming lessons.</p>
+<h2>Call To Action</h2>
+<p>If this helped things click, subscribe on YouTube so you don't miss tomorrow's lesson, and subscribe to the Substack newsletter for the written breakdown delivered straight to your inbox. Drop a comment with your tip calculator once you've built it — and share this with anyone starting their Python journey.</p>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>Every beginner Python programmer hits this wall eventually: you ask the user for a number, try to do math with it, and the program crashes with a cryptic <code>TypeError</code>.</p>
+<p>The reason is simple once you see it: Python's <code>input()</code> function <em>always</em> returns a string — even if the user types <code>25</code>. Your program doesn't know the difference between "the user typed a number" and "the user typed their name" unless you tell it. That's by design, not a bug.</p>
+<p>The fix is one extra step: wrap <code>input()</code> in <code>int()</code> or <code>float()</code> to convert it before doing any arithmetic.</p>
+<pre><code class="language-python">age = int(input(&quot;How old are you? &quot;))
+print(age + 1)
+</code></pre>
+<p>Once your data is in the right shape, formatting clean output is just as important. f-strings let you build readable output by dropping variables directly into a string with <code>{}</code>, including formatting instructions like <code>{price:.2f}</code> for currency.</p>
+<p>The pattern behind almost every interactive program you'll ever write comes down to four steps: <strong>read, convert, compute, print.</strong></p>
+<p>It's a small lesson, but it's the first time a Python program stops being a one-way monologue and starts having an actual conversation with the person running it. That shift — from "code that runs" to "code that responds" — is where things start to feel real.</p>
+<p>What's the first interactive program you ever built? Mine was a tip calculator that broke because I forgot to convert a string. Worth remembering.</p>
+<h1>Python #CodingInterview #LearnToCode #SoftwareEngineering</h1>
+<h2>Twitter/X Thread</h2>
+<p>1/ Your Python program just crashed because you added 1 to a number the user typed in. Here's why, and it trips up almost every beginner. 🧵</p>
+<p>2/ <code>input()</code> in Python ALWAYS returns a string. Even if the user types <code>25</code>, you get the text characters "2" and "5" — not the number twenty-five.</p>
+<p>3/ So this crashes:</p>
+<pre><code class="language-python">age = input(&quot;Age? &quot;)
+print(age + 1)
+</code></pre>
+<p>TypeError. You can't add an int to a str.</p>
+<p>4/ The fix: wrap input() in int() to convert it immediately.</p>
+<pre><code class="language-python">age = int(input(&quot;Age? &quot;))
+print(age + 1)  # works
+</code></pre>
+<p>5/ Same idea applies to decimals — use float() instead of int() when the number might have a decimal point, like a price.</p>
+<p>6/ Now for output. f-strings are the cleanest way to build formatted text in Python. Put an f right before your quotes, then drop variables into {}.</p>
+<pre><code class="language-python">print(f&quot;Hello, {name}!&quot;)
+</code></pre>
+<p>7/ Want to round a decimal? Add a format spec inside the braces:</p>
+<pre><code class="language-python">print(f&quot;Total: ${total:.2f}&quot;)
+</code></pre>
+<p>Rounds to 2 decimal places. Perfect for money.</p>
+<p>8/ print() also has two underrated params: sep (what goes between items) and end (what comes after). Try <code>print("a","b",sep="-")</code> → a-b</p>
+<p>9/ There's a classic gotcha here too: <code>"5" * 3</code> doesn't give you 15 — it gives you "555", because multiplying a string repeats it.</p>
+<p>10/ The pattern behind nearly every interactive program you'll write: read → convert → compute → print. Learn that rhythm and you can build almost anything from a calculator to a quiz app.</p>
+<h2>Facebook Post</h2>
+<p>Ever had your Python program crash the moment you tried to do math with something the user typed in? There's a simple reason for that: Python's <code>input()</code> function always hands you back plain text, even if someone types a number. You have to convert it yourself using <code>int()</code> or <code>float()</code> before you can add, subtract, or compare it.</p>
+<p>Once you've got real numbers to work with, formatting a clean reply is easy with f-strings — just drop your variables right into the sentence using curly braces.</p>
+<p>Today's lesson covers exactly this: reading input, converting types safely, and printing polished output — the building blocks behind pretty much every interactive program you'll ever write. Built a tiny tip calculator with it too. Give it a try tonight!</p>
+<h2>Reddit Summary</h2>
+<p>Quick note for anyone learning Python and confused why their program crashes when they try to use a number the user typed in: <code>input()</code> always returns a string, no matter what's typed. If someone enters <code>25</code>, you get the text <code>"25"</code>, not the integer <code>25</code>. Trying to do math on it directly (<code>age + 1</code>) throws a <code>TypeError</code>.</p>
+<p>Fix is simple — wrap it: <code>age = int(input("..."))</code>. Use <code>float()</code> instead if you're expecting a decimal.</p>
+<p>For output, f-strings (<code>f"Hello, {name}"</code>) are the cleanest option in modern Python — better than <code>.format()</code> or old-style <code>%</code> formatting. You can even round decimals inline: <code>f"{price:.2f}"</code>.</p>
+<p>One gotcha worth knowing: multiplying a string by a number repeats it instead of scaling it — <code>"5" * 3</code> gives <code>"555"</code>, not <code>15</code>. Caught a lot of people off guard, myself included early on.</p>
+<p>The general pattern for interactive scripts: read input, convert type, compute, print result. Covers a surprising amount of ground once it's second nature.</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># Python User Input &amp; Output — input(), Type Conversion, and f-strings
+
+## Problem
+
+Build a Python program that reads data from the user, converts it into the
+correct type, performs a computation, and prints a clean, formatted result.
+
+## Intuition
+
+`input()` reads raw keystrokes from the terminal, so it has no way of
+knowing whether the user meant to type a name or a number — it always
+returns a string. Converting that string into a real number is a deliberate
+step you take with `int()` or `float()`, not something Python does for you.
+Once you have proper numeric types, f-strings let you format output cleanly
+by embedding variables directly into a string with `{}`.
+
+## Approach
+
+1. Prompt the user with `input()` and capture their response.
+2. Convert the response with `int()` or `float()` if it needs to be used in
+   a calculation.
+3. Perform the computation.
+4. Build the output using an f-string, applying format specs like `.2f`
+   where decimal precision matters.
+5. Print the result.
+
+## Python Solution
+
+\`\`\`python
+def tip_calculator() -&gt; None:
+    bill = float(input(&quot;What was the bill amount? $&quot;))
+    tip_percent = float(input(&quot;What percentage would you like to tip? &quot;))
+
+    tip_amount = bill * (tip_percent / 100)
+    total = bill + tip_amount
+
+    print(f&quot;Tip: ${tip_amount:.2f} | Total: ${total:.2f}&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    tip_calculator()
+\`\`\`
+
+## Complexity
+
+- **Time:** O(1) — a fixed number of arithmetic operations.
+- **Space:** O(1) — a handful of scalar variables, no growing data structure.
+
+## Video
+
+Watch the full lesson here: {LINK}
+
+## Article
+
+Read the full written breakdown, including dry runs, common mistakes, and
+interview follow-ups, on the Daily Python LeetCode series: {LINK}
+</code></pre></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/me3yycaPiAo' target='_blank'>▶ Watch on YouTube</a></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>

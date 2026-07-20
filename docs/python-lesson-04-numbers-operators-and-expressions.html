@@ -22,13 +22,324 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 4: Numbers, Operators &amp; Expressions — Arithmetic, Comparison, Logic &amp; Precedence</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/6GDq2IQTa5o' allowfullscreen></iframe></div><article><p>Chapters:
-0:00 Lesson 4: Numbers, Operators, and Expressions
-0:25 The Words We Will Use
-0:50 Arithmetic Operators
-1:15 Two Kinds of Division
-1:47 Modulo: The Remainder
-2:17 Comparison Operators
-2:42 L</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/6GDq2IQTa5o' target='_blank'>▶ Watch on YouTube</a></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 4: Numbers, Operators &amp; Expressions — Arithmetic, Comparison, Logic &amp; Precedence</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/6GDq2IQTa5o' allowfullscreen></iframe></div><article><h1>SEO PACKAGE</h1>
+<p><strong>1. SEO Title:</strong> Python Numbers &amp; Operators Explained: Arithmetic, Comparison, and Logic for Beginners</p>
+<p><strong>2. SEO Subtitle:</strong> A complete guide to how Python evaluates expressions — from division and modulo to precedence and type conversion.</p>
+<p><strong>3. Featured Quote:</strong> "Every line of real code is an expression being evaluated — master the operators, and the rest of Python starts to feel obvious."</p>
+<p><strong>4. Meta Description:</strong> Learn Python arithmetic, comparison, and logical operators, operator precedence, and type conversion with clear examples and common beginner mistakes.</p>
+<p><strong>5. URL Slug:</strong> <code>python-numbers-operators-expressions-guide</code></p>
+<p><strong>6. Keywords:</strong> Python operators, Python arithmetic operators, floor division Python, modulo operator Python, Python comparison operators, Python logical operators, operator precedence Python, Python type conversion, Python for beginners, PEMDAS Python, float precision Python, math.isclose, Python expressions, Python == vs =, integer division Python, Python coding interview basics, Learn Python, Python fundamentals, Python data types, round vs int Python</p>
+<p><strong>7. Tags:</strong> Python, LeetCode, Coding Interview, Algorithms, Data Structures, Software Engineering, Python Basics, Beginner Python, Programming Fundamentals, Python Operators, Type Conversion, Python Tutorial</p>
+<hr />
+<h1>MAIN ARTICLE</h1>
+<h2>Introduction</h2>
+<p>Before you can write a single useful program, you need to understand how Python does math and how it makes decisions. That sounds basic, but it's not — arithmetic and logical operators are the foundation underneath every conditional, every loop, every algorithm you'll ever write. When you're solving a LeetCode problem and you need to check if a number is even, split an array in half, or compare two values, you're leaning directly on the concepts in this lesson.</p>
+<p>Interviewers rarely ask "what does the modulo operator do" as a standalone question, but they absolutely test whether you <em>use</em> it correctly under pressure. A candidate who fumbles floor division versus true division, or who writes <code>if x = 5</code> instead of <code>if x == 5</code>, loses credibility fast — not because the mistake is complex, but because it signals shaky fundamentals. Getting this right now means you stop thinking about syntax and start thinking about problems.</p>
+<h2>Problem Overview</h2>
+<p>There isn't a single "problem" to solve here in the traditional algorithmic sense. Instead, think of this as building the vocabulary and toolkit you'll use to solve every future problem. Specifically, we need to understand:</p>
+<ul>
+<li>The arithmetic operators (<code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>//</code>, <code>%</code>, <code>**</code>) and what each one actually returns</li>
+<li>The difference between <strong>true division</strong> and <strong>floor division</strong></li>
+<li>What modulo (<code>%</code>) really means and why it's the backbone of even/odd checks</li>
+<li>Comparison operators (<code>==</code>, <code>!=</code>, <code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code>) and how they always resolve to <code>True</code> or <code>False</code></li>
+<li>Logical operators (<code>and</code>, <code>or</code>, <code>not</code>) and how they combine boolean conditions</li>
+<li>Operator precedence — the order Python follows when an expression has multiple operators</li>
+<li>Type conversion between <code>int</code>, <code>float</code>, and <code>str</code>, including Python's automatic conversions</li>
+<li>Why floating-point math sometimes produces "weird" results, and how to compare floats safely</li>
+</ul>
+<p>By the end, you should be able to look at any expression and predict exactly what Python will compute — step by step, in the correct order.</p>
+<h2>Example</h2>
+<p>Let's ground this in a concrete example instead of abstract rules.</p>
+<pre><code class="language-python">result = 2 + 3 * 4 &gt; 10
+print(result)
+</code></pre>
+<p><strong>Output:</strong> <code>True</code></p>
+<p>Walk through it with me: Python doesn't read left to right like English. It follows precedence rules, so multiplication happens before addition, and both happen before the comparison. First <code>3 * 4</code> becomes <code>12</code>. Then <code>2 + 12</code> becomes <code>14</code>. Finally, <code>14 &gt; 10</code> evaluates to <code>True</code>. One expression, three separate evaluation steps, each producing an intermediate value that feeds the next.</p>
+<p>Here's a second example that trips up almost every beginner:</p>
+<pre><code class="language-python">print(7 / 2)    # 3.5
+print(7 // 2)   # 3
+print(7 % 2)    # 1
+print(8 / 2)    # 4.0  &lt;- not 4!
+</code></pre>
+<p><code>/</code> always returns a float, even when the division is exact. <code>//</code> throws away the fractional part and rounds toward negative infinity. <code>%</code> gives you exactly what's left over after that flooring happens. Notice that <code>7 // 2</code> and <code>7 % 2</code> are two halves of the same operation — <code>7 = 2 * 3 + 1</code>.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer thinks about operators before writing any code: every operator answers one specific question, and your job is to match the operator to the question you're actually asking.</p>
+<p>If the question is "how many whole groups fit?" — like counting how many full boxes you can pack — you want floor division. If the question is "what's left over after grouping?" — like figuring out how many items don't fit in a full box — you want modulo. If the question is "what's the precise real-world value?" — like splitting a restaurant bill — you want true division.</p>
+<p>Comparisons and logical operators follow the same pattern. A comparison operator answers a single yes/no question. Logical operators let you combine multiple yes/no questions into one final answer, the same way a bouncer combines "are you old enough" and "do you have ID" into a single admit/deny decision. <code>and</code> requires every condition to hold. <code>or</code> requires just one. <code>not</code> flips whatever it's given.</p>
+<p>The reason precedence matters is that Python has to resolve one operator at a time, and it needs a deterministic rule for which operator goes first when there's no parentheses to guide it. The order mirrors what you learned as PEMDAS in school: parentheses, then exponents, then multiplication/division, then addition/subtraction, then comparisons, then logical operators last. Once you internalize that order, you can predict the output of any expression without running it.</p>
+<h2>Brute Force Solution</h2>
+<p>There isn't a "brute force vs optimal" split for this lesson the way there is for an algorithm problem — but there is a brute-force <em>mental habit</em> worth calling out: manually tracing an expression left to right without knowing precedence rules.</p>
+<p><strong>Idea:</strong> Evaluate operators in the order they appear in the text, ignoring precedence.</p>
+<p><strong>Algorithm:</strong> Read the expression left to right, apply each operator as you encounter it.</p>
+<p><strong>Disadvantage:</strong> This gives the wrong answer. For <code>2 + 3 * 4</code>, reading left to right naively gives <code>(2 + 3) * 4 = 20</code>, but Python actually computes <code>2 + (3 * 4) = 14</code>. This "brute force" mental model is a common source of bugs for beginners who haven't yet memorized precedence.</p>
+<p><strong>Time/Space Complexity:</strong> Not applicable — this is a conceptual error, not an algorithm.</p>
+<h2>Optimal Solution</h2>
+<p>The reliable approach is to apply Python's actual precedence order, and when in doubt, use parentheses to make your intent explicit rather than relying on memorized rules.</p>
+<p>Here's the precedence order, highest to lowest:</p>
+<table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>Operators</th>
+<th>Category</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 (highest)</td>
+<td><code>()</code></td>
+<td>Parentheses</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>**</code></td>
+<td>Exponentiation</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>*</code>, <code>/</code>, <code>//</code>, <code>%</code></td>
+<td>Multiplication/Division</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>+</code>, <code>-</code></td>
+<td>Addition/Subtraction</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>==</code>, <code>!=</code>, <code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code></td>
+<td>Comparison</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>not</code></td>
+<td>Logical NOT</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>and</code></td>
+<td>Logical AND</td>
+</tr>
+<tr>
+<td>8 (lowest)</td>
+<td><code>or</code></td>
+<td>Logical OR</td>
+</tr>
+</tbody>
+</table>
+<p>Evaluation happens in passes: Python scans for the highest-priority operator still remaining, collapses it into a value, then repeats until one value is left. This is exactly what we traced in the <code>2 + 3 * 4 &gt; 10</code> example above — multiplication collapses first, then addition, then comparison.</p>
+<p>The senior-engineer habit that beats memorizing this table perfectly: <strong>wrap ambiguous expressions in parentheses.</strong> <code>(2 + 3) * 4</code> costs nothing to type and removes all doubt for the next reader — including future you.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">import math
+
+
+def is_even_and_greater_than(n: int, threshold: int) -&gt; bool:
+    &quot;&quot;&quot;Check whether n is even and strictly greater than threshold.&quot;&quot;&quot;
+    return n % 2 == 0 and n &gt; threshold
+
+
+def safe_divide(a: float, b: float) -&gt; float:
+    &quot;&quot;&quot;True division that raises a clear error instead of crashing on zero.&quot;&quot;&quot;
+    if b == 0:
+        raise ZeroDivisionError(&quot;cannot divide by zero&quot;)
+    return a / b
+
+
+def floats_are_equal(a: float, b: float) -&gt; bool:
+    &quot;&quot;&quot;Compare floats safely instead of using ==.&quot;&quot;&quot;
+    return math.isclose(a, b)
+
+
+def convert_to_int(value: str) -&gt; int:
+    &quot;&quot;&quot;Convert a numeric string to int, rounding decimals properly.&quot;&quot;&quot;
+    return round(float(value))
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>n % 2 == 0</code> checks evenness — any number modulo 2 is either 0 (even) or 1 (odd). This single operator is the standard even/odd check you'll reuse constantly.</li>
+<li><code>and n &gt; threshold</code> chains a second condition; both must be <code>True</code> for the whole expression to be <code>True</code>.</li>
+<li><code>safe_divide</code> checks for zero before dividing, since Python raises <code>ZeroDivisionError</code> on <code>a / 0</code> and it's better to fail with an intentional, readable error.</li>
+<li><code>math.isclose(a, b)</code> replaces <code>a == b</code> for floats. Because floats are binary approximations, direct equality checks are unreliable — <code>isclose</code> checks that two values are "close enough" within a tolerance instead of bit-for-bit identical.</li>
+<li><code>round(float(value))</code> first converts the string to a float, then rounds to the nearest integer — this avoids the common mistake of using <code>int()</code> on a decimal, which truncates instead of rounding.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Let's trace <code>is_even_and_greater_than(14, 10)</code>:</p>
+<ol>
+<li><code>n % 2</code> → <code>14 % 2</code> → <code>0</code></li>
+<li><code>0 == 0</code> → <code>True</code></li>
+<li><code>n &gt; threshold</code> → <code>14 &gt; 10</code> → <code>True</code></li>
+<li><code>True and True</code> → <code>True</code></li>
+</ol>
+<p>Function returns <code>True</code>, because 14 is even and greater than 10.</p>
+<p>Now <code>is_even_and_greater_than(7, 10)</code>:</p>
+<ol>
+<li><code>7 % 2</code> → <code>1</code></li>
+<li><code>1 == 0</code> → <code>False</code></li>
+<li>Python short-circuits <code>and</code> here — since the left side is already <code>False</code>, it never bothers evaluating <code>n &gt; threshold</code>.</li>
+<li>Result: <code>False</code></li>
+</ol>
+<p>That short-circuit behavior is worth remembering: <code>and</code> stops as soon as it hits a <code>False</code>, and <code>or</code> stops as soon as it hits a <code>True</code>. This matters for performance and for writing conditions that avoid errors (like checking <code>x != 0 and 10 / x &gt; 1</code> safely).</p>
+<h2>Complexity Analysis</h2>
+<p>Every operator discussed here — arithmetic, comparison, and logical — runs in <strong>O(1) time and O(1) space</strong> for fixed-size numeric types (<code>int</code>, <code>float</code>). Python doesn't loop or recurse to evaluate <code>a + b</code> or <code>a % b</code>; these map to a constant number of low-level operations. This holds true regardless of the size of the expression's <em>result</em>, though extremely large integers in Python (arbitrary precision) can technically take longer for very large magnitudes — a detail that rarely matters outside of cryptography-scale numbers.</p>
+<h2>Alternative Solutions</h2>
+<p>For the "check even and greater than threshold" example, an alternative using bitwise AND is worth knowing: <code>n &amp; 1 == 0</code> also checks evenness, since the last bit of a binary number is 0 for even numbers. It's marginally faster than <code>%</code> in some languages, but in Python the performance difference is negligible, and <code>n % 2 == 0</code> is far more readable. Prefer <code>%</code> unless you're working in a domain where bitwise operations are already the established idiom (like flags or masks).</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Zero division:</strong> <code>5 / 0</code> and <code>5 // 0</code> both raise <code>ZeroDivisionError</code> — always guard against a zero divisor.</li>
+<li><strong>Negative floor division:</strong> <code>-7 // 2</code> gives <code>-4</code>, not <code>-3</code>, because floor division always rounds toward negative infinity, not toward zero.</li>
+<li><strong>Negative modulo:</strong> <code>-7 % 2</code> gives <code>1</code> in Python (not <code>-1</code> as in some other languages), because Python's modulo result always matches the sign of the divisor.</li>
+<li><strong>Float precision:</strong> <code>0.1 + 0.2 == 0.3</code> evaluates to <code>False</code> due to binary floating-point representation — always use <code>math.isclose</code> for float comparisons.</li>
+<li><strong>Type mismatch:</strong> <code>"5" + 3</code> raises <code>TypeError</code> — Python won't silently convert strings and numbers for <code>+</code>.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Using <code>=</code> (assignment) when you mean <code>==</code> (comparison) — this is a syntax error in an <code>if</code> statement, but can silently reassign a variable in other contexts.</li>
+<li>Assuming <code>/</code> and <code>//</code> behave the same — <code>/</code> always returns a float, <code>//</code> returns a floored result.</li>
+<li>Using <code>int()</code> to round a float — <code>int(3.9)</code> gives <code>3</code>, not <code>4</code>, because it truncates rather than rounds. Use <code>round()</code> instead.</li>
+<li>Comparing floats with <code>==</code> — always use <code>math.isclose()</code> to avoid false negatives from binary precision errors.</li>
+<li>Forgetting operator precedence and assuming left-to-right evaluation — <code>2 + 3 * 4</code> is <code>14</code>, not <code>20</code>.</li>
+<li>Mixing types without converting — <code>"5" + 3</code> crashes; you need <code>int("5") + 3</code> or <code>"5" + str(3)</code>.</li>
+<li>Dividing by zero without a guard, which crashes the program instead of failing gracefully.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What's the difference between <code>/</code> and <code>//</code> in Python, and when would you use each?</li>
+<li>How would you check if a number is even without using the modulo operator?</li>
+<li>Why shouldn't you compare two floats with <code>==</code>? What's the alternative?</li>
+<li>Explain Python's operator precedence for a mixed expression like <code>a + b * c &gt; d and e</code>.</li>
+<li>What happens when you divide a negative number using floor division and modulo?</li>
+<li>How does Python's <code>and</code>/<code>or</code> short-circuiting affect program behavior and performance?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 7 (Reverse Integer):</strong> relies heavily on <code>//</code> and <code>%</code> to peel off digits one at a time.</li>
+<li><strong>LeetCode 9 (Palindrome Number):</strong> uses modulo and floor division to reverse digits without converting to a string.</li>
+<li><strong>LeetCode 66 (Plus One):</strong> requires careful handling of carry logic, which depends on modulo/floor-division intuition.</li>
+<li><strong>LeetCode 231 (Power of Two):</strong> tests understanding of modulo and bitwise operators for even/odd and power checks.</li>
+</ul>
+<p>These all build directly on the arithmetic and modulo intuition from this lesson — if you understand <em>why</em> modulo isolates the last digit, these problems become mechanical instead of mysterious.</p>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Arithmetic operators map almost exactly to what you learned in school, with <code>//</code> and <code>%</code> as the two new, powerful additions.</li>
+<li><code>/</code> always returns a float; <code>//</code> and <code>%</code> are a matched pair — one gives whole groups, the other gives the leftover.</li>
+<li>Comparisons always resolve to <code>True</code> or <code>False</code>, never anything else.</li>
+<li><code>and</code> requires everything to pass, <code>or</code> needs just one, <code>not</code> flips the result — and both <code>and</code>/<code>or</code> short-circuit.</li>
+<li>Precedence follows PEMDAS-style rules, with logical operators evaluated last — when in doubt, add parentheses.</li>
+<li>Never compare floats with <code>==</code>; use <code>math.isclose()</code> instead.</li>
+<li><code>int()</code> truncates, <code>round()</code> rounds — know which one your problem actually needs.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>For the full step-by-step walkthrough with live examples and whiteboard-style tracing of expression evaluation, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of the <strong>Daily Python LeetCode</strong> series — a day-by-day walkthrough of Python fundamentals and interview-style problem solving, built for developers who want to go from "I know some Python" to "I can confidently solve problems under interview pressure." Each lesson builds directly on the last, so today's operators and expressions become tomorrow's building blocks for conditionals, loops, and full algorithms.</p>
+<h2>Call To Action</h2>
+<p>If this helped clarify how Python actually evaluates your code, subscribe on YouTube so you don't miss the next lesson, and subscribe to the Substack newsletter for the written breakdown delivered straight to your inbox. Drop a comment with the practice expression from tonight's homework — write one expression that checks whether a number is even and greater than ten — and share this with a fellow developer who's still getting tripped up by <code>/</code> vs <code>//</code>.</p>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>Most bugs I've debugged in production didn't come from complex algorithms — they came from someone misunderstanding how their language evaluates a simple expression.</p>
+<p>Today's lesson in my Daily Python series covers arithmetic, comparison, and logical operators — the stuff that feels "too basic" to study carefully, which is exactly why so many developers skip it and pay for it later.</p>
+<p>A few things worth internalizing even if you've been coding for years:</p>
+<p>→ <code>/</code> always returns a float in Python, even when the division is exact (<code>8 / 2</code> gives <code>4.0</code>, not <code>4</code>)
+→ Floor division (<code>//</code>) rounds toward negative infinity, not toward zero — this matters a lot with negative numbers
+→ Comparing floats with <code>==</code> is a silent bug waiting to happen; <code>0.1 + 0.2 == 0.3</code> is <code>False</code>. Use <code>math.isclose()</code> instead
+→ <code>int(3.9)</code> truncates to <code>3</code> — it does not round. I once shipped that exact mistake in a billing calculation. Learned the hard way.</p>
+<p>Operator precedence follows PEMDAS-style rules, and logical operators (<code>and</code>, <code>or</code>, <code>not</code>) evaluate last. When an expression has more than two operators, I default to parentheses — not because I don't know the rules, but because the next person reading the code shouldn't have to.</p>
+<p>Fundamentals compound. If you're solid on this, conditionals, loops, and algorithm problems all get easier.</p>
+<p>What's a "basic" language feature that bit you in production? Curious what others have run into.</p>
+<h1>Python #SoftwareEngineering #CodingInterview #LearnToCode</h1>
+<h2>Twitter/X Thread</h2>
+<p>1/ Most Python bugs I've debugged didn't come from clever algorithms. They came from someone misunderstanding a basic operator. Let's fix that — a thread on arithmetic, comparison, and logic in Python 🧵</p>
+<p>2/ First: <code>/</code> vs <code>//</code>. Regular division (<code>/</code>) always returns a float. <code>8 / 2</code> gives <code>4.0</code>, not <code>4</code>. Floor division (<code>//</code>) gives you whole numbers, rounded down — always down, even for negatives.</p>
+<p>3/ <code>-7 // 2</code> gives <code>-4</code>, not <code>-3</code>. Floor division rounds toward negative infinity, not toward zero. This trips up more people than you'd think.</p>
+<p>4/ Modulo (<code>%</code>) gives you the leftover after division. <code>7 % 2</code> is <code>1</code>. And here's the trick: any number <code>% 2</code> is <code>0</code> if even, <code>1</code> if odd. One operator, infinite even/odd checks.</p>
+<p>5/ Comparisons always return <code>True</code> or <code>False</code>. Nothing else. <code>==</code> asks a question. <code>=</code> assigns a value. Mixing these up in an <code>if</code> statement is one of the most common beginner errors.</p>
+<p>6/ <code>and</code> requires every condition to be true. <code>or</code> needs just one. <code>not</code> flips the result. Think of a bouncer: age 18+ AND valid ID. Or: member OR birthday. Both patterns show up constantly in real code.</p>
+<p>7/ Precedence matters. <code>2 + 3 * 4 &gt; 10</code> isn't evaluated left to right — multiplication happens first (<code>12</code>), then addition (<code>14</code>), then comparison (<code>True</code>). Python always resolves highest priority first.</p>
+<p>8/ When an expression has 3+ operators, just add parentheses. Costs nothing. Saves the next reader (probably future you) from re-deriving precedence rules.</p>
+<p>9/ Float trap: <code>0.1 + 0.2 == 0.3</code> is <code>False</code>. Floats are binary approximations, not exact decimals. Use <code>math.isclose()</code> instead of <code>==</code> for float comparisons. Always.</p>
+<p>10/ Last one: <code>int(3.9)</code> gives <code>3</code>, not <code>4</code>. It truncates, it doesn't round. Use <code>round()</code> when you actually want the nearest number. I shipped the wrong one in a billing script once. Never again.</p>
+<h2>Facebook Post</h2>
+<p>Ever wonder why <code>8 / 2</code> in Python gives you <code>4.0</code> instead of just <code>4</code>? Or why <code>0.1 + 0.2</code> doesn't quite equal <code>0.3</code>? Today's Python lesson breaks down arithmetic, comparison, and logical operators — the building blocks behind literally every line of code you'll ever write. We cover the sneaky differences between <code>/</code> and <code>//</code>, what modulo actually does, how <code>and</code>/<code>or</code>/<code>not</code> work like a bouncer checking IDs at a club, and why Python always multiplies before it adds. If you're learning Python or just want to make sure your fundamentals are solid, this one's worth ten minutes. Link in comments!</p>
+<h2>Reddit Summary</h2>
+<p>Wrote up a breakdown of Python's arithmetic, comparison, and logical operators — specifically the parts that trip people up even after they've been writing Python for a while.</p>
+<p>Key things covered:
+- Why <code>/</code> always returns a float even on exact division, while <code>//</code> floors the result (and floors toward negative infinity, not zero, for negative numbers)
+- Modulo as the "remainder" operator, and why <code>n % 2</code> is the standard even/odd check
+- Why comparing floats with <code>==</code> is unreliable (<code>0.1 + 0.2 == 0.3</code> is <code>False</code>) and why <code>math.isclose()</code> is the fix
+- Operator precedence — Python evaluates in a fixed order (parens → exponents → mult/div → add/sub → comparisons → logical operators), not left-to-right
+- <code>int()</code> truncates instead of rounding — a mistake that's easy to make in anything involving money</p>
+<p>Full write-up with code examples and a dry-run trace of expression evaluation is linked if useful. Happy to answer questions about any of it here.</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># Python Numbers, Operators &amp; Expressions
+
+## Problem
+
+Understand how Python evaluates arithmetic, comparison, and logical
+expressions — including operator precedence, floor vs. true division,
+modulo, and type conversion between int, float, and str.
+
+## Intuition
+
+Every operator answers one specific question. Floor division answers
+&quot;how many whole groups fit?&quot; Modulo answers &quot;what's left over?&quot; True
+division answers &quot;what's the exact value?&quot; Comparisons ask yes/no
+questions, and logical operators combine those answers. Precedence
+determines which question Python answers first when an expression has
+multiple operators — apply the same order as PEMDAS, and use
+parentheses whenever it's not obvious.
+
+## Approach
+
+1. Resolve parentheses first.
+2. Apply exponentiation (`**`).
+3. Apply multiplication, division, floor division, modulo (`*`, `/`, `//`, `%`).
+4. Apply addition and subtraction (`+`, `-`).
+5. Apply comparisons (`==`, `!=`, `&lt;`, `&gt;`, `&lt;=`, `&gt;=`).
+6. Apply logical operators, in order: `not`, `and`, `or`.
+
+## Python Solution
+
+\`\`\`python
+import math
+
+
+def is_even_and_greater_than(n: int, threshold: int) -&gt; bool:
+    &quot;&quot;&quot;Check whether n is even and strictly greater than threshold.&quot;&quot;&quot;
+    return n % 2 == 0 and n &gt; threshold
+
+
+def safe_divide(a: float, b: float) -&gt; float:
+    &quot;&quot;&quot;True division that raises a clear error instead of crashing on zero.&quot;&quot;&quot;
+    if b == 0:
+        raise ZeroDivisionError(&quot;cannot divide by zero&quot;)
+    return a / b
+
+
+def floats_are_equal(a: float, b: float) -&gt; bool:
+    &quot;&quot;&quot;Compare floats safely instead of using ==.&quot;&quot;&quot;
+    return math.isclose(a, b)
+
+
+def convert_to_int(value: str) -&gt; int:
+    &quot;&quot;&quot;Convert a numeric string to int, rounding decimals properly.&quot;&quot;&quot;
+    return round(float(value))
+\`\`\`
+
+## Complexity
+
+- **Time:** O(1) for all operators on fixed-size numeric types.
+- **Space:** O(1) — no additional data structures involved.
+
+## Video
+
+Watch the full lesson here: {LINK}
+
+## Article
+
+Full written breakdown with examples, dry runs, and common mistakes:
+see the linked article for the complete walkthrough.
+</code></pre></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/6GDq2IQTa5o' target='_blank'>▶ Watch on YouTube</a></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>
