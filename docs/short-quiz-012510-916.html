@@ -2,6 +2,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Can You Spot the Bug in This XOR Swap? 🐛 #shorts — Python LeetCode Solution</title><meta name="description" content="Think you know the classic XOR swap trick? This quick quiz puts your bit-manipulation skills to the test.
 We show an XOR swap implementation with a subtle bug — pause the video and see if you can spot">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/short-quiz-012510-916.html">
 <meta property="og:title" content="Can You Spot the Bug in This XOR Swap? 🐛 #shorts — Python LeetCode Solution"><meta property="og:type" content="website">
 <meta property="og:description" content="Think you know the classic XOR swap trick? This quick quiz puts your bit-manipulation skills to the test.
@@ -9,7 +10,489 @@ We show an XOR swap implementation with a subtle bug — pause the video and see
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Can You Spot the Bug in This XOR Swap? 🐛 #shorts</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/vg5mvuEKY6c' allowfullscreen></iframe></div><article><p>Think you know the classic XOR swap trick? This quick quiz puts your bit-manipulation skills to the test.
-We show an XOR swap implementation with a subtle bug — pause the video and see if you can spot</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/vg5mvuEKY6c' target='_blank'>▶ Watch on YouTube</a></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Can You Spot the Bug in This XOR Swap? 🐛 #shorts</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/vg5mvuEKY6c' allowfullscreen></iframe></div><article><h1>SEO PACKAGE</h1>
+<h2>1. SEO Title</h2>
+<p>Why the XOR Swap Trick Breaks: The Same-Variable Bug Every Developer Should Know</p>
+<h2>2. SEO Subtitle</h2>
+<p>Learn why the classic no-temp XOR swap silently destroys data when both operands point to the same location — and when to just use a temp variable.</p>
+<h2>3. Featured Quote</h2>
+<blockquote>
+<p>"Clever bit tricks fail on the edge case a boring temp variable never even notices."</p>
+</blockquote>
+<h2>4. Meta Description</h2>
+<p>The XOR swap trick has a hidden bug: when both indices point to the same variable, your value is lost. Learn why, and when to avoid it.</p>
+<h2>5. URL Slug</h2>
+<p><code>xor-swap-same-variable-bug-python</code></p>
+<h2>6. Keywords</h2>
+<p>XOR swap, XOR swap bug, bit manipulation, swap without temp variable, Python swap, aliasing bug, bitwise XOR, in-place swap, same variable swap, coding interview bit tricks, XOR algorithm, swap two numbers, Python bitwise operators, edge case bugs, data structures interview, low-level programming, temp variable swap, exclusive or, integer swap Python, software engineering fundamentals</p>
+<h2>7. Tags</h2>
+<p><code>python</code>, <code>bit-manipulation</code>, <code>xor</code>, <code>coding-interview</code>, <code>algorithms</code>, <code>data-structures</code>, <code>bitwise-operators</code>, <code>edge-cases</code>, <code>software-engineering</code>, <code>swap</code>, <code>interview-prep</code>, <code>low-level-programming</code>, <code>debugging</code></p>
+<hr />
+<h1>MAIN ARTICLE</h1>
+<h2>8. Introduction</h2>
+<p>Every developer eventually meets the XOR swap trick. It shows up in interview prep threads, in old C codebases, and in "cool tricks" lists: swap two values <strong>without a temporary variable</strong>, using nothing but three XOR operations. It feels like a magic spell — no extra memory, no third box, just bitwise sleight of hand.</p>
+<p>But this trick hides one of the most instructive bugs in all of programming. It's not a syntax error. It's not a typo. It's a <em>logical</em> failure that only appears on a specific edge case, and it silently corrupts data instead of crashing loudly.</p>
+<p>Interviewers love this topic because it tests more than "do you know XOR." It tests whether you understand <strong>aliasing</strong> — the situation where two names or two indices refer to the same underlying memory. It tests whether you reason about edge cases <em>before</em> trusting clever code. And it tests judgment: knowing when a micro-optimization is worth the risk and when the boring solution is simply better engineering.</p>
+<p>If you can explain why the XOR swap breaks and when to avoid it, you demonstrate exactly the kind of low-level reasoning that separates someone who <em>memorizes</em> tricks from someone who <em>understands</em> them. Let's build that understanding from the ground up.</p>
+<h2>9. Problem Overview</h2>
+<p>The task sounds trivial: given two variables (or two array elements), exchange their values so that the first holds what the second held, and vice versa.</p>
+<p>The classic beginner solution uses a temporary variable:</p>
+<pre><code class="language-python">temp = a
+a = b
+b = temp
+</code></pre>
+<p>Three assignments, one extra variable. Clear, correct, done.</p>
+<p>The "clever" alternative claims you can do this with <strong>zero extra storage</strong> by exploiting a property of the XOR (<code>^</code>, exclusive or) operator. XOR has a beautiful mathematical structure: a number XORed with itself is <code>0</code>, and XOR is reversible. That reversibility is what makes swapping without a temp <em>seem</em> possible.</p>
+<p>The catch — and the real problem we're solving today — is this: <strong>the XOR swap only works when the two operands are stored in different locations.</strong> The moment they alias the same location (for example, you call <code>swap(arr, i, j)</code> with <code>i == j</code>), the trick doesn't just fail to swap. It <strong>zeroes the value out permanently</strong>. Your data is gone, with no error message to warn you.</p>
+<p>So the real question isn't "how do I swap two numbers?" It's "why does this specific implementation break, and how do I write swap code that is safe in every case?"</p>
+<h2>10. Example</h2>
+<p>Let's make it concrete with two scenarios.</p>
+<p><strong>Scenario A — different variables (works correctly):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Operation</th>
+<th><code>a</code></th>
+<th><code>b</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Start</td>
+<td>—</td>
+<td>5</td>
+<td>9</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>a = a ^ b</code></td>
+<td>12</td>
+<td>9</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>b = a ^ b</code></td>
+<td>12</td>
+<td>5</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>a = a ^ b</code></td>
+<td>9</td>
+<td>5</td>
+</tr>
+</tbody>
+</table>
+<p>Result: <code>a = 9</code>, <code>b = 5</code>. Swapped correctly. </p>
+<p><strong>Scenario B — same location (the bug):</strong></p>
+<p>Imagine <code>swap(arr, i, j)</code> where <code>i == j</code>, and <code>arr[i] = 7</code>. Both <code>x</code> and <code>y</code> below refer to the <em>same slot</em>:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Operation</th>
+<th>Value in the shared slot</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Start</td>
+<td>—</td>
+<td>7</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>slot = slot ^ slot</code></td>
+<td><code>7 ^ 7 = 0</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>slot = slot ^ slot</code></td>
+<td><code>0 ^ 0 = 0</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>slot = slot ^ slot</code></td>
+<td><code>0 ^ 0 = 0</code></td>
+</tr>
+</tbody>
+</table>
+<p>Result: the value <code>7</code> is <strong>destroyed</strong> and replaced with <code>0</code>. The number didn't get swapped with itself (which should be a harmless no-op) — it got erased. That is the bug the quiz answer "B" points to: <strong>when <code>i == j</code>, <code>x ^ x</code> is <code>0</code>, and your value is gone forever.</strong></p>
+<h2>11. Intuition</h2>
+<p>Here's how an experienced engineer discovers this bug without needing anyone to point it out.</p>
+<p>XOR swapping relies on the identity <strong><code>v ^ v == 0</code></strong>. That's the engine of the whole trick — it's what lets the second step "cancel out" one value and recover the other. When <code>a</code> and <code>b</code> are separate, cancellation is helpful: it strips <code>a</code> back out so <code>b</code> can absorb the original <code>a</code>.</p>
+<p>But the same identity that makes the trick work is a landmine when both operands are the <em>same storage</em>. The first line, <code>a = a ^ b</code>, is supposed to fold both values into <code>a</code>. When <code>a</code> and <code>b</code> are the same slot, you're computing <code>slot ^ slot</code>, which is <code>0</code> — and you've just <strong>overwritten your only copy</strong> of the value with zero. There is no longer any <code>b</code> sitting somewhere else to recover it from. Every subsequent XOR just churns zeros.</p>
+<p>The mental red flag is this: <strong>any in-place algorithm that writes to a location before reading everything it needs is fragile under aliasing.</strong> A seasoned engineer sees "swap without temp using the destination as scratch space" and immediately asks: <em>what if source and destination are the same?</em> That single question surfaces the bug before a single test runs.</p>
+<p>The temp-variable version doesn't have this problem because it never destroys a value before copying it somewhere safe. <code>temp = a</code> preserves the value first. Even if <code>a</code> and <code>b</code> are the same slot, you end up assigning the value back to itself — a harmless no-op.</p>
+<h2>12. Brute Force Solution</h2>
+<p><strong>Idea:</strong> Use a temporary variable to hold one value while you overwrite it.</p>
+<p><strong>Algorithm:</strong>
+1. Copy <code>a</code> into <code>temp</code>.
+2. Assign <code>b</code> into <code>a</code>.
+3. Assign <code>temp</code> into <code>b</code>.</p>
+<pre><code class="language-python">def swap_with_temp(arr, i, j):
+    temp = arr[i]
+    arr[i] = arr[j]
+    arr[j] = temp
+</code></pre>
+<p><strong>Advantages:</strong>
+- Correct in <strong>every</strong> case, including <code>i == j</code> (it degrades to a safe no-op).
+- Instantly readable — any developer understands it at a glance.
+- Works for any data type, not just integers.</p>
+<p><strong>Disadvantages:</strong>
+- Uses one extra variable's worth of memory (a few bytes — almost always irrelevant).</p>
+<p><strong>Time complexity:</strong> <code>O(1)</code> — three assignments.
+<strong>Space complexity:</strong> <code>O(1)</code> — one temporary.</p>
+<p>Calling this "brute force" is generous; it's actually the <em>correct</em> baseline. The XOR version is the risky "optimization."</p>
+<h2>13. Optimal Solution</h2>
+<p>The XOR swap is the "no extra space" approach — genuinely elegant when used correctly, and worth understanding because it teaches how XOR's reversibility works.</p>
+<p>The three-step recipe:</p>
+<pre><code>a = a ^ b     # a now holds the combined bits of both
+b = a ^ b     # b recovers the ORIGINAL a
+a = a ^ b     # a recovers the ORIGINAL b
+</code></pre>
+<p>Why each step works, bit by bit:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Expression</th>
+<th>What it produces</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>a = a ^ b</code></td>
+<td><code>a</code> becomes <code>A ^ B</code> (a mix carrying enough info to recover either)</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>b = a ^ b</code> = <code>(A ^ B) ^ B</code></td>
+<td><code>B</code> cancels, leaving <code>A</code> → <code>b</code> now holds original <code>A</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>a = a ^ b</code> = <code>(A ^ B) ^ A</code></td>
+<td><code>A</code> cancels, leaving <code>B</code> → <code>a</code> now holds original <code>B</code></td>
+</tr>
+</tbody>
+</table>
+<p>The magic is XOR self-cancellation: <code>X ^ X = 0</code> and <code>X ^ 0 = X</code>. Step 2 removes the <code>B</code> component; step 3 removes the <code>A</code> component. Perfect swap — <strong>as long as <code>a</code> and <code>b</code> are distinct storage.</strong></p>
+<p>The <strong>truly optimal</strong> solution in production, though, recognizes the aliasing trap and guards against it — or just uses the temp version. If you insist on XOR swap, protect it:</p>
+<pre><code class="language-python">def xor_swap(arr, i, j):
+    if i != j:                # guard: skip when both point to the same slot
+        arr[i] ^= arr[j]
+        arr[j] ^= arr[i]
+        arr[i] ^= arr[j]
+</code></pre>
+<p>That single <code>if i != j</code> check turns a data-destroying trick into a safe operation.</p>
+<h2>14. Python Code</h2>
+<pre><code class="language-python">def swap_with_temp(arr, i, j):
+    &quot;&quot;&quot;Swap two elements safely. Correct even when i == j.&quot;&quot;&quot;
+    arr[i], arr[j] = arr[j], arr[i]  # Pythonic, uses tuple packing under the hood
+
+
+def xor_swap(arr, i, j):
+    &quot;&quot;&quot;XOR swap with an aliasing guard.
+
+    Without the i != j check, xor_swap(arr, i, i) would zero out arr[i].
+    &quot;&quot;&quot;
+    if i != j:
+        arr[i] ^= arr[j]
+        arr[j] ^= arr[i]
+        arr[i] ^= arr[j]
+
+
+def xor_swap_buggy(arr, i, j):
+    &quot;&quot;&quot;The classic BUGGY version — kept for demonstration only. Do not use.&quot;&quot;&quot;
+    arr[i] ^= arr[j]   # when i == j, this is arr[i] ^= arr[i] -&gt; 0
+    arr[j] ^= arr[i]
+    arr[i] ^= arr[j]
+
+
+if __name__ == &quot;__main__&quot;:
+    # Correct behavior on distinct indices
+    data = [5, 9]
+    xor_swap(data, 0, 1)
+    assert data == [9, 5], data
+
+    # The guarded version is safe on the same index
+    same = [7]
+    xor_swap(same, 0, 0)
+    assert same == [7], &quot;guarded swap must leave the value untouched&quot;
+
+    # Proof of the bug: unguarded XOR swap destroys the value
+    broken = [7]
+    xor_swap_buggy(broken, 0, 0)
+    assert broken == [0], &quot;buggy version zeroes the value — this is the bug&quot;
+
+    print(&quot;All checks passed. The guard is what saves you.&quot;)
+</code></pre>
+<p>Note that in idiomatic Python you'd almost always write <code>arr[i], arr[j] = arr[j], arr[i]</code>. The interpreter evaluates the right side into a tuple first, so it is aliasing-safe and needs no temp of your own. The XOR version exists mainly to teach the underlying mechanics.</p>
+<h2>15. Code Walkthrough</h2>
+<ul>
+<li><strong><code>swap_with_temp</code> / tuple swap</strong> — <code>arr[i], arr[j] = arr[j], arr[i]</code> builds the tuple <code>(arr[j], arr[i])</code> fully before assigning. Because both reads happen before any write, <code>i == j</code> is harmless.</li>
+<li><strong><code>xor_swap</code> guard</strong> — <code>if i != j:</code> is the entire fix. It ensures we only run the XOR sequence when the two slots are genuinely different storage.</li>
+<li><strong><code>arr[i] ^= arr[j]</code></strong> — folds both values' bits into slot <code>i</code>. This is the step that would destroy the value if <code>i == j</code>.</li>
+<li><strong><code>arr[j] ^= arr[i]</code></strong> — uses the folded value to recover the original <code>arr[i]</code> into slot <code>j</code>.</li>
+<li><strong><code>arr[i] ^= arr[j]</code></strong> — uses the folded value again to recover the original <code>arr[j]</code> into slot <code>i</code>.</li>
+<li><strong>The <code>__main__</code> self-check</strong> — three assertions prove the guarded version is correct, prove it's safe on the same index, and <em>prove the bug exists</em> in the unguarded variant by showing the value becomes <code>0</code>.</li>
+</ul>
+<h2>16. Dry Run</h2>
+<p>Let's dry-run <code>xor_swap_buggy(broken, 0, 0)</code> with <code>broken = [7]</code>.</p>
+<p>Binary of <code>7</code> is <code>0111</code>.</p>
+<ol>
+<li><code>arr[0] ^= arr[0]</code> → <code>0111 ^ 0111 = 0000</code> → <code>arr[0]</code> is now <code>0</code>.</li>
+<li><code>arr[0] ^= arr[0]</code> → <code>0000 ^ 0000 = 0000</code> → still <code>0</code>.</li>
+<li><code>arr[0] ^= arr[0]</code> → <code>0000 ^ 0000 = 0000</code> → still <code>0</code>.</li>
+</ol>
+<p>Final: <code>broken = [0]</code>. The <code>7</code> is unrecoverable — there was never a second copy to XOR back from. This is precisely why the quiz's answer <strong>B</strong> is the bug: <code>x ^ x</code> collapses to zero on the very first step.</p>
+<p>Now compare the guarded call <code>xor_swap(same, 0, 0)</code>: the <code>if i != j</code> is <code>if 0 != 0</code>, which is <code>False</code>, so the body is skipped entirely. <code>same</code> stays <code>[7]</code>. Safe.</p>
+<h2>17. Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> <code>O(1)</code> for every version. Swapping is a constant number of operations regardless of input size — three XORs, or one tuple assignment.</li>
+<li><strong>Space:</strong> <code>O(1)</code> for all versions. The temp/tuple approach uses a tiny fixed amount of extra memory; XOR uses none beyond the operands. In practice this "savings" is a few bytes and is completely negligible on any modern machine.</li>
+</ul>
+<p>Why these are correct: there are no loops and no recursion. The work does not grow with the size of the array — you always touch exactly two slots. The much-hyped memory advantage of XOR swap is real only in the narrowest embedded contexts, and even there the correctness risk usually outweighs it.</p>
+<h2>18. Alternative Solutions</h2>
+<p><strong>Pythonic tuple swap (recommended):</strong></p>
+<pre><code class="language-python">arr[i], arr[j] = arr[j], arr[i]
+</code></pre>
+<p>This is the clear winner in Python. It's readable, safe under aliasing, works for <em>any</em> type (strings, objects, floats — not just integers), and the interpreter handles the temporary for you.</p>
+<p><strong>Arithmetic swap (another "no temp" trick):</strong></p>
+<pre><code class="language-python">a = a + b
+b = a - b
+a = a - b
+</code></pre>
+<p>This has the <strong>same class of bug</strong> plus an extra one: it also breaks when <code>a</code> and <code>b</code> alias, and it can overflow in fixed-width integer languages. In Python, integers are arbitrary precision so overflow isn't an issue, but the aliasing problem remains. Same lesson, same fix.</p>
+<p><strong>Comparison:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Extra memory</th>
+<th>Safe on aliasing?</th>
+<th>Works on non-integers?</th>
+<th>Readable?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tuple swap</td>
+<td>~O(1)</td>
+<td>✅ Yes</td>
+<td>✅ Yes</td>
+<td>✅ Excellent</td>
+</tr>
+<tr>
+<td>Temp variable</td>
+<td>O(1)</td>
+<td>✅ Yes</td>
+<td>✅ Yes</td>
+<td>✅ Excellent</td>
+</tr>
+<tr>
+<td>XOR (guarded)</td>
+<td>O(0)</td>
+<td>✅ Yes</td>
+<td>❌ Ints only</td>
+<td>⚠️ Needs comment</td>
+</tr>
+<tr>
+<td>XOR (unguarded)</td>
+<td>O(0)</td>
+<td>❌ <strong>No</strong></td>
+<td>❌ Ints only</td>
+<td>❌ Trap</td>
+</tr>
+</tbody>
+</table>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong>Same index / aliasing (<code>i == j</code>):</strong> The headline bug. Unguarded XOR destroys the value. Always the first case to test.</li>
+<li><strong>Empty input:</strong> Calling swap on an empty array with any index raises <code>IndexError</code> — validate indices before swapping if input is untrusted.</li>
+<li><strong>Single element with valid same index:</strong> <code>swap(arr, 0, 0)</code> must be a no-op, not a wipe.</li>
+<li><strong>Duplicate values (<code>arr[i] == arr[j]</code> but <code>i != j</code>):</strong> Works fine — the indices differ, so XOR still cancels correctly. Equal values are <em>not</em> the same as equal indices.</li>
+<li><strong>Minimum / maximum integers:</strong> In Python, arbitrary-precision integers mean no overflow; the arithmetic-swap trick would be dangerous here in C/Java, but XOR is bit-safe regardless of magnitude.</li>
+<li><strong>Negative numbers:</strong> XOR operates on the two's-complement bit patterns and swaps them correctly, as long as the aliasing guard holds.</li>
+</ul>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Assuming <code>i == j</code> is impossible.</strong> In real sort and partition code, <code>i == j</code> happens constantly (a pivot equal to a boundary, a fixed point). This is <em>the</em> mistake the quiz targets.</li>
+<li><strong>Confusing equal values with equal indices.</strong> Two different slots holding the same number swap fine. Only <em>shared storage</em> is the problem.</li>
+<li><strong>Using XOR swap on non-integers.</strong> <code>^</code> isn't defined for floats, strings, or objects. The trick is integer-only.</li>
+<li><strong>Porting the arithmetic swap to C/Java without thinking about overflow.</strong> <code>a + b</code> can overflow fixed-width integers and silently corrupt results.</li>
+<li><strong>Reaching for the "clever" trick to save memory that doesn't matter.</strong> A few bytes are never worth a data-loss bug. Optimize for correctness and readability first.</li>
+<li><strong>Trusting a trick you can't dry-run from memory.</strong> If you can't trace <code>x ^ x</code> on the spot, you shouldn't ship it in a hot path.</li>
+</ol>
+<h2>21. Interview Questions</h2>
+<ul>
+<li>Walk me through <em>why</em> XOR swap works, step by step, using bits.</li>
+<li>What exactly happens when <code>i == j</code>, and why?</li>
+<li>How would you fix the XOR swap so it's safe in all cases?</li>
+<li>The arithmetic version (<code>a = a + b; ...</code>) has two bugs in a language like C — name both.</li>
+<li>Why does Python's <code>a, b = b, a</code> avoid this problem entirely?</li>
+<li>When, if ever, is XOR swap the <em>right</em> choice in production?</li>
+<li>Can you swap two variables in place without XOR, temp, or tuple unpacking? (Trick question — you almost never should.)</li>
+</ul>
+<h2>22. Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 136 — Single Number:</strong> Uses <code>v ^ v = 0</code> to cancel out every duplicate and isolate the lone element. Same XOR identity, put to good use.</li>
+<li><strong>LeetCode 268 — Missing Number:</strong> XOR all indices with all values; matches cancel, and the missing number survives. Reversibility again.</li>
+<li><strong>LeetCode 260 — Single Number III:</strong> Extends the XOR-cancellation idea to isolate <em>two</em> unique numbers.</li>
+<li><strong>LeetCode 461 — Hamming Distance:</strong> Counts differing bits via <code>x ^ y</code>. Reinforces reading XOR at the bit level.</li>
+<li><strong>LeetCode 190 — Reverse Bits / 191 — Number of 1 Bits:</strong> General bit-manipulation fluency, the same muscle you flex tracing the XOR swap.</li>
+</ul>
+<p>They're related because they all lean on XOR's two defining properties — <strong>self-cancellation</strong> (<code>x ^ x = 0</code>) and <strong>reversibility</strong> — the exact properties that make the swap work <em>and</em> make it dangerous.</p>
+<h2>23. Key Takeaways</h2>
+<ul>
+<li>The XOR swap works by folding two values together, then cancelling out one at a time using <code>x ^ x = 0</code>.</li>
+<li>It has a fatal aliasing bug: when both operands are the same storage (<code>i == j</code>), the first XOR zeroes the value permanently.</li>
+<li>A single <code>if i != j:</code> guard makes it safe — but at that point, a temp variable or tuple swap is simpler and safer.</li>
+<li>Clever, memoryless tricks trade a negligible byte for a real correctness risk. In modern engineering, that's a bad trade.</li>
+<li>The deeper lesson: <strong>any in-place operation that overwrites storage before reading everything it needs is fragile under aliasing.</strong> Always ask "what if source and destination are the same?"</li>
+</ul>
+<h2>24. Watch the Video</h2>
+<p>Want to see the bug revealed in real time and test whether you'd have caught it? Watch the short here: <strong>{LINK}</strong>. Pause on the quiz, trace what happens when both indices point at the same box, and check your answer against the reveal.</p>
+<h2>25. About the Series</h2>
+<p>This is part of the <strong>Daily Python LeetCode</strong> series, where we take one coding concept at a time — from bit tricks to dynamic programming — and break it down the way a senior engineer would explain it to a teammate: intuition first, code second, edge cases always. Each entry pairs a short video with a deep-dive article and a ready-to-use Python solution, so you build real understanding, not just memorized patterns.</p>
+<h2>26. Call To Action</h2>
+<p>If this cleared up the XOR swap for you:
+- <strong>Subscribe on YouTube</strong> so you never miss a daily breakdown.
+- <strong>Subscribe on Substack</strong> to get each deep-dive article in your inbox.
+- <strong>Comment</strong> with the trick you <em>used</em> to trust before you understood its edge case.
+- <strong>Share</strong> this with the teammate who keeps sneaking clever one-liners into your codebase.</p>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>The XOR swap trick — exchanging two values without a temp variable — is a favorite in interview prep and old codebases. It feels elegant: three XOR operations, zero extra memory. But it hides a bug that trips up even experienced engineers.</p>
+<p>Here's the trick:</p>
+<pre><code>a = a ^ b
+b = a ^ b
+a = a ^ b
+</code></pre>
+<p>It works perfectly — as long as <code>a</code> and <code>b</code> live in <em>different</em> storage.</p>
+<p>The moment they alias the same location — say you call <code>swap(arr, i, j)</code> with <code>i == j</code> — it breaks. The first line becomes <code>x ^ x</code>, which is <code>0</code>. Your value isn't swapped with itself; it's erased. Permanently. No error, no crash. Just silent data loss.</p>
+<p>This matters because <code>i == j</code> isn't a rare theoretical case. It happens all the time in sorting and partitioning code, where a pivot lands on a boundary.</p>
+<p>The fix is one line: <code>if i != j:</code> before the XOR sequence. But once you add that guard, ask yourself — why not just use a temp variable or Python's <code>a, b = b, a</code>? Both are safe in every case, work on any data type, and read clearly at 3am when you're debugging.</p>
+<p>The real lesson isn't about XOR. It's about aliasing: any in-place operation that overwrites storage before reading everything it needs is fragile. Always ask, "What if source and destination are the same?"</p>
+<p>Clever tricks fail on the edge case a boring temp variable never even notices.</p>
+<h1>Python #CodingInterview #SoftwareEngineering #Algorithms #DataStructures</h1>
+<h2>Twitter/X Thread</h2>
+<p><strong>1/</strong> The XOR swap trick swaps two numbers with no temp variable. It's elegant, it's famous — and it hides a bug 90% of devs miss. Let's break it down. 🧵</p>
+<p><strong>2/</strong> The trick:</p>
+<pre><code>a = a ^ b
+b = a ^ b
+a = a ^ b
+</code></pre>
+<p>Three XORs, zero extra memory. Looks like magic.</p>
+<p><strong>3/</strong> It works because of two XOR properties:
+• <code>x ^ x = 0</code>
+• XOR is reversible
+Step by step, it folds both values together, then cancels one out at a time.</p>
+<p><strong>4/</strong> With <code>a = 5</code>, <code>b = 9</code>:
+- <code>a = 5^9 = 12</code>
+- <code>b = 12^9 = 5</code>
+- <code>a = 12^5 = 9</code>
+Swapped. Beautiful.</p>
+<p><strong>5/</strong> Now the trap. What if both operands point to the SAME storage? Like <code>swap(arr, i, j)</code> with <code>i == j</code>?</p>
+<p><strong>6/</strong> Then step one is <code>x ^ x</code>, which is <code>0</code>. You just overwrote your only copy with zero. There's no second value left to recover from.</p>
+<p><strong>7/</strong> The value isn't swapped with itself (a harmless no-op) — it's DESTROYED. Silently. No crash, no warning. That's the bug.</p>
+<p><strong>8/</strong> And <code>i == j</code> isn't rare. It happens constantly in sorting and partitioning code when an index lands on a boundary.</p>
+<p><strong>9/</strong> The fix is one line:</p>
+<pre><code>if i != j:
+    # xor swap
+</code></pre>
+<p>But now ask: why not just <code>a, b = b, a</code>? It's safe everywhere, works on any type, and reads instantly.</p>
+<p><strong>10/</strong> The real lesson isn't XOR. It's aliasing: any in-place op that writes before it finishes reading is fragile. Always ask "what if source == destination?" Clever tricks fail where a temp variable never does. Follow for more. 🐛</p>
+<h2>Facebook Post</h2>
+<p>Quick coding puzzle for the developers here 👇</p>
+<p>The XOR swap trick lets you swap two numbers without a temp variable — three lines of bitwise magic. It's famous, it's clever, and it has a sneaky bug that even experienced programmers miss.</p>
+<p>The gotcha? When both values point to the <em>same</em> variable, the first XOR turns your number into zero — and it's gone for good. No error, no crash, just silently deleted data.</p>
+<p>The fix is a single line, but honestly? Sometimes the "boring" temp variable is the smart engineering choice. Clever isn't always better.</p>
+<p>I broke the whole thing down — the intuition, the bit-level walkthrough, and how to make it safe — in a short video and a full article. Check it out and see if you'd have spotted the bug! 🐛</p>
+<h2>Reddit Summary</h2>
+<p><strong>The XOR swap trick has an aliasing bug worth understanding</strong></p>
+<p>The XOR swap (<code>a ^= b; b ^= a; a ^= b</code>) swaps two values without a temp variable. It works great — until both operands reference the same storage, e.g. <code>swap(arr, i, j)</code> with <code>i == j</code>.</p>
+<p>When that happens, the first step is <code>x ^ x</code>, which evaluates to <code>0</code>. You've overwritten your only copy of the value before there's anything to recover it from, so the value is destroyed rather than left unchanged. No exception is raised, which makes it easy to miss.</p>
+<p>This isn't a contrived case — <code>i == j</code> shows up regularly in partition/sort routines. The fix is a simple <code>if i != j:</code> guard, though at that point a temp variable or Python's <code>a, b = b, a</code> (which is aliasing-safe because the RHS tuple is built before assignment) is arguably better: safe in all cases, works on non-integer types, and clearer to read.</p>
+<p>The underlying takeaway generalizes beyond XOR: any in-place operation that writes to a location before reading everything it depends on is fragile under aliasing. The arithmetic swap (<code>a=a+b; b=a-b; a=a-b</code>) has the same flaw plus overflow risk in fixed-width languages.</p>
+<p>Curious whether people here still reach for XOR swap in any real context, or if it's purely a historical/interview curiosity at this point.</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># XOR Swap: The Same-Variable Bug
+
+Swapping two values without a temporary variable using XOR — and the
+aliasing bug that makes it dangerous.
+
+## Problem
+
+Swap two values in place. The classic &quot;no temp variable&quot; solution uses
+three XOR operations. It works correctly when the two operands live in
+**different** storage, but breaks silently when they alias the same
+location (e.g. `swap(arr, i, j)` with `i == j`).
+
+## Intuition
+
+XOR swap relies on two properties:
+- `x ^ x == 0` (self-cancellation)
+- XOR is reversible
+
+It folds both values together, then cancels one out at a time to recover
+the other. But when both operands are the **same** storage, the first
+step computes `x ^ x == 0` — overwriting the only copy of the value with
+zero before anything can recover it. The value is destroyed, not swapped.
+
+## Approach
+
+| Step | Expression        | Result                     |
+|------|-------------------|----------------------------|
+| 1    | `a = a ^ b`       | `a` = A ^ B                |
+| 2    | `b = a ^ b`       | `b` = original A           |
+| 3    | `a = a ^ b`       | `a` = original B           |
+
+Fix: guard with `if i != j` — or just use a temp / tuple swap, which is
+safe in every case and works on any type.
+
+## Python Solution
+
+```python
+def xor_swap(arr, i, j):
+    &quot;&quot;&quot;XOR swap with an aliasing guard (safe when i == j).&quot;&quot;&quot;
+    if i != j:
+        arr[i] ^= arr[j]
+        arr[j] ^= arr[i]
+        arr[i] ^= arr[j]
+
+
+def swap(arr, i, j):
+    &quot;&quot;&quot;Recommended: Pythonic, safe, works on any type.&quot;&quot;&quot;
+    arr[i], arr[j] = arr[j], arr[i]
+
+
+if __name__ == &quot;__main__&quot;:
+    d = [5, 9]
+    xor_swap(d, 0, 1)
+    assert d == [9, 5]
+
+    same = [7]
+    xor_swap(same, 0, 0)      # guarded -&gt; no-op
+    assert same == [7]
+
+    print(&quot;OK&quot;)
+</code></pre>
+<h2>Complexity</h2>
+<ul>
+<li><strong>Time:</strong> O(1)</li>
+<li><strong>Space:</strong> O(1)</li>
+</ul>
+<h2>Video</h2>
+<p>Watch the 60-second breakdown: {LINK}</p>
+<h2>Article</h2>
+<p>Full deep-dive (intuition, dry run, edge cases, common mistakes) is part
+of the <strong>Daily Python LeetCode</strong> series.
+```</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/vg5mvuEKY6c' target='_blank'>▶ Watch on YouTube</a></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>

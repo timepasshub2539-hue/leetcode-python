@@ -1,12 +1,373 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Python Lesson 2: Variables &amp; Data Types (int, float, str, bool) Explained — Python LeetCode Solution</title><meta name="description" content="Learn how Python variables actually work: what a variable is, how assignment fills it, and the core data types you&#x27;ll use constantly, integers, floats, strings, and booleans. We cover dynamic typing (">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-02-variables-and-basic-data-types.html">
 <meta property="og:title" content="Python Lesson 2: Variables &amp; Data Types (int, float, str, bool) Explained — Python LeetCode Solution"><meta property="og:type" content="website">
 <meta property="og:description" content="Learn how Python variables actually work: what a variable is, how assignment fills it, and the core data types you&#x27;ll use constantly, integers, floats, strings, and booleans. We cover dynamic typing ("><meta property="og:image" content="https://i.ytimg.com/vi/IgfwuLVWqZw/hqdefault.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 2: Variables &amp; Data Types (int, float, str, bool) Explained</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/IgfwuLVWqZw' allowfullscreen></iframe></div><article><p>Learn how Python variables actually work: what a variable is, how assignment fills it, and the core data types you&#x27;ll use constantly, integers, floats, strings, and booleans. We cover dynamic typing (</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/IgfwuLVWqZw' target='_blank'>▶ Watch on YouTube</a></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 2: Variables &amp; Data Types (int, float, str, bool) Explained</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/IgfwuLVWqZw' allowfullscreen></iframe></div><article><h1>SEO PACKAGE</h1>
+<h2>SEO Title</h2>
+<p>Python Variables and Data Types Explained: int, float, str, bool (Beginner Guide)</p>
+<h2>SEO Subtitle</h2>
+<p>A practical, beginner-friendly walkthrough of how Python variables work and how to use integers, floats, strings, and booleans correctly.</p>
+<h2>Featured Quote</h2>
+<p>"A variable doesn't lock you into a type — it just holds whatever you hand it, until you hand it something else."</p>
+<h2>Meta Description</h2>
+<p>Learn how Python variables and data types work — int, float, str, bool — with real examples, common beginner mistakes, and how dynamic typing works under the hood.</p>
+<h2>URL Slug</h2>
+<p>python-variables-data-types-explained</p>
+<h2>Keywords</h2>
+<p>python variables, python data types, int float str bool, dynamic typing python, static vs dynamic typing, python for beginners, python basics, learn python, python type function, python string concatenation, python boolean, python integer vs float, python naming conventions, python underscore variable names, python name error, python type error, python str function, beginner python tutorial, python fundamentals, coding interview basics</p>
+<h2>Tags</h2>
+<p>Python, Learn Python, Python Basics, Python for Beginners, Variables, Data Types, Dynamic Typing, Coding Tutorial, Programming Fundamentals, Software Engineering, Beginner Programming, Python Tutorial, Computer Science Basics</p>
+<hr />
+<h1>MAIN ARTICLE</h1>
+<h2>Introduction</h2>
+<p>Every programming language needs a way to store information, and Python's answer is the variable. Before you can write a single meaningful program — a calculator, a to-do list, a game — you need to understand how Python holds data in memory and how it decides what <em>kind</em> of data it's holding.</p>
+<p>This sounds basic, and it is, but it's also one of the most common places where beginners get tripped up, and where interviewers quietly test whether someone actually understands the language or just memorized syntax. Questions like "what's the difference between <code>5</code> and <code>5.0</code>?" or "why did concatenating a string and a number crash?" come up constantly in junior developer interviews, because they reveal whether you understand Python's type system or you've just been copy-pasting code that happens to work.</p>
+<p>Once you have a solid mental model of variables and data types, most of what follows in Python — functions, loops, data structures — becomes much easier, because they're all just operations performed on these basic building blocks.</p>
+<h2>Problem Overview</h2>
+<p>There's no LeetCode-style problem here — this is a foundational concept — but let's frame it as a set of questions every Python program needs to answer:</p>
+<ul>
+<li>How do you create a named storage location for a value?</li>
+<li>How does Python know what kind of value is stored, without you declaring it?</li>
+<li>What are the basic categories of values you'll work with constantly?</li>
+<li>What happens when you try to mix incompatible types together?</li>
+</ul>
+<p>In Python, the answer to the first question is <strong>assignment</strong>: you write a name, an equals sign, and a value. Python then automatically figures out the type — this is called <strong>dynamic typing</strong>, and it's one of the defining features of the language.</p>
+<h2>Example</h2>
+<pre><code class="language-python">age = 25
+name = &quot;Maya&quot;
+height = 5.9
+is_student = True
+
+print(type(age))        # &lt;class 'int'&gt;
+print(type(name))       # &lt;class 'str'&gt;
+print(type(height))     # &lt;class 'float'&gt;
+print(type(is_student)) # &lt;class 'bool'&gt;
+</code></pre>
+<p>Let's walk through what's happening:</p>
+<ul>
+<li><code>age = 25</code> creates an <strong>integer</strong> — a whole number with no decimal component.</li>
+<li><code>name = "Maya"</code> creates a <strong>string</strong> — text, wrapped in quotes.</li>
+<li><code>height = 5.9</code> creates a <strong>float</strong> — a number with a decimal point.</li>
+<li><code>is_student = True</code> creates a <strong>boolean</strong> — one of exactly two values, <code>True</code> or <code>False</code>, always capitalized.</li>
+</ul>
+<p>The <code>type()</code> function is your best friend when you're not sure what you're dealing with. Print it, and Python tells you exactly what's stored.</p>
+<p>A subtle but important detail: <code>10</code>, <code>10.0</code>, and <code>"10"</code> are three completely different types, even though they look almost identical.</p>
+<pre><code class="language-python">print(type(10))    # int
+print(type(10.0))  # float
+print(type(&quot;10&quot;))  # str
+</code></pre>
+<p>The presence of a decimal point makes it a float. The presence of quotes makes it a string, even if the characters inside are digits.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer thinks about this, rather than just memorizing rules.</p>
+<p>Picture a labeled box sitting on a shelf. The label is the variable name. Whatever you put inside the box is the value. The material the contents are made of — a stack of coins, a piece of paper with words on it, a light switch that's either on or off — that's the data type.</p>
+<p>When you write <code>age = 25</code>, you're not declaring "this box shall forever hold whole numbers." You're just placing a whole number inside a box labeled <code>age</code> right now. Python inspects what you handed it and tags the box with the appropriate type internally — you never state the type yourself.</p>
+<p>This is the core intuition behind <strong>dynamic typing</strong>: the box doesn't care what's inside it. You can empty it out and put something else in later:</p>
+<pre><code class="language-python">age = 25
+age = &quot;twenty-five&quot;  # totally legal, the box just holds something new now
+</code></pre>
+<p>Compare that to <strong>static typing</strong> (used in languages like Java or C++), where you declare up front, "this box only ever holds integers," and the compiler enforces that forever. Static typing catches type mistakes earlier — before the program even runs — at the cost of more upfront ceremony. Dynamic typing is faster to write and more flexible, but a type mismatch might not surface until the exact line of code that breaks actually executes. Neither is objectively better; it's a tradeoff between writing speed and early safety.</p>
+<p>Once you internalize "the box doesn't lock in a type, the value you hand it determines the type," most of Python's behavior around variables stops feeling like magic and starts feeling obvious.</p>
+<h2>Brute Force Solution</h2>
+<p>There isn't really a "brute force" version of storing a value — but there is a brute-force way beginners often approach <em>type-checking</em>, worth calling out because it's a common early mistake:</p>
+<p><strong>Idea:</strong> Manually check every value in your code using <code>type()</code> calls scattered everywhere, or worse, guess the type based on how the value looks in your source code.</p>
+<p><strong>Algorithm:</strong>
+1. Write a value.
+2. Assume its type based on appearance.
+3. Proceed without verifying.</p>
+<p><strong>Advantages:</strong> None, really — this isn't a real technique, it's the absence of one.</p>
+<p><strong>Disadvantages:</strong> It's exactly how bugs like <code>TypeError: can only concatenate str (not "int") to str</code> sneak into code — someone assumed a value was a string when it was actually an integer, and never checked.</p>
+<p><strong>Time complexity:</strong> N/A (this describes a habit, not an algorithm)
+<strong>Space complexity:</strong> N/A</p>
+<p>The "optimal solution" here isn't a smarter algorithm — it's a disciplined habit.</p>
+<h2>Optimal Solution</h2>
+<p>The real solution is a small set of practices that prevent the two classic beginner mistakes.</p>
+<p><strong>Mistake 1: Mixing strings and numbers with <code>+</code></strong></p>
+<pre><code class="language-python">price = 20
+message = &quot;Total: $&quot; + price  # TypeError
+</code></pre>
+<p>Python refuses to guess whether you meant to add numbers or concatenate text, so it raises a <code>TypeError</code>. The fix is to explicitly convert the number to a string using <code>str()</code>:</p>
+<pre><code class="language-python">message = &quot;Total: $&quot; + str(price)  # &quot;Total: $20&quot;
+</code></pre>
+<p><strong>Mistake 2: Forgetting quotes around text</strong></p>
+<pre><code class="language-python">color = red  # NameError: name 'red' is not defined
+</code></pre>
+<p>Without quotes, Python assumes <code>red</code> is the name of some other variable. Since no such variable exists, it crashes with a <code>NameError</code>. The fix is simply remembering that text always needs quotes:</p>
+<pre><code class="language-python">color = &quot;red&quot;
+</code></pre>
+<p>Here's a quick reference table for the four basic types:</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Example</th>
+<th>Use case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>int</code></td>
+<td><code>25</code></td>
+<td>Counting, scores, whole quantities</td>
+</tr>
+<tr>
+<td><code>float</code></td>
+<td><code>19.99</code></td>
+<td>Prices, measurements, precise values</td>
+</tr>
+<tr>
+<td><code>str</code></td>
+<td><code>"Maya"</code></td>
+<td>Names, messages, any text</td>
+</tr>
+<tr>
+<td><code>bool</code></td>
+<td><code>True</code></td>
+<td>Yes/no decisions, flags, conditions</td>
+</tr>
+</tbody>
+</table>
+<p>And naming conventions worth internalizing early:</p>
+<ul>
+<li>Use descriptive names: <code>total_price</code> instead of <code>tp</code>.</li>
+<li>Use underscores instead of spaces: <code>user_name</code>, not <code>user name</code>.</li>
+<li>Python is case-sensitive: <code>age</code> and <code>Age</code> are two separate variables.</li>
+</ul>
+<h2>Python Code</h2>
+<pre><code class="language-python">def demonstrate_variables():
+    &quot;&quot;&quot;Show variable assignment, type checking, and safe conversion.&quot;&quot;&quot;
+    age = 25
+    name = &quot;Maya&quot;
+    height = 5.9
+    is_student = True
+
+    print(f&quot;{name} is {age} years old, {height} ft tall, student: {is_student}&quot;)
+
+    # Explicit conversion avoids the classic str + int crash
+    price = 20
+    message = &quot;Total: $&quot; + str(price)
+    print(message)
+
+    return age, name, height, is_student, message
+
+
+if __name__ == &quot;__main__&quot;:
+    demonstrate_variables()
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>age = 25</code>, <code>name = "Maya"</code>, <code>height = 5.9</code>, <code>is_student = True</code> — four assignments, four different data types, no type declarations needed.</li>
+<li>The f-string (<code>f"..."</code>) embeds each variable directly into a formatted message — this is the standard, readable way to combine text and values in modern Python, safer than manual <code>+</code> concatenation.</li>
+<li><code>str(price)</code> explicitly converts the integer to a string before concatenation, which is the fix for Mistake 1 above.</li>
+<li>The function returns all values as a tuple, which is useful if you want to test the function's output.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Let's trace <code>demonstrate_variables()</code> step by step:</p>
+<ol>
+<li><code>age = 25</code> → Python creates an int, stores <code>25</code> under the name <code>age</code>.</li>
+<li><code>name = "Maya"</code> → Python creates a str, stores <code>"Maya"</code> under the name <code>name</code>.</li>
+<li><code>height = 5.9</code> → Python creates a float, stores <code>5.9</code> under the name <code>height</code>.</li>
+<li><code>is_student = True</code> → Python creates a bool, stores <code>True</code> under the name <code>is_student</code>.</li>
+<li>The f-string evaluates each variable and produces: <code>"Maya is 25 years old, 5.9 ft tall, student: True"</code>.</li>
+<li><code>price = 20</code> → an int.</li>
+<li><code>str(price)</code> converts <code>20</code> (int) into <code>"20"</code> (str).</li>
+<li><code>"Total: $" + "20"</code> → string concatenation succeeds, producing <code>"Total: $20"</code>.</li>
+</ol>
+<p>Output:</p>
+<pre><code>Maya is 25 years old, 5.9 ft tall, student: True
+Total: $20
+</code></pre>
+<h2>Complexity Analysis</h2>
+<p>Variable assignment and type checking are both <strong>O(1)</strong> in time and space — Python's variable binding is a constant-time operation (it just updates a reference in a namespace dictionary), and each value occupies a fixed, small amount of memory relative to the program overall. There's no loop or recursive structure involved, so there's nothing to analyze beyond "this happens once, immediately."</p>
+<h2>Alternative Solutions</h2>
+<p>The main "alternative" worth knowing is explicit type declaration using <strong>type hints</strong>, introduced for readability (not enforcement) in modern Python:</p>
+<pre><code class="language-python">age: int = 25
+name: str = &quot;Maya&quot;
+</code></pre>
+<p>This doesn't change Python's dynamic typing behavior at runtime — Python still won't stop you from reassigning <code>age = "twenty-five"</code> later — but it communicates intent to other developers and lets tools like <code>mypy</code> catch mismatches during development. It's a good habit in larger codebases, though unnecessary for small beginner scripts.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty string vs. no value:</strong> <code>name = ""</code> is a valid string of zero length, different from not assigning <code>name</code> at all.</li>
+<li><strong>Reassigning across types:</strong> <code>x = 5</code> then <code>x = "5"</code> is legal — the variable itself has no fixed type, only the current value does.</li>
+<li><strong>Large integers:</strong> Python has no fixed integer size limit (unlike many languages), so <code>x = 10**100</code> works without overflow.</li>
+<li><strong>Float precision:</strong> <code>0.1 + 0.2</code> doesn't exactly equal <code>0.3</code> due to floating-point representation — a common gotcha when comparing floats directly.</li>
+<li><strong>Boolean as integer:</strong> <code>True == 1</code> and <code>False == 0</code> both evaluate to <code>True</code> in Python, since booleans are technically a subtype of int.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Concatenating a string and a number directly with <code>+</code> without converting first.</li>
+<li>Forgetting quotes around text, causing a <code>NameError</code> instead of the intended string.</li>
+<li>Assuming a variable's type never changes, then being surprised when reassignment changes it.</li>
+<li>Comparing floats with <code>==</code> and getting unexpected results due to precision issues.</li>
+<li>Using vague variable names like <code>x</code>, <code>temp</code>, or <code>data1</code> that make code hard to read later.</li>
+<li>Confusing <code>age</code> and <code>Age</code> as the same variable — Python is case-sensitive.</li>
+<li>Assuming <code>"10"</code> and <code>10</code> behave identically just because they display the same.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What's the difference between dynamic and static typing, and what's the tradeoff?</li>
+<li>Why does <code>"5" + 5</code> raise an error, and how do you fix it?</li>
+<li>Is a boolean a separate type from an integer in Python, or related to it?</li>
+<li>What does <code>type()</code> return, and how would you use it to debug a type mismatch?</li>
+<li>Why is <code>5.0</code> a float and not an int, even though it represents a whole number?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Type Conversion / Casting exercises</strong> — practicing <code>int()</code>, <code>float()</code>, <code>str()</code>, <code>bool()</code> conversions reinforces this same intuition about types.</li>
+<li><strong>String Formatting (LeetCode-style string manipulation problems)</strong> — most string problems assume comfort with concatenation and type conversion first.</li>
+<li><strong>Truthy/Falsy Evaluation problems</strong> — booleans interacting with conditionals is a natural next step after this lesson.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Variables are labeled boxes created through assignment (<code>=</code>) — Python infers the type from the value you hand it.</li>
+<li>The four foundational types are <code>int</code>, <code>float</code>, <code>str</code>, and <code>bool</code>.</li>
+<li>Python uses <strong>dynamic typing</strong>: a variable's type can change over its lifetime, unlike statically typed languages.</li>
+<li>The two classic beginner errors — mixing types with <code>+</code>, and forgetting quotes — both stem from misunderstanding what type a value actually is.</li>
+<li>Good variable names and consistent casing prevent subtle bugs down the line.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with live coding and terminal output, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of the <strong>Daily Python LeetCode</strong> series, where every video breaks down one core Python concept or interview problem, builds the intuition behind it, and turns it into a clean, working solution. Whether you're just starting out or brushing up before interviews, the series is built to take you from fundamentals to interview-ready, one lesson at a time.</p>
+<h2>Call To Action</h2>
+<p>If this helped clarify how variables and types work, subscribe on YouTube so you don't miss the next lesson, and subscribe to the newsletter on Substack for the written breakdown delivered straight to your inbox. Drop a comment with any questions — and if you know someone starting their Python journey, share this with them.</p>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>Every Python developer eventually gets asked some version of this in an interview: "Why did this code crash when I tried to combine a number and a string?"</p>
+<p>The answer comes down to understanding variables and data types — arguably the most foundational concept in the language, and one that's easy to gloss over when you're just trying to get code running.</p>
+<p>A variable in Python is just a labeled container. What makes Python different from statically typed languages like Java is that you never declare the type upfront — Python infers it the moment you assign a value. This is called dynamic typing, and it's part of why Python feels so quick to write.</p>
+<p>But that flexibility comes with tradeoffs. Two mistakes trip up almost every beginner:</p>
+<ol>
+<li>Trying to combine a string and a number directly with <code>+</code> (fix: convert with <code>str()</code> first)</li>
+<li>Forgetting quotes around text, which Python then misreads as a variable name</li>
+</ol>
+<p>Understanding the four core types — <code>int</code>, <code>float</code>, <code>str</code>, and <code>bool</code> — and how Python distinguishes between them isn't just beginner trivia. It's the foundation everything else in the language builds on, and it's exactly the kind of thing interviewers use to separate people who've memorized syntax from people who actually understand how the language behaves.</p>
+<p>I broke this down in the latest Daily Python LeetCode lesson, with examples, common mistakes, and how dynamic typing compares to static typing. Link in comments — would love to hear which of these mistakes tripped you up when you were learning.</p>
+<h1>Python #SoftwareEngineering #CodingInterview</h1>
+<h2>Twitter/X Thread</h2>
+<p>1/ Why does <code>"Total: $" + 20</code> crash in Python, but <code>"Total: $" + str(20)</code> works?</p>
+<p>The answer is the key to understanding how Python variables actually work. Thread 🧵</p>
+<p>2/ A variable in Python is just a labeled box. Whatever value you assign to it determines its type — you never declare the type yourself.</p>
+<pre><code class="language-python">age = 25       # int
+name = &quot;Maya&quot;  # str
+</code></pre>
+<p>3/ This is called dynamic typing. Python looks at the value you hand it and figures out the type on the spot. Compare that to static typing (Java, C++), where you declare the type upfront and it never changes.</p>
+<p>4/ The four data types you'll use constantly as a beginner:
+- int → whole numbers (25)
+- float → decimals (19.99)
+- str → text ("Maya")
+- bool → True/False</p>
+<p>5/ Weird but true: <code>10</code>, <code>10.0</code>, and <code>"10"</code> are three completely different types in Python, even though they look almost identical.</p>
+<pre><code class="language-python">type(10)    # int
+type(10.0)  # float
+type(&quot;10&quot;)  # str
+</code></pre>
+<p>6/ Mistake #1 almost everyone makes early on:</p>
+<pre><code class="language-python">price = 20
+&quot;Total: $&quot; + price  # TypeError!
+</code></pre>
+<p>Python won't guess whether you meant math or text. Fix: convert first.</p>
+<pre><code class="language-python">&quot;Total: $&quot; + str(price)  # works
+</code></pre>
+<p>7/ Mistake #2:</p>
+<pre><code class="language-python">color = red  # NameError
+</code></pre>
+<p>No quotes = Python thinks you're referencing a variable called <code>red</code>. Since it doesn't exist, it crashes. Text always needs quotes.</p>
+<p>8/ Here's the part that surprises people coming from other languages: a Python variable isn't locked to one type forever.</p>
+<pre><code class="language-python">x = 5
+x = &quot;five&quot;  # totally legal
+</code></pre>
+<p>The box doesn't care what's inside it.</p>
+<p>9/ Dynamic typing = faster to write, more flexible. Static typing = catches type errors before the program even runs. Neither is "better" — it's a tradeoff between writing speed and early safety.</p>
+<p>10/ Once this clicks, everything else in Python — functions, loops, data structures — gets easier, because they're all just operations on these basic types.</p>
+<p>Full breakdown (with code, dry runs, and common mistakes) in the latest Daily Python LeetCode lesson: {LINK}</p>
+<h2>Facebook Post</h2>
+<p>Ever had Python throw an error just because you forgot a set of quotes, or tried to glue a number onto a sentence? You're not alone — it happens to basically every beginner.</p>
+<p>In the latest Daily Python LeetCode lesson, we break down how Python variables really work: what a variable is, the four core data types (whole numbers, decimals, text, and true/false values), and why Python doesn't make you declare types upfront the way some other languages do.</p>
+<p>We also walk through the two mistakes that trip up almost everyone starting out, and how to fix them in one line. If you're learning Python or know someone who is, this one's worth the few minutes it takes to watch: {LINK}</p>
+<h2>Reddit Summary</h2>
+<p>Wrote up a breakdown of how Python variables and data types actually work, aimed at people early in their Python journey.</p>
+<p>Covers:
+- What a variable is (a named reference to a value, created via assignment)
+- The four basic types: int, float, str, bool
+- Dynamic typing — how Python infers type from the value instead of requiring a declaration, and how that compares to static typing in languages like Java
+- The two classic beginner errors: <code>str + int</code> concatenation without converting first, and forgetting quotes around text (which Python reads as a variable reference instead)
+- Naming conventions that avoid subtle bugs (case sensitivity, underscores instead of spaces)</p>
+<p>Nothing revolutionary if you've been writing Python for a while, but it's the kind of foundational stuff that's easy to have gaps in if you learned by copying code without fully understanding why it worked. Full write-up here if useful: {LINK}</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># Python Variables &amp; Data Types (int, float, str, bool)
+
+Part of the Daily Python LeetCode series — a beginner-friendly breakdown of how
+Python variables work and the four core data types you'll use constantly.
+
+## Problem
+
+Understand how Python creates and stores variables, how it infers data types
+without explicit declarations, and how to avoid the two most common beginner
+mistakes when working with strings and numbers.
+
+## Intuition
+
+Think of a variable as a labeled box. The value is whatever you place inside;
+the data type describes what kind of thing that is. Python uses **dynamic
+typing** — it inspects the value you assign and infers the type on the spot,
+rather than requiring an upfront declaration like static-typed languages
+(Java, C++). This makes Python faster to write, at the cost of type errors
+sometimes surfacing only at runtime.
+
+## Approach
+
+1. Create variables via assignment (`name = value`).
+2. Use `type()` whenever you're unsure what kind of value you're working with.
+3. Convert types explicitly with `str()`, `int()`, or `float()` before mixing
+   them in operations.
+4. Always wrap text in quotes — without them, Python treats it as a variable
+   reference, not literal text.
+
+## Python Solution
+
+\`\`\`python
+def demonstrate_variables():
+    &quot;&quot;&quot;Show variable assignment, type checking, and safe conversion.&quot;&quot;&quot;
+    age = 25
+    name = &quot;Maya&quot;
+    height = 5.9
+    is_student = True
+
+    print(f&quot;{name} is {age} years old, {height} ft tall, student: {is_student}&quot;)
+
+    price = 20
+    message = &quot;Total: $&quot; + str(price)
+    print(message)
+
+    return age, name, height, is_student, message
+
+
+if __name__ == &quot;__main__&quot;:
+    demonstrate_variables()
+\`\`\`
+
+## Complexity
+
+- **Time:** O(1) — assignment and type inference are constant-time operations.
+- **Space:** O(1) — each variable occupies fixed, small memory relative to
+  the program.
+
+## Video
+
+Watch the full lesson: {LINK}
+
+## Article
+
+Full written breakdown with examples, common mistakes, and interview
+questions: {LINK}
+</code></pre></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/IgfwuLVWqZw' target='_blank'>▶ Watch on YouTube</a></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>

@@ -1,12 +1,401 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Python Lesson 3: Strings &amp; String Methods (Indexing, Slicing, F-Strings, split/join/strip) — Python LeetCode Solution</title><meta name="description" content="Learn how to work with text in Python. This lesson covers string indexing and slicing (with diagrams), f-strings for clean formatting, and the essential split, join, and strip methods for cleaning and">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-03-strings-and-string-methods.html">
 <meta property="og:title" content="Python Lesson 3: Strings &amp; String Methods (Indexing, Slicing, F-Strings, split/join/strip) — Python LeetCode Solution"><meta property="og:type" content="website">
 <meta property="og:description" content="Learn how to work with text in Python. This lesson covers string indexing and slicing (with diagrams), f-strings for clean formatting, and the essential split, join, and strip methods for cleaning and"><meta property="og:image" content="https://i.ytimg.com/vi/XRAfUcL9yAU/hqdefault.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 3: Strings &amp; String Methods (Indexing, Slicing, F-Strings, split/join/strip)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/XRAfUcL9yAU' allowfullscreen></iframe></div><article><p>Learn how to work with text in Python. This lesson covers string indexing and slicing (with diagrams), f-strings for clean formatting, and the essential split, join, and strip methods for cleaning and</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/XRAfUcL9yAU' target='_blank'>▶ Watch on YouTube</a></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 3: Strings &amp; String Methods (Indexing, Slicing, F-Strings, split/join/strip)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/XRAfUcL9yAU' allowfullscreen></iframe></div><article><h1>SEO PACKAGE</h1>
+<p><strong>1. SEO Title:</strong> Python Strings Explained: Indexing, Slicing, F-Strings, Split &amp; Join (Beginner Guide)</p>
+<p><strong>2. SEO Subtitle:</strong> Master Python string indexing, slicing, f-strings, and the split/join/strip methods with clear diagrams and real code examples.</p>
+<p><strong>3. Featured Quote:</strong> "Indexing grabs one letter, slicing grabs a range — everything else in Python's string toolkit is built on that one distinction."</p>
+<p><strong>4. Meta Description:</strong> Learn Python string indexing, slicing, f-strings, and split/join/strip with diagrams and beginner-friendly examples. Avoid the most common string mistakes.</p>
+<p><strong>5. URL Slug:</strong> <code>python-strings-indexing-slicing-fstrings-split-join</code></p>
+<p><strong>6. Keywords:</strong> Python strings, string indexing, string slicing, f-strings, Python split method, Python join method, Python strip method, Python string methods, Python for beginners, learn Python, Python tutorial, string manipulation Python, Python indexing explained, negative indexing Python, Python slicing explained, coding interview strings, Python basics, string formatting Python, Python list to string, Python data structures</p>
+<p><strong>7. Tags:</strong> Python, Python Strings, String Methods, Learn Python, Coding Interview, Python Basics, F-Strings, Python Slicing, Python Indexing, Data Structures, Software Engineering, Python Tutorial, Beginner Python, LeetCode, Algorithms</p>
+<hr />
+<h1>MAIN ARTICLE</h1>
+<h2>Introduction</h2>
+<p>Every technical interview eventually touches strings. Whether you're reversing words, validating a password, parsing a log line, or checking if two words are anagrams, the underlying skill being tested is the same: can you manipulate text precisely, without off-by-one errors?</p>
+<p>Strings look simple because we read text every day without thinking about it. But in code, a string is a sequence with positions, boundaries, and rules — and most beginner bugs (and a surprising number of interview mistakes) come from misunderstanding those rules. Interviewers use string problems specifically because they reveal whether you understand indexing, slicing boundaries, and how to reshape text efficiently, without needing you to know an obscure algorithm first.</p>
+<p>This lesson covers the five tools that make up 90% of everyday string work in Python: indexing, slicing, f-strings, <code>split</code>/<code>join</code>, and <code>strip</code>. Once these are second nature, you'll read and write string-processing code much faster, and you'll stop tripping over the two most common bugs in the entire language.</p>
+<h2>Problem Overview</h2>
+<p>There isn't a single "problem" to solve here — this is a foundations lesson. The goal is to answer five practical questions you'll hit constantly when working with text in Python:</p>
+<ol>
+<li>How do I get a single character out of a string?</li>
+<li>How do I get a <em>range</em> of characters out of a string?</li>
+<li>How do I build a formatted sentence out of variables, cleanly?</li>
+<li>How do I break a string into pieces, and glue pieces back into a string?</li>
+<li>How do I remove accidental whitespace from user input?</li>
+</ol>
+<p>Understanding these mechanics is what lets you later solve real problems — reversing a string, checking palindromes, parsing CSV lines, cleaning form input — without having to think hard about the mechanics themselves.</p>
+<h2>Example</h2>
+<pre><code class="language-python">word = &quot;apple&quot;
+
+word[0]      # 'a'
+word[-1]     # 'e'
+word[1:4]    # 'ppl'
+
+name = &quot;Sam&quot;
+age = 9
+print(f&quot;{name} is {age} years old.&quot;)   # Sam is 9 years old.
+
+sentence = &quot;I like cake&quot;
+words = sentence.split()               # ['I', 'like', 'cake']
+rejoined = &quot; &quot;.join(words)              # 'I like cake'
+
+messy = &quot;   hello   &quot;
+messy.strip()                           # 'hello'
+</code></pre>
+<p>Walking through the outputs:</p>
+<ul>
+<li><code>word[0]</code> returns <code>'a'</code> because indexing starts at position 0, not 1.</li>
+<li><code>word[-1]</code> returns <code>'e'</code> because negative indices count backward from the end, and <code>-1</code> always means "the last character."</li>
+<li><code>word[1:4]</code> returns <code>'ppl'</code> — it starts at position 1 and stops <em>before</em> position 4, so the character at index 4 (<code>'e'</code>) is excluded.</li>
+<li>The f-string swaps <code>{name}</code> and <code>{age}</code> for their real values automatically, including converting the integer <code>9</code> to text.</li>
+<li><code>split()</code> breaks the sentence into a list at every space.</li>
+<li><code>join()</code> does the reverse, gluing the list back together using the string you call it on as the "glue."</li>
+<li><code>strip()</code> removes only the leading and trailing spaces, leaving the interior untouched.</li>
+</ul>
+<h2>Intuition</h2>
+<p>Before memorizing syntax, it helps to build a mental model. Think of a string as a strip of tape with each character sitting in a numbered slot, starting at slot 0. That single fact — <strong>counting starts at zero</strong> — is responsible for more beginner bugs than anything else in this lesson, so it's worth internalizing early.</p>
+<p>Once you accept that characters have seat numbers, two operations naturally follow:</p>
+<ul>
+<li><strong>Indexing</strong> answers "give me the letter at seat N."</li>
+<li><strong>Slicing</strong> answers "give me everything between seat N and seat M."</li>
+</ul>
+<p>The tricky part of slicing isn't the starting position — it's that the <em>ending</em> position is a boundary, not an inclusion. Picture scissors cutting right before the ending index. Everything up to that cut is included; the character sitting exactly at the ending index is left out. This is why <code>word[1:4]</code> on <code>"apple"</code> gives you <code>"ppl"</code> and not <code>"pple"</code>.</p>
+<p>Once you can extract and slice text, the next natural need is <em>combining</em> text with variables — that's what f-strings solve. Then, once you're working with real-world data (sentences, CSV rows, log lines), you need to break text apart (<code>split</code>) and put it back together (<code>join</code>) — and clean up sloppy input (<code>strip</code>). Each tool exists to solve a specific, recurring pain point; none of it is arbitrary.</p>
+<h2>Brute Force Solution</h2>
+<p>There isn't really a "brute force vs optimal" split for basic string operations — indexing and slicing are already O(1) and O(k) respectively, which is as good as it gets. But it's worth contrasting the <em>naive</em> way developers do string formatting and combination before they learn the idiomatic tools, versus the modern approach.</p>
+<p><strong>Naive approach — manual concatenation with <code>+</code>:</strong></p>
+<pre><code class="language-python">name = &quot;Sam&quot;
+age = 9
+message = &quot;Name: &quot; + name + &quot;, Age: &quot; + str(age)
+</code></pre>
+<ul>
+<li><strong>Idea:</strong> Glue substrings together one <code>+</code> at a time.</li>
+<li><strong>Algorithm:</strong> Convert every non-string value with <code>str()</code>, then chain everything with <code>+</code>.</li>
+<li><strong>Advantages:</strong> Works in every version of Python, no new syntax to learn.</li>
+<li><strong>Disadvantages:</strong> Gets cluttered fast with multiple variables, easy to forget a <code>str()</code> conversion (which throws a <code>TypeError</code>), and harder to read than the sentence it's building.</li>
+<li><strong>Time complexity:</strong> O(n) per concatenation, and each <code>+</code> on strings creates a new string object, so chaining many concatenations in a loop degrades toward O(n²) for n pieces.</li>
+<li><strong>Space complexity:</strong> O(n) for the final string, but O(n) intermediate garbage is created along the way.</li>
+</ul>
+<h2>Optimal Solution</h2>
+<p>The optimal approach is to use each tool for the job it was designed for:</p>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Tool</th>
+<th>Why it's optimal</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Get one character</td>
+<td><code>s[i]</code></td>
+<td>Direct O(1) lookup by position</td>
+</tr>
+<tr>
+<td>Get a range</td>
+<td><code>s[i:j]</code></td>
+<td>Single O(k) operation, no manual loop</td>
+</tr>
+<tr>
+<td>Build formatted text</td>
+<td>f-string</td>
+<td>Handles type conversion, reads like English</td>
+</tr>
+<tr>
+<td>Break text into pieces</td>
+<td><code>s.split(sep)</code></td>
+<td>One call replaces a manual loop over characters</td>
+</tr>
+<tr>
+<td>Glue pieces together</td>
+<td><code>sep.join(list)</code></td>
+<td>O(n) total, avoids the O(n²) trap of repeated <code>+</code></td>
+</tr>
+<tr>
+<td>Remove edge whitespace</td>
+<td><code>s.strip()</code></td>
+<td>Purpose-built, doesn't touch the middle of the string</td>
+</tr>
+</tbody>
+</table>
+<p>The key insight for <code>join</code> specifically: because <code>+</code> concatenation creates a new string object every time, joining pieces one at a time in a loop is quadratic. <code>str.join()</code> is implemented to compute the total length once and build the result in a single pass, which is why it's the idiomatic (and faster) choice whenever you're combining more than a couple of strings.</p>
+<p>For slicing, it helps to visualize the boundary explicitly:</p>
+<pre><code> a   p   p   l   e
+ 0   1   2   3   4
+     ^       ^
+   start    stop (excluded)
+
+word[1:4] -&gt; &quot;ppl&quot;
+</code></pre>
+<h2>Python Code</h2>
+<pre><code class="language-python">def demo_string_tools() -&gt; None:
+    &quot;&quot;&quot;Show indexing, slicing, f-strings, split, join, and strip in action.&quot;&quot;&quot;
+    word = &quot;apple&quot;
+
+    # Indexing: single character by position
+    first_letter = word[0]
+    last_letter = word[-1]
+
+    # Slicing: a range of characters, stop index excluded
+    middle_slice = word[1:4]
+
+    # F-strings: formatted output with variables
+    name, age = &quot;Sam&quot;, 9
+    greeting = f&quot;{name} is {age} years old.&quot;
+
+    # Split / join: break apart and glue back together
+    sentence = &quot;I like cake&quot;
+    words = sentence.split()
+    rejoined = &quot; &quot;.join(words)
+
+    # Strip: trim only leading/trailing whitespace
+    messy_input = &quot;   hello   &quot;
+    cleaned = messy_input.strip()
+
+    print(first_letter, last_letter, middle_slice)
+    print(greeting)
+    print(words, &quot;-&gt;&quot;, rejoined)
+    print(repr(cleaned))
+
+
+if __name__ == &quot;__main__&quot;:
+    demo_string_tools()
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>word[0]</code> and <code>word[-1]</code> — direct index lookups. Zero is the first slot; <code>-1</code> wraps around to the last slot regardless of the string's length, so it works even if you don't know how long the string is.</li>
+<li><code>word[1:4]</code> — a slice expression <code>word[start:stop]</code>. It copies characters from <code>start</code> up to but not including <code>stop</code>.</li>
+<li><code>f"{name} is {age} years old."</code> — the <code>f</code> prefix tells Python to evaluate anything inside <code>{}</code> and insert its string representation. No manual <code>str()</code> conversion needed for <code>age</code>.</li>
+<li><code>sentence.split()</code> — called with no arguments, it splits on any whitespace and discards empty results, returning a list of words.</li>
+<li><code>" ".join(words)</code> — the string before <code>.join</code> is the separator; it's inserted between each element of the list you pass in.</li>
+<li><code>messy_input.strip()</code> — removes whitespace from both ends only. No arguments means "strip whitespace"; you can pass a string of characters to strip something else instead.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Trace <code>word = "apple"</code>, <code>word[1:4]</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Position</th>
+<th>0</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+<th>4</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Character</td>
+<td>a</td>
+<td>p</td>
+<td>p</td>
+<td>l</td>
+<td>e</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Start at index 1 → character <code>p</code>.</li>
+<li>Include index 2 → character <code>p</code>.</li>
+<li>Include index 3 → character <code>l</code>.</li>
+<li>Stop <em>before</em> index 4 → character <code>e</code> excluded.</li>
+<li>Result: <code>"ppl"</code>.</li>
+</ul>
+<p>Trace <code>"I like cake".split()</code> then <code>" ".join(...)</code>:</p>
+<ol>
+<li><code>split()</code> scans for whitespace: finds a space after <code>"I"</code> and after <code>"like"</code>.</li>
+<li>Produces <code>["I", "like", "cake"]</code>.</li>
+<li><code>" ".join([...])</code> inserts <code>" "</code> between each pair of adjacent elements: <code>"I" + " " + "like" + " " + "cake"</code>.</li>
+<li>Result: <code>"I like cake"</code> — identical to the original because the separator matched.</li>
+</ol>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Indexing (<code>s[i]</code>):</strong> O(1) time, O(1) space — Python strings are stored contiguously, so any position is a direct memory offset.</li>
+<li><strong>Slicing (<code>s[i:j]</code>):</strong> O(k) time and space, where <code>k</code> is the length of the slice, because a new string object is created.</li>
+<li><strong>F-strings:</strong> O(n) time where n is the total output length; space is O(n) for the resulting string.</li>
+<li><strong><code>split()</code>:</strong> O(n) time to scan the whole string once; O(n) space for the resulting list of substrings.</li>
+<li><strong><code>join()</code>:</strong> O(n) time total across all pieces (single pass, pre-computed length), O(n) space for the result — this is why it beats repeated <code>+</code> concatenation, which is O(n²) in the worst case.</li>
+<li><strong><code>strip()</code>:</strong> O(n) time in the worst case (checking from both ends inward), O(k) space for the trimmed result.</li>
+</ul>
+<p>These are correct because none of these operations do nested work over the string — each makes a single linear pass (or a constant-time jump, for indexing), which is the best possible complexity for operations that must touch every relevant character at least once.</p>
+<h2>Alternative Solutions</h2>
+<ul>
+<li><strong><code>str.format()</code> instead of f-strings:</strong> <code>"{} is {} years old".format(name, age)</code> — works, and is common in older codebases, but is more verbose and separates the placeholders from their values, making longer strings harder to read.</li>
+<li><strong><code>%</code> formatting:</strong> <code>"%s is %d years old" % (name, age)</code> — the oldest style, still seen in logging code, but requires matching format specifiers to types and is easy to get wrong.</li>
+<li><strong>Manual loops instead of <code>split</code>/<code>join</code>:</strong> you could iterate character by character and build a list yourself, but you'd be reimplementing what Python already does correctly and efficiently — there's no advantage, only more code to maintain.</li>
+</ul>
+<p>F-strings are the modern default recommendation for new code; <code>str.format()</code> and <code>%</code> are worth recognizing when reading existing code, not for writing new code.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty string:</strong> <code>""[0]</code> raises <code>IndexError</code> — always check length before indexing into unknown input.</li>
+<li><strong>Out-of-range index:</strong> <code>word[10]</code> on a 5-character string raises <code>IndexError</code>, but <code>word[10:20]</code> (a slice) simply returns <code>""</code> — slicing never raises for out-of-range bounds.</li>
+<li><strong>Slicing with negative numbers:</strong> <code>word[-3:-1]</code> counts from the end on both sides — worth tracing on paper the first few times.</li>
+<li><strong>Splitting a string with no matching separator:</strong> <code>"hello".split(",")</code> returns <code>["hello"]</code>, the whole string as a single-element list.</li>
+<li><strong>Strings with only whitespace:</strong> <code>"   ".strip()</code> returns <code>""</code>, not an error.</li>
+<li><strong>Joining an empty list:</strong> <code>" ".join([])</code> returns <code>""</code>.</li>
+<li><strong>Multiple consecutive spaces:</strong> <code>"a  b".split()</code> (no argument) correctly collapses runs of whitespace, but <code>"a  b".split(" ")</code> (explicit space) does not, and produces <code>["a", "", "b"]</code> — a subtle but common gotcha.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Assuming indexing starts at 1.</strong> It starts at 0 — <code>word[1]</code> gets the <em>second</em> character, not the first.</li>
+<li><strong>Forgetting the <code>f</code> before the quotes.</strong> Without it, <code>"{name}"</code> prints literally as the text <code>{name}</code>, not the variable's value.</li>
+<li><strong>Expecting a slice's stop index to be included.</strong> <code>word[1:4]</code> excludes index 4 — a frequent source of off-by-one bugs.</li>
+<li><strong>Expecting <code>strip()</code> to clean whitespace in the middle of a string.</strong> It only trims the edges; <code>"a  b".strip()</code> still has the double space in the middle.</li>
+<li><strong>Concatenating many values with <code>+</code> instead of an f-string or <code>join</code>.</strong> It's error-prone (forgetting <code>str()</code> on numbers) and doesn't scale cleanly.</li>
+<li><strong>Passing <code>" "</code> explicitly to <code>split</code> when you meant "split on any whitespace."</strong> <code>split()</code> and <code>split(" ")</code> behave differently on strings with multiple consecutive spaces.</li>
+<li><strong>Trying to modify a string in place.</strong> Strings are immutable in Python — <code>word[0] = "A"</code> raises <code>TypeError</code>. You always build a new string instead.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>"What's the difference between <code>s.split()</code> and <code>s.split(' ')</code>?"</li>
+<li>"Why is string concatenation with <code>+</code> in a loop considered inefficient? What would you use instead?"</li>
+<li>"How would you reverse a string using slicing?" (<code>word[::-1]</code>)</li>
+<li>"What happens if you slice past the end of a string? Does it raise an error?"</li>
+<li>"Why are Python strings immutable, and what does that mean for performance when building large strings?"</li>
+<li>"How would you check if a string is a palindrome using only indexing and slicing?"</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Reverse a String (LeetCode 344)</strong> — directly tests slicing intuition (<code>s[::-1]</code>).</li>
+<li><strong>Valid Palindrome (LeetCode 125)</strong> — combines cleaning input (similar to <code>strip</code>/filtering) with indexing from both ends.</li>
+<li><strong>Valid Anagram (LeetCode 242)</strong> — often solved by sorting or counting characters, but string indexing is the foundation.</li>
+<li><strong>Reverse Words in a String (LeetCode 151)</strong> — a direct real-world use of <code>split</code> and <code>join</code> together.</li>
+<li><strong>First Unique Character in a String (LeetCode 387)</strong> — relies on iterating and indexing efficiently.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Indexing retrieves a single character; slicing retrieves a range, and the range's ending index is always excluded.</li>
+<li>Negative indices count from the end, with <code>-1</code> always meaning the last character.</li>
+<li>F-strings are the clean, modern way to combine variables and text — no manual <code>str()</code> conversions required.</li>
+<li><code>split()</code> and <code>join()</code> are inverses of each other: one breaks text apart, the other glues it back together.</li>
+<li><code>strip()</code> only ever touches the leading and trailing edges of a string, never the middle.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>If you'd like to see these five tools demonstrated with diagrams and live code, watch the full lesson here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of the <strong>Daily Python LeetCode</strong> series — short, focused lessons that build up the exact Python fundamentals and problem-solving patterns you need for technical interviews. Each lesson takes a core concept, explains the intuition behind it, and connects it to real interview questions, so you're not just memorizing syntax but actually understanding why it works.</p>
+<h2>Call To Action</h2>
+<p>If this helped clarify how Python strings really work, subscribe on YouTube so you don't miss the next lesson, and subscribe to the Substack newsletter for write-ups like this one delivered straight to your inbox. Drop a comment with a string operation you'd like explained next, and share this with anyone starting their Python journey.</p>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>Most Python bugs I see in beginner code trace back to two misunderstandings: thinking indexing starts at 1, and thinking a slice's ending index is included.</p>
+<p>Both are wrong, and once you internalize why, a huge chunk of everyday string bugs disappear.</p>
+<p>Here's the mental model that helped me: picture a string as a strip of tape with each character sitting in a numbered slot, starting at slot 0. Indexing points to one slot. Slicing is scissors — cutting right before the ending number you give it, so that character gets left out of the result.</p>
+<p>From there, everything else clicks into place:</p>
+<p>→ F-strings let you drop variables into text without manual type conversion or messy <code>+</code> chains.
+→ <code>split()</code> and <code>join()</code> are inverses — one breaks a sentence into words, the other glues words back into a sentence.
+→ <code>strip()</code> only cleans the edges of a string, never the middle — useful for sanitizing user input from forms.</p>
+<p>These aren't advanced concepts, but they're the foundation every string-processing interview question builds on — reversing strings, checking palindromes, parsing lines of text. Get comfortable with the mental model, and the syntax stops being something you memorize and starts being something you reason about.</p>
+<p>What's a string-related bug that tripped you up early on? Curious to hear what clicked for others.</p>
+<h1>Python #CodingInterview #SoftwareEngineering #LearnToCode</h1>
+<h2>Twitter/X Thread</h2>
+<p>1/ Most beginner Python bugs come down to two things: thinking indexing starts at 1, and thinking slices include their ending index. Neither is true. Let's fix both mental models in one thread. 🧵</p>
+<p>2/ Picture a string as a strip of tape, each character sitting in a numbered box. The first box is labeled 0, not 1. So <code>"apple"[0]</code> is <code>'a'</code>, and <code>"apple"[1]</code> is <code>'p'</code> — the <em>second</em> letter.</p>
+<p>3/ Negative indices count from the end. <code>"apple"[-1]</code> is <code>'e'</code>, the last letter, no matter how long the string is. Handy when you don't know the length ahead of time.</p>
+<p>4/ Slicing is different from indexing — it grabs a range. <code>"apple"[1:4]</code> grabs positions 1, 2, 3... and stops right before position 4. Result: <code>'ppl'</code>, not <code>'pple'</code>.</p>
+<p>5/ Think of it as scissors cutting right before the stop number. Everything up to that cut is included. The character sitting exactly at the stop index is always left out.</p>
+<p>6/ F-strings solve the "gluing text and variables together" problem. <code>f"{name} is {age} years old"</code> auto-converts <code>age</code> to text for you — no manual <code>str()</code>, no messy <code>+</code> chains.</p>
+<p>7/ <code>split()</code> breaks a sentence into a list of words at each space: <code>"I like cake".split()</code> → <code>['I', 'like', 'cake']</code>.</p>
+<p>8/ <code>join()</code> is the reverse — it's the glue. <code>" ".join(['I', 'like', 'cake'])</code> → <code>'I like cake'</code>. The string you call <code>.join()</code> on is the separator.</p>
+<p>9/ <code>strip()</code> trims whitespace, but only from the very start and end. <code>"  hi  ".strip()</code> → <code>'hi'</code>. It will NOT touch spaces hiding in the middle of a string.</p>
+<p>10/ Five tools, one mental model: position numbers starting at zero. Master this and you've covered the foundation behind most string-based interview questions. Full breakdown (with diagrams) in the video: {LINK}</p>
+<h2>Facebook Post</h2>
+<p>Working with text in Python today! 🐍 If you've ever been confused about why <code>word[1:4]</code> doesn't include the 4th letter, or why your f-string printed <code>{name}</code> instead of the actual name — this one's for you.</p>
+<p>We covered indexing (grabbing one letter), slicing (grabbing a range), f-strings (clean formatting), and the split/join/strip trio for breaking text apart and cleaning it up. Simple stuff once you see the diagrams, and genuinely useful for anything from cleaning up form input to prepping for coding interviews.</p>
+<p>Full lesson here: {LINK} — would love to know which part clicked for you!</p>
+<h2>Reddit Summary</h2>
+<p>Wrote up a walkthrough on the core Python string tools every beginner (and honestly plenty of intermediate devs) trips over: indexing vs. slicing, f-strings, and split/join/strip.</p>
+<p>The two things that cause the most bugs:
+- Indexing starts at 0, so <code>word[1]</code> is the <em>second</em> character.
+- Slicing's stop index is excluded — <code>word[1:4]</code> on <code>"apple"</code> gives <code>"ppl"</code>, not <code>"pple"</code>, because the cut happens right before index 4.</p>
+<p>Also covered why <code>join()</code> beats chaining <code>+</code> in a loop (quadratic vs. linear), and the classic gotcha where <code>strip()</code> only cleans the edges of a string, not whitespace hiding in the middle.</p>
+<p>Full write-up with diagrams and a runnable code example: {LINK}. Happy to answer questions on any of it in the comments.</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># Python Strings: Indexing, Slicing, F-Strings, Split/Join/Strip
+
+## Problem
+
+Understand the core mechanics of working with text in Python: pulling out individual
+characters, extracting ranges, formatting output cleanly, and reshaping strings by
+breaking them apart and gluing them back together.
+
+## Intuition
+
+Treat a string as a numbered sequence of characters starting at position 0.
+Indexing points at one position. Slicing cuts a range, where the ending
+position is a boundary (excluded), not an inclusion. Once that model is clear,
+f-strings, split, join, and strip are just purpose-built tools layered on top
+of it.
+
+## Approach
+
+- **Indexing** `s[i]` → single character, O(1)
+- **Slicing** `s[i:j]` → range of characters, stop index excluded, O(k)
+- **F-strings** `f&quot;{var}&quot;` → clean formatting, auto type conversion
+- **`split()`** → break a string into a list of pieces
+- **`join()`** → glue a list of pieces back into a string (inverse of split)
+- **`strip()`** → remove whitespace from the start/end only, never the middle
+
+## Python Solution
+
+\`\`\`python
+def demo_string_tools() -&gt; None:
+    &quot;&quot;&quot;Show indexing, slicing, f-strings, split, join, and strip in action.&quot;&quot;&quot;
+    word = &quot;apple&quot;
+
+    first_letter = word[0]
+    last_letter = word[-1]
+    middle_slice = word[1:4]
+
+    name, age = &quot;Sam&quot;, 9
+    greeting = f&quot;{name} is {age} years old.&quot;
+
+    sentence = &quot;I like cake&quot;
+    words = sentence.split()
+    rejoined = &quot; &quot;.join(words)
+
+    messy_input = &quot;   hello   &quot;
+    cleaned = messy_input.strip()
+
+    print(first_letter, last_letter, middle_slice)
+    print(greeting)
+    print(words, &quot;-&gt;&quot;, rejoined)
+    print(repr(cleaned))
+
+
+if __name__ == &quot;__main__&quot;:
+    demo_string_tools()
+\`\`\`
+
+## Complexity
+
+| Operation | Time | Space |
+|---|---|---|
+| Indexing | O(1) | O(1) |
+| Slicing | O(k) | O(k) |
+| F-string formatting | O(n) | O(n) |
+| `split()` | O(n) | O(n) |
+| `join()` | O(n) | O(n) |
+| `strip()` | O(n) | O(k) |
+
+## Video
+
+Watch the full lesson: {LINK}
+
+## Article
+
+Read the complete write-up with diagrams, dry runs, and common mistakes: {LINK}
+</code></pre></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/XRAfUcL9yAU' target='_blank'>▶ Watch on YouTube</a></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>

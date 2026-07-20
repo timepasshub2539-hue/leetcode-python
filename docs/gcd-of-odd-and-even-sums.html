@@ -1,12 +1,291 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>GCD of Odd and Even Sums: Why the Answer Is Always n — Python LeetCode Solution</title><meta name="description" content="Split the first 2n numbers into their odd-sum and even-sum halves, then find the GCD between them, and something surprisingly clean falls out. This video walks through the problem, the core insight be">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/gcd-of-odd-and-even-sums.html">
 <meta property="og:title" content="GCD of Odd and Even Sums: Why the Answer Is Always n — Python LeetCode Solution"><meta property="og:type" content="website">
 <meta property="og:description" content="Split the first 2n numbers into their odd-sum and even-sum halves, then find the GCD between them, and something surprisingly clean falls out. This video walks through the problem, the core insight be"><meta property="og:image" content="https://i.ytimg.com/vi/GrL0d9s8KTM/hqdefault.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>GCD of Odd and Even Sums: Why the Answer Is Always n</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/GrL0d9s8KTM' allowfullscreen></iframe></div><article><p>Split the first 2n numbers into their odd-sum and even-sum halves, then find the GCD between them, and something surprisingly clean falls out. This video walks through the problem, the core insight be</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/GrL0d9s8KTM' target='_blank'>▶ Watch on YouTube</a></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>GCD of Odd and Even Sums: Why the Answer Is Always n</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/GrL0d9s8KTM' allowfullscreen></iframe></div><article><h1>SEO PACKAGE</h1>
+<h2>1. SEO Title</h2>
+<p>GCD of Odd and Even Sums in Python: Why the Answer Is Always n (LeetCode Explained)</p>
+<h2>2. SEO Subtitle</h2>
+<p>A step-by-step breakdown of why the GCD of the first n odd numbers and first n even numbers always equals n — with brute force, optimal, and one-line solutions.</p>
+<h2>3. Featured Quote</h2>
+<p>"The best optimizations aren't found in code — they're found on a whiteboard before you write any."</p>
+<h2>4. Meta Description</h2>
+<p>Learn why the GCD of the sum of the first n odd numbers and first n even numbers always equals n. Full Python walkthrough with math, code, and complexity analysis.</p>
+<h2>5. URL Slug</h2>
+<p>gcd-odd-even-sums-python-leetcode</p>
+<h2>6. Keywords</h2>
+<p>GCD Python, greatest common divisor, LeetCode easy, math.gcd, number theory, sum of odd numbers, sum of even numbers, coding interview math, Python algorithms, consecutive integers GCD, arithmetic series formula, LeetCode Python solution, Euclidean algorithm, constant time solution, brute force vs optimal, Daily Python LeetCode, math for coding interviews, algorithm intuition, data structures and algorithms, competitive programming Python</p>
+<h2>7. Tags</h2>
+<p>Python, LeetCode, Coding Interview, Algorithms, Data Structures, Number Theory, Math, GCD, Software Engineering, Problem Solving, Interview Prep, Euclidean Algorithm, Python Tips</p>
+<hr />
+<h1>MAIN ARTICLE</h1>
+<h2>Introduction</h2>
+<p>Every so often you run into a LeetCode problem that looks like it wants you to write a loop and grind through arithmetic — and then you realize the entire problem collapses into a single return statement. GCD of Odd and Even Sums is exactly that kind of problem, and it's a great one to study even though it's labeled "easy," because it tests something interviewers genuinely care about: can you spot structure in a problem before you start coding?</p>
+<p>This problem combines two ideas that show up constantly in technical interviews — closed-form summation formulas and the greatest common divisor — and asks you to notice that they interact in a very specific way. If you brute-force it, you'll get the right answer. If you take thirty seconds to think about the structure first, you'll realize you never needed to compute anything at all. That gap between "working solution" and "understood solution" is exactly what separates a junior engineer from a senior one in an interview room, and it's worth internalizing here.</p>
+<h2>Problem Overview</h2>
+<p>You're given a positive integer <code>n</code>. Consider the first <code>n</code> odd positive integers (1, 3, 5, …) and the first <code>n</code> even positive integers (2, 4, 6, …). Sum each group separately, call them <code>sumOdd</code> and <code>sumEven</code>. Your task is to return the greatest common divisor of these two sums.</p>
+<p>That's the whole problem. No tricky edge cases, no unusual constraints — <code>n</code> is bounded (commonly up to 1000), so even a naive approach runs instantly. The interesting part isn't making it fast; it's noticing that the answer has a closed form.</p>
+<h2>Example</h2>
+<p>Let's take <code>n = 4</code>.</p>
+<ul>
+<li>First 4 odd numbers: 1, 3, 5, 7 → <code>sumOdd = 16</code></li>
+<li>First 4 even numbers: 2, 4, 6, 8 → <code>sumEven = 20</code></li>
+<li><code>gcd(16, 20) = 4</code></li>
+</ul>
+<p>Notice the output, <code>4</code>, is identical to the input, <code>n = 4</code>. That's not a coincidence — it happens for every value of <code>n</code>, and understanding why is the entire point of this problem.</p>
+<p>One more example to build confidence, <code>n = 1</code>:</p>
+<ul>
+<li><code>sumOdd = 1</code></li>
+<li><code>sumEven = 2</code></li>
+<li><code>gcd(1, 2) = 1</code></li>
+</ul>
+<p>Again, the output equals <code>n</code>.</p>
+<h2>Intuition</h2>
+<p>The instinct most people have is to simulate the problem literally: loop through the first <code>n</code> odd numbers, add them up, do the same for even numbers, then run Euclid's algorithm on the two totals. That works, but an experienced engineer's first move on any "compute X then do Y" problem is to ask: is there a closed-form expression for X?</p>
+<p>There is. Two classic formulas from arithmetic series:</p>
+<ul>
+<li>Sum of the first <code>n</code> odd numbers = <code>n²</code></li>
+<li>Sum of the first <code>n</code> even numbers = <code>n(n + 1)</code></li>
+</ul>
+<p>Once you have those, look at the relationship between them:</p>
+<pre><code>sumEven = n(n + 1) = n² + n = sumOdd + n
+</code></pre>
+<p>So <code>sumEven</code> is always exactly <code>sumOdd</code> plus <code>n</code>. That's the key structural fact. Now think about what <code>gcd(sumOdd, sumEven)</code> becomes:</p>
+<pre><code>gcd(n², n² + n) = gcd(n², n(n + 1)) = n · gcd(n, n + 1)
+</code></pre>
+<p>The last step pulls <code>n</code> out as a common factor of both arguments (this is a standard GCD property: <code>gcd(ka, kb) = k · gcd(a, b)</code>). What's left inside is <code>gcd(n, n + 1)</code> — the GCD of two consecutive integers.</p>
+<p>Consecutive integers can never share a common factor greater than 1. If some number <code>d &gt; 1</code> divided both <code>n</code> and <code>n + 1</code>, it would have to divide their difference, which is <code>1</code> — and nothing greater than 1 divides 1. So <code>gcd(n, n + 1) = 1</code> always.</p>
+<p>That means the whole expression simplifies to:</p>
+<pre><code>n · 1 = n
+</code></pre>
+<p>The answer is always just <code>n</code>. No sums, no GCD computation, no loop.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Simulate the problem exactly as stated. Loop to build the first <code>n</code> odd numbers and add them, loop again for even numbers, then compute the GCD (either with a hand-rolled Euclidean algorithm or <code>math.gcd</code>).</p>
+<p><strong>Algorithm:</strong>
+1. Initialize <code>sum_odd = 0</code>, <code>sum_even = 0</code>.
+2. Loop <code>i</code> from <code>1</code> to <code>n</code>, adding <code>2i - 1</code> to <code>sum_odd</code> and <code>2i</code> to <code>sum_even</code>.
+3. Compute <code>gcd(sum_odd, sum_even)</code>.
+4. Return the result.</p>
+<p><strong>Advantages:</strong> Requires no insight — you can write it directly from the problem statement. Good for verifying your understanding before optimizing.</p>
+<p><strong>Disadvantages:</strong> Does real work proportional to <code>n</code> for no benefit, since the result never depends on the actual sums.</p>
+<p><strong>Complexity:</strong> Time <code>O(n)</code> for the summation loops (plus a negligible <code>O(log(min(sumOdd, sumEven)))</code> for the GCD step). Space <code>O(1)</code>.</p>
+<h2>Optimal Solution</h2>
+<p>There are really two tiers of "optimal" here, and it's worth understanding both.</p>
+<p><strong>Tier 1 — formula-based, still computes the GCD.</strong> Use the closed-form sums (<code>n²</code> and <code>n(n+1)</code>) instead of looping, then call <code>math.gcd</code> once. This avoids the loop entirely and trusts the library for the GCD step.</p>
+<p><strong>Tier 2 — fully simplified.</strong> Since we proved on paper that the result always equals <code>n</code>, skip the sums and the GCD call altogether. Just return <code>n</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Brute force</th>
+<th>Formula + gcd</th>
+<th>Fully simplified</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Compute sumOdd</td>
+<td>Loop, O(n)</td>
+<td><code>n**2</code>, O(1)</td>
+<td>not needed</td>
+</tr>
+<tr>
+<td>Compute sumEven</td>
+<td>Loop, O(n)</td>
+<td><code>n*(n+1)</code>, O(1)</td>
+<td>not needed</td>
+</tr>
+<tr>
+<td>Compute GCD</td>
+<td>Euclidean loop</td>
+<td><code>math.gcd</code> call</td>
+<td>not needed</td>
+</tr>
+<tr>
+<td>Return</td>
+<td>result</td>
+<td>result</td>
+<td><code>n</code></td>
+</tr>
+</tbody>
+</table>
+<p>Tier 2 is what you'd actually ship, but Tier 1 is worth keeping in your back pocket — it's the version you'd write if an interviewer asked you to solve it "without the algebraic trick," and it still demonstrates you know the summation formulas and the standard library.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">import math
+
+
+def gcd_of_odd_even_sums_bruteforce(n: int) -&gt; int:
+    &quot;&quot;&quot;Simulates the problem literally: loops and a real GCD call.&quot;&quot;&quot;
+    sum_odd = sum(2 * i - 1 for i in range(1, n + 1))
+    sum_even = sum(2 * i for i in range(1, n + 1))
+    return math.gcd(sum_odd, sum_even)
+
+
+def gcd_of_odd_even_sums_formula(n: int) -&gt; int:
+    &quot;&quot;&quot;Uses closed-form sums, still calls math.gcd for clarity/trust.&quot;&quot;&quot;
+    sum_odd = n ** 2
+    sum_even = n * (n + 1)
+    return math.gcd(sum_odd, sum_even)
+
+
+def gcd_of_odd_even_sums(n: int) -&gt; int:
+    &quot;&quot;&quot;Optimal: the GCD always equals n, so just return it.&quot;&quot;&quot;
+    return n
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>gcd_of_odd_even_sums_bruteforce</code> builds both sums with generator expressions instead of manual loops — same <code>O(n)</code> cost, less boilerplate. <code>math.gcd</code> then runs Euclid's algorithm internally.</li>
+<li><code>gcd_of_odd_even_sums_formula</code> replaces the loops with the closed-form identities <code>sumOdd = n²</code> and <code>sumEven = n(n+1)</code>. This turns two <code>O(n)</code> passes into two arithmetic expressions, each <code>O(1)</code>. <code>math.gcd</code> is still called because at this stage we haven't yet exploited the algebraic simplification.</li>
+<li><code>gcd_of_odd_even_sums</code> is the endpoint of the intuition section: since <code>gcd(n², n(n+1)) = n · gcd(n, n+1) = n · 1 = n</code>, there's nothing left to compute. The function body is the proof, compressed into one line.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Take <code>n = 5</code> through the formula version:</p>
+<ol>
+<li><code>sum_odd = 5 ** 2 = 25</code></li>
+<li><code>sum_even = 5 * 6 = 30</code></li>
+<li><code>math.gcd(25, 30)</code> → factors of 25: 1, 5, 25; factors of 30: 1, 2, 3, 5, 6, 10, 15, 30 → largest shared factor is <code>5</code>.</li>
+<li>Return <code>5</code>, which equals <code>n</code>. Confirms the pattern again.</li>
+</ol>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Brute force:</strong> Time <code>O(n)</code> — dominated by building both sums. Space <code>O(1)</code> beyond the input.</li>
+<li><strong>Formula + gcd:</strong> Time is effectively <code>O(log(min(sumOdd, sumEven)))</code>, bounded by the Euclidean algorithm's steps, since the sums themselves are computed in constant time. In practice this is a handful of operations regardless of <code>n</code>. Space <code>O(1)</code>.</li>
+<li><strong>Fully simplified:</strong> Time <code>O(1)</code>, space <code>O(1)</code> — there is no dependency on <code>n</code>'s magnitude at all.</li>
+</ul>
+<p>These are correct because no step in any version does variable-size work beyond what's described — the brute force loops scale linearly with <code>n</code> by construction, while the formula versions replace that loop with fixed-size arithmetic, and the final version replaces even that with a direct return.</p>
+<h2>Alternative Solutions</h2>
+<p>You could also derive the result using <code>math.gcd(n, n + 1)</code> directly without ever touching <code>sumOdd</code> or <code>sumEven</code>, then multiply by <code>n</code> — mirroring the algebra step by step in code rather than jumping straight to the conclusion:</p>
+<pre><code class="language-python">def gcd_via_consecutive(n: int) -&gt; int:
+    return n * math.gcd(n, n + 1)
+</code></pre>
+<p>This is mathematically equivalent to returning <code>n</code> (since <code>gcd(n, n+1)</code> is always <code>1</code>), but it's a nice middle-ground version to show in an interview if you want to demonstrate the algebraic reduction without asserting the final simplification outright.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>n = 1</strong> (minimum): <code>sumOdd = 1</code>, <code>sumEven = 2</code>, <code>gcd = 1</code>. Matches returning <code>n</code>.</li>
+<li><strong>n at maximum (e.g., 1000):</strong> Formula and simplified versions handle this instantly with no overflow risk in Python, since integers are arbitrary precision.</li>
+<li><strong>Large n in other languages:</strong> Worth noting that <code>n²</code> and <code>n(n+1)</code> could overflow fixed-width integer types in languages like Java or C++ for very large <code>n</code> — not a concern in Python, but worth mentioning if asked.</li>
+<li><strong>No zero or negative input:</strong> Constraints guarantee <code>n ≥ 1</code>, so there's no need to guard against <code>n = 0</code> or negative values.</li>
+<li><strong>Duplicates:</strong> Not applicable here since there's no array input, just a single integer.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Writing a loop to sum odd/even numbers when a closed-form formula exists — wastes time and adds bug surface for no benefit.</li>
+<li>Reimplementing Euclid's algorithm by hand instead of using <code>math.gcd</code>, introducing off-by-one or infinite-loop risks.</li>
+<li>Mixing up the even-sum formula — writing <code>n * n</code> instead of <code>n * (n + 1)</code>.</li>
+<li>Assuming the pattern (<code>answer == n</code>) without proving it, then submitting an unverified one-liner that happens to pass small test cases by luck.</li>
+<li>Forgetting that <code>gcd(a, 0)</code> and other boundary GCD behavior matters in general GCD problems, even though it doesn't surface here since both sums are always positive.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Can you prove why <code>gcd(n, n+1)</code> is always 1 for any positive integer <code>n</code>?</li>
+<li>What is <code>gcd(ka, kb)</code> in terms of <code>gcd(a, b)</code>, and why does that identity hold?</li>
+<li>How would you extend this to sums of the first <code>n</code> multiples of 3 versus multiples of 5 — is there still a clean closed form?</li>
+<li>What's the time complexity of <code>math.gcd</code> itself, and how does Euclid's algorithm achieve it?</li>
+<li>How would integer overflow change your approach in a language without arbitrary-precision integers?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 1979 — Find Greatest Common Divisor of Array:</strong> Direct practice applying <code>math.gcd</code> across a collection.</li>
+<li><strong>LeetCode 2469 — Convert the Temperature:</strong> Different domain, same lesson — spot the formula, skip the simulation.</li>
+<li><strong>LeetCode 1071 — Greatest Common Divisor of Strings:</strong> GCD applied to a non-numeric structure, testing whether you understand the concept abstractly rather than just the arithmetic.</li>
+<li><strong>LeetCode 258 — Add Digits:</strong> Another "the answer has a closed form, stop simulating" problem, this time tied to digital roots.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The core lesson isn't the GCD function itself — it's the habit of asking "does this have a closed form?" before reaching for a loop. Recognizing that <code>sumEven = sumOdd + n</code> turned a two-sum, one-GCD-call problem into a single return statement. That kind of algebraic simplification is exactly what interviewers are probing for when they hand you an "easy" problem: not whether you can write a loop, but whether you look for the shortcut first.</p>
+<h2>Watch the Video</h2>
+<p>For the full whiteboard walkthrough of the algebra, plus a side-by-side run of all three solutions, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This post is part of the Daily Python LeetCode series, where one problem gets fully unpacked every day — the brute force, the optimal approach, and the reasoning that connects them. The goal isn't just passing test cases, it's building the pattern-recognition instincts that make future problems easier.</p>
+<h2>Call To Action</h2>
+<p>If this breakdown helped, subscribe on YouTube for the daily video walkthroughs and subscribe to the Substack newsletter for the written version with extra detail. Drop a comment with which problem you'd like covered next, and share this with anyone prepping for interviews.</p>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>Here's a LeetCode problem that looks like it needs a loop and a GCD calculation — but actually needs neither.</p>
+<p>The problem: sum the first n odd numbers, sum the first n even numbers, return their GCD.</p>
+<p>Most people simulate it directly: loop, add, loop, add, call math.gcd. That works and runs in O(n) time. But there's a cleaner path.</p>
+<p>Using the classic formulas — sum of first n odd numbers = n², sum of first n even numbers = n(n+1) — you can see that the even sum is always exactly n more than the odd sum. That single observation lets you factor n out of both terms, reducing the problem to gcd(n, n+1). And consecutive integers never share a factor greater than 1.</p>
+<p>The result: the answer is always just n. No sums, no GCD call, no loop — O(1) time and space.</p>
+<p>This is a good reminder that "easy" problems are often testing something other than syntax. They're testing whether you pause to look for structure before you start writing code. The fastest solution here wasn't found by optimizing the loop — it was found by not needing the loop at all.</p>
+<p>Full breakdown (brute force, formula-based, and fully simplified versions with complexity analysis) linked in the comments.</p>
+<h1>Python #LeetCode #CodingInterview #Algorithms #SoftwareEngineering</h1>
+<h2>Twitter/X Thread</h2>
+<p>1/ A LeetCode "easy" problem that teaches a genuinely useful lesson: sometimes the fastest code is the code you never write. Let's break down GCD of Odd and Even Sums. 🧵</p>
+<p>2/ The setup: sum the first n odd numbers (sumOdd), sum the first n even numbers (sumEven), return gcd(sumOdd, sumEven).</p>
+<p>3/ Obvious approach: loop through both sequences, add them up, call math.gcd. Works fine. O(n) time. But let's dig deeper.</p>
+<p>4/ Two classic formulas save us the loop entirely:
+sum of first n odd numbers = n²
+sum of first n even numbers = n(n+1)</p>
+<p>5/ Now notice: n(n+1) = n² + n. So sumEven is always exactly sumOdd + n. That's the whole ballgame.</p>
+<p>6/ gcd(n², n² + n) = gcd(n², n(n+1)) = n · gcd(n, n+1) — factoring n out of both terms.</p>
+<p>7/ And gcd(n, n+1) is ALWAYS 1, because consecutive integers can never share a factor greater than 1 (any common divisor would have to divide their difference, which is 1).</p>
+<p>8/ So the whole expression collapses to n · 1 = n. The answer is just the input. Always.</p>
+<p>9/ Which means the "optimal" solution is: <code>def solve(n): return n</code>. O(1) time, O(1) space, zero computation.</p>
+<p>10/ The real skill here isn't GCD or Python — it's pausing before you loop to ask "does this have a closed form?" That instinct is worth more than any specific algorithm. Full writeup + video walkthrough linked below.</p>
+<h2>Facebook Post</h2>
+<p>Ever solve a coding problem where the "answer" turns out to be way simpler than the question made it sound? That happened with today's problem: find the GCD of the sum of the first n odd numbers and the sum of the first n even numbers.</p>
+<p>Turns out, no matter what n is, the answer is just... n. Once you see why (spoiler: it comes down to the fact that two consecutive numbers never share a common factor), the whole problem turns into a one-line function. Full walkthrough with the math and the Python code is up now — great one if you enjoy those "wait, that's it?" moments in problem solving.</p>
+<h2>Reddit Summary</h2>
+<p>Working through LeetCode's "GCD of Odd and Even Sums" and it's a nice example of a problem where the brute force and the optimal solution differ by an entire order of magnitude in code volume, not just runtime.</p>
+<p>Setup: sumOdd = sum of first n odd numbers, sumEven = sum of first n even numbers, return gcd(sumOdd, sumEven).</p>
+<p>Using sum of first n odds = n² and sum of first n evens = n(n+1), you get sumEven = sumOdd + n. Factor n out of gcd(n², n²+n) and you're left with gcd(n, n+1), which is always 1 since consecutive integers share no common factor &gt; 1. So the whole thing reduces to just n.</p>
+<p>Brute force is O(n) with two loops and a real GCD call. The reduced version is O(1) — literally <code>return n</code>. Wrote up the full derivation plus complexity comparison if anyone wants the details, but wanted to share the core insight here since it's a good one for pattern-recognition practice.</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># GCD of Odd and Even Sums
+
+## Problem
+Given a positive integer `n`, let `sumOdd` be the sum of the first `n` odd
+positive integers and `sumEven` be the sum of the first `n` even positive
+integers. Return `gcd(sumOdd, sumEven)`.
+
+## Intuition
+Using the identities `sumOdd = n²` and `sumEven = n(n+1)`, note that
+`sumEven = sumOdd + n`. This lets us factor `n` out of the GCD:
+
+    gcd(n², n² + n) = n * gcd(n, n + 1)
+
+Since `n` and `n + 1` are consecutive integers, `gcd(n, n + 1)` is always 1.
+So the answer always simplifies to `n`.
+
+## Approach
+1. Brute force: loop-build both sums, call `math.gcd`. O(n) time.
+2. Formula-based: use `n**2` and `n*(n+1)`, call `math.gcd`. O(1) time (GCD
+   step is effectively constant for these bounds).
+3. Optimal: skip computation entirely, return `n`. O(1) time, O(1) space.
+
+## Python Solution
+\`\`\`python
+import math
+
+def gcd_of_odd_even_sums(n: int) -&gt; int:
+    return n  # proven: gcd(sumOdd, sumEven) == n for all n &gt;= 1
+
+def gcd_of_odd_even_sums_formula(n: int) -&gt; int:
+    return math.gcd(n ** 2, n * (n + 1))
+\`\`\`
+
+## Complexity
+| Approach     | Time | Space |
+|--------------|------|-------|
+| Brute force  | O(n) | O(1)  |
+| Formula+gcd  | O(1)* | O(1) |
+| Optimal      | O(1) | O(1)  |
+
+\*bounded by Euclidean algorithm steps, negligible for the given constraints.
+
+## Video
+Full walkthrough: {LINK}
+
+## Article
+Full written breakdown with dry runs, edge cases, and interview follow-ups
+is part of the Daily Python LeetCode series.
+</code></pre></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/GrL0d9s8KTM' target='_blank'>▶ Watch on YouTube</a></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>

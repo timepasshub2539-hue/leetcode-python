@@ -2,6 +2,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Count Subsequence Pairs With Equal GCD — DP Explained Step by Step — Python LeetCode Solution</title><meta name="description" content="Two disjoint subsequences, one condition: their GCDs must match. In this video we break down this tricky counting problem into three simple tools — GCD, subsequences, and dynamic programming.
 You&#x27;ll s">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/find-the-number-of-subsequences-with-equal-gcd.html">
 <meta property="og:title" content="Count Subsequence Pairs With Equal GCD — DP Explained Step by Step — Python LeetCode Solution"><meta property="og:type" content="website">
 <meta property="og:description" content="Two disjoint subsequences, one condition: their GCDs must match. In this video we break down this tricky counting problem into three simple tools — GCD, subsequences, and dynamic programming.
@@ -9,7 +10,298 @@ You&#x27;ll s"><meta property="og:image" content="https://i.ytimg.com/vi/1KQzhMn
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Count Subsequence Pairs With Equal GCD — DP Explained Step by Step</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'>🧩 Dynamic Programming</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/1KQzhMnxHf0' allowfullscreen></iframe></div><article><p>Two disjoint subsequences, one condition: their GCDs must match. In this video we break down this tricky counting problem into three simple tools — GCD, subsequences, and dynamic programming.
-You&#x27;ll s</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/1KQzhMnxHf0' target='_blank'>▶ Watch on YouTube</a></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Count Subsequence Pairs With Equal GCD — DP Explained Step by Step</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'>🧩 Dynamic Programming</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/1KQzhMnxHf0' allowfullscreen></iframe></div><article><h1>SEO PACKAGE</h1>
+<h2>1. SEO Title</h2>
+<p>Count Subsequence Pairs With Equal GCD (LeetCode) — Full DP Explanation in Python</p>
+<h2>2. SEO Subtitle</h2>
+<p>A step-by-step breakdown of how to count disjoint subsequence pairs with matching GCDs using a simple two-dimensional DP table.</p>
+<h2>3. Featured Quote</h2>
+<p>"Every element has exactly three doors — group one, group two, or the bench. Count the doors, not the subsequences."</p>
+<h2>4. Meta Description</h2>
+<p>Learn how to count subsequence pairs with equal GCD using dynamic programming in Python. Full intuition, brute force comparison, code walkthrough, and dry run.</p>
+<h2>5. URL Slug</h2>
+<p>count-subsequence-pairs-with-equal-gcd-dp-python</p>
+<h2>6. Keywords</h2>
+<p>count subsequence pairs with equal gcd, gcd dynamic programming, python leetcode dp, disjoint subsequences leetcode, gcd dp table, leetcode hard dp problem, dynamic programming interview questions, gcd python algorithm, subsequence counting algorithm, python dp table example, leetcode gcd problem, dp with two states, coding interview dp, algorithm intuition building, python dynamic programming tutorial, gcd of subsequences, disjoint subsets gcd, competitive programming dp, brute force vs dp, modulo arithmetic dp</p>
+<h2>7. Tags</h2>
+<p>Dynamic Programming, LeetCode, Python, GCD, Algorithms, Coding Interview, Data Structures, Hard Problems, Subsequences, Competitive Programming, Interview Prep, DP Table, Software Engineering, Problem Solving</p>
+<hr />
+<h1>MAIN ARTICLE</h1>
+<h2>Introduction</h2>
+<p>Some problems test whether you know a formula. This one tests whether you can <em>see structure</em> where none seems to exist. "Count Subsequence Pairs With Equal GCD" looks intimidating on paper — two disjoint groups, matching GCDs, counting all valid pairs — but it's actually a masterclass in a specific interview skill: turning an exponential search space into a polynomial one by figuring out exactly what information you need to remember.</p>
+<p>This is a favorite in interviews for senior and staff-level roles because it doesn't test whether you memorized GCD or subsequence definitions. It tests whether you can ask the right question: "what's the minimum state I need to carry forward?" Once you internalize that skill here, you'll start spotting it in dozens of other DP problems — partition problems, subset-sum variants, and counting problems in general.</p>
+<h2>Problem Overview</h2>
+<p>You're given an array of positive integers. You need to split the array's elements into two groups — call them Group 1 and Group 2 — with two rules:</p>
+<ol>
+<li><strong>Disjoint and non-empty</strong>: no index can belong to both groups, and both groups must have at least one element (leftover elements are simply excluded from both — think of it as a third "bench").</li>
+<li><strong>Equal GCD</strong>: the greatest common divisor of all elements in Group 1 must equal the greatest common divisor of all elements in Group 2.</li>
+</ol>
+<p>You must count every valid way to form such a pair of groups, modulo <code>10^9 + 7</code>. Note that swapping which group is "Group 1" and which is "Group 2" counts as a distinct pair — order matters.</p>
+<h2>Example</h2>
+<p>Take <code>nums = [10, 20, 30]</code>.</p>
+<ul>
+<li>Put <code>10</code> in Group 1 → GCD = 10. Put <code>20, 30</code> in Group 2 → GCD(20, 30) = 10. Match.</li>
+<li>Swap: <code>20, 30</code> in Group 1, <code>10</code> in Group 2. Also a match.</li>
+</ul>
+<p>That's the only structure that works here, so the answer is <strong>2</strong>.</p>
+<p>Now sanity-check with <code>nums = [1, 1, 1, 1]</code>. Since GCD of any non-empty subset of 1's is always 1, <em>every</em> way of splitting the four elements into two non-empty, disjoint groups (with leftovers allowed on the bench) counts. We'll prove below that this comes out to exactly <strong>50</strong>, which is a great way to verify any implementation before trusting it on harder inputs.</p>
+<h2>Intuition</h2>
+<p>The instinctive approach is to think in terms of subsequences: enumerate every subsequence for Group 1, then every subsequence of what's left for Group 2, compute GCDs, and compare. That's the shape of the problem as stated — but it's also a trap. The number of subsequence pairs grows explosively, and most of that enumeration is wasted work.</p>
+<p>The reframe that unlocks this problem: <strong>stop thinking about "picking subsequences" and start thinking about "making a decision at each index."</strong> Walk through the array left to right. For each element, there are exactly three things that can happen to it:</p>
+<ol>
+<li>It joins Group 1.</li>
+<li>It joins Group 2.</li>
+<li>It joins neither (the "bench").</li>
+</ol>
+<p>Every possible pair of disjoint subsequences corresponds to exactly one sequence of these per-element decisions, and every sequence of decisions corresponds to exactly one pair of subsequences. That's a clean bijection — so instead of counting subsequence pairs, we can count decision sequences, which is a much more DP-friendly shape.</p>
+<p>The second insight is even more important: to check the final condition (equal GCDs), you don't need to remember <em>which</em> elements went into each group. You only need to remember the <em>current running GCD of each group</em>. That's it. Two numbers. Since array values are bounded (say, at most 200), each running GCD is bounded too, so the entire "memory" of the process fits in a small 2D grid: <code>dp[a][b]</code> = number of ways to reach a state where Group 1's running GCD is <code>a</code> and Group 2's running GCD is <code>b</code>.</p>
+<p>One elegant detail makes this work cleanly: <strong>GCD(0, x) = x</strong> by convention. So we use <code>0</code> to represent "this group is still empty," and when the first element joins an empty group, the running GCD update formula (<code>gcd(current, x)</code>) naturally turns into <code>x</code> — no special-casing needed.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea</strong>: For every element, literally try all three assignments (Group 1, Group 2, bench), recursively, and at the end check whether the two groups are non-empty and share a GCD.</p>
+<p><strong>Algorithm</strong>:
+1. Recurse over each index with three branches.
+2. At the base case (end of array), compute GCD of each group.
+3. If both are non-empty and GCDs match, count it.</p>
+<p><strong>Advantages</strong>: Trivially correct, easy to write in a handful of lines, perfect for validating a faster solution on tiny inputs.</p>
+<p><strong>Disadvantages</strong>: Time complexity is <code>O(3^n)</code>. At <code>n = 15</code> that's already ~14 million branches; at <code>n = 200</code> (the real constraint), it's computationally impossible.</p>
+<p><strong>Complexity</strong>: Time <code>O(3^n)</code>, Space <code>O(n)</code> for recursion depth.</p>
+<h2>Optimal Solution</h2>
+<p>We build a DP table <code>dp[a][b]</code>, where <code>a</code> ranges over possible GCD values for Group 1 and <code>b</code> over possible GCD values for Group 2 (both from <code>0</code> to <code>maxVal</code>, where <code>0</code> means "empty").</p>
+<p><strong>Initialization</strong>: <code>dp[0][0] = 1</code> — before touching any element, there's exactly one state: both groups empty.</p>
+<p><strong>Transition</strong>: For each element <code>x</code> in the array, we make a <em>copy</em> of the current table (call it <code>next_dp</code>), then for every state <code>(a, b)</code> with a nonzero count in the current table:
+- <strong>Bench</strong> <code>x</code>: already represented, since <code>next_dp</code> starts as a copy of <code>dp</code>.
+- <strong>Assign <code>x</code> to Group 1</strong>: add <code>dp[a][b]</code> to <code>next_dp[gcd(a, x)][b]</code>.
+- <strong>Assign <code>x</code> to Group 2</strong>: add <code>dp[a][b]</code> to <code>next_dp[a][gcd(b, x)]</code>.</p>
+<p>Then <code>dp = next_dp</code> for the next iteration.</p>
+<p>Why copy instead of updating in place? Because if you update the live table while iterating over it, the same element could get "used twice" — once to update a cell, and then that updated cell gets processed again in the same pass, effectively letting <code>x</code> join a group more than once.</p>
+<p><strong>Reading the answer</strong>: After processing all elements, <code>dp[g][g]</code> (for <code>g &gt;= 1</code>) counts the number of ways both groups ended up with running GCD exactly <code>g</code>. We start at <code>g = 1</code>, not <code>g = 0</code>, because <code>dp[0][0]</code> represents "both groups still empty" — which violates the non-empty requirement. Since a non-empty group can never have GCD <code>0</code>, starting the diagonal sum at <code>g = 1</code> automatically excludes the all-empty case.</p>
+<p><strong>Answer</strong> = <code>sum(dp[g][g] for g in 1..maxVal) % (10^9 + 7)</code>.</p>
+<h3>Visualizing the grid</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>b=0</th>
+<th>b=1</th>
+<th>b=2</th>
+<th>...</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>a=0</strong></td>
+<td>both empty</td>
+<td>G2 has gcd 1</td>
+<td>G2 has gcd 2</td>
+<td>...</td>
+</tr>
+<tr>
+<td><strong>a=1</strong></td>
+<td>G1 has gcd 1</td>
+<td>both gcd 1 ✅</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>a=2</strong></td>
+<td>G1 has gcd 2</td>
+<td></td>
+<td>both gcd 2 ✅</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>The diagonal (✅ cells) is exactly what we want to sum.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from math import gcd
+
+MOD = 10**9 + 7
+
+def count_pairs_equal_gcd(nums: list[int]) -&gt; int:
+    max_val = max(nums)
+
+    # dp[a][b] = number of ways group1 has running gcd a, group2 has running gcd b
+    # index 0 means &quot;group is still empty&quot;
+    dp = [[0] * (max_val + 1) for _ in range(max_val + 1)]
+    dp[0][0] = 1
+
+    for x in nums:
+        next_dp = [row[:] for row in dp]  # copy: handles &quot;bench x&quot; for free
+
+        for a in range(max_val + 1):
+            for b in range(max_val + 1):
+                ways = dp[a][b]
+                if ways == 0:
+                    continue
+
+                # assign x to group 1
+                new_a = gcd(a, x)
+                next_dp[new_a][b] = (next_dp[new_a][b] + ways) % MOD
+
+                # assign x to group 2
+                new_b = gcd(b, x)
+                next_dp[a][new_b] = (next_dp[a][new_b] + ways) % MOD
+
+        dp = next_dp
+
+    # sum the diagonal, skipping g=0 (both groups empty)
+    return sum(dp[g][g] for g in range(1, max_val + 1)) % MOD
+
+
+def demo():
+    assert count_pairs_equal_gcd([10, 20, 30]) == 2
+    assert count_pairs_equal_gcd([1, 1, 1, 1]) == 50
+    assert count_pairs_equal_gcd([5]) == 0  # can't form two non-empty groups
+    print(&quot;all checks passed&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    demo()
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><strong><code>max_val = max(nums)</code></strong>: bounds the grid size — GCDs never exceed the largest element in the array.</li>
+<li><strong><code>dp[0][0] = 1</code></strong>: the seed state, both groups empty, before any element is processed.</li>
+<li><strong><code>next_dp = [row[:] for row in dp]</code></strong>: a deep-enough copy (each row is a fresh list) so writes for element <code>x</code> don't leak into reads for the same element.</li>
+<li><strong>Inner double loop over <code>a, b</code></strong>: iterates every state currently reachable; <code>if ways == 0: continue</code> skips dead cells purely for speed — no cell needs to be visited if it's never been reached.</li>
+<li><strong><code>new_a = gcd(a, x)</code></strong>: computes what Group 1's running GCD becomes if <code>x</code> joins it; because <code>gcd(0, x) == x</code>, an empty group correctly "activates" with its first element.</li>
+<li><strong>Two update lines</strong>: represent the two live "doors" (<code>bench</code> is implicit via the copy).</li>
+<li><strong>Final sum</strong>: reads off the diagonal starting at index 1, which is exactly the set of states where both groups are non-empty and share a GCD.</li>
+</ul>
+<h2>Dry Run</h2>
+<p><code>nums = [10, 20, 30]</code>, <code>max_val = 30</code>.</p>
+<p><strong>Start</strong>: <code>dp[0][0] = 1</code>.</p>
+<p><strong>Process x=10</strong>:
+- From <code>(0,0)</code> with ways=1: assign to G1 → <code>(10, 0)</code> += 1; assign to G2 → <code>(0, 10)</code> += 1.
+- After: <code>dp[0][0]=1, dp[10][0]=1, dp[0][10]=1</code>.</p>
+<p><strong>Process x=20</strong>:
+- From <code>(0,0)</code>: → <code>(20,0)</code> += 1, <code>(0,20)</code> += 1.
+- From <code>(10,0)</code>: gcd(10,20)=10 → <code>(10,0)</code> += 1 (bench, already copied) plus assign G1 → <code>(10,0)</code> += 1 → total <code>dp[10][0]=2</code>; assign G2 → <code>(10,20)</code> += 1.
+- From <code>(0,10)</code>: assign G1 → <code>(20,10)</code> += 1; assign G2: gcd(10,20)=10 → <code>(0,10)</code> += 1 (already copied, now 2).</p>
+<p><strong>Process x=30</strong>: continuing this process (full table has many entries), the two paths that survive to the diagonal are:
+- Group 1 = <code>{10}</code>, Group 2 = <code>{20,30}</code> → both end at gcd 10 → <code>dp[10][10]</code> += 1.
+- Group 1 = <code>{20,30}</code>, Group 2 = <code>{10}</code> → also <code>dp[10][10]</code> += 1.</p>
+<p><strong>Final</strong>: <code>dp[10][10] = 2</code>, all other diagonal entries are 0. Sum = <strong>2</strong>. Matches our hand-traced example.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time</strong>: <code>O(n * V^2)</code> where <code>V</code> is the max value in the array (grid dimension). With <code>n &lt;= 200</code> and <code>V &lt;= 200</code>, that's roughly <code>200 * 200 * 200 ≈ 8,000,000</code> operations — fast in practice.</li>
+<li><strong>Space</strong>: <code>O(V^2)</code> for the DP grid (plus its copy during transitions).</li>
+<li><strong>Why correct</strong>: the bijection between "decision sequences" and "pairs of disjoint subsequences" is exact — every element makes exactly one of three choices, and every combination of choices across all elements produces exactly one valid (or invalid, if a group ends empty) pair. The DP just accumulates counts along that bijection without ever double-counting, because each element is folded into <code>next_dp</code> from a frozen snapshot of <code>dp</code>.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p>You could shrink the grid using the fact that only <em>divisors of elements actually in the array</em> matter, rather than every value from <code>0</code> to <code>max_val</code>. This uses less memory when the array has few small max values but many divisors are already sparse — but in practice for <code>n, V &lt;= 200</code>, the dense grid is simpler and fast enough, so this optimization isn't worth the added bookkeeping unless constraints get much larger. This is a good example of when the "obviously smarter" approach isn't worth building — the state space is already small enough that dense storage wins on simplicity.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty array</strong>: no elements to assign, answer is 0 (can't form two non-empty groups).</li>
+<li><strong>Single element</strong>: cannot split into two non-empty groups, answer is 0. <code>dp[g][g]</code> for <code>g &gt;= 1</code> never fires because one group always stays at 0.</li>
+<li><strong>All duplicate values</strong> (e.g., <code>[1,1,1,1]</code>): handled naturally since assignment is by index, not value — verified against the hand-computed answer of 50.</li>
+<li><strong>Maximum values</strong> (elements at the upper constraint bound): grid size scales with <code>max_val</code>, so very large max values increase memory; watch for this if constraints change.</li>
+<li><strong>All elements equal to 1</strong>: every non-empty group has GCD 1, so this becomes a pure counting-of-partitions problem — a great sanity check because it can be verified by hand with inclusion-exclusion.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Updating the DP table in place</strong> instead of writing into a copy — causes an element to be counted as joining a group more than once.</li>
+<li><strong>Forgetting the <code>GCD(0, x) = x</code> convention</strong> — leads to incorrectly special-casing "first element into a group" instead of letting the formula handle it.</li>
+<li><strong>Starting the diagonal sum at <code>g = 0</code></strong> — incorrectly includes the "both groups empty" state, inflating the answer.</li>
+<li><strong>Not applying modulo on every addition</strong> — waiting until the end causes integer overflow behavior differences or, in languages with fixed-width integers, silent corruption.</li>
+<li><strong>Sizing the grid off the array length instead of the max element value</strong> — the GCD state space is bounded by value magnitude, not array length.</li>
+<li><strong>Confusing "disjoint" with "distinct values"</strong> — disjoint refers to index positions, not values; duplicate values are completely fine as long as they occupy different indices.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would the solution change if the two groups could overlap?</li>
+<li>What if we wanted the GCD to be a <em>specific</em> target value <code>g</code>, not "any equal value"?</li>
+<li>How would you adapt this for three groups needing pairwise equal GCDs?</li>
+<li>Can you bound the grid using only divisors present in the array to reduce space?</li>
+<li>What's the time complexity if the array values could be much larger (say, up to 10^9)?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 878 — Nth Magical Number</strong>: also relies heavily on GCD/LCM reasoning.</li>
+<li><strong>LeetCode 1819 — Number of Different Subsequences GCDs</strong>: same core building block (GCD tracking), different counting objective.</li>
+<li><strong>LeetCode 494 — Target Sum</strong>: same "three choices per element, DP over running state" pattern, with sum instead of GCD as the tracked state.</li>
+<li><strong>LeetCode 416 — Partition Equal Subset Sum</strong>: same disjoint-partition flavor, using sum equality instead of GCD equality.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The core lesson isn't about GCDs at all — it's about <em>state compression</em>. Whenever a counting problem seems to require tracking "which exact elements" went somewhere, ask whether a much smaller summary (a running GCD, a running sum, a running XOR) actually suffices to answer the final question. Once you find that summary, the exponential search collapses into a polynomial DP table, and the three-choices-per-element framing turns a scary enumeration problem into an ordinary Bellman-style fill.</p>
+<h2>Watch the Video</h2>
+<p>For the full step-by-step walkthrough with diagrams and the live code build, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of the Daily Python LeetCode series, where each problem gets a full teardown — the intuition first, then brute force, then the optimal approach, all the way down to a clean, production-quality Python implementation. The goal isn't to memorize solutions; it's to build the pattern-recognition muscle that lets you solve problems you've never seen before.</p>
+<h2>Call To Action</h2>
+<p>If this breakdown helped the DP click, subscribe on YouTube for the daily walkthroughs, and subscribe to the Substack for the full written version delivered straight to your inbox. Drop a comment with the problem you want tackled next, and share this with a friend prepping for interviews.</p>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>One of the most underrated interview skills isn't knowing algorithms — it's knowing what <em>not</em> to remember.</p>
+<p>I recently broke down a LeetCode problem: count all pairs of disjoint subsequences from an array whose GCDs match exactly. The brute force instinct is to enumerate subsequences directly, which explodes combinatorially and becomes computationally impossible past small inputs.</p>
+<p>The unlock is a reframe. Instead of thinking "which elements go where," think "what decision does each element make." Every element has exactly three choices: join group one, join group two, or sit out. That turns subsequence enumeration into a sequence of per-element decisions — a much more tractable shape.</p>
+<p>The second unlock is even better: to check if two groups have equal GCD, you never need to remember which elements are in each group. You only need the <em>running GCD</em> of each group so far. That's two small numbers, which means the entire state of the problem fits into a compact 2D table you update one element at a time.</p>
+<p>This is dynamic programming doing what it does best — not "memoizing recursion," but compressing a huge state space down to the few numbers that actually matter for the final answer.</p>
+<p>I walked through the full derivation, a brute-force comparison, and a complete Python implementation in this week's video and article. If you're prepping for interviews or just enjoy sharpening algorithmic intuition, it's worth the fifteen minutes.</p>
+<p>Link in comments.</p>
+<h2>Twitter/X Thread</h2>
+<p>1/ Here's a LeetCode "hard" that looks scary but has a beautiful trick hiding in it: count pairs of disjoint subsequences with equal GCD. Let's break it down. 🧵</p>
+<p>2/ The naive approach: enumerate every possible subsequence for group 1, then every subsequence of what's left for group 2, check GCDs. This is combinatorially explosive — O(3^n). Dead on arrival for real inputs.</p>
+<p>3/ The reframe: stop thinking about "picking subsequences." Start thinking about "what does each element do." Every element has exactly 3 choices: join group 1, join group 2, or sit on the bench.</p>
+<p>4/ Every valid pair of disjoint subsequences corresponds to exactly one sequence of these choices, and vice versa. That's the whole problem, restated in a way a computer can actually explore efficiently.</p>
+<p>5/ Here's the real insight: to check "do the two groups have equal GCD," you don't need to remember which elements are in each group. You only need the <em>current running GCD</em> of each group.</p>
+<p>6/ That means the entire state of the problem is just two small numbers. Build a grid: dp[a][b] = number of ways to reach "group 1 has gcd a, group 2 has gcd b."</p>
+<p>7/ Trick: GCD(0, x) = x by convention. Use 0 to mean "group is empty." When the first element joins, the formula naturally computes the right value — no special case needed.</p>
+<p>8/ For each element, copy the table, then update two new cells per existing state: assigning to group 1, assigning to group 2. The copy prevents an element from being "used twice" in one step.</p>
+<p>9/ After processing everything, the diagonal dp[g][g] for g &gt;= 1 gives you the count of pairs with equal GCD g. Sum it, mod 1e9+7, done. O(n * V^2) instead of O(3^n).</p>
+<p>10/ The real lesson: whenever a counting problem seems to need "which exact elements went where," ask if a smaller running summary actually suffices. That's the difference between exponential and polynomial. Full code + walkthrough in the article. 🔗</p>
+<h2>Facebook Post</h2>
+<p>Ever look at a coding problem and think "there's no way this can be solved efficiently"? That was my first reaction to this one: count pairs of subsequences from an array where nothing overlaps and the GCDs match exactly.</p>
+<p>Turns out the trick is surprisingly elegant — instead of trying to pick subsequences directly, you just track two small numbers (the running GCD of each group) as you walk through the array once. A little dynamic programming table does all the heavy lifting.</p>
+<p>Broke down the full intuition, the brute-force comparison, and the Python code in this week's post — perfect if you're prepping for interviews or just like watching a scary problem turn simple. Check it out and let me know what problem you want to see next!</p>
+<h2>Reddit Summary</h2>
+<p>Worked through a nice DP problem this week: counting pairs of disjoint subsequences in an array where both groups end up with the same GCD.</p>
+<p>The naive approach (enumerate every subsequence pair) is O(3^n) and dies immediately at real constraints. The key insight is that every element has exactly three outcomes — join group A, join group B, or get left out — and to check the final GCD condition, you only ever need to track the <em>running GCD</em> of each group, not which specific elements are in it.</p>
+<p>That collapses the state space down to a small 2D grid (<code>dp[gcdA][gcdB]</code>), updated once per element by copying the table forward so you don't double-assign an element within the same step. Sum the diagonal (skipping the "both groups empty" cell) at the end, and you're done in roughly O(n * maxVal^2).</p>
+<p>Worth working through by hand on <code>[1,1,1,1]</code> (answer is 50) — it's a satisfying way to confirm you actually understand the state compression instead of just copying a formula.</p>
+<hr />
+<h1>GITHUB README</h1>
+<h1>Count Subsequence Pairs With Equal GCD</h1>
+<h2>Problem</h2>
+<p>Given an array of positive integers, count the number of ways to split it into two <strong>disjoint, non-empty</strong> groups such that the GCD of Group 1 equals the GCD of Group 2. Order matters (swapping group labels counts as a different pair). Return the count modulo <code>10^9 + 7</code>.</p>
+<h2>Intuition</h2>
+<p>Every element has exactly three fates: join Group 1, join Group 2, or sit out. Every pair of disjoint subsequences corresponds to exactly one sequence of these choices. To check the final condition, you only need to track the <em>running GCD</em> of each group — not which elements are in it — since <code>gcd(0, x) = x</code> lets an empty group (represented by <code>0</code>) "activate" cleanly on its first element.</p>
+<h2>Approach</h2>
+<p>Maintain a 2D DP table <code>dp[a][b]</code> = number of ways Group 1 has running GCD <code>a</code> and Group 2 has running GCD <code>b</code>. Initialize <code>dp[0][0] = 1</code>. For each element <code>x</code>, copy the table forward, then for every reachable state, add transitions for "assign to Group 1" and "assign to Group 2" (skipping is implicit via the copy). At the end, sum <code>dp[g][g]</code> for <code>g &gt;= 1</code>.</p>
+<h2>Python Solution</h2>
+<pre><code class="language-python">from math import gcd
+
+MOD = 10**9 + 7
+
+def count_pairs_equal_gcd(nums: list[int]) -&gt; int:
+    max_val = max(nums)
+    dp = [[0] * (max_val + 1) for _ in range(max_val + 1)]
+    dp[0][0] = 1
+
+    for x in nums:
+        next_dp = [row[:] for row in dp]
+        for a in range(max_val + 1):
+            for b in range(max_val + 1):
+                ways = dp[a][b]
+                if ways == 0:
+                    continue
+                new_a = gcd(a, x)
+                next_dp[new_a][b] = (next_dp[new_a][b] + ways) % MOD
+                new_b = gcd(b, x)
+                next_dp[a][new_b] = (next_dp[a][new_b] + ways) % MOD
+        dp = next_dp
+
+    return sum(dp[g][g] for g in range(1, max_val + 1)) % MOD
+</code></pre>
+<h2>Complexity</h2>
+<ul>
+<li><strong>Time</strong>: <code>O(n * V^2)</code>, where <code>V</code> is the max array value.</li>
+<li><strong>Space</strong>: <code>O(V^2)</code> for the DP grid.</li>
+</ul>
+<h2>Video</h2>
+<p>Full walkthrough with diagrams: {LINK}</p>
+<h2>Article</h2>
+<p>Full written breakdown with brute force comparison, dry run, and edge cases available on the blog: {LINK}</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/1KQzhMnxHf0' target='_blank'>▶ Watch on YouTube</a></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>
