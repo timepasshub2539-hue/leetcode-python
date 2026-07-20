@@ -81,7 +81,7 @@ result.
 
 ## Video
 
-📺 Watch the full walkthrough: {LINK}
+📺 Watch the full walkthrough: https://youtu.be/aaYx4Q1R1j0
 
 ## Article
 
