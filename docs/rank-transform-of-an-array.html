@@ -2,10 +2,514 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Rank Transform of an Array — Sort, Set &amp; Hash Map in Python (Explained Simply) — Python LeetCode Solution</title><meta name="description" content="Learn how to solve LeetCode 1331: Rank Transform of an Array — step by step in Python.
 We cover the three tools you need (list, set, hash map), walk through a tiny example, and handle the duplicate tw">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/rank-transform-of-an-array.html">
 <meta property="og:title" content="Rank Transform of an Array — Sort, Set &amp; Hash Map in Python (Explained Simply) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="Learn how to solve LeetCode 1331: Rank Transform of an Array — step by step in Python.
+We cover the three tools you need (list, set, hash map), walk through a tiny example, and handle the duplicate tw"><meta property="og:image" content="https://i.ytimg.com/vi/0dIbtfCvyI8/hqdefault.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Rank Transform of an Array — Sort, Set &amp; Hash Map in Python (Explained Simply)</h1><span class='badge' style='background:#facc1522;color:#facc15'>🔑 Hash Maps</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/0dIbtfCvyI8' allowfullscreen></iframe></div><article><p>Learn how to solve LeetCode 1331: Rank Transform of an Array — step by step in Python.
-We cover the three tools you need (list, set, hash map), walk through a tiny example, and handle the duplicate tw</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/0dIbtfCvyI8' target='_blank'>▶ Watch on YouTube</a></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Rank Transform of an Array — Sort, Set &amp; Hash Map in Python (Explained Simply)</h1><span class='badge' style='background:#facc1522;color:#facc15'>🔑 Hash Maps</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/0dIbtfCvyI8' allowfullscreen></iframe></div><article><h1>SEO PACKAGE</h1>
+<h2>1. SEO Title</h2>
+<p><strong>Rank Transform of an Array in Python — LeetCode 1331 Explained with Sort, Set &amp; Hash Map</strong></p>
+<h2>2. SEO Subtitle</h2>
+<p>Learn how to replace every number with its rank in O(n log n) using sorting, a set for duplicates, and a hash map for instant lookups.</p>
+<h2>3. Featured Quote</h2>
+<blockquote>
+<p>"Sort once to learn the ranks, then look them up forever — that single pattern quietly powers half the array problems you'll ever meet."</p>
+</blockquote>
+<h2>4. Meta Description</h2>
+<p>Solve LeetCode 1331 Rank Transform of an Array in Python. Learn sorting, sets, and hash maps to rank numbers in O(n log n) with clean, interview-ready code.</p>
+<h2>5. URL Slug</h2>
+<p><code>rank-transform-of-an-array-python-leetcode-1331</code></p>
+<h2>6. Keywords</h2>
+<p>rank transform of an array, leetcode 1331, python hash map, python dictionary, python set, sorting algorithm python, coding interview python, o(n log n) sorting, rank array problem, enumerate python, coordinate compression, data structures python, array ranking algorithm, python list comprehension, binary search python, leetcode easy python, hash map lookup, unique values python, sort a copy python, python interview questions</p>
+<h2>7. Tags</h2>
+<p>Python, LeetCode, Coding Interview, Data Structures, Algorithms, Hash Map, Sorting, Sets, Software Engineering, Problem Solving, Array Problems, Beginner Python, Interview Prep, Coordinate Compression</p>
+<hr />
+<h1>Rank Transform of an Array: The Sort → Map → Look Up Pattern Every Developer Should Own</h1>
+<h2>8. Introduction</h2>
+<p>Some coding problems look trivial until a duplicate value quietly breaks your first attempt. <strong>Rank Transform of an Array</strong> (LeetCode 1331) is exactly that kind of problem — deceptively simple, but a great teacher. It hands you an array of integers and asks you to replace each value with its <em>rank</em>: the smallest becomes 1, the next distinct value becomes 2, and so on.</p>
+<p>Interviewers love this problem because it tests three fundamental skills at once: choosing the right <strong>data structures</strong>, reasoning about <strong>duplicates</strong>, and preserving the <strong>original order</strong> of the input. None of those are hard on their own, but combining them cleanly separates engineers who reach for the right tool from those who brute-force their way through.</p>
+<p>If you're learning <strong>hash maps</strong> and <strong>sorting patterns</strong> for <strong>coding interviews</strong>, this is one of the highest-return problems you can study. The technique you'll learn here — sort the unique values, map each to its rank, then look everything up in O(1) — shows up again and again in real interview questions. Master it once, reuse it forever.</p>
+<h2>9. Problem Overview</h2>
+<p>You're given an integer array <code>arr</code>. Return a new array of the same length where each element is replaced by its <strong>rank</strong>, following three rules:</p>
+<ol>
+<li><strong>Rank starts at 1.</strong> The smallest value in the array is rank 1.</li>
+<li><strong>Larger values get larger ranks.</strong> If one value is bigger than another, its rank is bigger too.</li>
+<li><strong>Equal values share a rank, and ranks have no gaps.</strong> Two identical numbers must get the <em>same</em> rank, and the ranks are as small as possible — no numbers are skipped.</li>
+</ol>
+<p>The output must line up with the <strong>original positions</strong> of the input. If <code>arr[0]</code> was the largest value, then <code>answer[0]</code> must hold the largest rank. You are transforming values in place, not sorting the array.</p>
+<h2>10. Example</h2>
+<p>Let's start with a clean, no-duplicates case.</p>
+<p><strong>Input:</strong> <code>arr = [40, 10, 20, 30]</code></p>
+<p>Rank each value by size:</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Size order</th>
+<th>Rank</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10</td>
+<td>smallest</td>
+<td>1</td>
+</tr>
+<tr>
+<td>20</td>
+<td>2nd</td>
+<td>2</td>
+</tr>
+<tr>
+<td>30</td>
+<td>3rd</td>
+<td>3</td>
+</tr>
+<tr>
+<td>40</td>
+<td>largest</td>
+<td>4</td>
+</tr>
+</tbody>
+</table>
+<p>Now write those ranks back into the <strong>original positions</strong>. <code>40</code> sat at index 0, so rank <code>4</code> goes to index 0.</p>
+<p><strong>Output:</strong> <code>[4, 1, 2, 3]</code></p>
+<p>Notice the shape of the output matches the shape of the input — only the values changed.</p>
+<p>Now the twist that trips people up:</p>
+<p><strong>Input:</strong> <code>arr = [100, 100, 100]</code></p>
+<p>All three values are equal, so they all share <strong>rank 1</strong>. There are no gaps, so we do <em>not</em> produce <code>[1, 2, 3]</code>.</p>
+<p><strong>Output:</strong> <code>[1, 1, 1]</code></p>
+<p>This is the heart of the problem: <strong>duplicates must not consume extra ranks.</strong> That single requirement is why a plain "sort and count position" approach fails, and why we need a set.</p>
+<h2>11. Intuition</h2>
+<p>Here's how an experienced engineer arrives at the answer without writing a line of code first.</p>
+<p>Picture lining up a group of people from shortest to tallest. Once they're in order, <strong>each person's position in the line is their rank.</strong> The shortest person is 1st, the next is 2nd, and so on. Numbers work the same way: if you sort them, a value's position in the sorted list <em>is</em> its rank.</p>
+<p>But two problems appear immediately:</p>
+<ul>
+<li><strong>Duplicates.</strong> If two people are the same height, they should share a rank — so before lining up, collapse duplicates into a single entry. That's a <strong>set</strong>: it automatically keeps only unique values.</li>
+<li><strong>Original order.</strong> The answer has to match where each value started. If we sort the input array itself, we destroy that information. So we sort a <em>copy</em> off to the side, learn the ranks there, and leave the original untouched.</li>
+</ul>
+<p>Once we know each value's rank, we don't want to search for it every time. We want to <em>ask and instantly get the answer</em>. That's a <strong>hash map</strong> (a Python <code>dict</code>): store <code>value → rank</code>, then every lookup is O(1).</p>
+<p>So the full insight is: <strong>sort the unique values to learn the ranks, store them in a hash map, then walk the original array and swap each value for its rank.</strong></p>
+<h2>12. Brute Force Solution</h2>
+<p><strong>Idea:</strong> For each element, count how many <em>distinct</em> values are less than or equal to it. That count is its rank.</p>
+<p><strong>Algorithm:</strong>
+1. For each element <code>x</code> in <code>arr</code>, scan the entire array.
+2. Count how many unique values are <code>≤ x</code>.
+3. That count is the rank of <code>x</code>.</p>
+<pre><code class="language-python">def array_rank_transform_brute(arr):
+    unique = set(arr)
+    result = []
+    for x in arr:
+        rank = sum(1 for u in unique if u &lt;= x)
+        result.append(rank)
+    return result
+</code></pre>
+<p><strong>Advantages:</strong>
+- Requires almost no cleverness; easy to reason about correctness.
+- Naturally handles duplicates because it counts unique values.</p>
+<p><strong>Disadvantages:</strong>
+- For every element we rescan all unique values → quadratic work.
+- Far slower than necessary; will time out on large inputs.</p>
+<p><strong>Time complexity:</strong> O(n²) — for each of <code>n</code> elements we scan up to <code>n</code> unique values.
+<strong>Space complexity:</strong> O(n) for the set of unique values.</p>
+<h2>13. Optimal Solution</h2>
+<p>We can do dramatically better by sorting <strong>once</strong> and reusing that work.</p>
+<p><strong>Step 1 — Drop duplicates.</strong> Convert the array to a set so equal values collapse into one entry. This guarantees duplicates share a rank.</p>
+<p><strong>Step 2 — Sort the unique values.</strong> Sorting lines them up smallest to largest. Now each value's index in the sorted list tells us its rank.</p>
+<p><strong>Step 3 — Build the rank map.</strong> Walk the sorted unique values with <code>enumerate</code>, which hands out positions starting at 0. Since ranks start at 1, we add 1.</p>
+<table>
+<thead>
+<tr>
+<th>Sorted unique</th>
+<th>Index (enumerate)</th>
+<th>Rank (index + 1)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10</td>
+<td>0</td>
+<td>1</td>
+</tr>
+<tr>
+<td>20</td>
+<td>1</td>
+<td>2</td>
+</tr>
+<tr>
+<td>30</td>
+<td>2</td>
+<td>3</td>
+</tr>
+<tr>
+<td>40</td>
+<td>3</td>
+<td>4</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Step 4 — Look up each original value.</strong> Walk the <em>original</em> array in order. For each value, ask the hash map for its rank — an instant O(1) lookup — and collect the answers.</p>
+<p>Because both copies of a duplicated value query the <em>same</em> hash map, they both receive the <em>same</em> rank. The duplicate problem solves itself.</p>
+<h2>14. Python Code</h2>
+<pre><code class="language-python">def array_rank_transform(arr):
+    # Sort the unique values so each position reveals its rank.
+    rank = {value: i + 1 for i, value in enumerate(sorted(set(arr)))}
+
+    # Replace each original element with its rank via O(1) lookups.
+    return [rank[value] for value in arr]
+</code></pre>
+<p>The verbose, loop-based version — identical logic, easier to read while learning:</p>
+<pre><code class="language-python">def array_rank_transform(arr):
+    rank = {}
+    for i, value in enumerate(sorted(set(arr))):
+        rank[value] = i + 1  # ranks start at 1
+
+    result = []
+    for value in arr:
+        result.append(rank[value])
+    return result
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<ul>
+<li><strong><code>set(arr)</code></strong> — removes duplicates so equal values are represented once. Without this, duplicates would each grab a distinct position and violate the "shared rank, no gaps" rule.</li>
+<li><strong><code>sorted(...)</code></strong> — orders the unique values from smallest to largest. This is the single step that actually <em>computes</em> the ranks; everything else is bookkeeping.</li>
+<li><strong><code>enumerate(...)</code></strong> — pairs each sorted value with its position <code>i</code>, starting at 0.</li>
+<li><strong><code>i + 1</code></strong> — shifts from zero-based indexing to one-based ranks.</li>
+<li><strong>The dict comprehension</strong> — builds <code>{value: rank}</code>, our instant lookup table.</li>
+<li><strong><code>[rank[value] for value in arr]</code></strong> — walks the original array in its original order, swapping each value for its rank. Order is preserved because we iterate <code>arr</code> directly, not the sorted copy.</li>
+</ul>
+<h2>16. Dry Run</h2>
+<p>Let's trace <code>arr = [40, 10, 20, 40]</code> (note the duplicate <code>40</code>).</p>
+<ol>
+<li><strong><code>set(arr)</code></strong> → <code>{40, 10, 20}</code> — the two <code>40</code>s collapse into one.</li>
+<li><strong><code>sorted(...)</code></strong> → <code>[10, 20, 40]</code>.</li>
+<li><strong>Build the map:</strong>
+   - <code>enumerate</code> gives <code>(0, 10)</code>, <code>(1, 20)</code>, <code>(2, 40)</code>.
+   - <code>rank = {10: 1, 20: 2, 40: 3}</code>.</li>
+<li><strong>Look up each original value:</strong></li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Original value</th>
+<th>Position in input</th>
+<th><code>rank[value]</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>40</td>
+<td>0</td>
+<td>3</td>
+</tr>
+<tr>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>20</td>
+<td>2</td>
+<td>2</td>
+</tr>
+<tr>
+<td>40</td>
+<td>3</td>
+<td>3</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Output:</strong> <code>[3, 1, 2, 3]</code> — both <code>40</code>s correctly received rank <code>3</code>, and the original order is intact.</p>
+<h2>17. Complexity Analysis</h2>
+<p><strong>Time complexity: O(n log n).</strong>
+- <code>set(arr)</code> is O(n).
+- <code>sorted(...)</code> is O(n log n) — this dominates everything else.
+- Building the map is O(n); the final lookups are O(n) total (each lookup is O(1)).
+- Sum: O(n) + O(n log n) + O(n) = <strong>O(n log n)</strong>.</p>
+<p><strong>Space complexity: O(n).</strong>
+- The set holds up to <code>n</code> unique values.
+- The hash map holds up to <code>n</code> key-value pairs.
+- The result list holds <code>n</code> elements.</p>
+<p>The sort is the bottleneck, and no rank-transform solution can beat O(n log n) in the comparison model — you fundamentally have to order the values to know their ranks.</p>
+<h2>18. Alternative Solutions</h2>
+<p><strong>Binary search instead of a hash map.</strong> Keep the sorted unique list, but skip building the map. For each value, run a binary search (<code>bisect</code>) to find its position in the sorted list — that position is its rank.</p>
+<pre><code class="language-python">from bisect import bisect_left
+
+def array_rank_transform_bisect(arr):
+    ordered = sorted(set(arr))
+    return [bisect_left(ordered, value) + 1 for value in arr]
+</code></pre>
+<p><strong>Comparison:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Hash map</th>
+<th>Binary search</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Time</td>
+<td>O(n log n)</td>
+<td>O(n log n)</td>
+</tr>
+<tr>
+<td>Per-lookup cost</td>
+<td>O(1)</td>
+<td>O(log n)</td>
+</tr>
+<tr>
+<td>Extra memory</td>
+<td>O(n) map</td>
+<td>Still needs sorted list</td>
+</tr>
+<tr>
+<td>Code clarity</td>
+<td>Simplest</td>
+<td>Fiddlier to get right</td>
+</tr>
+</tbody>
+</table>
+<p>Both are O(n log n) because sorting dominates. The binary-search version saves the memory of the map, but it <em>still</em> needs the sorted list, so the savings are tiny — and every lookup now costs a small search instead of being instant.</p>
+<p><strong>When to pick which?</strong> Almost always pick the hash map: same speed, simpler code. Reach for binary search only when memory is extremely tight.</p>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong>Empty array <code>[]</code></strong> — the set is empty, the map is empty, the comprehension iterates zero times, and we return <code>[]</code>. No crash, no special case needed.</li>
+<li><strong>All duplicates <code>[7, 7, 7]</code></strong> — the set collapses to <code>{7}</code>, giving <code>rank = {7: 1}</code>, so the output is <code>[1, 1, 1]</code>. Correct by construction.</li>
+<li><strong>Single element <code>[5]</code></strong> — sorts to <code>[5]</code>, maps to <code>{5: 1}</code>, returns <code>[1]</code>.</li>
+<li><strong>Negative numbers <code>[-9, 0, -3]</code></strong> — sorting already knows <code>-9 &lt; -3 &lt; 0</code>, so ranks come out right with zero extra handling.</li>
+<li><strong>Extreme values</strong> — the largest and smallest 32-bit integers sort correctly in Python, which uses arbitrary-precision integers.</li>
+</ul>
+<p>The clean solution survives every edge case for free precisely because it leans on <code>set</code> and <code>sorted</code> to do the hard thinking.</p>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Sorting the original array in place.</strong> This destroys the mapping between values and their positions, so you can no longer rebuild the answer in original order. Always sort a copy.</li>
+<li><strong>Forgetting the set.</strong> Ranking positions of the <em>raw</em> sorted array gives duplicates different ranks (<code>[1, 2, 3]</code> instead of <code>[1, 1, 1]</code>).</li>
+<li><strong>Off-by-one on the rank.</strong> <code>enumerate</code> starts at 0, but ranks start at 1. Forgetting <code>+ 1</code> shifts every rank down by one.</li>
+<li><strong>Rebuilding the map inside the loop.</strong> Constructing the rank lookup once is O(n log n); rebuilding it per element balloons to O(n² log n).</li>
+<li><strong>Assuming input is non-empty.</strong> A naive <code>min</code>/<code>max</code>-based approach can crash on <code>[]</code>; the set-and-sort approach handles it silently.</li>
+</ol>
+<h2>21. Interview Questions</h2>
+<p>Likely follow-ups after you solve this:</p>
+<ul>
+<li><em>What's the time complexity, and which step dominates?</em> (O(n log n), the sort.)</li>
+<li><em>Can you do it without extra space?</em> (Not meaningfully — you need the sorted order, which itself costs space or destroys the input.)</li>
+<li><em>How would you handle streaming input where the array doesn't fit in memory?</em></li>
+<li><em>What if ranks needed to start at 0, or count from the largest value down?</em></li>
+<li><em>This is coordinate compression — where else have you seen this technique?</em></li>
+</ul>
+<h2>22. Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 1122 — Relative Sort Array:</strong> also remaps values based on ordering, reinforcing the sort-and-map idea.</li>
+<li><strong>LeetCode 1046 — Last Stone Weight:</strong> uses ordering of values (via a heap) to drive the result.</li>
+<li><strong>LeetCode 315 — Count of Smaller Numbers After Self:</strong> a harder cousin built on ranking and coordinate compression.</li>
+<li><strong>LeetCode 220 — Contains Duplicate III:</strong> relies on ordered structures and bucketing, close relatives of sorting-based ranking.</li>
+</ul>
+<p>These share the core skill: <strong>use ordering to assign meaning to values</strong>, then look those meanings up efficiently.</p>
+<h2>23. Key Takeaways</h2>
+<ul>
+<li><strong>Sort once, then reuse.</strong> The expensive step is the sort; everything after is cheap O(1) or O(n) work.</li>
+<li><strong>Sets handle duplicates for free.</strong> Collapse equal values before ranking so they share a rank with no gaps.</li>
+<li><strong>Hash maps turn "search" into "ask."</strong> Precompute <code>value → rank</code> and every lookup becomes instant.</li>
+<li><strong>Never mutate the input when order matters.</strong> Sort a copy so you can rebuild the answer in original position.</li>
+<li>The <strong>sort → map → look up</strong> pattern is one of the most reusable tools in your interview toolkit.</li>
+</ul>
+<h2>24. Watch the Video</h2>
+<p>Prefer to <em>see</em> the intuition build step by step — the lockers, the guest list, the phone book, and the duplicate twist drawn out visually? Watch the full walkthrough here: {LINK}. It's the fastest way to lock in the sort-and-map pattern before your next interview.</p>
+<h2>25. About the Series</h2>
+<p>This is part of the <strong>Daily Python LeetCode</strong> series, where we solve one interview problem a day in clean, readable Python. Every post builds intuition <em>before</em> code, explains <em>why</em> each approach works, and connects the problem to the broader patterns interviewers actually test. No memorization — just durable understanding you can carry from one problem to the next.</p>
+<h2>26. Call To Action</h2>
+<p>If this helped the pattern click:</p>
+<ul>
+<li><strong>Subscribe on YouTube</strong> so you never miss a daily solution.</li>
+<li><strong>Subscribe to the Substack</strong> for the written deep-dives and code you can copy.</li>
+<li><strong>Comment</strong> with the approach you used — brute force, hash map, or binary search.</li>
+<li><strong>Share</strong> this with a friend who's grinding LeetCode for interviews.</li>
+</ul>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>Rank Transform of an Array (LeetCode 1331) looks trivial: replace each number with its rank. Then a duplicate shows up and quietly breaks the naive solution.</p>
+<p>Here's what makes it a great interview problem — it tests three skills at once:</p>
+<ol>
+<li>Choosing the right data structure</li>
+<li>Handling duplicates correctly</li>
+<li>Preserving the original order of the input</li>
+</ol>
+<p>The clean approach is a pattern worth memorizing:</p>
+<p>→ Put the values in a <strong>set</strong> to drop duplicates (equal values must share a rank).
+→ <strong>Sort</strong> the unique values — now each position <em>is</em> the rank.
+→ Store value → rank in a <strong>hash map</strong> for O(1) lookups.
+→ Walk the original array and swap each value for its rank.</p>
+<p>Total cost: O(n log n), dominated entirely by the sort.</p>
+<p>Two details that separate strong candidates:</p>
+<p>• We sort a <em>copy</em>, never the original — otherwise we lose track of where each value belongs in the output.
+• Duplicates solve themselves. Both copies query the same map and get the same rank.</p>
+<p>The "sort once, then look up" pattern shows up constantly — coordinate compression, relative sorting, counting problems. Learn it here and you'll reuse it for years.</p>
+<p>What's your default: hash map or binary search on the sorted list?</p>
+<h1>Python #LeetCode #CodingInterview #DataStructures #Algorithms #SoftwareEngineering</h1>
+<h2>Twitter/X Thread</h2>
+<p><strong>1/</strong>
+LeetCode 1331 "Rank Transform of an Array" looks trivial — until a duplicate breaks your first solution.</p>
+<p>Here's the clean O(n log n) Python approach every dev should know. 🧵</p>
+<p><strong>2/</strong>
+The task: replace each number with its rank.
+Smallest → 1, next → 2, and so on.</p>
+<p>[40, 10, 20, 30] → [4, 1, 2, 3]</p>
+<p>The output keeps the original order. Only the values change.</p>
+<p><strong>3/</strong>
+The twist that trips people up:</p>
+<p>[100, 100, 100] → [1, 1, 1]</p>
+<p>NOT [1, 2, 3].</p>
+<p>Equal values share a rank, with no gaps. Remember this — it drives the whole solution.</p>
+<p><strong>4/</strong>
+Key insight: if you line numbers up smallest → largest, each value's POSITION is its rank.</p>
+<p>Sort them, and ranking is basically free.</p>
+<p><strong>5/</strong>
+But two problems:
+• Duplicates should share a rank → use a SET to drop them first.
+• We must keep original order → sort a COPY, never the input itself.</p>
+<p><strong>6/</strong>
+Once we know the ranks, we don't want to search every time.
+Store value → rank in a hash map (Python dict). Every lookup is O(1).</p>
+<p><strong>7/</strong>
+The whole thing in two lines:</p>
+<pre><code class="language-python">rank = {v: i+1 for i, v in enumerate(sorted(set(arr)))}
+return [rank[v] for v in arr]
+</code></pre>
+<p><strong>8/</strong>
+Why duplicates just work:
+both copies of a value query the SAME map, so both get the SAME rank. No special handling.</p>
+<p><strong>9/</strong>
+Complexity:
+• Time: O(n log n) — the sort dominates.
+• Space: O(n) — set + map + result.</p>
+<p>You can't beat O(n log n): you fundamentally must order the values.</p>
+<p><strong>10/</strong>
+The "sort → map → look up" pattern shows up all over interviews (coordinate compression, relative sort, counting problems).</p>
+<p>Learn it once, reuse it forever. Save this thread. 🔖</p>
+<h2>Facebook Post</h2>
+<p>Ever hit a coding problem that looks easy… until a duplicate value quietly breaks your solution? 😅</p>
+<p>That's LeetCode 1331, "Rank Transform of an Array." You replace each number with its rank — smallest gets 1, next gets 2, and so on. Simple, right? Then you see [100, 100, 100] and realize all three must share rank 1, not 1-2-3.</p>
+<p>The clean fix uses just three tools you already know: a <strong>set</strong> to drop duplicates, <strong>sorting</strong> to learn the ranks, and a <strong>hash map</strong> for instant lookups. Sort once, then look up each value — done in O(n log n).</p>
+<p>The best part: it's a pattern you'll reuse in tons of other interview problems. Full step-by-step walkthrough in the video and article. Give it a watch and let me know how you'd solve it! 👇</p>
+<h2>Reddit Summary</h2>
+<p><strong>Rank Transform of an Array (LC 1331) — the sort/set/hashmap pattern, and why duplicates matter</strong></p>
+<p>Quick writeup for anyone practicing array problems.</p>
+<p>The task: replace each element with its rank (smallest = 1). Output keeps the original order.</p>
+<p>The gotcha most people miss: duplicates must <strong>share</strong> a rank with no gaps. <code>[100,100,100]</code> → <code>[1,1,1]</code>, not <code>[1,2,3]</code>.</p>
+<p>Clean approach:
+1. <code>set(arr)</code> to drop duplicates (equal values share one rank).
+2. <code>sorted(...)</code> the unique values — position now equals rank.
+3. Build a <code>{value: rank}</code> dict for O(1) lookups.
+4. Walk the original array, swap each value for its rank.</p>
+<pre><code class="language-python">def array_rank_transform(arr):
+    rank = {v: i + 1 for i, v in enumerate(sorted(set(arr)))}
+    return [rank[v] for v in arr]
+</code></pre>
+<p>Time O(n log n) (sort dominates), space O(n).</p>
+<p>Two things worth noting:
+- Sort a copy, not the input — you need original positions to build the answer.
+- There's a <code>bisect</code>-based variant that skips the map, but it's O(log n) per lookup and still needs the sorted list, so the memory savings are marginal. Hash map is simpler and just as fast.</p>
+<p>Edge cases (empty array, all duplicates, negatives) all fall out for free because <code>set</code> + <code>sorted</code> do the heavy lifting. Curious if anyone uses the binary-search version in practice, or if it's always hashmap for you.</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># Rank Transform of an Array — LeetCode 1331 (Python)
+
+Replace every element of an array with its **rank**: the smallest value becomes 1,
+the next distinct value becomes 2, and equal values share the same rank with no gaps.
+The output preserves the original order.
+
+## Problem
+
+Given an integer array `arr`, return an array of the same length where each element
+is replaced by its rank.
+
+- Rank starts at 1.
+- Larger values get larger ranks.
+- Equal values get the same rank, and ranks have no gaps.
+
+**Example 1**
+</code></pre>
+<p>Input:  [40, 10, 20, 30]
+Output: [4, 1, 2, 3]</p>
+<pre><code>
+**Example 2**
+</code></pre>
+<p>Input:  [100, 100, 100]
+Output: [1, 1, 1]        # duplicates share a rank</p>
+<pre><code>
+## Intuition
+
+Line the numbers up from smallest to largest — each value's position in that line
+is its rank. Two adjustments make it correct:
+
+- **Duplicates** should share a rank → drop them with a `set` first.
+- **Original order** must be preserved → sort a *copy*, never the input.
+
+Once ranks are known, store `value → rank` in a hash map so every lookup is O(1).
+
+## Approach
+
+1. `set(arr)` — remove duplicates so equal values share one rank.
+2. `sorted(...)` — order the unique values; position reveals the rank.
+3. Build a `{value: rank}` map with `enumerate` (add 1 since ranks start at 1).
+4. Walk the original array and replace each value with its rank via O(1) lookups.
+
+## Python Solution
+
+```python
+def array_rank_transform(arr):
+    # Sort unique values so each position reveals its rank.
+    rank = {value: i + 1 for i, value in enumerate(sorted(set(arr)))}
+
+    # Replace each original element with its rank via O(1) lookups.
+    return [rank[value] for value in arr]
+</code></pre>
+<p>Binary-search alternative (skips the map, O(log n) per lookup):</p>
+<pre><code class="language-python">from bisect import bisect_left
+
+def array_rank_transform(arr):
+    ordered = sorted(set(arr))
+    return [bisect_left(ordered, value) + 1 for value in arr]
+</code></pre>
+<h2>Complexity</h2>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Time</td>
+<td>O(n log n)</td>
+<td>Sorting dominates; lookups are O(1) each</td>
+</tr>
+<tr>
+<td>Space</td>
+<td>O(n)</td>
+<td>Set + hash map + result list</td>
+</tr>
+</tbody>
+</table>
+<h2>Edge Cases</h2>
+<ul>
+<li><code>[]</code> → <code>[]</code></li>
+<li><code>[7, 7, 7]</code> → <code>[1, 1, 1]</code></li>
+<li>Negative numbers sort correctly with no special handling.</li>
+</ul>
+<h2>Video</h2>
+<p>Watch the full walkthrough: {LINK}</p>
+<h2>Article</h2>
+<p>Read the detailed explanation with dry runs, diagrams, and common mistakes in the
+<strong>Daily Python LeetCode</strong> series.
+```</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/0dIbtfCvyI8' target='_blank'>▶ Watch on YouTube</a></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>

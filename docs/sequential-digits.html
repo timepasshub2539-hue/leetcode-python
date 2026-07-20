@@ -1,9 +1,523 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Sequential Digits Explained in Python — Sliding Window Over a String (LeetCode 1291) — Python LeetCode Solution</title><meta name="description" content="Learn how to solve the Sequential Digits problem (LeetCode 1291) with a surprisingly simple trick: slide a window over the string &quot;123456789&quot; and cut out every candidate number. We start with the thre">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/sequential-digits.html">
 <meta property="og:title" content="Sequential Digits Explained in Python — Sliding Window Over a String (LeetCode 1291) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="Learn how to solve the Sequential Digits problem (LeetCode 1291) with a surprisingly simple trick: slide a window over the string &quot;123456789&quot; and cut out every candidate number. We start with the thre"><meta property="og:image" content="https://i.ytimg.com/vi/wgMhwxSzuKg/hqdefault.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Sequential Digits Explained in Python — Sliding Window Over a String (LeetCode 1291)</h1><span class='badge' style='background:#2dd4bf22;color:#2dd4bf'>↔️ Two Pointers</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/wgMhwxSzuKg' allowfullscreen></iframe></div><article><p>Learn how to solve the Sequential Digits problem (LeetCode 1291) with a surprisingly simple trick: slide a window over the string &quot;123456789&quot; and cut out every candidate number. We start with the thre</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/wgMhwxSzuKg' target='_blank'>▶ Watch on YouTube</a></div><h2 class='ph1' style='font-size:1.4rem'>Similar problems</h2><div class='grid'><a class='card' href='sum-of-gcd-of-formed-pairs.html'><div class='body'><h3>Sum of GCD of Formed Pairs — LeetCode Daily Python Solution (Two Pointers Eats It Alive)</h3><span class='badge' style='background:#2dd4bf22;color:#2dd4bf'>↔️ Two Pointers</span></div></a></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Sequential Digits Explained in Python — Sliding Window Over a String (LeetCode 1291)</h1><span class='badge' style='background:#2dd4bf22;color:#2dd4bf'>↔️ Two Pointers</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/wgMhwxSzuKg' allowfullscreen></iframe></div><article><h1>SEO PACKAGE</h1>
+<h2>1. SEO Title</h2>
+<p><strong>Sequential Digits (LeetCode 1291): The Sliding Window Trick That Makes This Medium Feel Easy in Python</strong></p>
+<h2>2. SEO Subtitle</h2>
+<p>Stop searching a billion numbers — generate the only 36 answers that can ever exist by sliding a window over <code>"123456789"</code>.</p>
+<h2>3. Featured Quote</h2>
+<blockquote>
+<p>When valid answers are rare and structured, generate them directly instead of searching for them.</p>
+</blockquote>
+<h2>4. Meta Description</h2>
+<p>Solve LeetCode 1291 Sequential Digits in Python using a sliding window over "123456789". Learn the O(1) trick, dry run, edge cases, and interview tips.</p>
+<h2>5. URL Slug</h2>
+<p><code>sequential-digits-leetcode-1291-python-sliding-window</code></p>
+<h2>6. Keywords</h2>
+<p>Sequential Digits, LeetCode 1291, Python sliding window, coding interview, string slicing Python, generate vs search, constant time algorithm, LeetCode medium Python, algorithm patterns, Python loops and lists, interview preparation, data structures and algorithms, brute force vs optimal, sliding window pattern, Daily Python LeetCode, software engineering interview, Python string manipulation, O(1) time complexity, beginner algorithms, number range problem</p>
+<h2>7. Tags</h2>
+<p><code>python</code>, <code>leetcode</code>, <code>sliding-window</code>, <code>coding-interview</code>, <code>algorithms</code>, <code>data-structures</code>, <code>string-slicing</code>, <code>interview-prep</code>, <code>leetcode-medium</code>, <code>python-for-beginners</code>, <code>problem-solving</code>, <code>software-engineering</code>, <code>daily-leetcode</code>, <code>programming-tutorial</code></p>
+<hr />
+<h1>Sequential Digits (LeetCode 1291): Generate the Answers Instead of Searching for Them</h1>
+<h2>8. Introduction</h2>
+<p>Some problems look intimidating until you notice the constraint hiding in plain sight. <strong>Sequential Digits</strong> is exactly that kind of problem — labeled <em>medium</em> on LeetCode, but secretly one of the easiest mediums you will ever solve once you see the trick.</p>
+<p>At its heart, this problem is a test of a single, career-defining instinct: <strong>when the set of valid answers is small and highly structured, you should manufacture those answers directly rather than scanning a giant search space looking for them.</strong> Interviewers love this problem precisely because the naive approach <em>works</em> but is embarrassingly slow, and the elegant approach turns a range that could span a billion numbers into a fixed, tiny amount of work.</p>
+<p>If you are learning <strong>Python</strong>, preparing for a <strong>coding interview</strong>, or building fluency with <strong>algorithms and data structures</strong>, this problem is a perfect teacher. It rewards you for thinking about the <em>shape</em> of valid outputs before you write a single loop — a habit that separates engineers who grind through brute force from those who spot the clean solution in seconds. By the end of this article you will understand not just the code, but the reasoning that produces it.</p>
+<h2>9. Problem Overview</h2>
+<p>You are given two integers, <code>low</code> and <code>high</code>. Your job is to return <strong>every integer in the inclusive range <code>[low, high]</code> whose digits are sequential</strong> — meaning each digit is exactly one more than the digit before it.</p>
+<p>A number has <em>sequential digits</em> if, reading left to right, every digit increases by exactly one. So <code>1234</code> qualifies because <code>1 → 2 → 3 → 4</code> each step goes up by one. The number <code>1357</code> does <strong>not</strong> qualify, because <code>1 → 3</code> jumps by two.</p>
+<p>The result must be returned as a <strong>sorted list</strong> in ascending order.</p>
+<p>A few consequences fall straight out of that definition:</p>
+<ul>
+<li>Sequential numbers never contain a <code>0</code>, because a digit must always be one greater than the last, and there is no digit before <code>1</code>.</li>
+<li>Sequential numbers never wrap past <code>9</code>. There is no <code>9 → 10</code> continuation, so the longest possible sequential number is <code>123456789</code>.</li>
+<li>Because every sequential number is built from strictly increasing single digits with no repeats, there is a <strong>finite, fixed universe</strong> of them.</li>
+</ul>
+<p>That last point is the whole game.</p>
+<h2>10. Example</h2>
+<p>Let's ground the definition in concrete cases.</p>
+<p><strong>Example 1</strong></p>
+<pre><code>Input:  low = 100, high = 300
+Output: [123, 234]
+</code></pre>
+<p>Why? The only three-digit sequential numbers are <code>123</code>, <code>234</code>, <code>345</code>, <code>456</code>, and so on. Of those, only <code>123</code> and <code>234</code> fall inside <code>[100, 300]</code>. <code>345</code> is greater than <code>300</code>, so it is excluded.</p>
+<p><strong>Example 2</strong></p>
+<pre><code>Input:  low = 1000, high = 13000
+Output: [1234, 2345, 3456, 4567, 5678, 6789, 12345]
+</code></pre>
+<p>Here <code>low</code> has 4 digits and <code>high</code> has 5 digits, so valid answers can only be 4 or 5 digits long. Every 4-digit sequential number (<code>1234</code> through <code>6789</code>) sits comfortably inside the range. Among 5-digit candidates, only <code>12345</code> is small enough — <code>23456</code> already exceeds <code>13000</code>, so it is dropped.</p>
+<p>Notice how the output is already sorted. Hold onto that observation; it becomes a free gift later.</p>
+<h2>11. Intuition</h2>
+<p>Imagine you have never seen the optimal solution. How would an experienced engineer <em>discover</em> it?</p>
+<p>The first instinct is almost always: <strong>loop from <code>low</code> to <code>high</code>, and for each number, check whether its digits are sequential.</strong> That is a perfectly reasonable starting thought. But then you glance at the constraints and see that <code>high</code> can be as large as <strong>one billion</strong>. A billion iterations to find — what, exactly? Let's count how many valid answers can even exist.</p>
+<p>The longest sequential number is <code>123456789</code> (9 digits). Every sequential number is a <em>contiguous run</em> of that master string. There are:</p>
+<ul>
+<li>8 numbers of length 2 (<code>12</code> … <code>89</code>)</li>
+<li>7 numbers of length 3</li>
+<li>6 of length 4 … down to 1 of length 9</li>
+</ul>
+<p>That sums to <strong>36 sequential numbers in the entire universe of integers.</strong> Ever. Full stop.</p>
+<p>So the naive approach potentially checks a billion numbers to surface at most 36 answers. That imbalance is the signal. When the valid outputs are this rare and this structured, searching is the wrong verb. <strong>Generating</strong> is the right one.</p>
+<p>Now the key insight crystallizes: <em>every sequential number is a slice of the string <code>"123456789"</code>.</em> <code>234</code> is characters 1–3. <code>4567</code> is characters 3–6. If you can systematically cut every substring out of <code>"123456789"</code>, you have generated every sequential number that could ever exist — no searching required.</p>
+<p>The tool for systematically cutting fixed-width chunks out of a string and moving along is the <strong>sliding window</strong>. Picture a cardboard cutout three digits wide sliding across the digit necklace. At each stop, the digits showing through form one candidate. Slide right, get the next one.</p>
+<p>That's the whole idea: <em>slide a window over one short string, and every candidate falls out for free.</em></p>
+<h2>12. Brute Force Solution</h2>
+<p><strong>Idea:</strong> Walk through every number from <code>low</code> to <code>high</code> and test each one for the sequential property.</p>
+<p><strong>Algorithm:</strong>
+1. Loop <code>num</code> from <code>low</code> to <code>high</code>.
+2. Convert <code>num</code> to a string.
+3. Check that every digit is exactly one more than the previous digit.
+4. If it passes, append it to the result.</p>
+<pre><code class="language-python">def sequentialDigits_brute(low: int, high: int) -&gt; list[int]:
+    result = []
+    for num in range(low, high + 1):
+        s = str(num)
+        if all(int(s[i]) + 1 == int(s[i + 1]) for i in range(len(s) - 1)):
+            result.append(num)
+    return result
+</code></pre>
+<p><strong>Advantages:</strong>
+- Dead simple to write and reason about.
+- Directly mirrors the problem statement, so it is easy to trust.</p>
+<p><strong>Disadvantages:</strong>
+- Scans up to a billion numbers to find at most 36 answers.
+- Wastes essentially all of its work on numbers that were never going to qualify.</p>
+<p><strong>Time complexity:</strong> <code>O(high - low)</code> — up to <code>O(10^9)</code>, far too slow.
+<strong>Space complexity:</strong> <code>O(1)</code> excluding the output list.</p>
+<p>The brute force is correct, but it searches when it should generate. Let's fix that.</p>
+<h2>13. Optimal Solution</h2>
+<p>We flip the strategy from <em>search</em> to <em>generate and filter</em>.</p>
+<p><strong>Step 1 — Establish the master string.</strong> Every sequential number lives inside <code>"123456789"</code>.</p>
+<p><strong>Step 2 — Only try useful lengths.</strong> A candidate can only land in <code>[low, high]</code> if it has the right number of digits. A 3-digit number can never beat a 5-digit <code>low</code>. So we count the digits of <code>low</code> and <code>high</code> and only consider window widths in that range.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">Length</th>
+<th>Candidates produced</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">2</td>
+<td>12, 23, 34, 45, 56, 67, 78, 89</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td>123, 234, 345, 456, 567, 678, 789</td>
+</tr>
+<tr>
+<td style="text-align: right;">4</td>
+<td>1234, 2345, 3456, 4567, 5678, 6789</td>
+</tr>
+<tr>
+<td style="text-align: right;">…</td>
+<td>…</td>
+</tr>
+<tr>
+<td style="text-align: right;">9</td>
+<td>123456789</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Step 3 — Slide the window for each length.</strong> For a window of width <code>length</code>, the left edge <code>start</code> runs from <code>0</code> up to <code>10 - length</code>. Why <code>10 - length</code>? The master string is 9 characters long. A window of width 4 must not hang off the end, so its last valid start is index <code>5</code> — and <code>10 - 4 = 6</code>, which is exactly the exclusive upper bound <code>range</code> needs.</p>
+<p><strong>Step 4 — Convert and filter.</strong> Each slice is text, so wrap it in <code>int()</code>. If the resulting number sits within <code>[low, high]</code>, keep it.</p>
+<p><strong>The free gift:</strong> because we try short lengths before long ones, and slide left-to-right within each length, the numbers emerge <strong>already sorted</strong>. No call to <code>sorted()</code> needed. Generate, filter, done.</p>
+<h2>14. Python Code</h2>
+<pre><code class="language-python">class Solution:
+    def sequentialDigits(self, low: int, high: int) -&gt; list[int]:
+        digits = &quot;123456789&quot;
+        result = []
+
+        # Only lengths between the digit-count of low and high can possibly fit.
+        for length in range(len(str(low)), len(str(high)) + 1):
+            # Slide a window of this width across the master string.
+            for start in range(0, 10 - length):
+                candidate = int(digits[start:start + length])
+                if low &lt;= candidate &lt;= high:
+                    result.append(candidate)
+
+        return result
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<ul>
+<li><strong><code>digits = "123456789"</code></strong> — our entire search space, compressed into nine characters. Every possible answer is a substring of this.</li>
+<li><strong><code>result = []</code></strong> — an ordered list we append valid candidates to. Order matters, and lists preserve insertion order.</li>
+<li><strong><code>for length in range(len(str(low)), len(str(high)) + 1)</code></strong> — we convert <code>low</code> and <code>high</code> to strings purely to <em>count their digits</em>. This loop skips every length that couldn't possibly produce an in-range answer, which is where most of the savings come from.</li>
+<li><strong><code>for start in range(0, 10 - length)</code></strong> — the sliding window itself. <code>start</code> is the left edge; the upper bound <code>10 - length</code> guarantees the window never runs off the end of the 9-character string.</li>
+<li><strong><code>candidate = int(digits[start:start + length])</code></strong> — the slice <code>digits[start:start + length]</code> cuts out one window of characters. Remember the end index is <em>exclusive</em>, which is the classic Python slicing gotcha. <code>int(...)</code> turns the text into a real number.</li>
+<li><strong><code>if low &lt;= candidate &lt;= high</code></strong> — a single inclusive bounds check. Python's chained comparison reads exactly like the math: is the candidate between <code>low</code> and <code>high</code>?</li>
+<li><strong><code>result.append(candidate)</code></strong> — keep the good ones. Because of the loop order, they arrive pre-sorted.</li>
+</ul>
+<h2>16. Dry Run</h2>
+<p>Let's trace <strong>Example 2</strong>: <code>low = 1000</code>, <code>high = 13000</code>.</p>
+<ul>
+<li><code>len(str(1000))</code> = 4, <code>len(str(13000))</code> = 5 → we try <code>length</code> in <code>{4, 5}</code>.</li>
+</ul>
+<p><strong>Length 4</strong> — <code>start</code> runs <code>0</code> to <code>5</code>:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">start</th>
+<th>slice</th>
+<th style="text-align: right;">candidate</th>
+<th>in [1000, 13000]?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">0</td>
+<td><code>1234</code></td>
+<td style="text-align: right;">1234</td>
+<td>✅ keep</td>
+</tr>
+<tr>
+<td style="text-align: right;">1</td>
+<td><code>2345</code></td>
+<td style="text-align: right;">2345</td>
+<td>✅ keep</td>
+</tr>
+<tr>
+<td style="text-align: right;">2</td>
+<td><code>3456</code></td>
+<td style="text-align: right;">3456</td>
+<td>✅ keep</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td><code>4567</code></td>
+<td style="text-align: right;">4567</td>
+<td>✅ keep</td>
+</tr>
+<tr>
+<td style="text-align: right;">4</td>
+<td><code>5678</code></td>
+<td style="text-align: right;">5678</td>
+<td>✅ keep</td>
+</tr>
+<tr>
+<td style="text-align: right;">5</td>
+<td><code>6789</code></td>
+<td style="text-align: right;">6789</td>
+<td>✅ keep</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Length 5</strong> — <code>start</code> runs <code>0</code> to <code>4</code>:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">start</th>
+<th>slice</th>
+<th style="text-align: right;">candidate</th>
+<th>in [1000, 13000]?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">0</td>
+<td><code>12345</code></td>
+<td style="text-align: right;">12345</td>
+<td>✅ keep</td>
+</tr>
+<tr>
+<td style="text-align: right;">1</td>
+<td><code>23456</code></td>
+<td style="text-align: right;">23456</td>
+<td>❌ too big</td>
+</tr>
+<tr>
+<td style="text-align: right;">2</td>
+<td><code>34567</code></td>
+<td style="text-align: right;">34567</td>
+<td>❌ too big</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td><code>45678</code></td>
+<td style="text-align: right;">45678</td>
+<td>❌ too big</td>
+</tr>
+<tr>
+<td style="text-align: right;">4</td>
+<td><code>56789</code></td>
+<td style="text-align: right;">56789</td>
+<td>❌ too big</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Result:</strong> <code>[1234, 2345, 3456, 4567, 5678, 6789, 12345]</code> — sorted, exact match. </p>
+<h2>17. Complexity Analysis</h2>
+<p>Here is the part that almost never happens on LeetCode.</p>
+<p><strong>Time complexity: O(1).</strong> The master string is fixed at 9 characters, so there are only ever <strong>36 possible candidates</strong>, regardless of whether <code>high</code> is 300 or a billion. We do a fixed, tiny amount of work every time. The input size does not drive the runtime at all.</p>
+<p><strong>Space complexity: O(1).</strong> We store one 9-character string and a result list whose size is bounded by 36 entries. Both are constant, independent of <code>low</code> and <code>high</code>.</p>
+<p>Contrast that with the brute force's <code>O(high - low)</code> time. The optimal solution isn't just faster by a constant factor — it's in an entirely different complexity class, because it stopped searching and started generating.</p>
+<h2>18. Alternative Solutions</h2>
+<p>There is a clean <strong>pure-arithmetic</strong> approach that avoids strings entirely. Start from each digit <code>1</code> through <code>8</code>, then repeatedly "glue on" the next digit by multiplying by 10 and adding it: <code>1 → 12 → 123 → 1234 …</code>.</p>
+<pre><code class="language-python">class Solution:
+    def sequentialDigits(self, low: int, high: int) -&gt; list[int]:
+        result = []
+        for start in range(1, 9):
+            num = start
+            next_digit = start + 1
+            while next_digit &lt;= 9:
+                num = num * 10 + next_digit
+                if low &lt;= num &lt;= high:
+                    result.append(num)
+                next_digit += 1
+        return sorted(result)
+</code></pre>
+<p><strong>Comparison:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Sliding Window</th>
+<th>Arithmetic</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Uses strings</td>
+<td>Yes (slicing)</td>
+<td>No, pure math</td>
+</tr>
+<tr>
+<td>Output order</td>
+<td>Already sorted, free</td>
+<td>Grouped by start digit</td>
+</tr>
+<tr>
+<td>Extra sort</td>
+<td>Not needed</td>
+<td><code>sorted()</code> required</td>
+</tr>
+<tr>
+<td>Readability</td>
+<td>Very high</td>
+<td>High, slightly trickier</td>
+</tr>
+<tr>
+<td>Complexity</td>
+<td>O(1) time / O(1) space</td>
+<td>O(1) time / O(1) space</td>
+</tr>
+</tbody>
+</table>
+<p>Both are constant time. Choose the <strong>sliding window</strong> for the free sorted output and readability. Choose <strong>arithmetic</strong> if you want to demonstrate that you can solve it without any string operations — a nice flex in an interview.</p>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong>Single-point range</strong> (<code>low == high == 123</code>): the inclusive <code>&lt;=</code> check catches it. <code>123</code> is generated and kept. ✅</li>
+<li><strong>No valid answers in range</strong> (<code>low = 200, high = 220</code>): no window ever lands inside, so we correctly return an empty list <code>[]</code> instead of crashing.</li>
+<li><strong>Numbers containing zero</strong> (like a hypothetical <code>8910</code>): impossible by construction — the master string has no <code>0</code>, so such a number can never be generated.</li>
+<li><strong>Minimum bound</strong> (<code>low = 10</code>): 2-digit candidates like <code>12</code>, <code>23</code> are correctly included.</li>
+<li><strong>Maximum bound</strong> (<code>high = 10^9</code>): the full <code>123456789</code> is generated and included; we still do only constant work.</li>
+</ul>
+<p>The beauty of the <em>generate-and-filter</em> design is that it makes bad cases <strong>impossible instead of handled one by one.</strong> You never write special-case code, because the invalid inputs simply never get generated.</p>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Brute-forcing the whole range.</strong> Looping <code>low</code> to <code>high</code> passes on small inputs but times out when <code>high</code> is near a billion. The structure of the answers is the whole point.</li>
+<li><strong>Off-by-one in the window bound.</strong> Writing <code>range(0, 9 - length)</code> or <code>range(0, 10 - length + 1)</code> either misses the last window or slices past the end of the string. The correct bound is <code>10 - length</code>.</li>
+<li><strong>Forgetting slicing is end-exclusive.</strong> <code>digits[0:4]</code> gives four characters (<code>1234</code>), not five. Beginners expect the end index to be included.</li>
+<li><strong>Skipping the <code>int()</code> conversion.</strong> A slice is a <em>string</em>. Comparing <code>"1234" &lt;= high</code> against an integer either errors or compares incorrectly. Always convert.</li>
+<li><strong>Adding an unnecessary <code>sorted()</code> to the sliding-window version.</strong> The loop order already produces sorted output. The redundant sort isn't wrong, but it shows you didn't notice the free ordering — and interviewers notice.</li>
+<li><strong>Trying to include lengths outside <code>[len(low), len(high)]</code>.</strong> Testing every length 2–9 still works but does needless comparisons; bounding the lengths is cleaner reasoning.</li>
+</ol>
+<h2>21. Interview Questions</h2>
+<p>Expect follow-ups that probe whether you truly understand the structure:</p>
+<ul>
+<li><strong>"Why is this O(1)?"</strong> Because there are only 36 sequential numbers total, regardless of input size.</li>
+<li><strong>"How many sequential numbers exist in total?"</strong> 36 — the sum <code>8 + 7 + 6 + … + 1</code>.</li>
+<li><strong>"Can you solve it without converting to strings?"</strong> Yes — the arithmetic approach.</li>
+<li><strong>"What if digits had to <em>decrease</em> by one instead?"</strong> Same idea, but the master string becomes <code>"9876543210"</code> (and now <code>0</code> is allowed).</li>
+<li><strong>"What if the step could be any fixed <code>k</code>, not just 1?"</strong> You'd generate candidates by starting at each digit and stepping by <code>k</code>, or generalize the master pattern.</li>
+<li><strong>"How would you return them in descending order?"</strong> Reverse the loop order, or reverse the final list.</li>
+</ul>
+<h2>22. Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 1validation-style problems</strong> where output is small and structured — the <em>generate-don't-search</em> pattern recurs constantly.</li>
+<li><strong>Next Greater Element / Next Permutation</strong> — building the next valid structured number from an existing one.</li>
+<li><strong>Letter Combinations of a Phone Number (17)</strong> — generating a bounded set of candidates rather than searching a huge space.</li>
+<li><strong>Combinations (77)</strong> — enumerating structured subsets, another "produce every valid shape" problem.</li>
+<li><strong>Fizz Buzz / Count and Say</strong> — pattern-driven generation where understanding the <em>shape</em> of output beats brute iteration.</li>
+</ul>
+<p>They all share the same lesson: recognize structure, then generate.</p>
+<h2>23. Key Takeaways</h2>
+<ul>
+<li><strong>Sequential Digits is O(1)</strong> because only 36 valid answers can ever exist.</li>
+<li>Every sequential number is a <strong>slice of <code>"123456789"</code></strong> — that single observation collapses the whole problem.</li>
+<li>The <strong>sliding window</strong> turns "search a billion numbers" into "cut 36 substrings."</li>
+<li>Looping short lengths first gives you <strong>sorted output for free.</strong></li>
+<li>The core interview lesson: <strong>when valid answers are rare and structured, generate them directly instead of searching for them.</strong></li>
+</ul>
+<h2>24. Watch the Video</h2>
+<p>Reading the reasoning is one thing — <em>seeing</em> the window slide across the string makes it click permanently. Watch the full visual walkthrough here, where we trace every candidate and animate the window step by step: <strong>{LINK}</strong></p>
+<h2>25. About the Series</h2>
+<p>This is part of <strong>Daily Python LeetCode</strong> — a series that turns one LeetCode problem a day into a clear, beginner-friendly lesson in <strong>Python, algorithms, data structures, and interview technique.</strong> Every entry builds intuition first, then code, so you learn <em>how experienced engineers think</em>, not just what to memorize. Follow along and you'll build real pattern recognition, one problem at a time.</p>
+<h2>26. Call To Action</h2>
+<p>If this made Sequential Digits finally make sense:</p>
+<ul>
+<li>▶️ <strong>Subscribe on YouTube</strong> so you never miss a daily breakdown.</li>
+<li>✉️ <strong>Subscribe to the Substack</strong> for the written deep-dives like this one.</li>
+<li>💬 <strong>Comment</strong> with the problem you want explained next.</li>
+<li>🔁 <strong>Share</strong> this with a friend who's grinding LeetCode — the generate-don't-search insight will save them hours.</li>
+</ul>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>Sequential Digits (LeetCode 1291) is labeled a "medium," but it's secretly one of the most elegant easy problems you'll encounter — and it teaches a lesson that shows up constantly in real engineering.</p>
+<p>The task: return every number in a range <code>[low, high]</code> whose digits each increase by exactly one, like 123 or 4567.</p>
+<p>The instinct most of us reach for first: loop from low to high and test each number. It works. But <code>high</code> can be a billion — that's up to a billion checks to find, at most, 36 answers.</p>
+<p>That imbalance is the whole insight.</p>
+<p>There are only ever 36 sequential numbers in existence, because every single one is a slice of the string "123456789". So instead of <em>searching</em> an enormous range for rare answers, you <em>generate</em> the answers directly: slide a window across those nine characters, convert each slice to a number, and keep the ones in range.</p>
+<p>The payoff:
+• O(1) time and O(1) space — the input size doesn't affect the work at all
+• The results come out already sorted, because you try short lengths first
+• Edge cases like zeros and empty ranges become impossible by construction, not special-cased</p>
+<p>The deeper takeaway applies far beyond this one problem: when the set of valid answers is small and highly structured, generating them directly beats searching for them every time.</p>
+<p>That mental shift — from "search the space" to "produce the shape" — is what separates brute force from clean solutions in interviews and in production.</p>
+<p>What's your favorite "generate, don't search" problem?</p>
+<h1>Python #LeetCode #CodingInterview #Algorithms #SoftwareEngineering</h1>
+<h2>Twitter/X Thread</h2>
+<p><strong>1/</strong>
+Sequential Digits (LeetCode 1291) looks like a medium. It's secretly one of the easiest problems on the site — once you see one trick. 🧵</p>
+<p><strong>2/</strong>
+The task: given <code>low</code> and <code>high</code>, return every number whose digits go up by exactly one. Like 123, 4567, 6789. Return them sorted.</p>
+<p><strong>3/</strong>
+First instinct: loop from low to high, test each number. Fine… until you see <code>high</code> can be 1,000,000,000. That's a billion checks.</p>
+<p><strong>4/</strong>
+For what? Let's count the valid answers. The longest sequential number is 123456789. Every answer is a chunk of it.</p>
+<p><strong>5/</strong>
+Count them up: 8 of length 2, 7 of length 3, 6 of length 4… down to 1. Total = 36. There are only 36 sequential numbers in all of existence. Ever.</p>
+<p><strong>6/</strong>
+So we're scanning a billion numbers to find 36 answers. That's the signal. Stop searching. Start generating.</p>
+<p><strong>7/</strong>
+Key insight: every sequential number is a slice of "123456789". Cut out every substring and you've generated every possible answer.</p>
+<p><strong>8/</strong>
+The tool for cutting fixed-width chunks and sliding along: a sliding window. Width-3 window → 123, slide → 234, slide → 345…</p>
+<p><strong>9/</strong>
+Only try lengths between the digit-count of low and high. Slide the window, <code>int()</code> each slice, keep the in-range ones. Short lengths first → output is sorted for FREE.</p>
+<p><strong>10/</strong>
+Complexity? O(1) time, O(1) space — fixed 36 candidates no matter the input. The real lesson: when answers are rare and structured, generate them, don't search for them. Full breakdown + video 👇</p>
+<h2>Facebook Post</h2>
+<p>Ever hit a coding problem that looks scary but turns out to be genuinely fun? Sequential Digits (LeetCode 1291) is one of those. 🙂</p>
+<p>You're asked to find every number in a range whose digits climb by one — like 123 or 4567. The obvious approach is to check every number one by one… but the range can go up to a BILLION. Yikes.</p>
+<p>Here's the "aha": there are only 36 such numbers in the entire universe, because every one of them is just a piece of "123456789". So instead of searching forever, you slide a little window across those nine digits and grab every answer directly. It runs in constant time and the results even come out sorted automatically.</p>
+<p>I broke the whole thing down step by step — the intuition, the Python code, a full dry run, and the edge cases — in a beginner-friendly way. If you're learning Python or prepping for interviews, come check it out. Would love to hear what clicked for you!</p>
+<h2>Reddit Summary</h2>
+<p><strong>Sequential Digits (LeetCode 1291): a clean example of "generate, don't search"</strong></p>
+<p>Sharing a walkthrough of this problem because it's a nice teaching case for a pattern that shows up a lot.</p>
+<p>The problem: return every number in <code>[low, high]</code> whose digits each increase by one (123, 4567, etc.), sorted.</p>
+<p>The naive approach loops from low to high and tests each number. It works but <code>high</code> can be 1e9, so worst case ~a billion iterations.</p>
+<p>The observation that changes everything: the longest possible sequential number is <code>123456789</code>, and every sequential number is a contiguous substring of it. Counting them (8 + 7 + … + 1) gives exactly <strong>36 total</strong>, ever. So there's no reason to search — you can just generate all candidates by sliding a window across <code>"123456789"</code>, converting each slice with <code>int()</code>, and filtering to the range.</p>
+<p>Two things fall out for free:
+- If you iterate lengths shortest-first, the output is already sorted (no <code>sorted()</code> needed).
+- Zeros and out-of-range cases are impossible by construction rather than special-cased.</p>
+<p>Both the sliding-window and pure-arithmetic versions run in O(1) time and space, which is unusual and kind of satisfying. The generalizable takeaway is the useful part: when valid outputs are rare and structured, producing them directly beats scanning a large space. Happy to discuss variations (decreasing digits, arbitrary step size) in the comments.</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># Sequential Digits — LeetCode 1291 (Python)
+
+Return every integer in the inclusive range `[low, high]` whose digits are
+sequential — each digit exactly one greater than the one before it.
+
+## Problem
+
+Given two integers `low` and `high`, return a **sorted** list of all
+integers in `[low, high]` that have sequential digits.
+
+A number has *sequential digits* if each digit is one more than the previous
+digit (e.g. `123`, `4567`, `6789`).
+
+**Example 1**
+</code></pre>
+<p>Input:  low = 100, high = 300
+Output: [123, 234]</p>
+<pre><code>
+**Example 2**
+</code></pre>
+<p>Input:  low = 1000, high = 13000
+Output: [1234, 2345, 3456, 4567, 5678, 6789, 12345]</p>
+<pre><code>
+## Intuition
+
+`high` can be up to 1e9, so scanning every number in the range is wasteful —
+there are only **36 sequential numbers in existence**. Every one of them is a
+contiguous slice of the string `&quot;123456789&quot;`. So instead of *searching* a huge
+range, we *generate* all valid candidates directly and filter by range.
+
+## Approach
+
+1. All answers live inside the master string `&quot;123456789&quot;`.
+2. Only lengths between the digit-count of `low` and `high` can fit.
+3. Slide a window of each length across the master string.
+4. Convert each slice to an int; keep it if it falls in `[low, high]`.
+5. Iterating shortest length first yields already-sorted output — no sort call.
+
+## Python Solution
+
+```python
+class Solution:
+    def sequentialDigits(self, low: int, high: int) -&gt; list[int]:
+        digits = &quot;123456789&quot;
+        result = []
+
+        for length in range(len(str(low)), len(str(high)) + 1):
+            for start in range(0, 10 - length):
+                candidate = int(digits[start:start + length])
+                if low &lt;= candidate &lt;= high:
+                    result.append(candidate)
+
+        return result
+</code></pre>
+<h3>Alternative (pure arithmetic, no strings)</h3>
+<pre><code class="language-python">class Solution:
+    def sequentialDigits(self, low: int, high: int) -&gt; list[int]:
+        result = []
+        for start in range(1, 9):
+            num, nxt = start, start + 1
+            while nxt &lt;= 9:
+                num = num * 10 + nxt
+                if low &lt;= num &lt;= high:
+                    result.append(num)
+                nxt += 1
+        return sorted(result)
+</code></pre>
+<h2>Complexity</h2>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Time</td>
+<td>O(1)</td>
+<td>Only 36 candidates exist, regardless of input</td>
+</tr>
+<tr>
+<td>Space</td>
+<td>O(1)</td>
+<td>Fixed 9-char string + bounded result list</td>
+</tr>
+</tbody>
+</table>
+<h2>Video</h2>
+<p>📺 Watch the visual walkthrough: {LINK}</p>
+<h2>Article</h2>
+<p LINK="LINK">📝 Full written explanation with dry run, edge cases, and interview tips:</p>
+<hr />
+<p>Part of the <strong>Daily Python LeetCode</strong> series — one problem a day, explained
+from intuition to code.
+```</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/wgMhwxSzuKg' target='_blank'>▶ Watch on YouTube</a></div><h2 class='ph1' style='font-size:1.4rem'>Similar problems</h2><div class='grid'><a class='card' href='sum-of-gcd-of-formed-pairs.html'><div class='body'><h3>Sum of GCD of Formed Pairs — LeetCode Daily Python Solution (Two Pointers Eats It Alive)</h3><span class='badge' style='background:#2dd4bf22;color:#2dd4bf'>↔️ Two Pointers</span></div></a></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>
