@@ -22,6 +22,355 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 6: Conditionals — if, elif, else, Truthiness &amp; Nested Logic</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/uX2B1zLXsmg' allowfullscreen></iframe></div><article><p>You've hit your session limit · resets 5:20am (Asia/Calcutta)</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/uX2B1zLXsmg' target='_blank'>▶ Watch on YouTube</a></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 6: Conditionals — if, elif, else, Truthiness &amp; Nested Logic</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/uX2B1zLXsmg' allowfullscreen></iframe></div><article><h1>SEO PACKAGE</h1>
+<h2>1. SEO Title</h2>
+<p>Python Conditionals Explained: if, elif, else, Truthiness &amp; Nested Logic (With Examples)</p>
+<h2>2. SEO Subtitle</h2>
+<p>A beginner-friendly walkthrough of how Python makes decisions using if, elif, else, truthy/falsy values, and nested conditions.</p>
+<h2>3. Featured Quote</h2>
+<p>"Order your conditions strict to loose — the first true branch wins, and everything after it never gets a chance."</p>
+<h2>4. Meta Description</h2>
+<p>Learn Python if, elif, and else from scratch — truthiness, falsy values, the = vs == mistake, and when to nest vs combine conditions with and/or.</p>
+<h2>5. URL Slug</h2>
+<p>python-conditionals-if-elif-else-truthiness</p>
+<h2>6. Keywords</h2>
+<p>python conditionals, python if else, python elif, python truthiness, falsy values python, python boolean logic, python nested if, python and or not, python beginner tutorial, learn python decisions, python if elif else example, python comparison operators, python = vs ==, python branching logic, python control flow, python for beginners, python logical operators, python boolean, python coding interview basics, python fundamentals</p>
+<h2>7. Tags</h2>
+<p>Python, Conditionals, If Else, Control Flow, Python Basics, Learn Python, Coding Interview, Boolean Logic, Beginner Programming, Python Tutorial, Software Engineering, Data Structures, Algorithms, Python for Beginners, Coding Fundamentals</p>
+<hr />
+<h1>MAIN ARTICLE</h1>
+<h2>Introduction</h2>
+<p>Every program you've written so far has run the same way: top to bottom, one line after another, like a train stuck on a single track. That's fine for simple scripts, but it's not how real software works. Real programs need to react — to user input, to sensor readings, to whatever state the system happens to be in at the moment. That reaction is built entirely on conditionals.</p>
+<p>If you've ever looked at an interview problem and thought "I know the logic, I just don't know how to structure the checks," conditionals are usually the missing piece. Interviewers care about this because sloppy branching is one of the most common sources of bugs in real code — an <code>elif</code> in the wrong order, a <code>=</code> where a <code>==</code> should be, a deeply nested mess that nobody can read six months later. Getting comfortable with <code>if</code>, <code>elif</code>, <code>else</code>, and Python's truthiness rules isn't just a beginner milestone. It's the foundation every algorithm you'll ever write sits on top of.</p>
+<p>By the end of this lesson, you'll understand not just the syntax but the <em>reasoning</em> behind it — why order matters, why Python lets you use almost any value as a yes/no answer, and when nesting conditions is the right call versus when it's just clutter.</p>
+<h2>Problem Overview</h2>
+<p>At its core, a conditional is a piece of code that only runs when something is true. Think about your morning routine: if it's raining, you grab an umbrella. Otherwise, you don't. That's it — that's a conditional in plain English.</p>
+<p>Python gives you three tools to express this:</p>
+<ul>
+<li><strong><code>if</code></strong> — run this block only if the condition is true.</li>
+<li><strong><code>elif</code></strong> — short for "else if." Check another condition, but only if the previous ones failed.</li>
+<li><strong><code>else</code></strong> — the catch-all. Runs when nothing above it was true.</li>
+</ul>
+<p>Underneath all of this sits a concept called a <strong>boolean</strong> — a value that's either <code>True</code> or <code>False</code>. Every condition you write eventually boils down to one of these two values, and Python decides which branch to run based on it.</p>
+<h2>Example</h2>
+<p>Let's start with the simplest possible version:</p>
+<pre><code class="language-python">temp = 35
+
+if temp &gt; 30:
+    print(&quot;It's hot!&quot;)
+</code></pre>
+<p>Here, <code>temp &gt; 30</code> is the condition — a question that resolves to <code>True</code> or <code>False</code>. Since <code>35 &gt; 30</code> is <code>True</code>, the indented line runs and prints <code>It's hot!</code>. Notice two things: the colon at the end of the <code>if</code> line, and the indentation on the next line. That indentation is Python's way of saying "this code belongs inside the <code>if</code>."</p>
+<p>Now let's add an alternative path:</p>
+<pre><code class="language-python">age = 15
+
+if age &gt;= 18:
+    print(&quot;Adult&quot;)
+else:
+    print(&quot;Minor&quot;)
+</code></pre>
+<p>Since <code>age</code> is <code>15</code>, the condition <code>age &gt;= 18</code> is <code>False</code>, so Python skips straight to <code>else</code> and prints <code>Minor</code>. Only one branch ever runs — never both, never neither.</p>
+<p>Finally, let's handle more than two outcomes with <code>elif</code>:</p>
+<pre><code class="language-python">score = 82
+
+if score &gt;= 90:
+    print(&quot;A&quot;)
+elif score &gt;= 80:
+    print(&quot;B&quot;)
+elif score &gt;= 70:
+    print(&quot;C&quot;)
+else:
+    print(&quot;F&quot;)
+</code></pre>
+<p>Python checks each condition from top to bottom and stops at the first one that's <code>True</code>. Since <code>score</code> is <code>82</code>, it fails the <code>&gt;= 90</code> check, passes the <code>&gt;= 80</code> check, prints <code>B</code>, and never even looks at the remaining branches.</p>
+<h2>Intuition</h2>
+<p>Here's the part experienced engineers internalize but rarely explain out loud: <strong>conditionals are just a sequence of gates, checked in order, and the first gate that opens wins.</strong></p>
+<p>That single fact explains almost every bug you'll ever hit with <code>if</code>/<code>elif</code>/<code>else</code>. Consider this broken version of the grading example:</p>
+<pre><code class="language-python">score = 95
+
+if score &gt;= 70:
+    print(&quot;C&quot;)
+elif score &gt;= 90:
+    print(&quot;A&quot;)
+</code></pre>
+<p><code>score</code> is <code>95</code>, which clearly deserves an <code>A</code>. But because the loose <code>&gt;= 70</code> check sits on top, it grabs the win first, prints <code>C</code>, and the <code>A</code> branch never gets evaluated. The lesson: <strong>order your conditions from strictest to loosest.</strong> Python doesn't know which check you "meant" to be more important — it just runs the first one that opens.</p>
+<p>The second big intuition is <strong>truthiness</strong>. Python doesn't require you to write an explicit comparison every time. You can drop almost any value directly into an <code>if</code>, and Python will decide for you whether it counts as true or false:</p>
+<pre><code class="language-python">name = &quot;&quot;
+
+if name:
+    print(f&quot;Hello, {name}&quot;)
+else:
+    print(&quot;No name provided&quot;)
+</code></pre>
+<p><code>name</code> is an empty string, which Python treats as falsy — no comparison needed. The values that count as falsy are worth memorizing once:</p>
+<table>
+<thead>
+<tr>
+<th>Falsy values</th>
+<th>Everything else</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>False</code>, <code>None</code>, <code>0</code>, <code>""</code>, <code>[]</code>, <code>{}</code></td>
+<td>Truthy</td>
+</tr>
+</tbody>
+</table>
+<p>You can verify this yourself with <code>bool()</code>:</p>
+<pre><code class="language-python">print(bool(&quot;&quot;))    # False
+print(bool(&quot;hi&quot;))  # True
+print(bool(0))     # False
+print(bool([1]))   # True
+</code></pre>
+<p>The third intuition, and the one that trips up almost every beginner at least once, is the difference between <code>=</code> and <code>==</code>. A single equals sign <em>assigns</em> a value; a double equals sign <em>compares</em> two values.</p>
+<pre><code class="language-python">x = 5
+
+if x == 5:       # comparison — correct
+    print(&quot;Matches!&quot;)
+</code></pre>
+<p>Write <code>if x = 5:</code> instead, and Python throws a <code>SyntaxError</code> immediately rather than silently doing the wrong thing. That's actually a kindness — some languages let this slide and turn it into a runtime bug that's brutal to track down.</p>
+<h2>Brute Force Solution</h2>
+<p>There isn't really a "brute force vs optimal" split for conditionals the way there is for an algorithm problem — but there is a naive habit beginners fall into that's worth calling out: <strong>nesting everything</strong>, even when it isn't necessary.</p>
+<pre><code class="language-python">logged_in = True
+is_admin = False
+
+if logged_in:
+    if is_admin:
+        print(&quot;Admin dashboard&quot;)
+    else:
+        print(&quot;User home&quot;)
+else:
+    print(&quot;Please log in&quot;)
+</code></pre>
+<p><strong>Idea:</strong> wrap every additional condition inside another <code>if</code>, one level deeper each time.</p>
+<p><strong>Advantages:</strong> each level of nesting can have completely separate handling — useful when the branches genuinely diverge (e.g., different error messages, different follow-up logic).</p>
+<p><strong>Disadvantages:</strong> the code drifts further and further to the right, and once you're four or five levels deep, it's hard to trace which condition is actually being checked. This is sometimes called the "arrow anti-pattern."</p>
+<p><strong>Time complexity:</strong> O(1) — a fixed number of comparisons regardless of nesting depth.
+<strong>Space complexity:</strong> O(1) — no extra memory is used; nesting only affects readability, not performance.</p>
+<h2>Optimal Solution</h2>
+<p>When the branches don't need separate handling — when you're really just asking "is the answer yes to both of these?" — combining conditions with <code>and</code> is cleaner:</p>
+<pre><code class="language-python">logged_in = True
+is_admin = False
+
+if logged_in and is_admin:
+    print(&quot;Admin dashboard&quot;)
+elif logged_in:
+    print(&quot;User home&quot;)
+else:
+    print(&quot;Please log in&quot;)
+</code></pre>
+<p>This produces the exact same behavior as the nested version above, but it's flatter and easier to scan. The rule of thumb: <strong>reach for <code>and</code> when the answer is a plain yes-or-both; only nest when each layer truly needs its own distinct handling</strong> (different error messages, different logging, different cleanup steps, etc.).</p>
+<p>Here's a quick reference for combining conditions:</p>
+<table>
+<thead>
+<tr>
+<th>Operator</th>
+<th>Meaning</th>
+<th>Example</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>and</code></td>
+<td>both sides must be true</td>
+<td><code>20 &lt; 25 and 25 &lt; 30</code></td>
+<td><code>True</code></td>
+</tr>
+<tr>
+<td><code>or</code></td>
+<td>at least one side true</td>
+<td><code>25 &gt; 100 or 25 &lt; 30</code></td>
+<td><code>True</code></td>
+</tr>
+<tr>
+<td><code>not</code></td>
+<td>flips the result</td>
+<td><code>not (25 &gt; 30)</code></td>
+<td><code>True</code></td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-python">age = 25
+if age &gt; 20 and age &lt; 30:
+    print(&quot;Comfortable age range&quot;)
+</code></pre>
+<h2>Python Code</h2>
+<p>Here's a complete, production-quality example that ties <code>if</code>/<code>elif</code>/<code>else</code>, truthiness, and combined conditions together in one realistic function:</p>
+<pre><code class="language-python">def classify_user(name: str, age: int, is_admin: bool = False) -&gt; str:
+    &quot;&quot;&quot;Return an access-level message based on name, age, and admin status.&quot;&quot;&quot;
+    if not name:
+        return &quot;No name provided&quot;
+
+    if is_admin and age &gt;= 18:
+        return f&quot;Welcome, admin {name}&quot;
+    elif age &gt;= 18:
+        return f&quot;Welcome, {name}&quot;
+    else:
+        return f&quot;Sorry {name}, minors are not allowed&quot;
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>def classify_user(name: str, age: int, is_admin: bool = False) -&gt; str:</code> — defines a function with type hints; <code>is_admin</code> defaults to <code>False</code> if not provided.</li>
+<li><code>if not name:</code> — relies on truthiness. An empty string is falsy, so <code>not name</code> becomes <code>True</code>, catching missing input before anything else runs.</li>
+<li><code>if is_admin and age &gt;= 18:</code> — a combined condition. Both sides must be <code>True</code> for this branch to trigger, avoiding a nested <code>if</code> inside an <code>if</code>.</li>
+<li><code>elif age &gt;= 18:</code> — only checked if the first condition failed, so this catches adults who aren't admins.</li>
+<li><code>else:</code> — the final catch-all for anyone under 18.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Let's trace <code>classify_user("Kai", 25, is_admin=True)</code>:</p>
+<ol>
+<li><code>name</code> is <code>"Kai"</code>, which is truthy, so <code>not name</code> is <code>False</code> — skip the first branch.</li>
+<li><code>is_admin</code> is <code>True</code> and <code>age &gt;= 18</code> (<code>25 &gt;= 18</code> is <code>True</code>) — both sides of <code>and</code> are <code>True</code>, so the condition is <code>True</code>.</li>
+<li>Python enters this branch, returns <code>"Welcome, admin Kai"</code>, and stops. The <code>elif</code> and <code>else</code> are never evaluated.</li>
+</ol>
+<p>Now trace <code>classify_user("", 30)</code>:</p>
+<ol>
+<li><code>name</code> is <code>""</code>, which is falsy — <code>not name</code> is <code>True</code>.</li>
+<li>Python immediately returns <code>"No name provided"</code> without ever checking age.</li>
+</ol>
+<h2>Complexity Analysis</h2>
+<p><strong>Time complexity: O(1).</strong> Every branch is a constant number of comparisons — Python checks conditions top to bottom and stops at the first match, so the work doesn't grow with input size.</p>
+<p><strong>Space complexity: O(1).</strong> No additional data structures are created; only the existing variables are read.</p>
+<p>These bounds hold regardless of how many <code>elif</code> branches you add, because each one is a simple boolean check, not a loop or recursive call.</p>
+<h2>Alternative Solutions</h2>
+<p>For simple value-to-value mapping (rather than range checks), Python 3.10+ offers <code>match</code>/<code>case</code> as a structurally different alternative:</p>
+<pre><code class="language-python">def day_type(day: str) -&gt; str:
+    match day:
+        case &quot;Saturday&quot; | &quot;Sunday&quot;:
+            return &quot;Weekend&quot;
+        case _:
+            return &quot;Weekday&quot;
+</code></pre>
+<p><code>match</code> shines when you're comparing one value against several exact options or patterns. It's not a replacement for range checks like <code>age &gt;= 18</code> — <code>if</code>/<code>elif</code>/<code>else</code> remains the right tool whenever you're dealing with comparisons, boolean logic, or truthiness rather than exact matches.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty input:</strong> an empty string, list, or dict is falsy — make sure that's actually the behavior you want before relying on it implicitly.</li>
+<li><strong>Zero as a valid value:</strong> <code>0</code> is falsy, so <code>if quantity:</code> will skip a legitimate order of zero items the same way it skips "no value." Use <code>if quantity is not None:</code> when zero is meaningful.</li>
+<li><strong>Boundary values:</strong> <code>age &gt;= 18</code> includes 18; <code>age &gt; 18</code> doesn't. Off-by-one mistakes here are extremely common — double-check whether your boundary should be inclusive.</li>
+<li><strong>Overlapping conditions in the wrong order:</strong> as shown earlier, a loose condition placed before a strict one will silently swallow it.</li>
+<li><strong><code>None</code> vs falsy:</strong> <code>None</code>, <code>0</code>, and <code>""</code> are all falsy, but they mean very different things. Don't conflate "no value was given" with "the value is zero."</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Using <code>=</code> instead of <code>==</code></strong> inside a condition — Python raises a <code>SyntaxError</code> for this, which is actually a safety net compared to languages that don't.</li>
+<li><strong>Ordering loose conditions before strict ones</strong>, causing an early <code>elif</code> to swallow cases meant for a later branch.</li>
+<li><strong>Relying on truthiness when zero is a valid value</strong>, silently treating <code>0</code> the same as "missing."</li>
+<li><strong>Nesting when <code>and</code> would be flatter and more readable</strong>, making the logic harder to follow than necessary.</li>
+<li><strong>Forgetting the colon or misindenting the block</strong>, which either raises a <code>SyntaxError</code> or — worse — silently changes which lines belong to which branch.</li>
+<li><strong>Chaining unrelated <code>if</code> statements instead of <code>elif</code></strong>, which causes multiple branches to run when only one was intended.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What's the difference between using multiple <code>if</code> statements versus <code>elif</code>?</li>
+<li>Why does Python evaluate elif conditions in order, and why does that matter?</li>
+<li>What values are falsy in Python, and why might that be useful (or dangerous)?</li>
+<li>How would you rewrite a deeply nested <code>if</code> chain to be flatter?</li>
+<li>What's the difference between <code>and</code>/<code>or</code> short-circuiting versus evaluating both sides?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 1: Two Sum</strong> — relies on conditional checks inside a loop to test whether a complement exists.</li>
+<li><strong>LeetCode 20: Valid Parentheses</strong> — built almost entirely on branching logic to decide what to do with each character.</li>
+<li><strong>LeetCode 121: Best Time to Buy and Sell Stock</strong> — uses conditionals to track running minimums and maximums.</li>
+<li><strong>LeetCode 217: Contains Duplicate</strong> — a simple conditional check against a seen-values set.</li>
+</ul>
+<p>Each of these problems assumes you're fluent enough with <code>if</code>/<code>elif</code>/<code>else</code> that the branching logic isn't the bottleneck — the algorithm is.</p>
+<h2>Key Takeaways</h2>
+<ul>
+<li><code>if</code> runs code when a condition is true; <code>else</code> catches everything else; <code>elif</code> stacks additional choices in between.</li>
+<li>Python checks conditions top to bottom and stops at the first <code>True</code> — order your branches strict to loose.</li>
+<li>Empty strings, empty collections, <code>0</code>, and <code>None</code> are all falsy; everything else is truthy.</li>
+<li><code>=</code> assigns, <code>==</code> compares — Python will error on the former inside a condition, which is a helpful guardrail.</li>
+<li>Prefer <code>and</code>/<code>or</code>/<code>not</code> to flatten logic over nesting, unless each layer genuinely needs separate handling.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This lesson is easiest to absorb by watching it in motion — seeing each branch execute live makes the "first true wins" rule click. {LINK}</p>
+<h2>About the Series</h2>
+<p>This is Lesson 6 of the Daily Python series, where each video builds one core concept at a time — no shortcuts, no assumed knowledge. If you're following along from Lesson 1, conditionals are the piece that turns straight-line scripts into programs that actually respond to the world around them.</p>
+<h2>Call To Action</h2>
+<p>If this lesson helped things click, subscribe on YouTube so you don't miss the next one, and subscribe to the Substack for the written breakdown delivered straight to your inbox. Drop a comment with the condition or bug that's tripped you up before — chances are someone else has hit the exact same one. And if you know someone learning Python right now, send this their way.</p>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>Every developer eventually hits the same "aha" moment with conditionals — not when they learn the syntax, but when they realize <em>order</em> is the whole game.</p>
+<p>Python checks <code>if</code>/<code>elif</code> conditions top to bottom and stops at the first one that's true. That sounds obvious until you write a grading system where a loose <code>score &gt;= 70</code> check sits above a strict <code>score &gt;= 90</code> check — and suddenly a 95 gets graded as a C, because the loose condition grabbed the win first.</p>
+<p>A few things worth internalizing early:</p>
+<p>→ Order your conditions strict to loose, not the other way around.
+→ Python treats empty strings, empty lists, <code>0</code>, and <code>None</code> as falsy — you can use that, but be careful when zero is a legitimate value.
+→ <code>=</code> assigns, <code>==</code> compares. Python throws a syntax error if you mix them up inside a condition — a small mercy compared to languages that don't.
+→ Prefer combining conditions with <code>and</code>/<code>or</code> over nesting <code>if</code> inside <code>if</code> when the branches don't need separate handling. It reads better six months later.</p>
+<p>None of this is advanced. But it's exactly the kind of foundational habit that separates code that "happens to work" from code that's actually reliable. Worth revisiting even if you've been writing Python for years.</p>
+<h2>Twitter/X Thread</h2>
+<p>1/ Your code has been running top to bottom this whole time, like a train on one track. Today it learns to make choices. Here's how Python's if/elif/else actually works — and where beginners get it wrong. 🧵</p>
+<p>2/ The basics: <code>if condition:</code> runs a block only when that condition is True. Add <code>else:</code> for the alternative path. Only one branch ever runs — never both.</p>
+<p>3/ Need more than two options? <code>elif</code> (else-if) stacks extra checks. Python evaluates top to bottom and stops at the FIRST true condition.</p>
+<p>4/ Here's the trap: if a loose check sits above a strict one, it wins first — even when the strict one was "more correct." A score of 95 checked against <code>&gt;= 70</code> before <code>&gt;= 90</code> prints the wrong grade.</p>
+<p>5/ Rule: order your conditions strict → loose. Otherwise an easy test swallows everything below it.</p>
+<p>6/ Truthiness is Python's sneaky superpower. You can drop almost any value into an <code>if</code>, and Python decides true/false for you.</p>
+<p>7/ Falsy values to memorize: <code>False</code>, <code>None</code>, <code>0</code>, <code>""</code>, <code>[]</code>, <code>{}</code>. Everything else is truthy. Run <code>bool()</code> on anything to check.</p>
+<p>8/ Classic beginner mistake: writing <code>if x = 5:</code> instead of <code>if x == 5:</code>. One equals assigns, two compares. Good news — Python throws a clear error instead of silently doing the wrong thing.</p>
+<p>9/ Nested ifs vs <code>and</code>: nesting handles each layer separately but drifts right and gets hard to read. <code>and</code> flattens two checks into one line. Use <code>and</code> when the answer is a plain yes/both — nest only when each layer truly needs its own logic.</p>
+<p>10/ That's the full toolkit: if, elif, else, truthiness, and and/or/not. Your programs can now choose their own path. Full breakdown (with code) linked below. 👇</p>
+<h2>Facebook Post</h2>
+<p>New lesson is up! 🐍 Today we taught our Python code to actually make decisions — if, elif, else, and the sneaky "truthiness" trick that lets Python treat empty strings and zeros as false without you writing a single comparison. Also covering the classic <code>=</code> vs <code>==</code> mistake that gets literally every beginner at least once (myself included). If you're learning to code or brushing up, this one's a fun watch. Link below!</p>
+<h2>Reddit Summary</h2>
+<p>Wrote up a breakdown of Python conditionals — if/elif/else, truthiness, and the nested-vs-and comparison. A couple of things I think are worth flagging beyond the basic syntax:</p>
+<ul>
+<li>Order matters more than people expect. Python stops at the first <code>elif</code> that's true, so a loose condition placed above a strict one will silently swallow it. Easy to get bitten by this in grading/tiering logic.</li>
+<li>Truthiness is genuinely useful but has a sharp edge: <code>0</code> is falsy, so <code>if quantity:</code> will treat "zero items" the same as "no value provided." Worth being explicit with <code>is not None</code> when zero is meaningful.</li>
+<li>The <code>=</code> vs <code>==</code> mistake inside a condition throws a <code>SyntaxError</code> in Python, which I appreciate — some languages let it slide into a silent runtime bug.</li>
+<li>On nesting: <code>and</code> flattens two conditions into one line and is usually more readable than nested <code>if</code>s, unless each layer genuinely needs separate handling (different error messages, different logging, etc.).</li>
+</ul>
+<p>Full write-up with code examples and a dry run in the article if useful.</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># Python Conditionals: if, elif, else, Truthiness &amp; Nested Logic
+
+## Problem
+Write code that reacts differently depending on runtime conditions — the
+foundation of every branching program, from a simple age check to complex
+algorithmic logic.
+
+## Intuition
+A conditional is a gate: Python evaluates each `if`/`elif` in order and
+stops at the first one that's `True`. Order your conditions strict to loose,
+or a loose check will swallow a stricter one below it. Python also lets you
+use almost any value as a yes/no answer via truthiness — empty strings,
+empty collections, `0`, and `None` are falsy; everything else is truthy.
+
+## Approach
+- Use `if`/`elif`/`else` for range-based or boolean logic.
+- Combine related conditions with `and`/`or` instead of nesting when the
+  branches don't need separate handling.
+- Nest only when each layer requires genuinely distinct logic.
+- Never confuse `=` (assignment) with `==` (comparison) inside a condition.
+
+## Python Solution
+
+\`\`\`python
+def classify_user(name: str, age: int, is_admin: bool = False) -&gt; str:
+    &quot;&quot;&quot;Return an access-level message based on name, age, and admin status.&quot;&quot;&quot;
+    if not name:
+        return &quot;No name provided&quot;
+
+    if is_admin and age &gt;= 18:
+        return f&quot;Welcome, admin {name}&quot;
+    elif age &gt;= 18:
+        return f&quot;Welcome, {name}&quot;
+    else:
+        return f&quot;Sorry {name}, minors are not allowed&quot;
+\`\`\`
+
+## Complexity
+- **Time:** O(1) — constant number of comparisons regardless of branch count.
+- **Space:** O(1) — no extra data structures used.
+
+## Video
+Watch the full walkthrough: {LINK}
+
+## Article
+Full written breakdown with dry run and edge cases: see the linked article.
+</code></pre></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/uX2B1zLXsmg' target='_blank'>▶ Watch on YouTube</a></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>

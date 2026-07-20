@@ -22,6 +22,360 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Find Greatest Common Divisor of Array — LeetCode Daily Python Solution (the trick nobody sees)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/brzex76x6rU' allowfullscreen></iframe></div><article><p>You've hit your session limit · resets 5:20am (Asia/Calcutta)</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/brzex76x6rU' target='_blank'>▶ Watch on YouTube</a></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Find Greatest Common Divisor of Array — LeetCode Daily Python Solution (the trick nobody sees)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/brzex76x6rU' allowfullscreen></iframe></div><article><h1>SEO PACKAGE</h1>
+<h2>SEO Title</h2>
+<p>Find Greatest Common Divisor of Array — Python Solution Explained (LeetCode Easy)</p>
+<h2>SEO Subtitle</h2>
+<p>Learn why only the smallest and largest numbers in an array matter when finding the GCD, and how Python's <code>math.gcd()</code> solves it in one line.</p>
+<h2>Featured Quote</h2>
+<p>"The problem statement basically hands you the answer's shape — it just doesn't say it out loud."</p>
+<h2>Meta Description</h2>
+<p>Solve LeetCode's Find GCD of Array with a clean one-line Python trick using min, max, and math.gcd(). Full breakdown, complexity, and edge cases included.</p>
+<h2>URL Slug</h2>
+<p>find-greatest-common-divisor-of-array-python</p>
+<h2>Keywords</h2>
+<p>find greatest common divisor of array, gcd of array python, leetcode gcd problem, math.gcd python, python gcd function, euclid's algorithm python, gcd two numbers python, leetcode easy python, coding interview math problems, gcd brute force, greatest common divisor explained, python built-in gcd, leetcode daily challenge python, gcd time complexity, min max python array, array gcd trick, python one liner solutions, gcd cryptography use case, algorithm interview prep, data structures and algorithms python</p>
+<h2>Tags</h2>
+<p>Python, LeetCode, Coding Interview, Algorithms, Data Structures, GCD, Math Problems, Software Engineering, Euclid's Algorithm, Interview Prep, DSA, Beginner Friendly, Problem Solving, Daily Coding Practice</p>
+<hr />
+<h1>MAIN ARTICLE</h1>
+<h2>Introduction</h2>
+<p>Math-based problems have a reputation for being either trivially easy or secretly tricky, and Find Greatest Common Divisor of Array sits right at that intersection. On the surface it looks like a simple array question. Underneath, it's testing something more specific: do you actually understand what GCD means, and can you spot when a problem is quietly simplifying itself for you.</p>
+<p>This kind of question shows up in early interview rounds at companies like Amazon and Google, not because GCD itself is hard, but because it's a fast way to check whether you reach for the right tool instead of reinventing math from scratch. GCD logic isn't just an interview trick either — it powers fraction simplification, cryptographic key generation, and scheduling systems that need to sync recurring events. Small concept, wide reach.</p>
+<p>By the end of this article, you'll know why this "array problem" is really a two-number problem in disguise, how Euclid's algorithm makes <code>math.gcd()</code> fast, and how to write a clean, interview-ready Python solution.</p>
+<h2>Problem Overview</h2>
+<p>You're given an array of positive integers. Your task is to find the greatest common divisor (GCD) of the smallest and largest numbers in that array.</p>
+<p>To be precise about the definition: the GCD of two numbers is the largest number that divides both of them evenly, with no remainder.</p>
+<p>The key detail — and the part that trips people up — is that the problem only cares about the <strong>smallest</strong> and <strong>largest</strong> values in the array. Every other number is irrelevant to the final answer.</p>
+<h2>Example</h2>
+<p>Suppose we have this array:</p>
+<pre><code>nums = [2, 5, 6, 9, 10]
+</code></pre>
+<p>Step 1: Find the minimum and maximum.
+- Minimum: <code>2</code>
+- Maximum: <code>10</code></p>
+<p>Step 2: Find the GCD of <code>2</code> and <code>10</code>.
+- The divisors of 2 are: 1, 2
+- The divisors of 10 are: 1, 2, 5, 10
+- The largest number appearing in both lists is <code>2</code>.</p>
+<p><strong>Output: <code>2</code></strong></p>
+<p>The numbers 5, 6, and 9 never factor into the calculation at all. They exist in the array, but they're bystanders.</p>
+<h2>Intuition</h2>
+<p>The first instinct many people have is to treat this as an array problem — maybe compute the GCD of every pair, or reduce the whole array pairwise. That instinct is understandable but wasteful, and the problem statement is quietly telling you not to do that.</p>
+<p>Re-read the requirement: "the GCD of the smallest and largest number." That phrasing isn't decoration — it's the entire algorithm. The problem has already told you which two numbers matter. Your job isn't to search for them; it's to notice that you were told.</p>
+<p>Once you see that, this stops being an "array of GCDs" problem and becomes the classic two-number GCD problem wearing an array costume. That reframing is the whole trick. An experienced engineer doesn't start writing loops here — they start by rereading the problem statement for hints about which values are actually load-bearing.</p>
+<p>From there, the only remaining question is: how do you compute GCD of two numbers efficiently? That's where Euclid's algorithm comes in — an ancient technique where you repeatedly replace the larger number with the remainder of dividing the two numbers, until nothing's left to divide. The last nonzero remainder is your answer. It shrinks the problem fast, which is why it's the standard approach used inside <code>math.gcd()</code>.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Instead of using Euclid's algorithm, count downward from the smaller of the two numbers and stop at the first value that divides both numbers evenly.</p>
+<p><strong>Algorithm:</strong>
+1. Find min and max of the array.
+2. Starting from <code>min</code>, count down to <code>1</code>.
+3. For each candidate <code>i</code>, check if both <code>min % i == 0</code> and <code>max % i == 0</code>.
+4. Return the first <code>i</code> that satisfies both conditions.</p>
+<p><strong>Advantages:</strong>
+- Intuitive and easy to explain out loud in an interview if you blank on <code>math.gcd()</code>.
+- No need to remember Euclid's algorithm or any library function.</p>
+<p><strong>Disadvantages:</strong>
+- Slower for large numbers.
+- More code, and more room for off-by-one mistakes under interview pressure.</p>
+<p><strong>Time Complexity:</strong> O(min(a, b)) — in the worst case, you check every number from the smaller value down to 1.</p>
+<p><strong>Space Complexity:</strong> O(1) — no extra data structures used.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach has two parts, and both lean on tools that are already sitting in Python's standard library.</p>
+<p><strong>Step 1 — Reduce the array to two numbers.</strong>
+Use Python's built-in <code>min()</code> and <code>max()</code> functions to pull out the smallest and largest values. These are implemented in C and already optimized — there's no reason to hand-write a scanning loop to find them yourself.</p>
+<p><strong>Step 2 — Compute GCD with Euclid's algorithm.</strong>
+Python's <code>math</code> module ships a battle-tested <code>gcd()</code> function. Instead of brute-force checking divisors, it uses Euclid's algorithm:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>a</th>
+<th>b</th>
+<th>a % b</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>10</td>
+<td>2</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<p>Since <code>10 % 2 == 0</code>, the algorithm stops immediately — <code>b</code> (which is <code>2</code>) is the GCD.</p>
+<p>For a case where it takes more steps, consider GCD(48, 18):</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>a</th>
+<th>b</th>
+<th>a % b</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>48</td>
+<td>18</td>
+<td>12</td>
+</tr>
+<tr>
+<td>2</td>
+<td>18</td>
+<td>12</td>
+<td>6</td>
+</tr>
+<tr>
+<td>3</td>
+<td>12</td>
+<td>6</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<p>The last nonzero remainder is <code>6</code>, so GCD(48, 18) = 6. Notice how fast this shrinks — that speed is exactly why Euclid's algorithm beats brute force for large inputs.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">import math
+from typing import List
+
+
+def find_gcd(nums: List[int]) -&gt; int:
+    &quot;&quot;&quot;Return the GCD of the smallest and largest values in nums.&quot;&quot;&quot;
+    return math.gcd(min(nums), max(nums))
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>min(nums)</code> scans the array once and returns the smallest value.</li>
+<li><code>max(nums)</code> scans the array once and returns the largest value.</li>
+<li><code>math.gcd(a, b)</code> runs Euclid's algorithm internally and returns the greatest common divisor of the two values.</li>
+<li>The whole function is a single return statement — there's no reason to introduce intermediate variables or manual loops here.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Input: <code>nums = [2, 5, 6, 9, 10]</code></p>
+<ol>
+<li><code>min(nums)</code> → <code>2</code></li>
+<li><code>max(nums)</code> → <code>10</code></li>
+<li><code>math.gcd(2, 10)</code>:
+   - <code>10 % 2 == 0</code>, so the loop stops immediately.
+   - Result: <code>2</code></li>
+<li>Return <code>2</code>.</li>
+</ol>
+<h2>Complexity Analysis</h2>
+<p><strong>Time Complexity:</strong> O(n + log(min(a, b)))
+- Finding min and max each take O(n) since you must look at every element once.
+- <code>math.gcd()</code> runs in O(log(min(a, b))) because Euclid's algorithm shrinks the problem roughly like a binary search — each step cuts the remainder down dramatically.
+- Overall, the array scan dominates for large arrays, but the GCD step itself is extremely fast.</p>
+<p><strong>Space Complexity:</strong> O(1) — no additional data structures are allocated; only a few scalar values are tracked.</p>
+<p>This is correct because neither <code>min()</code>, <code>max()</code>, nor <code>math.gcd()</code> allocate memory proportional to the input — they all operate in constant extra space.</p>
+<h2>Alternative Solutions</h2>
+<p>The brute force divisor search covered earlier is a fair fallback if <code>math.gcd()</code> slips your mind mid-interview. It's worth saying out loud, then improving on:</p>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Time Complexity</th>
+<th>Space</th>
+<th>When to use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Euclid's algorithm (<code>math.gcd</code>)</td>
+<td>O(log(min(a,b)))</td>
+<td>O(1)</td>
+<td>Always preferred — standard, fast, correct</td>
+</tr>
+<tr>
+<td>Brute force divisor search</td>
+<td>O(min(a,b))</td>
+<td>O(1)</td>
+<td>Fallback if you forget the library function</td>
+</tr>
+</tbody>
+</table>
+<p>For large numbers, Euclid's approach wins by a wide margin, since it shrinks the problem logarithmically instead of linearly.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty input:</strong> Not valid per constraints — the problem guarantees at least one element, but always confirm array length assumptions in an interview.</li>
+<li><strong>Two elements only:</strong> <code>min</code> and <code>max</code> still work correctly with just two values.</li>
+<li><strong>All duplicates (e.g., <code>[2, 2]</code>):</strong> <code>min</code> and <code>max</code> are the same number, so you're computing GCD of a number with itself, which is always that number.</li>
+<li><strong>One number divides the other (e.g., <code>[2, 10]</code>):</strong> The smaller number is the answer, and Euclid's algorithm terminates in a single step.</li>
+<li><strong>Large values:</strong> Euclid's algorithm keeps performance fast even as numbers grow, unlike brute force which scales linearly with the smaller value.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Computing GCD across the entire array instead of just min and max, which wastes time and adds unnecessary complexity.</li>
+<li>Hand-writing a scanning loop for min/max instead of using Python's optimized built-ins.</li>
+<li>Forgetting that <code>math.gcd()</code> requires non-negative integers — passing negative numbers can produce unexpected results depending on Python version.</li>
+<li>Writing a brute force divisor search with an off-by-one error in the loop bounds.</li>
+<li>Assuming duplicates need special-case handling, when the formula already handles them correctly.</li>
+<li>Not testing with a two-element array, which can expose faulty assumptions about array size.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What is Euclid's algorithm, and can you explain why it's efficient?</li>
+<li>How would you compute the GCD of more than two numbers?</li>
+<li>What's the difference between GCD and LCM, and how are they related?</li>
+<li>Can you implement <code>gcd()</code> manually without using the <code>math</code> module?</li>
+<li>How does GCD relate to the Extended Euclidean Algorithm used in cryptography?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 1979 — Find Greatest Common Divisor of Array</strong>: this exact problem.</li>
+<li><strong>LeetCode 1071 — Greatest Common Divisor of Strings</strong>: applies the same GCD intuition to string patterns instead of numbers.</li>
+<li><strong>LeetCode 878 — Nth Magical Number</strong>: uses GCD and LCM together to solve a counting problem.</li>
+<li><strong>LeetCode 365 — Water and Jug Problem</strong>: relies on GCD theory (Bézout's identity) to determine reachable states.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Always read the problem statement carefully — it often tells you exactly which values matter, like it does here with "smallest and largest."</li>
+<li>Reach for standard library functions like <code>math.gcd()</code>, <code>min()</code>, and <code>max()</code> before writing manual implementations.</li>
+<li>Euclid's algorithm is fast because it shrinks the problem logarithmically, not linearly.</li>
+<li>Brute force is a legitimate fallback to mention in an interview, but always follow it up with the optimal approach.</li>
+<li>Small math concepts like GCD show up in real systems — cryptography, fraction simplification, and event scheduling all lean on it.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>For a full visual walkthrough of this problem, including the step-by-step trace of Euclid's algorithm and a pause-and-predict challenge, check out the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of the Daily Python LeetCode series, where one problem gets solved, explained, and broken down in Python every single day. The goal isn't just to get to a working answer — it's to build the intuition that lets you recognize similar patterns instantly in future interviews.</p>
+<h2>Call To Action</h2>
+<p>If this helped clarify how to think about GCD problems, subscribe on YouTube for daily walkthroughs, and subscribe to the Substack newsletter for the written breakdowns delivered straight to your inbox. Drop a comment with which problem you'd like solved next, and share this with a friend prepping for interviews.</p>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>Most people overcomplicate "Find Greatest Common Divisor of Array" the moment they see the word "array."</p>
+<p>The instinct is to loop through every number, maybe compute pairwise GCDs, maybe write some reduction logic. But reread the problem statement carefully: it explicitly says to use the smallest and largest values only. That's not a hint — it's the entire algorithm handed to you.</p>
+<p>Once you see that, the problem collapses into the classic two-number GCD problem:</p>
+<pre><code class="language-python">import math
+
+def find_gcd(nums):
+    return math.gcd(min(nums), max(nums))
+</code></pre>
+<p>Three lines. No manual loops, no reinventing Euclid's algorithm — Python's standard library already has a fast, battle-tested implementation.</p>
+<p>What I like about problems like this is what they actually test. It's not your ability to write complex code — it's whether you slow down enough to notice when a problem is already simplifying itself for you. That skill matters more in real engineering than knowing every algorithm by heart.</p>
+<p>If you're prepping for interviews, don't just memorize solutions — practice spotting these structural hints. They show up more often than you'd think.</p>
+<p>Full breakdown with complexity analysis, edge cases, and a brute-force alternative in the comments.</p>
+<h1>Python #LeetCode #CodingInterview #Algorithms #SoftwareEngineering</h1>
+<h2>Twitter/X Thread</h2>
+<p>1/ Everyone overcomplicates "Find GCD of Array" the second they see the word array.</p>
+<p>They start looping. They start thinking pairwise GCDs. Big mistake. Here's the actual trick 🧵</p>
+<p>2/ Reread the problem statement. It says: find the GCD of the SMALLEST and LARGEST number in the array.</p>
+<p>That's not flavor text. That's the entire algorithm, handed to you directly.</p>
+<p>3/ Every other number in the array? Total bystanders. They don't affect the answer at all.</p>
+<p>4/ So this "array problem" is really just the classic two-number GCD problem wearing a disguise.</p>
+<p>5/ Step 1: grab min and max using Python's built-ins.</p>
+<pre><code class="language-python">lo, hi = min(nums), max(nums)
+</code></pre>
+<p>They're implemented in C. Don't write your own scanning loop.</p>
+<p>6/ Step 2: hand those two numbers to math.gcd()</p>
+<pre><code class="language-python">math.gcd(lo, hi)
+</code></pre>
+<p>One import saves you from reinventing Euclid's algorithm.</p>
+<p>7/ Speaking of Euclid — here's how GCD actually gets computed fast: repeatedly replace the bigger number with the remainder of dividing the two, until nothing's left.</p>
+<p>The last nonzero remainder = your answer.</p>
+<p>8/ Why does this matter? math.gcd runs in O(log(min(a,b))). Brute force divisor search runs in O(min(a,b)).</p>
+<p>For large numbers, Euclid's approach wins by a mile.</p>
+<p>9/ Edge case check: array is [2, 2]? GCD of a number with itself is just that number. No special casing needed — the formula handles it for free.</p>
+<p>10/ Full solution:</p>
+<pre><code class="language-python">import math
+
+def find_gcd(nums):
+    return math.gcd(min(nums), max(nums))
+</code></pre>
+<p>Read the problem statement twice. Sometimes it's already telling you the answer's shape.</p>
+<h2>Facebook Post</h2>
+<p>Quick one for anyone brushing up on coding interview prep 👋</p>
+<p>There's a LeetCode problem called "Find Greatest Common Divisor of Array" that looks intimidating at first — array of numbers, find a GCD, sounds like a lot of looping.</p>
+<p>Turns out, the problem statement basically tells you the trick if you read it closely: you only ever need the smallest and largest numbers in the array. Everything else doesn't matter.</p>
+<p>Once you know that, Python solves it in one line using <code>math.gcd(min(nums), max(nums))</code>.</p>
+<p>Full breakdown of how it works, why Euclid's algorithm makes it fast, and what edge cases to watch for is up now. Great one for beginners getting comfortable with Python's standard library. 🐍</p>
+<h2>Reddit Summary</h2>
+<p>Breaking down LeetCode's "Find Greatest Common Divisor of Array" since it's a good example of a problem that looks harder than it is.</p>
+<p>The problem statement explicitly says to find the GCD of the smallest and largest values in the array — that's the whole trick. Every other element is irrelevant. Once you see that, it's just the standard two-number GCD problem.</p>
+<p>Solution:</p>
+<pre><code class="language-python">import math
+
+def find_gcd(nums):
+    return math.gcd(min(nums), max(nums))
+</code></pre>
+<p><code>math.gcd()</code> uses Euclid's algorithm under the hood, which runs in O(log(min(a,b))) — much faster than a brute-force divisor search, which would be O(min(a,b)).</p>
+<p>Worth knowing for interviews since it tests whether you reach for the standard library instead of hand-rolling something that's already been optimized. Also comes up in real systems — cryptography, fraction simplification, event scheduling.</p>
+<p>Happy to answer questions on the Euclid's algorithm internals or the brute-force alternative if anyone's curious.</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># Find Greatest Common Divisor of Array — Python Solution
+
+## Problem
+
+Given an array of positive integers `nums`, find the greatest common divisor (GCD)
+of the smallest and largest values in the array.
+
+## Intuition
+
+Only two values in the array actually matter: the minimum and the maximum.
+The problem statement explicitly tells you this — it's not a hidden trick,
+it's stated in the requirements. That means this &quot;array problem&quot; is really
+the classic two-number GCD problem wearing a disguise.
+
+## Approach
+
+1. Find `min(nums)` and `max(nums)` using Python's built-in functions.
+2. Pass both values to `math.gcd()`, which uses Euclid's algorithm internally.
+3. Return the result.
+
+## Python Solution
+
+```python
+import math
+from typing import List
+
+
+def find_gcd(nums: List[int]) -&gt; int:
+    &quot;&quot;&quot;Return the GCD of the smallest and largest values in nums.&quot;&quot;&quot;
+    return math.gcd(min(nums), max(nums))
+
+
+def demo() -&gt; None:
+    assert find_gcd([2, 5, 6, 9, 10]) == 2
+    assert find_gcd([2, 2]) == 2
+    assert find_gcd([7, 5, 6, 8, 3]) == 1
+    assert find_gcd([3, 3]) == 3
+    print(&quot;All checks passed.&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    demo()
+</code></pre>
+<h2>Complexity</h2>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Complexity</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Time</td>
+<td>O(n + log(min(a, b)))</td>
+<td>O(n) to scan for min/max, O(log) for Euclid's algorithm</td>
+</tr>
+<tr>
+<td>Space</td>
+<td>O(1)</td>
+<td>No extra data structures used</td>
+</tr>
+</tbody>
+</table>
+<h2>Video</h2>
+<p>Full walkthrough with a pause-and-predict challenge: {LINK}</p>
+<h2>Article</h2>
+<p>Full written breakdown with brute force alternative, dry run, and edge cases:
+{LINK}
+```</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/brzex76x6rU' target='_blank'>▶ Watch on YouTube</a></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>

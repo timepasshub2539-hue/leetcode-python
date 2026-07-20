@@ -24,6 +24,374 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 7: while &amp; for Loops Explained (range, break, continue)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/kQS2WKE81b8' allowfullscreen></iframe></div><article><p>You've hit your session limit · resets 5:20am (Asia/Calcutta)</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/kQS2WKE81b8' target='_blank'>▶ Watch on YouTube</a></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 7: while &amp; for Loops Explained (range, break, continue)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/kQS2WKE81b8' allowfullscreen></iframe></div><article><h1>SEO PACKAGE</h1>
+<h3>1. SEO Title</h3>
+<p>Python Loops Explained: while vs for, range(), break, and continue (with Examples)</p>
+<h3>2. SEO Subtitle</h3>
+<p>A beginner-friendly, in-depth guide to mastering Python's while and for loops, range(), break, continue, and the loop-else clause.</p>
+<h3>3. Featured Quote</h3>
+<p>"A loop isn't magic — it's just you, refusing to write the same line a hundred times."</p>
+<h3>4. Meta Description</h3>
+<p>Learn Python loops step by step: while vs for, range(), break, continue, and loop-else. Avoid the two classic loop bugs every beginner hits.</p>
+<h3>5. URL Slug</h3>
+<p><code>python-while-for-loops-range-break-continue</code></p>
+<h3>6. Keywords</h3>
+<p>python loops, while loop python, for loop python, range() python, break statement python, continue statement python, python loop else, python for vs while, infinite loop python, off-by-one error python, python iteration, nested loops python, python beginner tutorial, python interview questions, loop control statements, python iterable, python index, coding interview prep, learn python from scratch, python data structures</p>
+<h3>7. Tags</h3>
+<p>Python, Python Loops, For Loop, While Loop, Range Function, Break Continue, Coding Interview, Algorithms, Data Structures, Software Engineering, Python Basics, Learn Python, Programming Tutorial, Python for Beginners, LeetCode</p>
+<hr />
+<h1>MAIN ARTICLE</h1>
+<h2>Introduction</h2>
+<p>Every program you'll ever write comes down to three things: sequence, selection, and repetition. Loops are that third piece, and they're the one that trips up beginners the most — not because the syntax is hard, but because knowing <em>which</em> loop to reach for, and <em>when</em> it will stop, takes a bit of practice.</p>
+<p>If you've ever copy-pasted the same line of code five times because you needed to print five things, a loop is the fix. Instead of writing <code>print(item)</code> over and over, you write it once and let Python repeat it for you.</p>
+<p>This matters far beyond toy examples. Processing a list of orders, validating every row in a spreadsheet, retrying a network call until it succeeds, searching a dataset for a match — all of this is loops. It's also one of the first things interviewers probe, because how you loop (and how you <em>stop</em> looping) reveals whether you actually understand control flow or you're just pattern-matching syntax you memorized.</p>
+<p>In this lesson, we'll build a complete mental model: <code>while</code> loops, <code>for</code> loops, <code>range()</code>, <code>break</code>, <code>continue</code>, the often-misunderstood <code>loop-else</code>, the two classic bugs that catch almost every beginner, and when to reach for nested loops.</p>
+<h2>Problem Overview</h2>
+<p>Stated plainly, the problem loops solve is: <strong>how do I repeat a block of code multiple times without rewriting it?</strong></p>
+<p>Python gives you two main tools for this:</p>
+<ul>
+<li><strong><code>while</code> loop</strong> — repeats <em>as long as a condition stays true</em>. You don't necessarily know in advance how many times it'll run.</li>
+<li><strong><code>for</code> loop</strong> — walks through an <strong>iterable</strong> (a list, string, range, or anything you can step through item by item) and runs the block once per item. You know exactly what you're looping over.</li>
+</ul>
+<p>Alongside these, you get control statements to steer the loop mid-flight:</p>
+<ul>
+<li><strong><code>break</code></strong> — stop the loop immediately, no matter what's left.</li>
+<li><strong><code>continue</code></strong> — skip the rest of the current iteration and move to the next one.</li>
+<li><strong><code>else</code></strong> (attached to a loop) — runs only if the loop finished naturally, without ever hitting a <code>break</code>.</li>
+</ul>
+<p>And you get <code>range()</code>, a way to generate a sequence of numbers on the fly so you can loop a specific number of times without needing a real list.</p>
+<h2>Example</h2>
+<pre><code class="language-python"># while loop
+count = 0
+while count &lt; 3:
+    print(count)
+    count += 1
+# Output: 0 1 2
+
+# for loop over a real iterable
+fruits = [&quot;apple&quot;, &quot;banana&quot;, &quot;cherry&quot;]
+for fruit in fruits:
+    print(fruit)
+# Output: apple banana cherry
+
+# range()
+for i in range(5):
+    print(i)
+# Output: 0 1 2 3 4  (stops BEFORE 5)
+
+# break
+numbers = [4, 8, 15, 16, 23, 42]
+for num in numbers:
+    if num == 15:
+        print(&quot;found it&quot;)
+        break
+# Output: found it   (16, 23, 42 are never checked)
+
+# continue
+for num in [1, 2, 3, 4]:
+    if num == 2:
+        continue
+    print(num)
+# Output: 1 3 4   (2 is skipped, loop keeps going)
+</code></pre>
+<p>Each output follows directly from the rule the loop enforces: <code>while</code> checks a condition every pass, <code>for</code> walks a known sequence, <code>range(5)</code> produces 0 through 4 (five numbers, stopping <em>before</em> 5), <code>break</code> exits entirely the instant its condition is met, and <code>continue</code> skips only the current pass.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer thinks about this, before writing a single line of code.</p>
+<p>Ask yourself one question first: <strong>do I know exactly what I'm looping over, or am I waiting for something to become true?</strong></p>
+<ul>
+<li>If you have a concrete collection — a list of users, a range of numbers, a string of characters — you already know the loop's boundaries. That's a <code>for</code> loop. It's like handing out name tags from a list: you go until the list runs out, no risk of going forever.</li>
+<li>If you're waiting on a condition — "keep asking the user for input until they type quit," "keep retrying until the server responds" — you don't know the number of iterations in advance. That's a <code>while</code> loop. It's like leaving a light on as long as someone's in the room.</li>
+</ul>
+<p>Once you're inside a loop, the next question is: <strong>do I need to react to something mid-loop?</strong> If yes, that's where <code>break</code> and <code>continue</code> come in. Think of <code>break</code> as slamming the brakes the moment you find what you need — no reason to check the rest. Think of <code>continue</code> as skipping one track on a playlist without turning the music off.</p>
+<p>The <code>else</code> clause is the part most engineers forget exists, and it solves a specific, recurring pattern: <strong>"did I finish searching without finding anything?"</strong> Instead of a separate <code>found = False</code> flag you set and check after the loop, <code>for...else</code> gives you that signal for free — <code>else</code> only fires if the loop completed without a <code>break</code>.</p>
+<p>This intuition — "what am I looping over" then "do I need early exits" — is really the entire design space of loops. Everything else is syntax.</p>
+<h2>Brute Force Solution</h2>
+<p>There isn't a "brute force vs optimal" algorithm here in the traditional sense — loops are the primitive, not the problem. But it's worth calling out the <em>naive</em> way beginners often reach for a <code>for</code> loop when a <code>while</code> (or vice versa) would be more honest, and the naive way beginners simulate a "did I find it" flag manually.</p>
+<p><strong>Naive found-flag pattern (before knowing <code>loop-else</code>):</strong></p>
+<pre><code class="language-python">numbers = [4, 8, 15, 16, 23, 42]
+found = False
+for num in numbers:
+    if num == 4:
+        found = True
+        break
+
+if not found:
+    print(&quot;not in the list&quot;)
+</code></pre>
+<ul>
+<li><strong>Idea:</strong> manually track whether the loop found something using an extra boolean variable.</li>
+<li><strong>Advantages:</strong> works everywhere, easy to read for beginners, no special syntax knowledge required.</li>
+<li><strong>Disadvantages:</strong> extra variable to manage, easy to forget to set it, adds a line of state that the loop itself already implicitly knows.</li>
+<li><strong>Time complexity:</strong> O(n) — you may scan the whole list.</li>
+<li><strong>Space complexity:</strong> O(1) — just one extra boolean.</li>
+</ul>
+<h2>Optimal Solution</h2>
+<p>The "optimal" version isn't faster in Big-O terms — it's <em>cleaner</em>, because it removes the manual flag entirely by using Python's built-in <code>for...else</code>:</p>
+<pre><code class="language-python">numbers = [4, 8, 15, 16, 23, 42]
+for num in numbers:
+    if num == 100:
+        print(&quot;found it&quot;)
+        break
+else:
+    print(&quot;not in the list&quot;)
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Loop starts</td>
+<td>Python walks through <code>numbers</code> one at a time</td>
+</tr>
+<tr>
+<td>Condition never true</td>
+<td><code>100</code> never matches any element</td>
+</tr>
+<tr>
+<td>Loop exhausts the list</td>
+<td>No <code>break</code> ever executes</td>
+</tr>
+<tr>
+<td><code>else</code> block runs</td>
+<td>Because the loop completed without breaking</td>
+</tr>
+</tbody>
+</table>
+<p>The key mental shift: <code>else</code> on a loop doesn't mean "if the loop didn't run" — it means <strong>"if the loop ran to completion without a break."</strong> That's the whole trick, and once it clicks, you'll spot places to use it in search and validation logic constantly.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def find_first_match(items, target):
+    &quot;&quot;&quot;Search items for target; return index if found, else -1.&quot;&quot;&quot;
+    for index, value in enumerate(items):
+        if value == target:
+            return index
+    else:
+        # Only runs if the loop never hit 'return' inside the if
+        return -1
+
+
+def countdown(start):
+    &quot;&quot;&quot;Print numbers from start down to 1 using a while loop.&quot;&quot;&quot;
+    current = start
+    while current &gt; 0:
+        print(current)
+        current -= 1  # must move toward the exit condition
+    print(&quot;Liftoff!&quot;)
+
+
+def print_multiplication_grid(rows, cols):
+    &quot;&quot;&quot;Nested loop example: print a rows x cols multiplication table.&quot;&quot;&quot;
+    for row in range(1, rows + 1):
+        for col in range(1, cols + 1):
+            print(row * col, end=&quot;\t&quot;)
+        print()  # newline after each row
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>enumerate(items)</code> — gives you both the index and the value in one pass, avoiding a manual counter.</li>
+<li><code>if value == target: return index</code> — a <code>return</code> inside a loop is effectively a <code>break</code> that also hands back data; the function exits immediately.</li>
+<li>The <code>else</code> on <code>find_first_match</code>'s <code>for</code> loop is technically redundant here since <code>return -1</code> after the loop achieves the same thing — included to show the pattern, and worth removing in production code for clarity (see Common Mistakes below).</li>
+<li><code>countdown</code>'s <code>current -= 1</code> is the single most important line in the function — remove it and the <code>while</code> condition never turns false.</li>
+<li><code>print_multiplication_grid</code> shows nested loops: the outer loop fixes a row, and the inner loop runs completely for every single row, which is why nested loops cost rows × cols operations, not rows + cols.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Trace <code>find_first_match([4, 8, 15, 16, 23], 16)</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Iteration</th>
+<th>index</th>
+<th>value</th>
+<th>value == 16?</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>0</td>
+<td>4</td>
+<td>No</td>
+<td>continue loop</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1</td>
+<td>8</td>
+<td>No</td>
+<td>continue loop</td>
+</tr>
+<tr>
+<td>3</td>
+<td>2</td>
+<td>15</td>
+<td>No</td>
+<td>continue loop</td>
+</tr>
+<tr>
+<td>4</td>
+<td>3</td>
+<td>16</td>
+<td><strong>Yes</strong></td>
+<td><code>return 3</code></td>
+</tr>
+</tbody>
+</table>
+<p>Function returns <code>3</code> immediately — indices 4 (<code>23</code>) never get checked, because <code>return</code> exits the loop right away, just like <code>break</code> would.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong><code>find_first_match</code>:</strong> Time is O(n) in the worst case (target is last or absent — every element is checked once). Best case is O(1) if the first element matches. Space is O(1) — no extra data structures grow with input size.</li>
+<li><strong><code>countdown</code>:</strong> Time is O(n) where n is <code>start</code>, since the loop runs exactly <code>start</code> times. Space is O(1).</li>
+<li><strong><code>print_multiplication_grid</code>:</strong> Time is O(rows × cols) because the inner loop fully re-runs for every outer iteration. Space is O(1) beyond the printed output.</li>
+</ul>
+<p>These are correct because a loop's cost is always the number of iterations times the cost of the loop body — with a single loop that's O(n), and with one loop nested inside another it multiplies to O(n × m).</p>
+<h2>Alternative Solutions</h2>
+<p>You could replace <code>find_first_match</code> with Python's built-in tools:</p>
+<pre><code class="language-python">index = numbers.index(target) if target in numbers else -1
+</code></pre>
+<p>This is more concise but does two full passes in the worst case (<code>in</code> scans once, <code>.index</code> scans again), whereas the loop-based version scans once. For learning purposes and for interviews, writing the loop yourself is the expected answer — built-ins are for production code once you've proven you understand the underlying mechanics.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty input:</strong> <code>for num in []:</code> simply never executes the body — no error, the <code>else</code> clause (if present) still runs.</li>
+<li><strong>Duplicates:</strong> a search loop with <code>break</code> stops at the <em>first</em> match; if you need all matches, don't <code>break</code> — collect results in a list instead.</li>
+<li><strong>Minimum values:</strong> <code>range(0)</code> produces nothing at all; <code>while False:</code> never runs once.</li>
+<li><strong>Maximum values / large ranges:</strong> <code>range()</code> doesn't build a list in memory — it's lazy — so <code>range(10_000_000)</code> is cheap to create even though iterating fully still costs time.</li>
+<li><strong>Off-by-one boundaries:</strong> always double-check whether your stop value should be inclusive or exclusive; <code>range()</code> is always exclusive of its stop.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting to update the loop variable in a <code>while</code> loop</strong> — causes an infinite loop that freezes your program. Always confirm something inside the loop moves you toward the exit condition.</li>
+<li><strong>Assuming <code>range(stop)</code> includes <code>stop</code></strong> — it never does; <code>range(1, 6)</code> gives you 1–5, not 1–6.</li>
+<li><strong>Using <code>break</code> when you meant <code>continue</code>, or vice versa</strong> — <code>break</code> exits the whole loop, <code>continue</code> only skips the current pass. Mixing these up silently produces wrong output, not an error.</li>
+<li><strong>Misreading <code>loop-else</code></strong> — it does not mean "if the loop didn't run." It means "if the loop finished without a <code>break</code>." An empty loop's <code>else</code> still runs, which surprises people.</li>
+<li><strong>Mutating a list while iterating over it</strong> — removing or adding items to a list inside a <code>for item in my_list:</code> loop skips elements or raises unexpected behavior. Iterate over a copy (<code>my_list[:]</code>) if you need to modify the original.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What's the difference between <code>break</code> and <code>continue</code>, and can you give an example where using the wrong one produces incorrect output?</li>
+<li>Explain when a <code>for...else</code> clause executes, using a concrete example.</li>
+<li>Why does <code>range(5)</code> stop at 4 instead of 5? Walk through the underlying reasoning.</li>
+<li>How would you rewrite a <code>while</code> loop that has a known number of iterations as a <code>for</code> loop, and why might that be safer?</li>
+<li>What's the time complexity of two nested loops, each running n times, and why?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 27 (Remove Element)</strong> — tests in-place iteration and index management, a common <code>while</code>/index pitfall.</li>
+<li><strong>LeetCode 209 (Minimum Size Subarray Sum)</strong> — sliding window pattern, built entirely on nested/two-pointer loop control.</li>
+<li><strong>LeetCode 704 (Binary Search)</strong> — a <code>while</code> loop with a shrinking search space, directly builds on the "when does the loop stop" intuition covered here.</li>
+<li><strong>LeetCode 202 (Happy Number)</strong> — relies on loop termination reasoning similar to avoiding infinite <code>while</code> loops.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Use <code>for</code> when you know exactly what you're looping over — it's safer and less likely to run forever.</li>
+<li>Use <code>while</code> when you're waiting for a condition to become true, and always make sure something inside the loop changes that condition.</li>
+<li><code>range()</code> generates numbers lazily; its stop value is always excluded.</li>
+<li><code>break</code> exits the entire loop immediately; <code>continue</code> skips only the current iteration.</li>
+<li><code>loop-else</code> runs only if the loop finished without a <code>break</code> — a clean way to express "searched and found nothing."</li>
+<li>Nested loops multiply cost — only reach for them when you genuinely have two dimensions to walk through.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with live coding and visual explanations of every concept above, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of the <strong>Daily Python LeetCode</strong> series, a day-by-day walkthrough of Python fundamentals and interview-style problem solving — built for developers who want to go from "I know the syntax" to "I understand why it works." Each lesson builds on the last, so if loops felt shaky before, they shouldn't anymore.</p>
+<h2>Call To Action</h2>
+<p>If this helped things click, subscribe on YouTube so you don't miss the next lesson, and subscribe to the Substack newsletter for the written breakdown delivered straight to your inbox. Drop a comment with what tripped you up (loop-else gets almost everyone), and share this with a fellow learner who's still fighting with infinite loops.</p>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h3>LinkedIn Post</h3>
+<p>Loops are one of the first real tests of whether a beginner understands control flow — not because the syntax is hard, but because knowing <em>which</em> loop to reach for, and <em>when</em> it stops, takes actual reasoning.</p>
+<p>Here's the simplest way to decide: if you know exactly what you're looping over — a list, a range, a fixed count — reach for a <code>for</code> loop. It's predictable and safer by default. If you're waiting on a condition to become true — a retry, a game loop, user input — that's a <code>while</code> loop, and you need to guarantee something inside it moves you toward the exit, or you'll ship an infinite loop (ask me how I know).</p>
+<p>Two control statements sit on top of both: <code>break</code> exits the loop entirely the moment you're done, and <code>continue</code> skips just the current pass without stopping the whole thing. Confusing these two is a quiet bug — your code runs, it just does the wrong thing.</p>
+<p>The one almost nobody remembers: <code>for...else</code>. The <code>else</code> block on a loop runs only if the loop completes <em>without</em> hitting a <code>break</code> — a clean, built-in way to express "I searched the whole thing and found nothing," without a manual <code>found = False</code> flag cluttering your code.</p>
+<p>Small concept, but it's foundational — sliding windows, binary search, and half of LeetCode's easy-to-medium problems are really just loops with the right exit conditions.</p>
+<p>What's a loop bug that got you early on? Curious to hear the war stories.</p>
+<h1>Python #CodingInterview #Algorithms #LearnToCode #SoftwareEngineering</h1>
+<h3>Twitter/X Thread</h3>
+<p>1/ Loops are where a lot of beginners quietly get stuck — not the syntax, but knowing <em>which</em> loop and <em>when</em> it stops. Here's the whole mental model in one thread. 🧵</p>
+<p>2/ Rule one: know exactly what you're looping over (a list, a range)? Use <code>for</code>. Waiting for a condition to become true (retry, user input)? Use <code>while</code>. That single question decides 90% of it.</p>
+<p>3/ <code>while</code> loops are dangerous if you're not careful — forget to update the variable your condition depends on, and your program freezes. Always check: does something inside the loop move me toward the exit?</p>
+<p>4/ <code>for</code> loops are safer by default because Python handles the counting for you. When in doubt, prefer <code>for</code>.</p>
+<p>5/ <code>range(5)</code> gives you 0, 1, 2, 3, 4 — it stops BEFORE 5. This trips up nearly every beginner at least once. The stop value is a wall you never touch.</p>
+<p>6/ <code>break</code> = slam the brakes, exit the whole loop right now. Nothing after it runs, no more iterations checked.</p>
+<p>7/ <code>continue</code> = skip just this one pass, keep the loop running. Mixing up <code>break</code> and <code>continue</code> doesn't crash your code — it just silently gives you the wrong output.</p>
+<p>8/ The one nobody remembers: <code>for...else</code>. The <code>else</code> runs ONLY if the loop finished without ever hitting a <code>break</code>. Perfect for "did I search everything and find nothing."</p>
+<p>9/ Nested loops = loop inside a loop, for grid-shaped problems (rows/columns). Cost multiplies: n × m, not n + m. Use only when you genuinely have two dimensions.</p>
+<p>10/ Master these five ideas — for vs while, range, break, continue, loop-else — and you've got the entire foundation for sliding windows, binary search, and most interview loop problems. Full breakdown + code: {LINK}</p>
+<h3>Facebook Post</h3>
+<p>Been teaching Python loops this week and it's wild how one small idea — "does something inside the loop move you toward the exit?" — prevents like 80% of beginner bugs. Broke down while loops, for loops, range(), break, continue, and the sneaky loop-else clause (bet you forgot that one exists) in the latest lesson. If you've ever accidentally written an infinite loop or gotten confused by range() cutting off one number early, this one's for you. Full video and write-up here: {LINK}</p>
+<h3>Reddit Summary</h3>
+<p>Wrote up a breakdown of Python's <code>while</code> and <code>for</code> loops, covering the stuff that actually trips people up: <code>range()</code> being exclusive of its stop value, the difference between <code>break</code> (exit entirely) and <code>continue</code> (skip this pass only), and the <code>for...else</code> clause that a surprising number of intermediate devs don't know exists — it runs only if the loop completes without a <code>break</code>, which is a clean way to express "searched and found nothing" without a manual flag variable. Also covers the two classic beginner bugs: infinite <code>while</code> loops (forgetting to update the condition variable) and off-by-one errors with <code>range()</code>. Included dry runs, complexity analysis, and common interview follow-up questions if that's useful to anyone prepping. {LINK}</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># Python Loops: while, for, range, break, continue, and loop-else
+
+## Problem
+How do you repeat a block of code multiple times without rewriting it,
+and how do you control exactly when that repetition stops?
+
+## Intuition
+Ask one question first: do you know exactly what you're looping over
+(a list, a range) or are you waiting for a condition to become true?
+- Known collection → `for` loop
+- Waiting on a condition → `while` loop
+
+From there, `break` gives you an early exit, `continue` skips just the
+current pass, and `for...else` lets you detect &quot;the loop finished without
+ever breaking&quot; — useful for search patterns.
+
+## Approach
+1. Pick `for` when the iteration count/collection is known up front.
+2. Pick `while` when you're waiting on a condition, and make sure the
+   loop body changes something the condition depends on.
+3. Use `break` to stop early once you've found what you need.
+4. Use `continue` to skip irrelevant items without stopping the loop.
+5. Use `for...else` instead of a manual `found` flag when you need to
+   know whether the loop completed without breaking.
+
+## Python Solution
+
+\`\`\`python
+def find_first_match(items, target):
+    &quot;&quot;&quot;Search items for target; return index if found, else -1.&quot;&quot;&quot;
+    for index, value in enumerate(items):
+        if value == target:
+            return index
+    else:
+        return -1
+
+
+def countdown(start):
+    &quot;&quot;&quot;Print numbers from start down to 1 using a while loop.&quot;&quot;&quot;
+    current = start
+    while current &gt; 0:
+        print(current)
+        current -= 1
+    print(&quot;Liftoff!&quot;)
+
+
+def print_multiplication_grid(rows, cols):
+    &quot;&quot;&quot;Nested loop example: print a rows x cols multiplication table.&quot;&quot;&quot;
+    for row in range(1, rows + 1):
+        for col in range(1, cols + 1):
+            print(row * col, end=&quot;\t&quot;)
+        print()
+\`\`\`
+
+## Complexity
+| Function | Time | Space |
+|---|---|---|
+| `find_first_match` | O(n) | O(1) |
+| `countdown` | O(n) | O(1) |
+| `print_multiplication_grid` | O(rows × cols) | O(1) |
+
+## Video
+Full walkthrough with live coding: {LINK}
+
+## Article
+Full write-up with dry runs, common mistakes, and interview questions: {LINK}
+</code></pre></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/kQS2WKE81b8' target='_blank'>▶ Watch on YouTube</a></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>

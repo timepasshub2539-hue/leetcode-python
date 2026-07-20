@@ -18,6 +18,372 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Smallest Subsequence of Distinct Characters — LeetCode Daily Python Solution (the greedy stack trick nobody sees)</h1><span class='badge' style='background:#fb923c22;color:#fb923c'>💰 Greedy</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/VfEGuMR1aNU' allowfullscreen></iframe></div><article><p>You've hit your session limit · resets 5:20am (Asia/Calcutta)</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/VfEGuMR1aNU' target='_blank'>▶ Watch on YouTube</a></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Smallest Subsequence of Distinct Characters — LeetCode Daily Python Solution (the greedy stack trick nobody sees)</h1><span class='badge' style='background:#fb923c22;color:#fb923c'>💰 Greedy</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/VfEGuMR1aNU' allowfullscreen></iframe></div><article><h1>SEO PACKAGE</h1>
+<h2>1. SEO Title</h2>
+<p>Smallest Subsequence of Distinct Characters in Python: The Greedy Stack Trick (LeetCode 1081 / 316)</p>
+<h2>2. SEO Subtitle</h2>
+<p>Learn how a monotonic stack and a simple last-occurrence map solve "Smallest Subsequence of Distinct Characters" in linear time — no sorting, no backtracking.</p>
+<h2>3. Featured Quote</h2>
+<blockquote>
+<p>"Pop a letter only if you're not losing it forever — that one lookahead check is the entire algorithm."</p>
+</blockquote>
+<h2>4. Meta Description</h2>
+<p>Master LeetCode's Smallest Subsequence of Distinct Characters (Remove Duplicate Letters) with a greedy stack and last-occurrence map. Full Python solution, dry run, and complexity breakdown.</p>
+<h2>5. URL Slug</h2>
+<p><code>smallest-subsequence-distinct-characters-python-greedy-stack</code></p>
+<h2>6. Keywords</h2>
+<p>smallest subsequence of distinct characters, remove duplicate letters, leetcode 1081, leetcode 316, greedy stack algorithm, monotonic stack python, python coding interview, leetcode daily challenge, last occurrence map, stack based string algorithm, python algorithms, data structures interview, greedy algorithm python, string manipulation leetcode, coding interview preparation, faang interview questions, python leetcode solutions, time complexity analysis, google interview questions, amazon interview questions</p>
+<h2>7. Tags</h2>
+<p>Python, LeetCode, Coding Interview, Algorithms, Data Structures, Greedy Algorithm, Monotonic Stack, String Processing, Software Engineering, Interview Prep, LeetCode Daily Challenge, FAANG Interview, Problem Solving</p>
+<hr />
+<h1>MAIN ARTICLE</h1>
+<h2>Introduction</h2>
+<p>Every so often you run into a LeetCode problem that looks like a sorting exercise on the surface but is actually testing something deeper: whether you can reason about <em>safety</em>. "Smallest Subsequence of Distinct Characters" (also known as LeetCode 316, "Remove Duplicate Letters") is exactly that kind of problem, and it shows up regularly in interviews at companies like Google and Amazon — not because the code is long, but because the greedy insight is easy to get almost right and subtly wrong.</p>
+<p>The reason this problem is worth your time goes beyond passing an interview. The same greedy-stack-with-lookahead pattern shows up in real systems: log compaction, deduplication pipelines, and text-normalization tools all lean on this idea of "keep the smallest useful thing now, but only if you're not burning a bridge you'll need later." Learn the pattern once here, and you'll start recognizing it in places that have nothing to do with LeetCode.</p>
+<h2>Problem Overview</h2>
+<p>You're given a string made of lowercase letters. Your job is to produce the smallest possible string (in dictionary order) that:</p>
+<ol>
+<li>Contains every distinct character from the original string exactly once.</li>
+<li>Preserves the relative order those characters appeared in the original string — in other words, your answer must be a <strong>subsequence</strong> of the input.</li>
+</ol>
+<p>So you're not free to rearrange letters however you like. You can only pick which occurrences to keep and which to drop, and the leftover letters must stay in their original left-to-right order.</p>
+<p>For example, given <code>bcabc</code>, the distinct letters are <code>b</code>, <code>c</code>, and <code>a</code>. There are multiple subsequences that contain all three exactly once, but the smallest one alphabetically is <code>abc</code>.</p>
+<h2>Example</h2>
+<p><strong>Input:</strong> <code>"bcabc"</code>
+<strong>Output:</strong> <code>"abc"</code></p>
+<p>Why? The distinct letters are <code>a</code>, <code>b</code>, <code>c</code>. Several subsequences satisfy "each letter once, order preserved" — for instance <code>bca</code>, <code>bac</code>, <code>abc</code> — but only <code>abc</code> is the alphabetically smallest one that's still a valid subsequence of the original string.</p>
+<p><strong>Input:</strong> <code>"cbacdcbc"</code>
+<strong>Output:</strong> <code>"acdb"</code></p>
+<p>This one's trickier. Let's trace the intuition: <code>a</code> and <code>b</code> are easy picks. <code>c</code> shows up early but gets pushed out because a smaller letter (<code>a</code>) comes later and <code>c</code> itself reappears further down the string, so dropping the early <code>c</code> doesn't cost us anything. <code>d</code> has nothing smaller after it, so it stays put once added. <code>b</code> closes out the string. The result: <code>acdb</code>.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer would approach this without knowing the "official" solution.</p>
+<p>First instinct: this smells like sorting. You want the smallest possible letters as early as possible. But you can't just sort the distinct letters — that would break the subsequence constraint. If <code>b</code> appears before <code>a</code> in the original string but <code>a</code> never appears again after that point, you're not allowed to put <code>a</code> before <code>b</code> in your answer, because there's no valid subsequence that does that.</p>
+<p>So the real question becomes: <strong>when is it safe to prefer a smaller letter over one you've already committed to?</strong></p>
+<p>Think of building your answer as a stack, one letter at a time, left to right. At each step you have two choices for the current letter:</p>
+<ul>
+<li>If you haven't used this letter yet, you <em>want</em> it in your answer.</li>
+<li>Before adding it, check whether the letter currently on top of your stack is bigger than it. If it is, you'd love to remove that top letter and let the smaller one take its place earlier in the answer.</li>
+</ul>
+<p>But you can only do that removal if the bigger letter you're kicking out is <em>not gone for good</em> — meaning it needs to appear again later in the string so you can add it back afterward. This is the one insight that makes the whole algorithm safe: never discard a letter you can't get back.</p>
+<p>That single lookahead check — "does this letter reappear later?" — is what separates a correct greedy algorithm from a broken one.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Generate candidate orderings of the distinct letters (or greedily try to build the lexicographically smallest string character by character by trial), and check whether each candidate is actually a valid subsequence of the original string. Keep the smallest one that works.</p>
+<p><strong>Algorithm:</strong>
+1. Find the set of distinct characters.
+2. Try building strings in increasing lexicographic order (or permute the letters).
+3. For each candidate, verify it's a valid subsequence of the input string.
+4. Return the first valid one.</p>
+<p><strong>Advantages:</strong>
+- Conceptually simple to explain in an interview — it directly restates the problem.
+- Easy to verify correctness on small inputs.</p>
+<p><strong>Disadvantages:</strong>
+- The number of orderings to check grows combinatorially with the number of distinct letters (up to 26! in the worst case, though pruning helps).
+- Subsequence-checking itself costs O(n) per candidate, so total work explodes fast.
+- Impractical the moment the input gets even moderately long.</p>
+<p><strong>Time complexity:</strong> Exponential in the number of distinct characters (roughly O(k! · n) in the naive version).
+<strong>Space complexity:</strong> O(k) to O(k!) depending on how candidates are generated.</p>
+<p>This is worth mentioning out loud in an interview to show you understand the goal, but you should pivot to the stack approach immediately afterward.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach uses two supporting tools and one greedy stack:</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Last-occurrence map</strong></td>
+<td>For each letter, store the last index it appears at in the string.</td>
+</tr>
+<tr>
+<td><strong><code>seen</code> set</strong></td>
+<td>Track which letters are already placed in our stack, so we never add duplicates.</td>
+</tr>
+<tr>
+<td><strong>Stack</strong></td>
+<td>Build the answer incrementally; only the top can be added or removed.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Step 1 — Build the last-occurrence map.</strong>
+Scan the string once and record, for every character, the last index at which it appears. This is what lets us later ask "if I remove this letter now, can I still get it back?"</p>
+<p><strong>Step 2 — Walk the string, skipping already-placed letters.</strong>
+If a letter is already in our <code>seen</code> set, skip it entirely — we only ever want one copy in the final answer.</p>
+<p><strong>Step 3 — The kick-out condition.</strong>
+Before pushing the current letter, look at the top of the stack. While all three of these are true:
+- the stack isn't empty,
+- the top of the stack is alphabetically greater than the current letter,
+- the top of the stack still appears again later (its last-occurrence index is greater than the current position),</p>
+<p>...pop the top off the stack and mark it as no longer seen (since we'll add it back later).</p>
+<p><strong>Step 4 — Push and continue.</strong>
+Once the popping stops (either the stack is empty, the top is smaller, or the top won't reappear), push the current letter and mark it seen. Repeat for the rest of the string.</p>
+<p>At the end, the stack <em>is</em> the answer — just join it into a string.</p>
+<p>Here's a small trace to visualize the "kick-out":</p>
+<pre><code>String: b c a b c
+Index:  0 1 2 3 4
+
+i=0 'b': stack=[b]              seen={b}
+i=1 'c': stack=[b,c]            seen={b,c}
+i=2 'a': top 'c' &gt; 'a' and 'c' reappears at i=4 → pop 'c'
+         top 'b' &gt; 'a' and 'b' reappears at i=3 → pop 'b'
+         stack=[a]              seen={a}
+i=3 'b': stack=[a,b]            seen={a,b}
+i=4 'c': stack=[a,b,c]          seen={a,b,c}
+
+Answer: &quot;abc&quot;
+</code></pre>
+<h2>Python Code</h2>
+<pre><code class="language-python">def smallest_subsequence(s: str) -&gt; str:
+    &quot;&quot;&quot;Return the smallest subsequence of s containing each distinct
+    character exactly once, using a greedy monotonic stack.&quot;&quot;&quot;
+
+    last_occurrence = {char: idx for idx, char in enumerate(s)}
+    stack = []
+    seen = set()
+
+    for idx, char in enumerate(s):
+        if char in seen:
+            continue
+
+        # Kick out a bigger letter only if it reappears later.
+        while stack and stack[-1] &gt; char and last_occurrence[stack[-1]] &gt; idx:
+            seen.remove(stack.pop())
+
+        stack.append(char)
+        seen.add(char)
+
+    return &quot;&quot;.join(stack)
+
+
+def demo():
+    assert smallest_subsequence(&quot;bcabc&quot;) == &quot;abc&quot;
+    assert smallest_subsequence(&quot;cbacdcbc&quot;) == &quot;acdb&quot;
+    assert smallest_subsequence(&quot;&quot;) == &quot;&quot;
+    assert smallest_subsequence(&quot;a&quot;) == &quot;a&quot;
+    assert smallest_subsequence(&quot;edcba&quot;) == &quot;edcba&quot;
+    print(&quot;All checks passed.&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    demo()
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>last_occurrence = {char: idx for idx, char in enumerate(s)}</code> builds the lookup table in one pass — since we overwrite as we go, each letter ends up mapped to its <em>last</em> index.</li>
+<li><code>stack</code> holds our answer-in-progress; <code>seen</code> tracks membership so we never push a duplicate.</li>
+<li><code>if char in seen: continue</code> skips any letter we've already placed — we only want one copy of each.</li>
+<li>The <code>while</code> loop is the core logic: it only pops when the top is strictly larger than the current character <strong>and</strong> that top letter has a future occurrence to fall back on (<code>last_occurrence[stack[-1]] &gt; idx</code>). If the top letter has no later appearance, the loop stops immediately, protecting it from being lost.</li>
+<li><code>seen.remove(stack.pop())</code> pops and un-marks the letter in one step, since it may get pushed again later.</li>
+<li>After the loop, we push the current character and mark it seen.</li>
+<li><code>"".join(stack)</code> converts the final stack into the answer string.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Let's trace <code>"cbacdcbc"</code> fully.</p>
+<table>
+<thead>
+<tr>
+<th>i</th>
+<th>char</th>
+<th>last_occurrence</th>
+<th>Action</th>
+<th>Stack after</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>c</td>
+<td>c:6</td>
+<td>push c</td>
+<td>[c]</td>
+</tr>
+<tr>
+<td>1</td>
+<td>b</td>
+<td>b:6</td>
+<td>b &lt; c? no (b<c actually — wait check condition: top='c' > 'b' and last[c]=6&gt;1 → pop c; push b</td>
+<td>[b]</td>
+</tr>
+<tr>
+<td>2</td>
+<td>a</td>
+<td>a:2</td>
+<td>top='b' &gt; 'a', last[b]=6&gt;2 → pop b; stack empty → push a</td>
+<td>[a]</td>
+</tr>
+<tr>
+<td>3</td>
+<td>c</td>
+<td>c:6</td>
+<td>c not seen, top='a' &lt; 'c' → no pop; push c</td>
+<td>[a,c]</td>
+</tr>
+<tr>
+<td>4</td>
+<td>d</td>
+<td>d:4</td>
+<td>top='c' &lt; 'd' → no pop; push d</td>
+<td>[a,c,d]</td>
+</tr>
+<tr>
+<td>5</td>
+<td>c</td>
+<td>—</td>
+<td>already seen → skip</td>
+<td>[a,c,d]</td>
+</tr>
+<tr>
+<td>6</td>
+<td>b</td>
+<td>b:6</td>
+<td>top='d' &gt; 'b' but last[d]=4, not &gt;6 → stop; push b</td>
+<td>[a,c,d,b]</td>
+</tr>
+<tr>
+<td>7</td>
+<td>c</td>
+<td>—</td>
+<td>already seen → skip</td>
+<td>[a,c,d,b]</td>
+</tr>
+</tbody>
+</table>
+<p>Final stack: <code>a, c, d, b</code> → <strong><code>"acdb"</code></strong>, matching the expected answer.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(n), where n is the length of the string. Building the last-occurrence map is one O(n) pass. In the main loop, each character is pushed onto the stack at most once and popped at most once — so even though the <code>while</code> loop looks like it could be expensive, the total number of push/pop operations across the <em>entire</em> run is bounded by O(n), giving amortized O(1) work per character.</p>
+<p><strong>Space:</strong> O(26) in the worst case, since the alphabet is fixed (lowercase English letters). The stack, the <code>seen</code> set, and the map all scale with the number of distinct characters, not the length of the string — effectively constant space.</p>
+<p>This is what makes the stack approach fundamentally better than brute force: brute force complexity grows with the <em>number of orderings</em> (factorial-ish), while the stack approach grows linearly with the <em>length of the input</em>, no matter how it's structured.</p>
+<h2>Alternative Solutions</h2>
+<p>Besides the brute-force sorting/permutation approach discussed earlier, there isn't a meaningfully different efficient algorithm — the greedy stack is the standard optimal solution for this problem. Some implementations use a fixed-size array of 26 booleans instead of a Python <code>set</code> for <code>seen</code>, and a 26-element array instead of a dict for <code>last_occurrence</code>. This shaves a small constant factor off runtime since array indexing is faster than hashing, but the algorithmic idea is identical.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty string:</strong> Returns <code>""</code> immediately — the loop never executes.</li>
+<li><strong>Single character:</strong> Returns that character unchanged.</li>
+<li><strong>All characters already unique</strong> (e.g., <code>"abcdef"</code>): The <code>while</code> loop never fires since nothing needs kicking out; the stack builds straight through in the original order.</li>
+<li><strong>Already sorted, strictly decreasing</strong> (e.g., <code>"edcba"</code>): Looks like it should collapse, but since no letter reappears later, the last-occurrence check blocks every pop — the answer is the string unchanged.</li>
+<li><strong>Repeated letters clustered together</strong> (e.g., <code>"aaabbbccc"</code>): Only the first occurrence of each letter matters; everything else gets skipped via the <code>seen</code> check.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting the last-occurrence check</strong> before popping — this is the single most common bug, and it's exactly the mistake called out in the video. Without it, you might discard a letter that never appears again, making the final "subsequence" invalid.</li>
+<li><strong>Popping a letter but forgetting to remove it from <code>seen</code></strong> — if you don't un-mark it, the algorithm will refuse to re-add it later, producing a string missing a required letter.</li>
+<li><strong>Comparing characters incorrectly</strong> (e.g., using <code>&gt;=</code> instead of <code>&gt;</code> in the pop condition) — this can pop letters unnecessarily or fail to pop when it should.</li>
+<li><strong>Not skipping already-seen letters</strong>, which lets duplicates leak into the stack and break the "each letter exactly once" requirement.</li>
+<li><strong>Using the first occurrence instead of the last</strong> when building the lookup map — this silently breaks the safety check, since you'd think a letter is "gone" when it actually reappears later.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What happens if the input contains uppercase letters or digits — how would you adapt the solution?</li>
+<li>Can you prove that the greedy choice (popping when safe) always leads to a globally optimal answer?</li>
+<li>How would you modify this to return the <em>lexicographically largest</em> valid subsequence instead?</li>
+<li>What's the maximum number of push/pop operations possible, and why does that bound the time complexity?</li>
+<li>How does this problem relate to other monotonic stack problems you've seen?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 316 – Remove Duplicate Letters:</strong> This is effectively the same problem under a different name; the exact same solution applies.</li>
+<li><strong>LeetCode 402 – Remove K Digits:</strong> Uses a nearly identical greedy monotonic stack pattern to remove digits and minimize the resulting number.</li>
+<li><strong>LeetCode 496 – Next Greater Element I:</strong> Builds foundational monotonic stack intuition, even though the goal is different.</li>
+<li><strong>LeetCode 84 – Largest Rectangle in Histogram:</strong> A harder monotonic stack problem that uses the same "pop while condition holds" structure.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The core lesson here isn't really about strings — it's about recognizing when a greedy choice is <em>safe</em>. Whenever you're tempted to make a locally better choice (a smaller letter, a smaller digit, a shorter path), ask yourself: "if I make this choice now, am I permanently losing something I'll need later?" A last-occurrence or lookahead map is often the tool that turns an unsafe greedy idea into a provably correct one. Once this pattern clicks, you'll start spotting it in a whole family of stack-based greedy problems.</p>
+<h2>Watch the Video</h2>
+<p>If you want to see this traced live on the whiteboard, including the exact moment where letters get popped and why, check out the full walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of the Daily Python LeetCode series, where each problem gets the same treatment: build the intuition first, then the code, so you actually understand <em>why</em> a solution works instead of memorizing it. If you're prepping for interviews or just want to get sharper at recognizing algorithmic patterns, this series is built to get you there one problem at a time.</p>
+<h2>Call To Action</h2>
+<p>If this breakdown helped the trick click, subscribe on YouTube for the daily walkthroughs, and subscribe to the Substack for the written version delivered straight to your inbox. Drop a comment with the string you'd want traced next, and share this with a friend who's grinding LeetCode right now — it genuinely helps a small channel grow.</p>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>Most engineers see "Smallest Subsequence of Distinct Characters" and reach for sorting. It's not a sorting problem — it's a greedy safety problem.</p>
+<p>The task: given a string, produce the smallest possible string (alphabetically) that contains every distinct character exactly once, while preserving their original relative order.</p>
+<p>The trick is to build the answer as a stack while scanning left to right. Before adding a new character, check the top of the stack — if it's alphabetically larger than your current character, you'd like to remove it and let the smaller one take its place. But you can only do that if the larger character reappears later in the string. If it doesn't, removing it now would lose it forever, so you leave it alone.</p>
+<p>That one lookahead check — precomputing the last index where each letter appears — is what makes the whole greedy approach provably correct. Without it, you risk producing a string that isn't even a valid subsequence anymore.</p>
+<p>The result is an O(n) algorithm using nothing but a hash map and a stack, versus a brute-force approach that has to generate and validate candidate orderings — a combinatorial mess that falls apart on longer inputs.</p>
+<p>This exact pattern (monotonic stack + lookahead) reappears in problems like Remove K Digits and in real systems like log compaction and deduplication pipelines. Worth internalizing once, because you'll see it again.</p>
+<p>Full breakdown with code, dry run, and complexity analysis in the comments.</p>
+<h1>Python #LeetCode #CodingInterview #Algorithms #SoftwareEngineering</h1>
+<h2>Twitter/X Thread</h2>
+<p>1/ "Smallest Subsequence of Distinct Characters" looks like a sorting problem. It's actually a greedy stack problem. Here's the trick nobody explains well. 🧵</p>
+<p>2/ The task: given a string, output the smallest subsequence (alphabetically) that has every distinct letter exactly once, in original relative order.</p>
+<p>3/ First instinct: just sort the distinct letters. Wrong — you can't reorder freely, your answer has to be a valid subsequence of the original string.</p>
+<p>4/ The real move: build your answer as a stack while scanning left to right, one pass, no backtracking.</p>
+<p>5/ Before pushing a new letter, check the stack's top. If it's bigger than your current letter, you'd love to remove it and let the smaller one go first.</p>
+<p>6/ But there's a catch — you can only remove it if it shows up again later in the string. Otherwise you lose it for good.</p>
+<p>7/ That single check (does this letter reappear later?) is the entire trick. Precompute it with a simple last-occurrence map before you start.</p>
+<p>8/ Example: "cbacdcbc" → the answer is "acdb". Early 'c' gets kicked because 'a' is smaller and 'c' comes back later. 'd' stays because nothing smaller follows it.</p>
+<p>9/ Runtime: O(n). Every character gets pushed and popped at most once. Space: O(26), basically constant. Brute force (generate + validate orderings) blows up combinatorially by comparison.</p>
+<p>10/ Once you see this greedy-stack-with-lookahead pattern, you'll spot it everywhere — Remove K Digits, log compaction, dedup pipelines. Learn it once, reuse it forever.</p>
+<h2>Facebook Post</h2>
+<p>Ever hit a coding problem that looks like it needs sorting but actually needs a completely different kind of thinking? That's "Smallest Subsequence of Distinct Characters" in a nutshell.</p>
+<p>The goal: take a string, output the smallest version (alphabetically) that still contains every distinct letter exactly once, in the same relative order as the original.</p>
+<p>The elegant solution uses just a stack and a simple lookup table telling you where each letter last appears. As you scan the string, you build your answer on the stack, occasionally "kicking out" a letter you already added — but only if you know it'll show up again later. That one safety check is what makes the whole thing work.</p>
+<p>It runs in a single pass, no sorting or backtracking required, and it's a great example of how a small lookahead trick can turn a tricky-looking problem into a clean, fast solution. Full breakdown with code and a step-by-step trace linked below if you want to dig in!</p>
+<h2>Reddit Summary</h2>
+<p>Breaking down "Smallest Subsequence of Distinct Characters" (LeetCode 1081, same as 316 "Remove Duplicate Letters") since it's a great example of greedy-with-lookahead reasoning.</p>
+<p>The problem: given a string, output the lexicographically smallest subsequence containing every distinct character exactly once, preserving original order.</p>
+<p>The clean solution: precompute the last index each character appears at, then walk the string building a stack. Before pushing a new character, pop the top of the stack while it's alphabetically larger than the current character <em>and</em> it reappears later in the string. The lookahead check is what prevents you from popping a character you can never get back — without it the greedy approach breaks.</p>
+<p>Runs in O(n) time, O(26) space (since only lowercase letters are involved). Brute force (generate candidate orderings, check which are valid subsequences) is easy to explain but scales terribly.</p>
+<p>Full writeup with code, a full dry run on "cbacdcbc" → "acdb", and complexity analysis: {LINK}</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># Smallest Subsequence of Distinct Characters (LeetCode 1081 / 316)
+
+## Problem
+Given a string `s`, return the lexicographically smallest subsequence of `s`
+that contains every distinct character of `s` exactly once. The result must
+still be a valid subsequence — original relative order must be preserved.
+
+**Example**
+Input: `&quot;cbacdcbc&quot;`
+Output: `&quot;acdb&quot;`
+
+## Intuition
+This isn't a sorting problem — you can't freely reorder letters, only choose
+which occurrences to keep. Build the answer as a stack while scanning left to
+right. Before adding a letter, check whether the stack's top is alphabetically
+larger; if so, and that top letter reappears later in the string, pop it and
+let the smaller letter take its place. If the top letter never reappears,
+leave it — popping it would lose it forever.
+
+## Approach
+1. Precompute the last index at which every character appears.
+2. Walk the string, skipping characters already placed.
+3. While the stack's top is larger than the current character **and** the top
+   character reappears later, pop it.
+4. Push the current character and mark it seen.
+5. The final stack is the answer.
+
+## Python Solution
+```python
+def smallest_subsequence(s: str) -&gt; str:
+    last_occurrence = {char: idx for idx, char in enumerate(s)}
+    stack = []
+    seen = set()
+
+    for idx, char in enumerate(s):
+        if char in seen:
+            continue
+        while stack and stack[-1] &gt; char and last_occurrence[stack[-1]] &gt; idx:
+            seen.remove(stack.pop())
+        stack.append(char)
+        seen.add(char)
+
+    return &quot;&quot;.join(stack)
+</code></pre>
+<h2>Complexity</h2>
+<ul>
+<li><strong>Time:</strong> O(n) — each character is pushed and popped at most once.</li>
+<li><strong>Space:</strong> O(26) — bounded by the size of the alphabet.</li>
+</ul>
+<h2>Video</h2>
+<p>Full walkthrough with diagrams and a live trace: {LINK}</p>
+<h2>Article</h2>
+<p>Complete writeup with dry run, edge cases, and interview follow-ups: {LINK}
+```</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/VfEGuMR1aNU' target='_blank'>▶ Watch on YouTube</a></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>
