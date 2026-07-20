@@ -1,0 +1,440 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shift 2D Grid — LeetCode Daily Python Solution (the trick nobody sees) — Python LeetCode Solution</title><meta name="description" content="Chapters:
+0:00 This whole problem dies to one line: k mod m times n
+0:14 Where this trick actually shows up
+0:30 What the problem is asking
+0:46 Meet the tools we will use
+1:05 The core trick: think i">
+<link rel="stylesheet" href="style.css"></head><body><div class="wrap"><p><a href='index.html'>← all problems</a></p><header><h1>Shift 2D Grid — LeetCode Daily Python Solution (the trick nobody sees)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span></header><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/aaYx4Q1R1j0' allowfullscreen></iframe></div><article><h1>SEO PACKAGE</h1>
+<h2>1. SEO Title</h2>
+<p><strong>Shift 2D Grid in Python — The One-Line Modulo Trick Every Interviewer Loves (LeetCode 1260)</strong></p>
+<h2>2. SEO Subtitle</h2>
+<p>Learn how flattening a 2D grid into a single list turns a confusing shift problem into one clean rotation you can code in under two minutes.</p>
+<h2>3. Featured Quote</h2>
+<blockquote>
+<p>"A 2D grid shift is just a 1D rotation wearing a costume — once you flatten the grid, the whole problem collapses into a single line."</p>
+</blockquote>
+<h2>4. Meta Description</h2>
+<p>Solve LeetCode Shift 2D Grid in Python using the flatten-and-rotate trick. Learn the modulo shortcut, brute force vs optimal, complexity, and edge cases.</p>
+<h2>5. URL Slug</h2>
+<p><code>shift-2d-grid-python-leetcode-solution</code></p>
+<h2>6. Keywords</h2>
+<p>Shift 2D Grid, LeetCode 1260, Python solution, 2D grid rotation, flatten and rotate, modulo trick, list rotation Python, coding interview, array rotation, grid manipulation, Python list slicing, algorithms, data structures, circular buffer pattern, right rotation, matrix problems, LeetCode daily, software engineering, technical interview, Python list comprehension</p>
+<h2>7. Tags</h2>
+<p><code>python</code>, <code>leetcode</code>, <code>coding-interview</code>, <code>algorithms</code>, <code>data-structures</code>, <code>arrays</code>, <code>matrix</code>, <code>grid</code>, <code>modulo</code>, <code>list-rotation</code>, <code>problem-solving</code>, <code>software-engineering</code>, <code>daily-coding-challenge</code></p>
+<hr />
+<h1>Shift 2D Grid: The Trick Nobody Sees</h1>
+<h2>8. Introduction</h2>
+<p>Some problems look like they want you to do a lot of work. <strong>Shift 2D Grid</strong> is one of them. On the surface it asks you to move every cell in a grid <code>k</code> times, wrapping values around the edges. Your first instinct is to actually <em>do</em> that — move everything, <code>k</code> times, and hope <code>k</code> isn't too large.</p>
+<p>That instinct is exactly what interviewers are watching for.</p>
+<p>This problem is a quiet test of a very specific skill: <strong>can you see the simpler structure hiding underneath a complex-sounding statement?</strong> A 2D grid shift <em>feels</em> two-dimensional and repetitive. But it's neither. It's a single one-dimensional rotation, and rotations have a well-known shortcut. Recognizing that turns a page of nested loops into three clean lines of Python.</p>
+<p>If you're preparing for coding interviews, this is worth learning cold. The <strong>flatten-and-rotate</strong> pattern shows up far beyond LeetCode — circular buffers, image scrolling, log ring buffers, and UI carousels that wrap around all lean on the same idea. Learn it once here, and you'll recognize it everywhere in real software engineering.</p>
+<p>By the end of this article, you'll understand not just <em>how</em> to solve it, but <em>why</em> the modulo trick works and why simulating the shift is the lazy-in-the-wrong-way approach.</p>
+<h2>9. Problem Overview</h2>
+<p>You're given a 2D grid <code>grid</code> of size <code>m x n</code> (m rows, n columns) and an integer <code>k</code>.</p>
+<p>A <strong>single shift</strong> operation does the following to every element at once:</p>
+<ul>
+<li>Every element moves one position to the <strong>right</strong>.</li>
+<li>The element at the <strong>end of a row</strong> wraps to the <strong>start of the next row</strong>.</li>
+<li>The element in the <strong>bottom-right corner</strong> wraps all the way around to the <strong>top-left corner</strong>.</li>
+</ul>
+<p>You must apply this shift operation <code>k</code> times and return the resulting grid.</p>
+<p>The key mental model: imagine reading the grid as <strong>one long line</strong>, left to right, row by row — like a snake. One shift moves every value one step forward along that snake, and the very last value loops back to the front. Do that <code>k</code> times, reshape, done.</p>
+<h2>10. Example</h2>
+<p><strong>Input:</strong></p>
+<pre><code>grid = [[1, 2, 3],
+        [4, 5, 6],
+        [7, 8, 9]]
+k = 1
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>[[9, 1, 2],
+ [3, 4, 5],
+ [6, 7, 8]]
+</code></pre>
+<p><strong>Why?</strong> Flatten the grid into <code>[1, 2, 3, 4, 5, 6, 7, 8, 9]</code>. A single right shift pushes everything forward one slot and wraps <code>9</code> to the front: <code>[9, 1, 2, 3, 4, 5, 6, 7, 8]</code>. Reshape into rows of length 3 and you get the output above.</p>
+<p><strong>A second example:</strong></p>
+<p><strong>Input:</strong></p>
+<pre><code>grid = [[1, 2],
+        [3, 4]]
+k = 2
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code>[[3, 4],
+ [1, 2]]
+</code></pre>
+<p><strong>Why?</strong> There are 4 cells. Flattened: <code>[1, 2, 3, 4]</code>. Shifting right twice gives <code>[3, 4, 1, 2]</code>. Reshaped into two rows of length 2: <code>[[3, 4], [1, 2]]</code>.</p>
+<h2>11. Intuition</h2>
+<p>Here's how an experienced engineer sinks into this problem before writing a line of code.</p>
+<p>The word "grid" is a distraction. Rows and columns <em>feel</em> important, but watch what a single shift actually does: the value at <code>(row, col)</code> moves to the next cell in reading order. There's nothing special about hitting the end of a row — it just continues to the start of the next row. The grid is behaving like a <strong>flat, circular list</strong>.</p>
+<p>So the first leap is: <strong>stop thinking in 2D. Flatten it.</strong></p>
+<p>Once it's flat, "shift the grid once" becomes "rotate this list one step to the right." And "shift <code>k</code> times" becomes "rotate the list <code>k</code> times." Rotation is a solved, boring, beautiful operation.</p>
+<p>The second leap is realizing rotation <em>loops</em>. If your list has 9 elements and you rotate it 9 times, you're exactly back where you started. Rotating 10 times is the same as rotating once. So rotating <code>k</code> times is really rotating <code>k mod (m*n)</code> times — where <code>m*n</code> is the total number of cells.</p>
+<p>That single observation, <code>k mod (m*n)</code>, is the whole problem. It means you never simulate <code>k</code> shifts. You compute the <em>one</em> real shift that matters and apply it in a single slice.</p>
+<p>Flatten → rotate by <code>k mod total</code> → reshape. That's the entire solution, and once you see it, the code takes ninety seconds.</p>
+<h2>12. Brute Force Solution</h2>
+<p><strong>Idea:</strong> Do exactly what the problem describes. Simulate one shift at a time, <code>k</code> separate times.</p>
+<p><strong>Algorithm:</strong>
+1. Repeat <code>k</code> times:
+   - Take the value from the bottom-right corner and remember it.
+   - Move every element one position to the right, row by row.
+   - Wrap the previous end value into the top-left.
+2. Return the grid.</p>
+<p><strong>Advantages:</strong>
+- It mirrors the problem statement almost word for word, so it's easy to reason about and hard to get <em>conceptually</em> wrong.
+- It's a great tool for <em>building intuition</em> — you literally watch the values crawl forward.</p>
+<p><strong>Disadvantages:</strong>
+- It redoes the same full-grid pass up to <code>k</code> times (and <code>k</code> can be as large as 100).
+- More code means more places for an off-by-one wrap bug to hide.
+- It does far more work than needed for zero benefit.</p>
+<p><strong>Time Complexity:</strong> <code>O(k × m × n)</code> — every cell touched, <code>k</code> times.
+<strong>Space Complexity:</strong> <code>O(m × n)</code> for the output grid.</p>
+<h2>13. Optimal Solution</h2>
+<p>The optimal approach has three moves. Let's walk each one.</p>
+<p><strong>Step 1 — Setup.</strong> Grab <code>m</code> (rows) and <code>n</code> (columns). Shrink <code>k</code> immediately with <code>k = k % (m * n)</code>, because anything beyond one full loop is wasted motion. Then flatten the grid into a single 1D list.</p>
+<p><strong>Step 2 — The rotation.</strong> This is the one line that does all the real work:</p>
+<pre><code class="language-python">flat = flat[-k:] + flat[:-k]
+</code></pre>
+<ul>
+<li><code>flat[-k:]</code> grabs the <strong>last <code>k</code> elements</strong> — the ones that wrap to the front.</li>
+<li><code>flat[:-k]</code> grabs <strong>everything before them</strong>.</li>
+<li>Gluing them in that order <em>is</em> a right rotation by <code>k</code>.</li>
+</ul>
+<p><strong>Step 3 — Rebuild.</strong> Chop the flat list back into rows of length <code>n</code>. Row <code>i</code> starts at index <code>i * n</code> and runs <code>n</code> elements.</p>
+<p>Here's the transformation visualized for <code>grid = [[1,2,3],[4,5,6],[7,8,9]]</code>, <code>k = 1</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Data</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Flattened</td>
+<td><code>[1, 2, 3, 4, 5, 6, 7, 8, 9]</code></td>
+</tr>
+<tr>
+<td><code>flat[-1:]</code> (wraps to front)</td>
+<td><code>[9]</code></td>
+</tr>
+<tr>
+<td><code>flat[:-1]</code> (the rest)</td>
+<td><code>[1, 2, 3, 4, 5, 6, 7, 8]</code></td>
+</tr>
+<tr>
+<td>Rotated</td>
+<td><code>[9, 1, 2, 3, 4, 5, 6, 7, 8]</code></td>
+</tr>
+<tr>
+<td>Reshaped (n=3)</td>
+<td><code>[[9,1,2],[3,4,5],[6,7,8]]</code></td>
+</tr>
+</tbody>
+</table>
+<h2>14. Python Code</h2>
+<pre><code class="language-python">from typing import List
+
+
+class Solution:
+    def shiftGrid(self, grid: List[List[int]], k: int) -&gt; List[List[int]]:
+        m, n = len(grid), len(grid[0])
+
+        # Only the shift within one full loop matters.
+        k %= m * n
+
+        # Flatten the grid into one long list (reading order).
+        flat = [val for row in grid for val in row]
+
+        # A single right rotation of the flat list by k.
+        flat = flat[-k:] + flat[:-k]
+
+        # Reshape the flat list back into m rows of length n.
+        return [flat[i * n:(i + 1) * n] for i in range(m)]
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<ul>
+<li><strong><code>m, n = len(grid), len(grid[0])</code></strong> — capture the dimensions. We need <code>n</code> later to reshape and <code>m * n</code> for the modulo.</li>
+<li><strong><code>k %= m * n</code></strong> — the star of the show. This collapses any <code>k</code>, even 100, down to the single meaningful shift. If <code>k</code> is already 0, it stays 0.</li>
+<li><strong><code>flat = [val for row in grid for val in row]</code></strong> — a nested list comprehension that reads each row and each value inside it, producing one flat list in reading order.</li>
+<li><strong><code>flat = flat[-k:] + flat[:-k]</code></strong> — the right rotation. Slice off the last <code>k</code> elements, put them in front, follow with the rest.</li>
+<li><strong><code>return [flat[i * n:(i + 1) * n] for i in range(m)]</code></strong> — reshape by slicing the flat list into <code>m</code> chunks of size <code>n</code>.</li>
+</ul>
+<blockquote>
+<p><strong>Callout — the one gotcha:</strong> When <code>k == 0</code>, <code>flat[-0:]</code> is the <em>entire</em> list and <code>flat[:-0]</code> is <em>empty</em>, which would corrupt the result. Python handles this correctly here <strong>only because</strong> <code>-0 == 0</code>, so <code>flat[-0:]</code> is <code>flat[0:]</code> (the whole list) and <code>flat[:-0]</code> is <code>flat[:0]</code> (empty) — glued together, that's the original list unchanged. It works out, but it's exactly the kind of edge case worth knowing before an interviewer asks.</p>
+</blockquote>
+<h2>16. Dry Run</h2>
+<p>Let's fully trace <code>grid = [[1, 2], [3, 4]]</code>, <code>k = 2</code>.</p>
+<ol>
+<li><code>m, n = 2, 2</code>.</li>
+<li><code>k %= m * n</code> → <code>k = 2 % 4 = 2</code>. Still 2, so we rotate — just not a full loop.</li>
+<li>Flatten: <code>flat = [1, 2, 3, 4]</code>.</li>
+<li>Rotate:
+   - <code>flat[-2:]</code> → <code>[3, 4]</code>
+   - <code>flat[:-2]</code> → <code>[1, 2]</code>
+   - Combined → <code>[3, 4, 1, 2]</code></li>
+<li>Reshape into rows of length 2:
+   - Row 0 → <code>flat[0:2]</code> → <code>[3, 4]</code>
+   - Row 1 → <code>flat[2:4]</code> → <code>[1, 2]</code></li>
+<li><strong>Result:</strong> <code>[[3, 4], [1, 2]]</code> ✅</li>
+</ol>
+<h2>17. Complexity Analysis</h2>
+<p><strong>Optimal (flatten and rotate):</strong>
+- <strong>Time: <code>O(m × n)</code></strong> — flattening touches every cell once, slicing touches every cell once, reshaping touches every cell once. All linear in the number of cells.
+- <strong>Space: <code>O(m × n)</code></strong> — we build a flat list and a new grid.</p>
+<p><strong>Brute force (simulate each shift):</strong>
+- <strong>Time: <code>O(k × m × n)</code></strong> — every cell is moved <code>k</code> separate times.
+- <strong>Space: <code>O(m × n)</code></strong>.</p>
+<p>Since <code>k</code> can be up to 100, the simulation can do up to 100× more work for the identical result. There is genuinely no input where simulation wins here.</p>
+<h2>18. Alternative Solutions</h2>
+<p><strong>Index-mapping without slicing.</strong> Instead of building a flat list, you can compute each element's destination directly. A cell at flat index <code>i</code> moves to <code>(i + k) % (m * n)</code>. You can write straight into a fresh grid:</p>
+<pre><code class="language-python">class Solution:
+    def shiftGrid(self, grid: List[List[int]], k: int) -&gt; List[List[int]]:
+        m, n = len(grid), len(grid[0])
+        total = m * n
+        result = [[0] * n for _ in range(m)]
+
+        for i in range(m):
+            for j in range(n):
+                dest = (i * n + j + k) % total
+                result[dest // n][dest % n] = grid[i][j]
+
+        return result
+</code></pre>
+<p><strong>Comparison:</strong> Same <code>O(m × n)</code> time and space. The slicing version is shorter and reads more cleanly; the index-mapping version avoids the intermediate flat list and makes the wraparound math explicit. Both are perfectly interview-ready — pick the one you can explain most confidently.</p>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong><code>k = 0</code></strong> — modulo keeps it 0, and (thanks to <code>-0 == 0</code>) the grid returns untouched.</li>
+<li><strong><code>k</code> larger than the grid</strong> (e.g. <code>k = 100</code> on a small grid) — modulo shrinks it to a tiny, safe shift. No wasted loops.</li>
+<li><strong><code>k</code> a multiple of <code>m * n</code></strong> — modulo makes it 0; the grid is returned unchanged (a full loop).</li>
+<li><strong>1×1 grid</strong> — a single element rotates to itself no matter what <code>k</code> is.</li>
+<li><strong>Single row or single column</strong> — flattening handles these identically; no special casing needed.</li>
+</ul>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Simulating <code>k</code> shifts literally.</strong> It works but wastes up to 100× the effort — and interviewers notice.</li>
+<li><strong>Forgetting the modulo.</strong> Without <code>k %= m * n</code>, a large <code>k</code> either loops needlessly or (in a slice-based approach) throws an index error.</li>
+<li><strong>Confusing left rotation with right rotation.</strong> This is the classic trap. Right rotation is <code>flat[-k:] + flat[:-k]</code>. Left rotation would be <code>flat[k:] + flat[:k]</code>. Draw it once on paper and it sticks for good.</li>
+<li><strong>The <code>k = 0</code> slicing trap.</strong> In some rotation implementations, <code>flat[-0:]</code> silently returns the whole list where you expected the last zero elements — a subtle bug. Always test <code>k = 0</code>.</li>
+<li><strong>Hardcoding dimensions.</strong> Using a fixed row length instead of <code>n</code> breaks on non-square grids. Always derive <code>n</code> from <code>len(grid[0])</code>.</li>
+</ol>
+<h2>21. Interview Questions</h2>
+<ul>
+<li>"Can you do this <strong>in place</strong> without an auxiliary flat list?" (Yes — index mapping, or the reverse-reverse-reverse rotation trick.)</li>
+<li>"What if <code>k</code> could be <strong>negative</strong>?" (Python's modulo handles negatives gracefully: <code>-1 % 9 == 8</code>, giving a correct left-style shift.)</li>
+<li>"Why does <code>k mod (m*n)</code> capture <em>every</em> case?" (Because rotating by the total number of cells is a full identity loop.)</li>
+<li>"How would you shift <strong>left</strong> instead of right?" (Slice the other way: <code>flat[k:] + flat[:k]</code>.)</li>
+<li>"What's the difference between this and rotating a matrix 90 degrees?" (This preserves reading order; rotation remaps rows to columns.)</li>
+</ul>
+<h2>22. Similar Problems</h2>
+<ul>
+<li><strong>Rotate Array (LeetCode 189)</strong> — the pure 1D version of the exact rotation trick used here.</li>
+<li><strong>Rotate Image (LeetCode 48)</strong> — 2D transformation, but geometric rotation rather than a linear shift; great contrast.</li>
+<li><strong>Spiral Matrix (LeetCode 54)</strong> — another problem where reading a 2D grid as a 1D sequence unlocks the solution.</li>
+<li><strong>Design Circular Queue (LeetCode 622)</strong> — the circular-buffer idea behind the wraparound, made explicit.</li>
+</ul>
+<p>They're related because each one rewards the same instinct: recognizing a circular, linear structure hiding inside something that looks more complex.</p>
+<h2>23. Key Takeaways</h2>
+<ul>
+<li>A 2D grid shift is a <strong>1D rotation in disguise</strong>. Flatten first, think second.</li>
+<li><code>k mod (m × n)</code> reduces any number of shifts to the <strong>one</strong> that matters — the single most important line in the solution.</li>
+<li><strong>Right rotation</strong> is <code>flat[-k:] + flat[:-k]</code>. Memorize the slice.</li>
+<li>Simulation is a fine way to <em>understand</em> the problem but a poor way to <em>ship</em> it — it does up to 100× the work for the same answer.</li>
+<li>The flatten-and-rotate pattern generalizes to circular buffers, scrolling, and carousels. It's a genuinely reusable tool, not a one-off trick.</li>
+</ul>
+<h2>24. Watch the Video</h2>
+<p>Want to see the flatten-and-rotate idea come together step by step, including the live dry run and the honest take on brute force vs optimal? <strong>Watch the full walkthrough here: {LINK}</strong> — it's under five minutes and the visual of the grid "unrolling" into a snake makes the whole thing click.</p>
+<h2>25. About the Series</h2>
+<p>This is part of the <strong>Daily Python LeetCode</strong> series, where we break down one interview-favorite problem every day. Each episode goes past the accepted answer to build real intuition: <em>why</em> the optimal approach works, how an experienced engineer discovers it, and the mistakes that quietly cost people offers. Clean Python, clear reasoning, no filler — just the patterns that actually show up in coding interviews and real software engineering.</p>
+<h2>26. Call To Action</h2>
+<p>If this helped the pieces click into place:</p>
+<ul>
+<li>🔔 <strong>Subscribe on YouTube</strong> so you never miss a daily solution.</li>
+<li>📩 <strong>Subscribe on Substack</strong> for the written deep-dives like this one.</li>
+<li>💬 <strong>Comment</strong> with the problem you want broken down next.</li>
+<li>🔁 <strong>Share</strong> it with someone who's grinding LeetCode right now.</li>
+</ul>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>Most engineers over-solve "Shift 2D Grid" (LeetCode 1260). It looks like you need to move every cell in the grid, k times, wrapping around the edges. So people write nested loops and simulate each shift one at a time.</p>
+<p>It works. But it's doing up to 100x more work than necessary.</p>
+<p>Here's the shift in thinking that changes everything: a 2D grid shift is really a 1D rotation in disguise.</p>
+<p>Read the grid as one long line — left to right, row by row, like a snake. A single grid shift is just rotating that flat list one step to the right. So shifting k times is rotating the list k times.</p>
+<p>And rotation loops. If a list has 9 elements and you rotate it 9 times, you're back where you started. So you never rotate k times — you rotate k mod (m×n) times. That one line collapses the entire problem.</p>
+<p>Flatten → rotate by k mod total → reshape. Three lines of Python.</p>
+<p>The brute-force simulation is O(k × m × n). The flatten-and-rotate is O(m × n). Same answer, a fraction of the work.</p>
+<p>What I love about this problem is that the pattern underneath — flatten-and-rotate — is everywhere in real software: circular buffers, ring logs, image scrolling, UI carousels that wrap. It's a small LeetCode problem hiding a genuinely reusable idea.</p>
+<p>The lesson that outlasts the problem: before you write the loop, ask whether the 2D structure is actually load-bearing. Often it isn't.</p>
+<p>What problem taught you to look for the simpler structure underneath?</p>
+<h1>Python #LeetCode #CodingInterview #Algorithms #SoftwareEngineering</h1>
+<h2>Twitter/X Thread</h2>
+<p><strong>1/</strong>
+"Shift 2D Grid" (LeetCode 1260) looks like a loop-heavy nightmare. Move every cell, k times, wrapping the edges.</p>
+<p>The entire problem collapses into ONE line. Here's the trick nobody sees 🧵</p>
+<p><strong>2/</strong>
+First instinct: simulate the shift. Move every cell one step, k separate times.</p>
+<p>It works. It's easy to reason about. It also does up to 100x more work than needed. Hold that thought.</p>
+<p><strong>3/</strong>
+The key realization: the word "grid" is a distraction.</p>
+<p>A single shift just moves each value to the next cell in reading order. Hitting the end of a row? It just continues to the next row. That's not 2D behavior — it's a flat, circular list.</p>
+<p><strong>4/</strong>
+So flatten it. Read the grid left to right, row by row, like a snake:</p>
+<p>[[1,2,3],[4,5,6]] → [1,2,3,4,5,6]</p>
+<p>Now "shift the grid once" = "rotate this list one step right." Rotation is a solved problem.</p>
+<p><strong>5/</strong>
+Second realization: rotation LOOPS.</p>
+<p>9 elements rotated 9 times = back to start. Rotating 10 times = rotating once.</p>
+<p>So rotating k times is really rotating k mod (m×n) times. That single line kills k=100.</p>
+<p><strong>6/</strong>
+The rotation itself is one line of Python:</p>
+<p>flat = flat[-k:] + flat[:-k]</p>
+<p>flat[-k:] → last k elements (they wrap to the front)
+flat[:-k] → everything else
+Glue them → a right rotation by k</p>
+<p><strong>7/</strong>
+Full solution, three moves:</p>
+<p>m, n = len(grid), len(grid[0])
+k %= m * n
+flat = [v for row in grid for v in row]
+flat = flat[-k:] + flat[:-k]
+return [flat[i<em>n:(i+1)</em>n] for i in range(m)]</p>
+<p><strong>8/</strong>
+Complexity:</p>
+<p>Flatten-and-rotate: O(m×n) time &amp; space — every cell touched once.
+Simulation: O(k×m×n) — every cell touched k times.</p>
+<p>There's no input where simulation wins.</p>
+<p><strong>9/</strong>
+The trap that gets everyone: left vs right rotation.</p>
+<p>Right: flat[-k:] + flat[:-k]
+Left: flat[k:] + flat[:k]</p>
+<p>Draw it on paper ONCE and it sticks for good. I used to second-guess this every single time.</p>
+<p><strong>10/</strong>
+This flatten-and-rotate pattern is everywhere: circular buffers, ring logs, image scrolling, carousels that wrap.</p>
+<p>Small problem, genuinely reusable idea. Learn it once, spot it forever.</p>
+<p>Full video walkthrough 👇 Follow for daily Python LeetCode breakdowns.</p>
+<h2>Facebook Post</h2>
+<p>Ever hit a coding problem that looks way harder than it is? "Shift 2D Grid" is a perfect example.</p>
+<p>It asks you to shift every cell in a grid k times, wrapping around the edges. Most people write a big nested loop and simulate every single shift. It works — but it's the hard way.</p>
+<p>Here's the fun part: if you read the grid as one long line (left to right, row by row, like a snake), the whole thing becomes a simple list rotation. And since rotating a list all the way around just brings you back to the start, you only ever need to rotate by "k mod total cells."</p>
+<p>That turns a page of code into three clean lines of Python. Same answer, a fraction of the work.</p>
+<p>I broke the whole thing down step by step in today's video — the trick, the code, a live dry run, and an honest comparison with the brute-force approach. If you're learning Python or prepping for interviews, this one's a great "aha" moment. Give it a watch and let me know what clicked! 🐍</p>
+<h2>Reddit Summary</h2>
+<p><strong>Shift 2D Grid (LeetCode 1260): why the "simulate each shift" approach is a trap</strong></p>
+<p>Sharing a breakdown in case it helps anyone working through this one.</p>
+<p>The problem: shift every cell in an m×n grid k times, wrapping the bottom-right corner back to the top-left.</p>
+<p>The obvious approach is to simulate one shift at a time, k times. It works and it mirrors the problem statement, which makes it good for building intuition. The problem is it's O(k × m × n), and k can be up to 100 — so you redo the full grid pass up to 100 times.</p>
+<p>The cleaner insight: a grid shift is a 1D rotation in disguise. Flatten the grid into one list in reading order, and a single shift is just a right rotation by one. So k shifts = rotate right by k. And because rotating by the total number of cells is a full loop back to start, you only need <code>k % (m*n)</code>.</p>
+<p>That reduces it to three steps:
+1. <code>k %= m * n</code>
+2. flatten with a list comprehension
+3. <code>flat = flat[-k:] + flat[:-k]</code>, then reshape into rows of length n</p>
+<p>Both approaches are O(m×n) space; the rotation version is O(m×n) time vs O(k×m×n) for simulation.</p>
+<p>Two things worth flagging for anyone practicing:
+- The left-vs-right rotation slice is the most common bug. Right is <code>flat[-k:] + flat[:-k]</code>.
+- Test k=0 — the <code>-0</code> slicing behavior is a subtle edge case.</p>
+<p>Curious whether people prefer the slicing version or the index-mapping version <code>(i*n + j + k) % total</code> for readability. I lean slicing but the index math makes the wraparound explicit.</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># Shift 2D Grid — LeetCode 1260 (Python)
+
+A clean, O(m×n) Python solution using the flatten-and-rotate pattern.
+
+## Problem
+
+Given a 2D `grid` of size `m x n` and an integer `k`, shift the grid `k` times.
+
+In one shift operation:
+- Each element moves one position to the right.
+- The last element of a row wraps to the start of the next row.
+- The bottom-right element wraps around to the top-left.
+
+Return the grid after `k` shifts.
+
+**Example**
+
+
+Input:  grid = [[1,2,3],[4,5,6],[7,8,9]], k = 1
+Output: [[9,1,2],[3,4,5],[6,7,8]]
+
+
+## Intuition
+
+The grid *looks* two-dimensional, but a single shift just moves each value to
+the next cell in reading order. Read the grid as one long line (row by row,
+like a snake) and a shift becomes a **1D right rotation**.
+
+Two key insights:
+1. **Flatten the grid** → a shift is a right rotation of the flat list.
+2. **Rotation loops** → rotating by `m*n` returns to the start, so only
+   `k % (m*n)` matters.
+
+## Approach
+
+1. Reduce `k` with `k %= m * n` — skip full loops.
+2. Flatten the grid into a 1D list (reading order).
+3. Right-rotate the list: `flat[-k:] + flat[:-k]`.
+4. Reshape into `m` rows of length `n`.
+
+## Python Solution
+
+```python
+from typing import List
+
+
+class Solution:
+    def shiftGrid(self, grid: List[List[int]], k: int) -&gt; List[List[int]]:
+        m, n = len(grid), len(grid[0])
+
+        # Only the shift within one full loop matters.
+        k %= m * n
+
+        # Flatten the grid into one list (reading order).
+        flat = [val for row in grid for val in row]
+
+        # Right rotation of the flat list by k.
+        flat = flat[-k:] + flat[:-k]
+
+        # Reshape back into m rows of length n.
+        return [flat[i * n:(i + 1) * n] for i in range(m)]
+</code></pre>
+<h2>Complexity</h2>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Time</th>
+<th>Space</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Flatten &amp; rotate</td>
+<td>O(m × n)</td>
+<td>O(m × n)</td>
+</tr>
+<tr>
+<td>Simulate each shift</td>
+<td>O(k × m × n)</td>
+<td>O(m × n)</td>
+</tr>
+</tbody>
+</table>
+<p>Since <code>k</code> can be up to 100, simulation does up to 100× more work for the same
+result.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><code>k = 0</code> → grid returned unchanged.</li>
+<li><code>k</code> larger than the grid → modulo shrinks it to a safe shift.</li>
+<li><code>k</code> a multiple of <code>m*n</code> → full loop, grid unchanged.</li>
+<li>1×1 grid → maps to itself for any <code>k</code>.</li>
+</ul>
+<h2>Video</h2>
+<p>📺 Watch the full walkthrough: {LINK}</p>
+<h2>Article</h2>
+<p>📖 Full written deep-dive (intuition, dry run, common mistakes, follow-ups):
+part of the <strong>Daily Python LeetCode</strong> series.
+```</p></article><div class='btnrow'><a class='btn' href='https://youtu.be/aaYx4Q1R1j0' target='_blank'>▶ Watch on YouTube</a></div>
+<div class="foot">Daily Python LeetCode — free coding tutorials. Built automatically.</div>
+</div></body></html>
