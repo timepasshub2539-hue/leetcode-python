@@ -12,8 +12,329 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>What If 20 Lines of Code Beat Most Traders&#x27; Intuition?</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/PkpWm7B9nuQ' allowfullscreen></iframe></div><article><p>✅ Runtime tested — the solution passes every example case.
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>What If 20 Lines of Code Beat Most Traders&#x27; Intuition?</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/PkpWm7B9nuQ' allowfullscreen></iframe></div><article><h1>SEO PACKAGE</h1>
+<h3>1. SEO Title</h3>
+<p>Python Stock Price Analysis with Pandas: Moving Averages, Resampling &amp; Volume (Beginner Time Series Project)</p>
+<h3>2. SEO Subtitle</h3>
+<p>A hands-on walkthrough of building a real stock analysis script in Python using yfinance and pandas — from raw daily prices to weekly/monthly resampling and moving average crossovers.</p>
+<h3>3. Featured Quote</h3>
+<p>"Price tells you direction, volume tells you conviction."</p>
+<h3>4. Meta Description</h3>
+<p>Learn time series analysis in Python with pandas: download real stock data, resample to weekly/monthly, compute moving averages, and compare volume — beginner friendly.</p>
+<h3>5. URL Slug</h3>
+<p><code>python-pandas-stock-price-time-series-analysis</code></p>
+<h3>6. Keywords</h3>
+<p>python stock analysis, pandas time series, moving average python, resample pandas, rolling window pandas, yfinance tutorial, DatetimeIndex pandas, stock data python, golden cross python, pandas groupby time, financial data analysis python, beginner data science project, python for finance, trading volume analysis, downsampling time series, pandas rolling mean, stock price plotting matplotlib, python leetcode daily, coding interview data structures, algorithms python</p>
+<h3>7. Tags</h3>
+<p>Python, Pandas, Time Series, Data Science, Stock Analysis, Finance, Matplotlib, yfinance, Coding Interview, Algorithms, Data Structures, Beginner Project, Software Engineering, Data Analysis, LeetCode</p>
+<hr />
+<h1>MAIN ARTICLE</h1>
+<h2>Introduction</h2>
+<p>Every developer eventually runs into time series data — server metrics, sensor readings, sales numbers, or in this case, stock prices. Stock data happens to be the friendliest on-ramp into the topic, because you already understand the domain. Everyone has an intuitive sense of what a "closing price" or a "moving average" means, so instead of spending half your energy learning unfamiliar business logic, you can spend all of it learning the tool: pandas.</p>
+<p>This matters beyond finance. Interviewers and real production systems both care about the same underlying skills — working with a proper datetime index, aggregating data over time windows, and computing rolling statistics. These are the exact mechanics behind resampling application logs by hour, computing 7-day rolling averages of user signups, or smoothing sensor noise in an IoT pipeline. Learn it once on stock prices, and it transfers everywhere.</p>
+<p>In this project, we'll go from a single line of code that downloads real market data, all the way to a complete script that plots price trends, resamples into weekly and monthly views, computes moving averages, and compares trading volume — in under 20 lines of core logic.</p>
+<h2>Problem Overview</h2>
+<p>The task: given daily stock price data for one or more tickers, build a small analysis pipeline that can:</p>
+<ol>
+<li>Download historical price and volume data.</li>
+<li>Ensure the data is indexed by actual calendar dates (not just date-like strings).</li>
+<li>Extract closing prices and visualize them over time.</li>
+<li>Downsample the daily data into weekly and monthly summaries.</li>
+<li>Compute short-term and long-term moving averages to reveal trend direction.</li>
+<li>Compare trading volume alongside price movement.</li>
+</ol>
+<p>There's no single "correct output" here in the LeetCode sense — this is an exploratory data engineering task. The goal is a script that's reusable on any ticker, producing consistent, readable analysis every time.</p>
+<h2>Example</h2>
+<p>Suppose we pull two years of daily data for two tickers, say <code>AAPL</code> and <code>MSFT</code>. A single download call returns a table where the top-level columns are price fields (<code>Open</code>, <code>High</code>, <code>Low</code>, <code>Close</code>, <code>Volume</code>) and the second level is the ticker symbol. Pulling <code>Close</code> from that table gives you a clean two-column DataFrame:</p>
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>AAPL</th>
+<th>MSFT</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2024-01-02</td>
+<td>185.64</td>
+<td>370.87</td>
+</tr>
+<tr>
+<td>2024-01-03</td>
+<td>184.25</td>
+<td>366.02</td>
+</tr>
+<tr>
+<td>2024-01-04</td>
+<td>181.91</td>
+<td>365.99</td>
+</tr>
+</tbody>
+</table>
+<p>Resampling this to monthly (taking the last value of each month) collapses hundreds of daily rows into roughly 24 rows — one per month — each representing the closing price on the last trading day of that month. That's the price the market actually settled on, which is why "last value" is the standard way to downsample a price series, rather than averaging every day in the month.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer approaches this, before writing any code.</p>
+<p>First question: what's the shape of the data I'm working with? Stock data is inherently sequential — today's price only makes sense relative to yesterday's. That immediately tells you the index shouldn't be a plain integer row number; it should be the date itself. Once dates are the real index (a <code>DatetimeIndex</code>, not text that merely looks like a date), pandas can jump directly to any day, slice by date range, and — critically — understand chronological ordering well enough to resample and plot correctly without you doing any manual sorting or formatting.</p>
+<p>Second question: how do I go from noisy daily data to something a human can read a trend from? Two tools solve this, and they solve different problems:</p>
+<ul>
+<li><strong>Resampling</strong> answers "what happened per week/month?" — it's <code>groupby</code>, but the buckets are time intervals instead of categories.</li>
+<li><strong>Rolling windows</strong> answer "what's the recent trend at every single point?" — a moving average that slides forward one day at a time, smoothing out day-to-day noise without throwing away granularity.</li>
+</ul>
+<p>The reason traders watch a 20-day average against a 200-day average isn't magic — it's that a short window reacts quickly to recent price action, while a long window changes slowly and represents the underlying trend. When the fast line crosses above the slow line, it's a visual signal that recent momentum has shifted relative to the long-term baseline. That's the entire idea behind the so-called "golden cross" — nothing more mysterious than two rolling averages of different lengths.</p>
+<p>Only after this mental model is in place does it make sense to open an editor and write code.</p>
+<h2>Brute Force Solution</h2>
+<p>Before reaching for pandas' built-in resample and rolling methods, imagine doing this manually with raw Python.</p>
+<p><strong>Idea:</strong> Loop through the daily price list, manually bucket each date into its week or month using date arithmetic, and manually compute averages over sliding index ranges with nested loops.</p>
+<p><strong>Algorithm:</strong>
+1. Parse each date string into a <code>date</code> object.
+2. Maintain a dictionary keyed by (year, week) or (year, month), appending prices into lists.
+3. After grouping, take the last price in each bucket.
+4. For moving averages, slide a window index across the list and sum/divide each time.</p>
+<p><strong>Advantages:</strong> No library dependency beyond the standard library; you fully control the bucketing logic.</p>
+<p><strong>Disadvantages:</strong> Reimplements what pandas already does correctly and efficiently — including edge cases like uneven month lengths, missing trading days (holidays/weekends), and leap years. It's also slow: naive rolling averages recompute the full sum for every window position instead of reusing the previous sum.</p>
+<p><strong>Time complexity:</strong> O(n·k) for rolling averages with a naive re-sum approach, where n is the number of rows and k is the window size. Resampling by manual bucketing is O(n).</p>
+<p><strong>Space complexity:</strong> O(n) for the grouped buckets and output lists.</p>
+<p>This works, but it's a lot of fragile date-handling code for something pandas solves in one method call — and it's easy to introduce subtle bugs around weekends and holidays.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach leans entirely on pandas' time series machinery, which is implemented in optimized C under the hood.</p>
+<p><strong>Step 1 — Download aligned data.</strong> Pull all tickers in a single call. yfinance aligns them on the same date index automatically, so you don't need to manually join separate downloads.</p>
+<p><strong>Step 2 — Guarantee a real DatetimeIndex.</strong> yfinance usually gives you this for free, but converting explicitly with <code>pd.to_datetime</code> is the safety net for any dataset where it isn't guaranteed.</p>
+<p><strong>Step 3 — Extract closing prices.</strong> Because multi-ticker downloads come back with a two-level column structure (field, then ticker), selecting <code>'Close'</code> slices off just that top level, leaving a clean DataFrame.</p>
+<p><strong>Step 4 — Plot.</strong> With a proper datetime index, matplotlib automatically lays out the x-axis chronologically — no manual formatting required.</p>
+<p><strong>Step 5 — Resample.</strong> <code>.resample('W').last()</code> and <code>.resample('ME').last()</code> bucket the daily rows into weekly and monthly groups, keeping the final (closing) price of each period.</p>
+<p><strong>Step 6 — Rolling averages.</strong> <code>.rolling(window=20).mean()</code> and <code>.rolling(window=200).mean()</code> compute the moving averages directly on the daily closing prices.</p>
+<p><strong>Step 7 — Volume comparison.</strong> The same column-selection pattern used for <code>Close</code> applies to <code>Volume</code>.</p>
+<p>A mental table of what each tool does:</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Purpose</th>
+<th>Analogy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DatetimeIndex</code></td>
+<td>Makes dates first-class</td>
+<td>Page numbers in a book</td>
+</tr>
+<tr>
+<td><code>.resample()</code></td>
+<td>Buckets rows by time period</td>
+<td><code>groupby</code>, but for time</td>
+</tr>
+<tr>
+<td><code>.rolling()</code></td>
+<td>Sliding window statistic</td>
+<td>Moving average on a chart</td>
+</tr>
+</tbody>
+</table>
+<h2>Python Code</h2>
+<pre><code class="language-python">import matplotlib.pyplot as plt
+import pandas as pd
+import yfinance as yf
 
-📄 Full written solution: https://timepasshub2539-hue.github.io/leetcode-python/project-build-a-stock-price-analysis-beginner-time-series.htm</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/PkpWm7B9nuQ' target='_blank'>▶ Watch on YouTube</a></div>
+TICKERS = [&quot;AAPL&quot;, &quot;MSFT&quot;]
+
+# Step 1: Download daily price/volume data for both tickers at once
+data = yf.download(TICKERS, start=&quot;2023-01-01&quot;, end=&quot;2025-01-01&quot;)
+
+# Step 2: Ensure a real datetime index (yfinance already provides this,
+# but this is the manual fix for datasets that don't)
+data.index = pd.to_datetime(data.index)
+
+# Step 3: Extract closing prices
+close_prices = data[&quot;Close&quot;]
+
+# Step 4: Plot closing prices
+close_prices.plot(title=&quot;Closing Prices&quot;)
+plt.ylabel(&quot;Price (USD)&quot;)
+plt.show()
+
+# Step 5: Resample to weekly and monthly closing prices
+weekly = close_prices.resample(&quot;W&quot;).last()
+monthly = close_prices.resample(&quot;ME&quot;).last()
+
+# Step 6: Moving averages (20-day and 200-day) per ticker
+moving_avg_20 = close_prices.rolling(window=20).mean()
+moving_avg_200 = close_prices.rolling(window=200).mean()
+
+fig, ax = plt.subplots()
+close_prices[&quot;AAPL&quot;].plot(ax=ax, label=&quot;AAPL Close&quot;)
+moving_avg_20[&quot;AAPL&quot;].plot(ax=ax, label=&quot;20-Day MA&quot;)
+moving_avg_200[&quot;AAPL&quot;].plot(ax=ax, label=&quot;200-Day MA&quot;)
+ax.legend()
+plt.show()
+
+# Step 7: Compare trading volume
+volume = data[&quot;Volume&quot;]
+volume.plot(title=&quot;Trading Volume&quot;)
+plt.show()
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>yf.download(TICKERS, ...)</code>: downloads both tickers in one API call, returning a DataFrame with a two-level column structure — field (Open/High/Low/Close/Volume) on top, ticker underneath.</li>
+<li><code>pd.to_datetime(data.index)</code>: converts the index to a true <code>DatetimeIndex</code>. This is what unlocks <code>.resample()</code> and chronological plotting.</li>
+<li><code>data["Close"]</code>: selects only the closing price field across both tickers, collapsing the two-level columns down to one level (just the ticker names).</li>
+<li><code>close_prices.plot(...)</code>: matplotlib reads the datetime index directly and lays out the x-axis in calendar order automatically.</li>
+<li><code>.resample("W").last()</code> / <code>.resample("ME").last()</code>: groups rows into weekly/month-end buckets and keeps the final trading day's price in each bucket — the price the market actually closed at for that period.</li>
+<li><code>.rolling(window=20).mean()</code>: computes a trailing 20-day average at every row, sliding forward one day at a time. Same idea for the 200-day version.</li>
+<li><code>data["Volume"]</code>: identical extraction pattern to <code>Close</code>, made possible by yfinance's consistent multi-level column layout.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Take a small slice of <code>AAPL</code> closing prices: <code>[184, 185, 183, 186, 188, ...]</code> for early January 2024.</p>
+<ul>
+<li><code>close_prices["AAPL"]</code> picks out just this column from the combined DataFrame.</li>
+<li><code>.resample("W").last()</code> groups all trading days that fall in the same calendar week and keeps only Friday's (or the last available day's) closing price — so five daily values collapse into one weekly value.</li>
+<li><code>.rolling(window=20).mean()</code> on this series produces <code>NaN</code> for the first 19 rows (not enough history yet), then starting at row 20, each value is the average of the trailing 20 closes. As new prices arrive, the oldest day drops out of the window and the newest day enters — this is why the line reacts quickly to recent price changes.</li>
+<li>The 200-day version follows the same mechanic but needs 200 rows of history before producing its first real number — which is exactly why a fresh chart shows a flat gap of <code>NaN</code>s at the start until day 200.</li>
+</ul>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> Downloading is bounded by network I/O, not computation. <code>.resample()</code> runs in O(n) since it's a single pass grouping by date bucket. <code>.rolling(window=k).mean()</code> is O(n) as well — pandas uses an incremental sum internally rather than recomputing the sum from scratch at every position, unlike the brute force approach's O(n·k).</li>
+<li><strong>Space:</strong> O(n) for the original DataFrame, plus O(n) for each derived series (resampled or rolled). Nothing here scales worse than linear in the number of rows.</li>
+<li><strong>Why these are correct:</strong> resample and rolling are both single left-to-right passes over sorted time-indexed data — no nested loops, no re-scanning, which is only possible because the index is properly typed as dates.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p>You could reach for <code>statsmodels</code> or a dedicated time series library to compute rolling statistics, decompositions, or seasonality — but for straightforward moving averages and resampling, that's more machinery than the problem needs. Pandas alone handles this cleanly, and reaching for a heavier library before you need decomposition/forecasting features is premature. The pandas-only approach is faster to write, easier to read, and has no additional dependency overhead for a task this size.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty download</strong> (invalid ticker or no data in date range): <code>close_prices</code> will be an empty DataFrame; <code>.resample()</code> and <code>.rolling()</code> will simply return empty results without erroring.</li>
+<li><strong>Single ticker instead of multiple:</strong> the column structure flattens to a single level, so <code>data["Close"]</code> still works but returns a Series instead of a DataFrame — worth checking with <code>.ndim</code> if your code assumes multiple tickers.</li>
+<li><strong>Window larger than available history:</strong> <code>.rolling(window=200)</code> on fewer than 200 rows produces all <code>NaN</code> values — not an error, just no output yet.</li>
+<li><strong>Missing trading days (holidays):</strong> resample buckets simply have no row contribution from closed days; <code>.last()</code> still finds the last available trading day in the period.</li>
+<li><strong>Duplicate or unsorted dates:</strong> rare with yfinance, but if present, sort the index first — resample and rolling both assume monotonic ordering.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Forgetting to convert the index to <code>DatetimeIndex</code> before resampling, causing a <code>TypeError</code> or, worse, a silent wrong grouping by string sort order.</li>
+<li>Assuming the 200-day moving average starts producing values immediately, instead of expecting <code>NaN</code>s for the first 199 rows.</li>
+<li>Selecting <code>'Close'</code> before verifying the multi-ticker column structure, leading to a KeyError when only one ticker was downloaded.</li>
+<li>Using <code>.mean()</code> instead of <code>.last()</code> when resampling prices, which distorts the "close" concept market data is supposed to represent.</li>
+<li>Plotting without a proper datetime index and then manually trying to format the x-axis — unnecessary work pandas already does for you.</li>
+<li>Not handling weekends/holidays explicitly, then being confused why row counts don't match calendar day counts.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How does <code>.resample()</code> differ from <code>.groupby()</code>, and why does resample require a datetime index?</li>
+<li>What's the time complexity of a rolling mean over a Series of length n with window size k, and how is it achieved without recomputing the sum each time?</li>
+<li>How would you handle multiple tickers with different date ranges (e.g., one has a shorter trading history)?</li>
+<li>How would you extend this to compute Bollinger Bands using the existing rolling window?</li>
+<li>What's the difference between upsampling and downsampling, and which one applies here?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 239 — Sliding Window Maximum</strong>: same "moving window over a sequence" mental model as <code>.rolling()</code>, but for max instead of mean.</li>
+<li><strong>LeetCode 1004 — Max Consecutive Ones III</strong>: another sliding window problem, reinforcing window-based thinking.</li>
+<li><strong>LeetCode 480 — Sliding Window Median</strong>: a harder variant of the rolling-statistic idea used here.</li>
+<li><strong>LeetCode 346 — Moving Average from Data Stream</strong>: directly mirrors the rolling mean concept, implemented from scratch instead of via pandas.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>A datetime index isn't a formality — it's the foundation that makes resampling, rolling windows, and chronological plotting work correctly and efficiently. Resample answers "what happened per period," rolling answers "what's the trend at every point," and both run in linear time because pandas processes sorted time data in a single pass. These same three tools — datetime index, resample, rolling — apply directly to sales data, sensor logs, or any other sequence that moves through time, not just stock prices.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with live output and chart results, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This project is part of the Daily Python LeetCode series, where each entry breaks down one coding problem or hands-on Python project — building real intuition for algorithms, data structures, and practical tools like pandas, one small, focused lesson at a time.</p>
+<h2>Call To Action</h2>
+<p>If this helped, subscribe on YouTube for daily Python breakdowns, and subscribe to the Substack newsletter to get each write-up delivered directly. Drop a comment with the ticker you tried this on, and share this with anyone learning pandas or time series analysis.</p>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h3>LinkedIn Post</h3>
+<p>Stock prices are one of the friendliest ways to learn time series analysis in Python — everyone already understands what a closing price and a moving average mean, so you can focus entirely on the tooling.</p>
+<p>In today's walkthrough, I built a complete stock analysis script using pandas and yfinance: downloading daily price data, setting up a proper datetime index, resampling into weekly and monthly views, and computing 20-day and 200-day moving averages to visualize trend direction.</p>
+<p>The core lesson isn't really about finance — it's about three pandas concepts that show up everywhere: a real <code>DatetimeIndex</code> (which unlocks everything downstream), <code>.resample()</code> for bucketing rows into time periods, and <code>.rolling()</code> for sliding-window statistics. The exact same techniques apply to sales data, sensor readings, or server logs.</p>
+<p>One honest mistake I made the first time I wrote this: I forgot the 200-day average needs 200 days of history before producing a value, so my chart started with a flat gap of NaNs I couldn't explain for ten minutes.</p>
+<p>If you're learning pandas, this is a great low-stakes project to practice on — full code and article linked below.</p>
+<h1>Python #Pandas #DataScience #TimeSeries #CodingInterview</h1>
+<h3>Twitter/X Thread</h3>
+<p>1/ What if 20 lines of code beat most traders' intuition? Built a real stock analysis script in Python using pandas. Thread on how it works 🧵</p>
+<p>2/ Step 1: yfinance downloads multiple tickers in one call, already aligned on the same date index. No scraping, no API keys.</p>
+<p>3/ Step 2: the index needs to be real dates, not date-looking text. A true DatetimeIndex is what unlocks resampling, rolling windows, and date slicing.</p>
+<p>4/ Step 3: multi-ticker downloads come back with two header rows — field on top, ticker below. Selecting 'Close' slices off just that layer, leaving a clean DataFrame.</p>
+<p>5/ Step 4: with a datetime index, matplotlib lays out the x-axis chronologically automatically. No manual formatting.</p>
+<p>6/ Step 5: resample is groupby, but for time. It buckets rows into weeks or months, and <code>.last()</code> keeps the actual closing price of each period.</p>
+<p>7/ Step 6: rolling windows average the last N days at every point. 20-day catches short-term moves, 200-day shows the real trend. Where they cross = the "golden cross."</p>
+<p>8/ Step 7: volume tells you conviction. Same price move on high volume means a lot more than on a quiet day.</p>
+<p>9/ My honest mistake: forgot the 200-day average needs 200 days of history first — chart started with a flat gap of NaNs that confused me for ten minutes.</p>
+<p>10/ Full code + article in the video description. Every technique here — datetime index, resample, rolling — transfers straight to any time-based data. Worth learning once, uses it forever.</p>
+<h3>Facebook Post</h3>
+<p>Ever wonder how those stock trend charts with the crossing lines actually get made? Turns out it's about 20 lines of Python. I walked through building a real stock price analyzer with pandas — downloading real data, setting up dates properly, and computing moving averages that show short-term vs. long-term trends. Even if you don't care about trading, the same tricks work for any data that changes over time — sales, sensors, you name it. Full breakdown and code linked below if you want to try it yourself!</p>
+<h3>Reddit Summary</h3>
+<p>Put together a small pandas project analyzing real stock data — download with yfinance, set up a proper DatetimeIndex, resample daily prices to weekly/monthly, and compute 20-day/200-day rolling averages to visualize trend crossovers, plus a volume comparison. The interesting part for anyone learning pandas: <code>.resample()</code> is basically <code>groupby</code> for time buckets, and <code>.rolling()</code> gives you a sliding-window stat with O(n) performance (not recomputing the sum each time). Also documented a real mistake — the 200-day average needs 200 rows of history before it produces anything, which shows up as a flat NaN gap at the start of the chart. Code's on GitHub if anyone wants to run it against their own tickers.</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># Stock Price Analysis with Pandas (Beginner Time Series Project)
+
+A complete beginner-friendly time series analysis pipeline built with Python, pandas, and yfinance — download real stock data, resample it into weekly/monthly views, compute moving averages, and compare trading volume.
+
+## Problem
+
+Given daily historical price and volume data for one or more stock tickers, build a reusable analysis script that:
+
+- Downloads real market data (no scraping, no API keys)
+- Establishes a proper datetime index
+- Extracts and plots closing prices
+- Resamples daily data into weekly and monthly summaries
+- Computes short-term (20-day) and long-term (200-day) moving averages
+- Compares trading volume alongside price movement
+
+## Intuition
+
+Stock prices are sequential by nature, so the date needs to be the actual index — not just text that looks like a date. Once that's in place:
+
+- **Resample** answers &quot;what happened per week/month?&quot; (it's `groupby`, but for time)
+- **Rolling** answers &quot;what's the trend at every point?&quot; (a moving average that slides forward one day at a time)
+
+Traders watch where a fast (20-day) moving average crosses a slow (200-day) one — that crossing is the entire idea behind the &quot;golden cross&quot; signal.
+
+## Approach
+
+1. Download all tickers in a single `yf.download()` call — they arrive pre-aligned on the same date index.
+2. Convert the index to a true `DatetimeIndex` (safety net for datasets that don't provide this by default).
+3. Extract `Close` prices from the multi-level column structure.
+4. Plot — matplotlib lays out the x-axis chronologically for free once the index is real dates.
+5. Resample to weekly and monthly, keeping `.last()` (the actual closing price of each period).
+6. Compute 20-day and 200-day rolling means.
+7. Extract and plot `Volume` for comparison.
+
+## Python Solution
+
+```python
+import matplotlib.pyplot as plt
+import pandas as pd
+import yfinance as yf
+
+TICKERS = [&quot;AAPL&quot;, &quot;MSFT&quot;]
+
+data = yf.download(TICKERS, start=&quot;2023-01-01&quot;, end=&quot;2025-01-01&quot;)
+data.index = pd.to_datetime(data.index)
+
+close_prices = data[&quot;Close&quot;]
+close_prices.plot(title=&quot;Closing Prices&quot;)
+plt.show()
+
+weekly = close_prices.resample(&quot;W&quot;).last()
+monthly = close_prices.resample(&quot;ME&quot;).last()
+
+moving_avg_20 = close_prices.rolling(window=20).mean()
+moving_avg_200 = close_prices.rolling(window=200).mean()
+
+volume = data[&quot;Volume&quot;]
+volume.plot(title=&quot;Trading Volume&quot;)
+plt.show()
+</code></pre>
+<h2>Complexity</h2>
+<ul>
+<li><strong>Time:</strong> O(n) for resampling and rolling — pandas uses an incremental sum for rolling means rather than recomputing from scratch each window.</li>
+<li><strong>Space:</strong> O(n) per derived series (resampled or rolled).</li>
+</ul>
+<h2>Video</h2>
+<p>Full walkthrough: {LINK}</p>
+<h2>Article</h2>
+<p>Full written breakdown: https://timepasshub2539-hue.github.io/leetcode-python/project-build-a-stock-price-analysis-beginner-time-series.html
+```</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/PkpWm7B9nuQ' target='_blank'>▶ Watch on YouTube</a></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>
