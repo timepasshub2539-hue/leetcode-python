@@ -10,24 +10,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Why the O(n) Segment Trick Beats Brute Force — Maximize Active Section with Trade I LeetCode Python Solution</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/9HkkrKJlh3A' allowfullscreen></iframe></div><article><h1>SEO PACKAGE</h1>
-<h3>1. SEO Title</h3>
-<p>Maximize Active Section With Trade I — O(n) Python Solution (LeetCode Explained)</p>
-<h3>2. SEO Subtitle</h3>
-<p>Learn how a single pass over run-lengths beats brute-force simulation for LeetCode's "Maximize Active Section with Trade I."</p>
-<h3>3. Featured Quote</h3>
-<p>"Whatever you erase, you rebuild — the only real gain is the bread around the sandwich."</p>
-<h3>4. Meta Description</h3>
-<p>Solve LeetCode's Maximize Active Section with Trade I in O(n) using run-length encoding in Python. Full intuition, code, dry run, and edge cases.</p>
-<h3>5. URL Slug</h3>
-<p>maximize-active-section-trade-i-python-on</p>
-<h3>6. Keywords</h3>
-<p>LeetCode Python, Maximize Active Section with Trade I, binary string interview question, run-length encoding Python, groupby itertools, O(n) string algorithm, coding interview algorithms, prefix sum vs run length, brute force vs optimal, Daily Python LeetCode, string manipulation interview, data structures and algorithms, Google coding interview, Amazon coding interview, greedy algorithm string, segment scoring technique, binary string problems, Python interview prep, LeetCode string problems, algorithm complexity analysis</p>
-<h3>7. Tags</h3>
-<p>Python, LeetCode, Coding Interview, Algorithms, Data Structures, Software Engineering, String Manipulation, itertools, Interview Prep, DSA, Problem Solving, Big O Notation, Daily Python LeetCode</p>
-<hr />
-<h1>MAIN ARTICLE</h1>
-<h2>Introduction</h2>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Why the O(n) Segment Trick Beats Brute Force — Maximize Active Section with Trade I LeetCode Python Solution</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/9HkkrKJlh3A' allowfullscreen></iframe></div><article><h2>Introduction</h2>
 <p>Binary string problems show up constantly in coding interviews because they look deceptively simple — a string of 0s and 1s — while quietly testing whether you can spot structure instead of reaching for brute force. "Maximize Active Section with Trade I" is a great example. On the surface it asks you to simulate a single swap operation. Underneath, it's really testing whether you understand run-length thinking: the idea that consecutive repeated characters can be collapsed into a handful of numbers, and that most "simulate every possibility" problems secretly reduce to a single arithmetic pass.</p>
 <p>This pattern isn't just an interview trick. The same idea — grouping runs of identical values and reasoning about their boundaries — powers things like free-space coalescing in memory allocators, run-length encoding in image compression, and disk block management. Learning to recognize it here will help you recognize it again in a dozen other problems.</p>
 <p>By the end of this article, you'll understand why the brute-force approach breaks down at scale, how to reframe the problem in terms of "runs" instead of individual characters, and how to write a clean O(n) Python solution that never even needs to touch the actual string.</p>
@@ -211,92 +194,6 @@ def max_active_section(s: str) -&gt; int:
 <p>This breakdown is part of the <strong>Daily Python LeetCode</strong> series, where each problem gets a complete treatment: brute force, optimized solution, complexity analysis, and the interview reasoning behind every step — all in clean, production-quality Python.</p>
 <h2>Call To Action</h2>
 <p>If this helped the idea click, subscribe on YouTube for the daily walkthroughs, subscribe to the Substack for the full written breakdowns, and drop a comment with which part clicked (or didn't) for you. Sharing this with someone prepping for interviews helps more than you'd think.</p>
-<hr />
-<h1>SOCIAL MEDIA</h1>
-<h3>LinkedIn Post</h3>
-<p>Most engineers' first instinct on "Maximize Active Section with Trade I" is to simulate the swap on every candidate block. It works — until the string hits 100,000 characters and that O(n²) approach grinds to a halt.</p>
-<p>The unlock is realizing the operation doesn't actually change what you erase. A block of <code>1</code>s that gets erased is immediately rebuilt as <code>1</code>s — it's a wash. The only real gain comes from the <code>0</code>s bordering it on each side, which flip to active.</p>
-<p>Once you see that, the whole problem collapses: pad the string with sentinel <code>1</code>s to kill edge cases, run-length encode it, and take the max sum of two adjacent zero-runs around any <code>1</code>-block. One pass, O(n), done.</p>
-<p>This pattern — grouping repeated values into runs and reasoning about their boundaries — isn't just an interview trick. It's the same idea behind free-space coalescing in memory allocators and run-length compression in image formats.</p>
-<p>Full breakdown with code, dry run, and edge cases in the comments/link. Always happy to hear how others approached this one.</p>
-<h1>Python #LeetCode #CodingInterview #Algorithms #DataStructures</h1>
-<h3>Twitter/X Thread</h3>
-<p>1/ "1000100" has 2 active bits. One legal move later, it has 7. No magic — just one clean trick. Thread on LeetCode's "Maximize Active Section with Trade I" 🧵</p>
-<p>2/ The move: find a group of 1s boxed in by 0s on both sides, erase it, refill the whole span with 1s. Brute force tries this on every candidate. Works, but it's O(n²).</p>
-<p>3/ Here's the insight that kills the brute force: whatever block of 1s you erase gets turned right back into 1s. It's a wash. Nothing changes there.</p>
-<p>4/ So what actually changes? Only the 0s bordering that block. Those flip to 1s. That's the ENTIRE gain from any trade.</p>
-<p>5/ Think sandwich: the 1-block is the filling, the bordering 0-runs are the bread. Trading turns bread into filling. Gain = size of the bread.</p>
-<p>6/ Now reframe the whole string as "runs" instead of characters: "1000100" → runs of 1, 000, 1, 00. Suddenly you're doing arithmetic on a handful of numbers, not scanning repeatedly.</p>
-<p>7/ One more trick: pad the string with a '1' sentinel on each end first. Now every real block has neighbors on both sides — zero edge-case branching needed.</p>
-<p>8/ The algorithm: run-length encode the padded string, skip the two sentinel runs, and for every interior 1-run take (left zero-run + right zero-run). Track the max.</p>
-<p>9/ Answer = original 1-count + best gain. Never rewrite the string — just count. That's O(n) time, one pass, done.</p>
-<p>10/ Full code + dry run + edge cases in the article/video. If you've hit this problem, what was your first instinct — brute force or straight to runs? {LINK}</p>
-<h3>Facebook Post</h3>
-<p>Ever notice how some coding problems look way scarier than they actually are? Today's one: you've got a string of 0s and 1s, and you're allowed one move — find a group of "on" switches boxed in by "off" switches, and flip the whole boxed-in area to "on."</p>
-<p>Turns out you don't need to simulate anything to solve it fast. The trick is realizing the group you erase gets rebuilt anyway, so the only real gain is from the switches sitting right next to it. Group the string into "runs" (streaks of the same value), and the answer falls out in one pass.</p>
-<p>Full walkthrough with Python code and a practice example in the link — good one if you're brushing up for interviews. {LINK}</p>
-<h3>Reddit Summary</h3>
-<p>Worked through LeetCode's "Maximize Active Section with Trade I" — sharing the approach since the brute force vs. optimal gap here is a nice teaching example.</p>
-<p>The operation: erase a <code>1</code>-block that's boxed in by <code>0</code>s on both sides, then fill that whole span with <code>1</code>s. Naive approach simulates this for every candidate block — O(n²), falls over at n=1e5.</p>
-<p>Key realization: the block you erase gets rebuilt as <code>1</code>s regardless, so it contributes zero net change. The only actual gain comes from the <code>0</code>-runs immediately bordering it. So the problem reduces to: pad the string with <code>1</code> sentinels (kills edge cases), run-length encode it with <code>itertools.groupby</code>, and take the max of (left zero-run + right zero-run) over every interior <code>1</code>-run. Add that to your baseline <code>1</code>-count. O(n) time, no string mutation.</p>
-<p>There's also a prefix-sum variant (precompute left/right zero-run lengths per index) that's the same complexity class but needs two extra arrays instead of one runs list — runs felt like less code for the same result.</p>
-<p>Happy to discuss alternative approaches or edge cases people ran into.</p>
-<hr />
-<h1>GITHUB README</h1>
-<pre><code class="language-markdown"># Maximize Active Section with Trade I — Python Solution
-
-## Problem
-Given a binary string `s`, you may perform exactly one operation: erase a
-maximal group of `1`s that is bordered by `0`s on both sides, then fill the
-entire span (the erased `1`s and both bordering `0`s) with `1`s. Return the
-maximum number of active (`1`) positions achievable.
-
-## Intuition
-The block of `1`s you erase gets rebuilt as `1`s regardless — it contributes
-zero net change. The only real gain comes from the `0`-runs bordering it,
-which flip to active. So the problem reduces to finding the `1`-block whose
-two adjacent zero-runs sum to the largest value.
-
-## Approach
-1. Pad `s` with a `'1'` sentinel on each end to remove edge-case branching.
-2. Run-length encode the padded string with `itertools.groupby`.
-3. Skip the two sentinel runs; for every interior `1`-run, compute
-   `left_zero_run + right_zero_run`.
-4. Track the maximum gain, add it to the original `1`-count.
-
-## Python Solution
-\`\`\`python
-from itertools import groupby
-
-
-def max_active_section(s: str) -&gt; int:
-    baseline_ones = s.count(&quot;1&quot;)
-
-    padded = &quot;1&quot; + s + &quot;1&quot;
-    runs = [(char, len(list(group))) for char, group in groupby(padded)]
-
-    best_gain = 0
-    for i in range(1, len(runs) - 1):
-        char, length = runs[i]
-        if char == &quot;1&quot;:
-            left_zeros = runs[i - 1][1]
-            right_zeros = runs[i + 1][1]
-            best_gain = max(best_gain, left_zeros + right_zeros)
-
-    return baseline_ones + best_gain
-\`\`\`
-
-## Complexity
-- **Time:** O(n) — one pass to count, one pass to run-length encode, one
-  pass over the runs.
-- **Space:** O(n) worst case for the runs list (bounded by number of runs).
-
-## Video
-Full walkthrough with dry run and edge cases: {LINK}
-
-## Article
-Complete written breakdown: see the linked Substack article for intuition,
-brute force comparison, dry run, and interview follow-ups.
-</code></pre></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/9HkkrKJlh3A' target='_blank'>▶ Watch on YouTube</a></div><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>What pattern turns two separate 1-blocks into one big block?</summary><p>Sandwich swap: flip a 0-gap between two 1-blocks (or an edge 0-run) to merge them into one contiguous run.</p></details><details class='card2'><summary>Time complexity of the optimal sandwich-swap approach?</summary><p>O(n) — one pass to split into runs, one pass to check adjacent run triples.</p></details><details class='card2'><summary>Space complexity of the run-length approach?</summary><p>O(n) worst case for the list of run lengths (or O(1) if scanning with rolling pointers instead of storing all runs).</p></details><details class='card2'><summary>Trickiest edge case in this problem?</summary><p>A 0-run touching the array boundary (no 1-block on one side) — must handle it as a one-sided merge, not a full sandwich.</p></details><details class='card2'><summary>Brute force vs optimal: what&#x27;s the key insight that avoids simulation?</summary><p>Brute force tries every possible k-swap; optimal just breaks the string into runs and evaluates merges of adjacent runs directly, no simulation needed.</p></details><details class='card2'><summary>Interview follow-up: why break the string into runs first?</summary><p>Runs reduce the problem to comparing a few adjacent group lengths instead of scanning bit-by-bit for every possible swap position.</p></details></div>
+<hr /></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/9HkkrKJlh3A' target='_blank'>▶ Watch on YouTube</a></div><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>What pattern turns two separate 1-blocks into one big block?</summary><p>Sandwich swap: flip a 0-gap between two 1-blocks (or an edge 0-run) to merge them into one contiguous run.</p></details><details class='card2'><summary>Time complexity of the optimal sandwich-swap approach?</summary><p>O(n) — one pass to split into runs, one pass to check adjacent run triples.</p></details><details class='card2'><summary>Space complexity of the run-length approach?</summary><p>O(n) worst case for the list of run lengths (or O(1) if scanning with rolling pointers instead of storing all runs).</p></details><details class='card2'><summary>Trickiest edge case in this problem?</summary><p>A 0-run touching the array boundary (no 1-block on one side) — must handle it as a one-sided merge, not a full sandwich.</p></details><details class='card2'><summary>Brute force vs optimal: what&#x27;s the key insight that avoids simulation?</summary><p>Brute force tries every possible k-swap; optimal just breaks the string into runs and evaluates merges of adjacent runs directly, no simulation needed.</p></details><details class='card2'><summary>Interview follow-up: why break the string into runs first?</summary><p>Runs reduce the problem to comparing a few adjacent group lengths instead of scanning bit-by-bit for every possible swap position.</p></details></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>

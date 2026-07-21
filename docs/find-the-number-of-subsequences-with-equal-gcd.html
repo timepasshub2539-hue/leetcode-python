@@ -10,24 +10,7 @@ You&#x27;ll s"><meta property="og:image" content="https://i.ytimg.com/vi/1KQzhMn
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Count Subsequence Pairs With Equal GCD — DP Explained Step by Step</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'>🧩 Dynamic Programming</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/1KQzhMnxHf0' allowfullscreen></iframe></div><article><h1>SEO PACKAGE</h1>
-<h2>1. SEO Title</h2>
-<p>Count Subsequence Pairs With Equal GCD (LeetCode) — Full DP Explanation in Python</p>
-<h2>2. SEO Subtitle</h2>
-<p>A step-by-step breakdown of how to count disjoint subsequence pairs with matching GCDs using a simple two-dimensional DP table.</p>
-<h2>3. Featured Quote</h2>
-<p>"Every element has exactly three doors — group one, group two, or the bench. Count the doors, not the subsequences."</p>
-<h2>4. Meta Description</h2>
-<p>Learn how to count subsequence pairs with equal GCD using dynamic programming in Python. Full intuition, brute force comparison, code walkthrough, and dry run.</p>
-<h2>5. URL Slug</h2>
-<p>count-subsequence-pairs-with-equal-gcd-dp-python</p>
-<h2>6. Keywords</h2>
-<p>count subsequence pairs with equal gcd, gcd dynamic programming, python leetcode dp, disjoint subsequences leetcode, gcd dp table, leetcode hard dp problem, dynamic programming interview questions, gcd python algorithm, subsequence counting algorithm, python dp table example, leetcode gcd problem, dp with two states, coding interview dp, algorithm intuition building, python dynamic programming tutorial, gcd of subsequences, disjoint subsets gcd, competitive programming dp, brute force vs dp, modulo arithmetic dp</p>
-<h2>7. Tags</h2>
-<p>Dynamic Programming, LeetCode, Python, GCD, Algorithms, Coding Interview, Data Structures, Hard Problems, Subsequences, Competitive Programming, Interview Prep, DP Table, Software Engineering, Problem Solving</p>
-<hr />
-<h1>MAIN ARTICLE</h1>
-<h2>Introduction</h2>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Count Subsequence Pairs With Equal GCD — DP Explained Step by Step</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'>🧩 Dynamic Programming</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/1KQzhMnxHf0' allowfullscreen></iframe></div><article><h2>Introduction</h2>
 <p>Some problems test whether you know a formula. This one tests whether you can <em>see structure</em> where none seems to exist. "Count Subsequence Pairs With Equal GCD" looks intimidating on paper — two disjoint groups, matching GCDs, counting all valid pairs — but it's actually a masterclass in a specific interview skill: turning an exponential search space into a polynomial one by figuring out exactly what information you need to remember.</p>
 <p>This is a favorite in interviews for senior and staff-level roles because it doesn't test whether you memorized GCD or subsequence definitions. It tests whether you can ask the right question: "what's the minimum state I need to carry forward?" Once you internalize that skill here, you'll start spotting it in dozens of other DP problems — partition problems, subset-sum variants, and counting problems in general.</p>
 <h2>Problem Overview</h2>
@@ -230,78 +213,6 @@ if __name__ == &quot;__main__&quot;:
 <p>This breakdown is part of the Daily Python LeetCode series, where each problem gets a full teardown — the intuition first, then brute force, then the optimal approach, all the way down to a clean, production-quality Python implementation. The goal isn't to memorize solutions; it's to build the pattern-recognition muscle that lets you solve problems you've never seen before.</p>
 <h2>Call To Action</h2>
 <p>If this breakdown helped the DP click, subscribe on YouTube for the daily walkthroughs, and subscribe to the Substack for the full written version delivered straight to your inbox. Drop a comment with the problem you want tackled next, and share this with a friend prepping for interviews.</p>
-<hr />
-<h1>SOCIAL MEDIA</h1>
-<h2>LinkedIn Post</h2>
-<p>One of the most underrated interview skills isn't knowing algorithms — it's knowing what <em>not</em> to remember.</p>
-<p>I recently broke down a LeetCode problem: count all pairs of disjoint subsequences from an array whose GCDs match exactly. The brute force instinct is to enumerate subsequences directly, which explodes combinatorially and becomes computationally impossible past small inputs.</p>
-<p>The unlock is a reframe. Instead of thinking "which elements go where," think "what decision does each element make." Every element has exactly three choices: join group one, join group two, or sit out. That turns subsequence enumeration into a sequence of per-element decisions — a much more tractable shape.</p>
-<p>The second unlock is even better: to check if two groups have equal GCD, you never need to remember which elements are in each group. You only need the <em>running GCD</em> of each group so far. That's two small numbers, which means the entire state of the problem fits into a compact 2D table you update one element at a time.</p>
-<p>This is dynamic programming doing what it does best — not "memoizing recursion," but compressing a huge state space down to the few numbers that actually matter for the final answer.</p>
-<p>I walked through the full derivation, a brute-force comparison, and a complete Python implementation in this week's video and article. If you're prepping for interviews or just enjoy sharpening algorithmic intuition, it's worth the fifteen minutes.</p>
-<p>Link in comments.</p>
-<h2>Twitter/X Thread</h2>
-<p>1/ Here's a LeetCode "hard" that looks scary but has a beautiful trick hiding in it: count pairs of disjoint subsequences with equal GCD. Let's break it down. 🧵</p>
-<p>2/ The naive approach: enumerate every possible subsequence for group 1, then every subsequence of what's left for group 2, check GCDs. This is combinatorially explosive — O(3^n). Dead on arrival for real inputs.</p>
-<p>3/ The reframe: stop thinking about "picking subsequences." Start thinking about "what does each element do." Every element has exactly 3 choices: join group 1, join group 2, or sit on the bench.</p>
-<p>4/ Every valid pair of disjoint subsequences corresponds to exactly one sequence of these choices, and vice versa. That's the whole problem, restated in a way a computer can actually explore efficiently.</p>
-<p>5/ Here's the real insight: to check "do the two groups have equal GCD," you don't need to remember which elements are in each group. You only need the <em>current running GCD</em> of each group.</p>
-<p>6/ That means the entire state of the problem is just two small numbers. Build a grid: dp[a][b] = number of ways to reach "group 1 has gcd a, group 2 has gcd b."</p>
-<p>7/ Trick: GCD(0, x) = x by convention. Use 0 to mean "group is empty." When the first element joins, the formula naturally computes the right value — no special case needed.</p>
-<p>8/ For each element, copy the table, then update two new cells per existing state: assigning to group 1, assigning to group 2. The copy prevents an element from being "used twice" in one step.</p>
-<p>9/ After processing everything, the diagonal dp[g][g] for g &gt;= 1 gives you the count of pairs with equal GCD g. Sum it, mod 1e9+7, done. O(n * V^2) instead of O(3^n).</p>
-<p>10/ The real lesson: whenever a counting problem seems to need "which exact elements went where," ask if a smaller running summary actually suffices. That's the difference between exponential and polynomial. Full code + walkthrough in the article. 🔗</p>
-<h2>Facebook Post</h2>
-<p>Ever look at a coding problem and think "there's no way this can be solved efficiently"? That was my first reaction to this one: count pairs of subsequences from an array where nothing overlaps and the GCDs match exactly.</p>
-<p>Turns out the trick is surprisingly elegant — instead of trying to pick subsequences directly, you just track two small numbers (the running GCD of each group) as you walk through the array once. A little dynamic programming table does all the heavy lifting.</p>
-<p>Broke down the full intuition, the brute-force comparison, and the Python code in this week's post — perfect if you're prepping for interviews or just like watching a scary problem turn simple. Check it out and let me know what problem you want to see next!</p>
-<h2>Reddit Summary</h2>
-<p>Worked through a nice DP problem this week: counting pairs of disjoint subsequences in an array where both groups end up with the same GCD.</p>
-<p>The naive approach (enumerate every subsequence pair) is O(3^n) and dies immediately at real constraints. The key insight is that every element has exactly three outcomes — join group A, join group B, or get left out — and to check the final GCD condition, you only ever need to track the <em>running GCD</em> of each group, not which specific elements are in it.</p>
-<p>That collapses the state space down to a small 2D grid (<code>dp[gcdA][gcdB]</code>), updated once per element by copying the table forward so you don't double-assign an element within the same step. Sum the diagonal (skipping the "both groups empty" cell) at the end, and you're done in roughly O(n * maxVal^2).</p>
-<p>Worth working through by hand on <code>[1,1,1,1]</code> (answer is 50) — it's a satisfying way to confirm you actually understand the state compression instead of just copying a formula.</p>
-<hr />
-<h1>GITHUB README</h1>
-<h1>Count Subsequence Pairs With Equal GCD</h1>
-<h2>Problem</h2>
-<p>Given an array of positive integers, count the number of ways to split it into two <strong>disjoint, non-empty</strong> groups such that the GCD of Group 1 equals the GCD of Group 2. Order matters (swapping group labels counts as a different pair). Return the count modulo <code>10^9 + 7</code>.</p>
-<h2>Intuition</h2>
-<p>Every element has exactly three fates: join Group 1, join Group 2, or sit out. Every pair of disjoint subsequences corresponds to exactly one sequence of these choices. To check the final condition, you only need to track the <em>running GCD</em> of each group — not which elements are in it — since <code>gcd(0, x) = x</code> lets an empty group (represented by <code>0</code>) "activate" cleanly on its first element.</p>
-<h2>Approach</h2>
-<p>Maintain a 2D DP table <code>dp[a][b]</code> = number of ways Group 1 has running GCD <code>a</code> and Group 2 has running GCD <code>b</code>. Initialize <code>dp[0][0] = 1</code>. For each element <code>x</code>, copy the table forward, then for every reachable state, add transitions for "assign to Group 1" and "assign to Group 2" (skipping is implicit via the copy). At the end, sum <code>dp[g][g]</code> for <code>g &gt;= 1</code>.</p>
-<h2>Python Solution</h2>
-<pre><code class="language-python">from math import gcd
-
-MOD = 10**9 + 7
-
-def count_pairs_equal_gcd(nums: list[int]) -&gt; int:
-    max_val = max(nums)
-    dp = [[0] * (max_val + 1) for _ in range(max_val + 1)]
-    dp[0][0] = 1
-
-    for x in nums:
-        next_dp = [row[:] for row in dp]
-        for a in range(max_val + 1):
-            for b in range(max_val + 1):
-                ways = dp[a][b]
-                if ways == 0:
-                    continue
-                new_a = gcd(a, x)
-                next_dp[new_a][b] = (next_dp[new_a][b] + ways) % MOD
-                new_b = gcd(b, x)
-                next_dp[a][new_b] = (next_dp[a][new_b] + ways) % MOD
-        dp = next_dp
-
-    return sum(dp[g][g] for g in range(1, max_val + 1)) % MOD
-</code></pre>
-<h2>Complexity</h2>
-<ul>
-<li><strong>Time</strong>: <code>O(n * V^2)</code>, where <code>V</code> is the max array value.</li>
-<li><strong>Space</strong>: <code>O(V^2)</code> for the DP grid.</li>
-</ul>
-<h2>Video</h2>
-<p>Full walkthrough with diagrams: {LINK}</p>
-<h2>Article</h2>
-<p>Full written breakdown with brute force comparison, dry run, and edge cases available on the blog: {LINK}</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/1KQzhMnxHf0' target='_blank'>▶ Watch on YouTube</a></div>
+<hr /></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/1KQzhMnxHf0' target='_blank'>▶ Watch on YouTube</a></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>

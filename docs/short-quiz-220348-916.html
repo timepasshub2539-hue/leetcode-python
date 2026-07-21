@@ -10,24 +10,7 @@ You&#x27;ll learn what sort() actually returns, why the default comparator betra
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>This sort() is BROKEN — can you spot the bug? #shorts</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/56Jwa5WJaZI' allowfullscreen></iframe></div><article><p>SEO PACKAGE</p>
-<h2>1. SEO Title</h2>
-<p>JavaScript sort() Trap: Why sort(10, 1, 3) Doesn't Return [1, 3, 10]</p>
-<h2>2. SEO Subtitle</h2>
-<p>The default JavaScript <code>sort()</code> method silently converts your numbers to strings before comparing them, and it's costing developers correctness bugs in production.</p>
-<h2>3. Featured Quote</h2>
-<p>"Array.prototype.sort() doesn't compare numbers by default. It compares strings that used to be numbers."</p>
-<h2>4. Meta Description</h2>
-<p>Why does <code>[10, 1, 3].sort()</code> return <code>[1, 10, 3]</code>? Learn how JavaScript's default sort actually works, why it breaks numeric arrays, and the one-line fix.</p>
-<h2>5. URL Slug</h2>
-<p>javascript-sort-numeric-bug-compare-function</p>
-<h2>6. Keywords</h2>
-<p>javascript sort bug, array sort() javascript, javascript compare function, sort numbers javascript, javascript interview questions, default sort javascript, lexicographic sort javascript, javascript array methods, coding interview prep, javascript fundamentals, sort algorithm javascript, javascript gotchas, ECMAScript sort specification, javascript type coercion, frontend interview questions, javascript quiz, array.prototype.sort, javascript string comparison, web development basics, javascript for beginners</p>
-<h2>7. Tags</h2>
-<p>JavaScript, Coding Interview, Web Development, Algorithms, Data Structures, Software Engineering, JavaScript Fundamentals, Interview Prep, Programming Tips, Frontend Development, Debugging, Array Methods, Computer Science, Developer Education, Code Quality</p>
-<hr />
-<h1>MAIN ARTICLE</h1>
-<h2>Introduction</h2>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>This sort() is BROKEN — can you spot the bug? #shorts</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/56Jwa5WJaZI' allowfullscreen></iframe></div><article><h2>Introduction</h2>
 <p>Here's a question that trips up developers with years of experience: what does <code>[10, 1, 3].sort()</code> return in JavaScript? Most people confidently say <code>[1, 3, 10]</code>. The actual answer is <code>[1, 10, 3]</code>.</p>
 <p>This isn't an edge case buried in some obscure corner of the language. It's the <em>default</em> behavior of one of the most commonly used array methods in JavaScript. If you've never hit this bug, it's likely because your test data happened to be single-digit numbers, or already sorted, or you got lucky. In production, with real data, this bug shows up as scoreboards ranking wrong, prices sorting out of order, or dates landing in the wrong sequence.</p>
 <p>Interviewers love this question because it tests something more valuable than memorizing a method signature. It tests whether you understand <em>how</em> a built-in function actually works under the hood, rather than assuming it does what its name implies. That distinction — assumption versus verification — is exactly what separates engineers who ship subtle bugs from engineers who catch them in code review.</p>
@@ -211,102 +194,6 @@ def sort_numbers_descending(nums: list[int]) -&gt; list[int]:
 <p>This breakdown is part of the Daily Python LeetCode series, where each day tackles one interview-relevant problem or language gotcha, breaking down the intuition, the code, and the reasoning an engineer uses to get from "brute force" to "optimal" — one clear lesson at a time.</p>
 <h2>Call To Action</h2>
 <p>If this saved you from a bug you didn't know you had, subscribe on YouTube for daily interview prep in under a minute, subscribe to the Substack newsletter for the full written breakdowns, and drop a comment with a JavaScript gotcha you want covered next. Sharing this with a teammate who still trusts default <code>sort()</code> is the fastest way to help them dodge the same trap.</p>
-<hr />
-<h1>SOCIAL MEDIA</h1>
-<h3>LinkedIn Post</h3>
-<p>Quick question: what does <code>[10, 1, 3].sort()</code> return in JavaScript?</p>
-<p>If you said <code>[1, 3, 10]</code>, you're in good company — and also wrong. The actual output is <code>[1, 10, 3]</code>.</p>
-<p>Here's why: <code>Array.prototype.sort()</code> without arguments doesn't compare numbers at all. It converts every element to a string and compares them lexicographically. So <code>10</code> becomes <code>"10"</code>, and <code>"1"</code> sorts before <code>"10"</code> before <code>"3"</code> — the same way <code>"apple"</code> sorts before <code>"banana"</code>.</p>
-<p>This isn't a rare edge case. It's the default behavior of one of the most-used array methods in the language, and it only reveals itself once your array has numbers with different digit counts. Single-digit test data will hide this bug indefinitely.</p>
-<p>The fix is one line: pass an explicit comparator.</p>
-<pre><code class="language-javascript">[10, 1, 3].sort((a, b) =&gt; a - b); // [1, 3, 10]
-</code></pre>
-<p>The comparator tells <code>sort()</code> exactly how to order any two elements — negative means "a first," positive means "a after," zero means "equal." Once you supply it, the string-conversion default never runs.</p>
-<p>The broader lesson: built-in methods aren't magic. They have documented default behaviors, and it's worth knowing them rather than assuming they match your intuition. This is exactly the kind of thing that separates "I think this works" from "I know this works" — and it's a favorite among interviewers for that reason.</p>
-<p>What's a JavaScript default that surprised you the first time you hit it?</p>
-<h3>Twitter/X Thread</h3>
-<p>1/ What does <code>[10, 1, 3].sort()</code> return in JavaScript?</p>
-<p>Most people say <code>[1, 3, 10]</code>.</p>
-<p>The real answer is <code>[1, 10, 3]</code>.</p>
-<p>Here's why, and why it matters for interviews 🧵</p>
-<p>2/ JavaScript's <code>sort()</code>, called with no arguments, doesn't compare numbers. It converts every element to a string first.</p>
-<p><code>10</code> → <code>"10"</code>, <code>1</code> → <code>"1"</code>, <code>3</code> → <code>"3"</code></p>
-<p>3/ Then it sorts those strings lexicographically — the same way a dictionary orders words. Character by character, left to right.</p>
-<p>4/ <code>"1"</code> comes before <code>"10"</code> because <code>"1"</code> is a prefix of <code>"10"</code>, and shorter prefix matches sort first.</p>
-<p>5/ <code>"10"</code> comes before <code>"3"</code> because the FIRST character is compared first: <code>1</code> &lt; <code>3</code>. The engine never looks past that first digit.</p>
-<p>6/ This is why the bug hides so well. Test with <code>[1, 2, 3]</code> and everything looks fine — single digits sort identically as strings and numbers.</p>
-<p>7/ The moment you add a two-digit number, the illusion breaks.</p>
-<p>8/ The fix is one line — pass a comparator function:</p>
-<pre><code class="language-js">[10, 1, 3].sort((a, b) =&gt; a - b)
-</code></pre>
-<p>9/ This returns negative/zero/positive based on actual numeric difference, so <code>sort()</code> never falls back to string conversion.</p>
-<p>10/ Lesson: built-in methods have defaults. Know them, don't assume them. This exact question shows up in interviews because it tests real understanding, not memorization. Follow for more traps like this.</p>
-<h3>Facebook Post</h3>
-<p>Fun (and slightly terrifying) JavaScript fact: if you run <code>[10, 1, 3].sort()</code>, you don't get <code>[1, 3, 10]</code> like you'd expect. You get <code>[1, 10, 3]</code>.</p>
-<p>Why? JavaScript's default sort compares everything as text, not numbers. So <code>"10"</code> sneaks in before <code>"3"</code> because it's comparing letters, not values.</p>
-<p>The fix is easy once you know about it — just tell <code>sort()</code> how to compare numbers: <code>.sort((a, b) =&gt; a - b)</code>. One line, problem solved.</p>
-<p>It's a great reminder that even the tools we use every day can have surprising defaults. Worth double-checking the ones you rely on most!</p>
-<h3>Reddit Summary</h3>
-<p><code>Array.prototype.sort()</code> in JavaScript defaults to converting elements to strings and comparing them lexicographically — it never compares numbers numerically unless you tell it to. This means <code>[10, 1, 3].sort()</code> returns <code>[1, 10, 3]</code>, not <code>[1, 3, 10]</code>, because <code>"10"</code> sorts before <code>"3"</code> as text (comparing the first character <code>1</code> vs <code>3</code>).</p>
-<p>The fix is a comparator function: <code>arr.sort((a, b) =&gt; a - b)</code>. This returns a negative, zero, or positive number based on actual numeric difference, which overrides the string-based default entirely.</p>
-<p>Worth knowing because it's a common interview question and a real bug source — it only shows up once your array has multi-digit numbers, so it's easy to miss in casual testing with small values. Complexity stays O(n log n) either way; the comparator doesn't cost you anything, it just tells the engine what "greater than" actually means for your data.</p>
-<hr />
-<h1>GITHUB README</h1>
-<pre><code class="language-markdown"># JavaScript sort() Trap: The Default Comparator Problem
-
-## Problem
-`[10, 1, 3].sort()` does not return `[1, 3, 10]`. It returns `[1, 10, 3]`.
-
-`Array.prototype.sort()` called without arguments converts every element to a
-string and compares them lexicographically (like dictionary order), not
-numerically.
-
-## Intuition
-`sort()` is generic — it works on any array type, so its default fallback is
-string comparison, which happens to be correct for arrays of strings but
-silently wrong for arrays of numbers with differing digit counts.
-
-## Approach
-Pass an explicit comparator function. It returns:
-- negative → first argument sorts first
-- positive → first argument sorts after
-- zero → equal, order unchanged
-
-```js
-[10, 1, 3].sort((a, b) =&gt; a - b); // [1, 3, 10]
-</code></pre>
-<h2>Python Solution</h2>
-<pre><code class="language-python">def sort_numbers(nums: list[int]) -&gt; list[int]:
-    &quot;&quot;&quot;Sort a list of numbers in ascending numeric order.&quot;&quot;&quot;
-    return sorted(nums, key=lambda x: x)
-
-
-def sort_numbers_descending(nums: list[int]) -&gt; list[int]:
-    &quot;&quot;&quot;Sort a list of numbers in descending numeric order.&quot;&quot;&quot;
-    return sorted(nums, key=lambda x: x, reverse=True)
-
-
-if __name__ == &quot;__main__&quot;:
-    assert sort_numbers([10, 1, 3]) == [1, 3, 10]
-    assert sort_numbers([]) == []
-    assert sort_numbers([5]) == [5]
-    assert sort_numbers([3, 3, 1]) == [1, 3, 3]
-    assert sort_numbers([-10, 5, -3]) == [-10, -3, 5]
-    assert sort_numbers_descending([10, 1, 3]) == [10, 3, 1]
-    print(&quot;All tests passed.&quot;)
-</code></pre>
-<h2>Complexity</h2>
-<ul>
-<li><strong>Time:</strong> O(n log n) — comparison-based sort, same complexity with or
-  without a comparator.</li>
-<li><strong>Space:</strong> O(n) for Python's <code>sorted()</code> (returns a new list); O(1)
-  additional space for JavaScript's in-place <code>sort()</code>.</li>
-</ul>
-<h2>Video</h2>
-<p>Watch the full breakdown: {LINK}</p>
-<h2>Article</h2>
-<p>Read the complete write-up with dry runs, edge cases, and interview
-follow-ups in the linked article.
-```</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/56Jwa5WJaZI' target='_blank'>▶ Watch on YouTube</a></div>
+<hr /></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/56Jwa5WJaZI' target='_blank'>▶ Watch on YouTube</a></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>

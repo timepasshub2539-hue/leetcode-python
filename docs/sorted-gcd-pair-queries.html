@@ -18,24 +18,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Sorted GCD Pair Queries — LeetCode Daily Python Solution (5 Billion Pairs, No List)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/JVLzC_apwYQ' allowfullscreen></iframe></div><article><h1>SEO PACKAGE</h1>
-<h2>SEO Title</h2>
-<p>Sorted GCD Pair Queries in Python: Count Pairs Instead of Building 5 Billion of Them (LeetCode Hard)</p>
-<h2>SEO Subtitle</h2>
-<p>A step-by-step Python walkthrough of LeetCode's Sorted GCD Pair Queries using a divisor-counting sieve instead of generating every pair.</p>
-<h2>Featured Quote</h2>
-<p>"When listing explodes, count instead."</p>
-<h2>Meta Description</h2>
-<p>Solve LeetCode's Sorted GCD Pair Queries in Python without building the pair list. Learn the divisor-sieve counting trick that turns 5 billion pairs into O(M log M).</p>
-<h2>URL Slug</h2>
-<p>sorted-gcd-pair-queries-python-leetcode</p>
-<h2>Keywords</h2>
-<p>sorted GCD pair queries, LeetCode Python solutions, GCD algorithm Python, coding interview algorithms, divisor sieve, harmonic series time complexity, prefix sum queries, number theory LeetCode, counting pairs by divisor, frequency array Python, sieve of multiples, binary search prefix sum, LeetCode hard problems, Python data structures, algorithm optimization, LeetCode daily challenge, GCD of array elements, bisect module Python, interview preparation Python, efficient counting algorithms</p>
-<h2>Tags</h2>
-<p>LeetCode, Python, Coding Interview, Algorithms, Data Structures, Software Engineering, Number Theory, GCD, Sieve Algorithms, Prefix Sums, Interview Prep, Daily Coding Challenge, Competitive Programming, Big O Complexity, Python Tips</p>
-<hr />
-<h1>MAIN ARTICLE</h1>
-<h2>Introduction</h2>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Sorted GCD Pair Queries — LeetCode Daily Python Solution (5 Billion Pairs, No List)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/JVLzC_apwYQ' allowfullscreen></iframe></div><article><h2>Introduction</h2>
 <p>Some LeetCode problems test whether you know a data structure. Others test whether you can recognize that the "obvious" solution is a trap. <strong>Sorted GCD Pair Queries</strong> belongs firmly in the second category, and it's exactly the kind of problem that separates candidates who can write correct code from candidates who can write code that <em>scales</em>.</p>
 <p>Here's the setup that makes this problem interesting: with an array of just 100,000 numbers, the number of pairs you could form crosses <strong>five billion</strong>. If your first instinct is to compute the GCD of every pair, sort them, and answer queries by index, you'll write code that is completely correct and completely unusable — it will run out of time and memory before it finishes.</p>
 <p>This is precisely the pattern interviewers love to probe, because it shows up everywhere in real systems. Precompute a distribution once, then answer a flood of queries instantly. Percentile calculations in analytics dashboards, histogram-backed search in databases, and ranking systems at companies like Google and Meta all lean on this same idea: separate the expensive prep work from the cheap lookup. Learn this pattern once here, and you'll recognize it in a dozen other problems.</p>
@@ -250,111 +233,6 @@ class Solution:
 <p>This solution is part of the <strong>Daily Python LeetCode</strong> series, where each day brings one problem broken down from first principles — not just the code, but the reasoning that gets you there, so the pattern sticks the next time it shows up in a different disguise.</p>
 <h2>Call To Action</h2>
 <p>If this helped the problem click, subscribe on YouTube so tomorrow's problem shows up in your feed, and subscribe to the Substack for the written breakdown delivered straight to your inbox. Drop a comment with the approach you'd have tried first, and share this with anyone grinding through their interview prep — it helps more than you'd think.</p>
-<hr />
-<h1>SOCIAL MEDIA</h1>
-<h2>LinkedIn Post</h2>
-<p>Here's a problem that looks impossible until you stop thinking about it the "obvious" way.</p>
-<p>LeetCode's Sorted GCD Pair Queries gives you an array and asks for specific positions in the <em>sorted list of all pairwise GCDs</em>. With just 100,000 numbers, that list would have close to 5 billion entries. Building it isn't slow — it's impossible on any reasonable machine.</p>
-<p>The fix is a shift in perspective: instead of asking "what is the GCD of this pair," ask "how many pairs have this GCD?" You count, for each candidate value g, how many numbers are multiples of g — any two of them share g as a common divisor. Subtract off the pairs that actually belong to larger multiples of g, and what remains is the exact count of pairs whose GCD is g. Do this from the largest value down to the smallest, and a prefix sum turns "find the value at index i" into a single binary search.</p>
-<p>This is the same shape used to serve percentiles in analytics dashboards and databases: precompute a distribution once, then answer any query near-instantly. The brute force is O(n²) in time and space. The counting approach is O(M log M), where M is the largest value in the array — a harmonic series sum, not a quadratic blowup.</p>
-<p>The lesson generalizes well beyond this one problem: when direct enumeration explodes, look for a way to count by category instead. It's a pattern worth having in your toolkit for interviews and for production code alike.</p>
-<p>Full breakdown and Python code in the article — link in comments.</p>
-<h2>Twitter/X Thread</h2>
-<p>1/ A LeetCode problem where the "obvious" solution isn't just slow — it's impossible. 100,000 numbers → almost 5 billion pairs. You cannot build that list. Here's how to solve it without ever trying to. 🧵</p>
-<p>2/ The problem: compute the GCD of every pair in an array, sort all those GCDs, then answer queries asking for the value at a given index. Simple to state, brutal to brute-force at scale.</p>
-<p>3/ The trick: never build the pair list. Instead, count how many pairs land on each possible GCD value. Shift from "what's the GCD of this pair" to "how many pairs have this GCD."</p>
-<p>4/ Step 1: tally the input into a frequency array. freq[v] = how many times value v appears. This compresses the whole array into counts.</p>
-<p>5/ Step 2: for every candidate g, sum freq[g] + freq[2g] + freq[3g] + ... to get how many numbers are multiples of g. Any two of them share g as a common divisor.</p>
-<p>6/ That count, call it c, gives you c-choose-2 pairs whose GCD is <em>divisible by</em> g — could be g itself, or 2g, 3g, etc. Not exact yet.</p>
-<p>7/ Step 3: to get pairs whose GCD is <em>exactly</em> g, subtract the already-known exact counts at 2g, 3g, 4g... Go from largest g to smallest, so those values are ready when you need them.</p>
-<p>8/ Step 4: prefix-sum the exact counts. Now "what's the GCD at index i" becomes "find the first g where the running total passes i" — one binary search per query.</p>
-<p>9/ Complexity: brute force is O(n²) time and space, dead on arrival at scale. The sieve is O(M log M) — a harmonic series, not quadratic — plus O(log M) per query.</p>
-<p>10/ The real takeaway: when listing every case explodes, count by category instead. This exact pattern powers percentile lookups in databases and dashboards. Learn it once, reuse it everywhere. Full code + walkthrough in the article.</p>
-<h2>Facebook Post</h2>
-<p>Ever hit a coding problem where the straightforward answer is technically correct but completely impossible to run? That's today's LeetCode deep dive: Sorted GCD Pair Queries. With just 100,000 numbers, you'd need to handle almost 5 billion pairs if you did it the naive way — no computer is finishing that anytime soon.</p>
-<p>The clever fix: instead of computing every pair's GCD, count how many pairs land on each possible GCD value using a simple tally-and-sieve trick, then use prefix sums to answer any query instantly. No giant lists, no wasted memory, just counting smarter.</p>
-<p>Full Python walkthrough (with a quick puzzle you can try yourself) is up now — link in the comments. Perfect if you're prepping for coding interviews or just enjoy a good "wait, that's clever" moment.</p>
-<h2>Reddit Summary</h2>
-<p>Wrote up a walkthrough of LeetCode's Sorted GCD Pair Queries (Hard) since it's a nice example of "brute force is technically correct but literally impossible at scale."</p>
-<p>The naive approach computes every pairwise GCD, sorts them, and indexes into the result. With n=100,000 that's ~5 billion pairs — not happening.</p>
-<p>The working approach never builds the pair list at all. For each candidate GCD value g, count how many array elements are multiples of g (any two of them share g as a common divisor), turn that into a pair count via n-choose-2, then subtract off pairs that actually belong to larger multiples of g (processing from largest g to smallest). What's left is the exact count of pairs whose GCD is g. Prefix-sum those exact counts and each query becomes a single binary search.</p>
-<p>Runs in O(M log M) where M is the max array value (harmonic series sum from the sieve), instead of O(n²). Full code and a dry run are in the writeup if useful.</p>
-<hr />
-<h1>GITHUB README</h1>
-<pre><code class="language-markdown"># Sorted GCD Pair Queries — Python Solution
-
-## Problem
-Given an integer array `nums`, consider the GCD of every pair `(i, j)` with `i &lt; j`.
-Collect all these GCDs into a list and sort it. Given `queries`, an array of
-indices, return the GCD value at each queried index — without ever materializing
-the (potentially billions-large) sorted list.
-
-## Intuition
-Instead of asking &quot;what is the GCD of this pair,&quot; count &quot;how many pairs have
-this GCD.&quot; For a candidate value `g`, count how many array elements are
-multiples of `g` — any two of them share `g` as a common divisor. Convert that
-count into a pair count, then subtract off pairs that actually belong to larger
-multiples of `g` (processing from the largest `g` down to the smallest). What's
-left is the exact count of pairs whose GCD is `g`.
-
-## Approach
-1. **Tally**: build a frequency array over `nums`.
-2. **Sieve**: for each `g`, sum frequencies at multiples of `g` to count numbers
-   divisible by `g` — this is a harmonic-series loop, O(M log M).
-3. **Peel**: from largest `g` to smallest, subtract exact counts at larger
-   multiples of `g` to isolate pairs whose GCD is exactly `g`.
-4. **Prefix sum + binary search**: build a running total over exact counts;
-   answer each query with `bisect_right`.
-
-## Python Solution
-```python
-from bisect import bisect_right
-from typing import List
-
-
-class Solution:
-    def gcdValues(self, nums: List[int], queries: List[int]) -&gt; List[int]:
-        max_val = max(nums)
-
-        freq = [0] * (max_val + 1)
-        for num in nums:
-            freq[num] += 1
-
-        multiples_count = [0] * (max_val + 1)
-        for g in range(1, max_val + 1):
-            for multiple in range(g, max_val + 1, g):
-                multiples_count[g] += freq[multiple]
-
-        exact_pairs = [0] * (max_val + 1)
-        for g in range(max_val, 0, -1):
-            total = multiples_count[g]
-            pairs_divisible_by_g = total * (total - 1) // 2
-            for multiple in range(2 * g, max_val + 1, g):
-                pairs_divisible_by_g -= exact_pairs[multiple]
-            exact_pairs[g] = pairs_divisible_by_g
-
-        prefix = []
-        gcd_values = []
-        running_total = 0
-        for g in range(1, max_val + 1):
-            if exact_pairs[g] &gt; 0:
-                running_total += exact_pairs[g]
-                prefix.append(running_total)
-                gcd_values.append(g)
-
-        return [gcd_values[bisect_right(prefix, q)] for q in queries]
-</code></pre>
-<h2>Complexity</h2>
-<ul>
-<li><strong>Time:</strong> O(M log M + Q log M), where <code>M = max(nums)</code> and <code>Q = len(queries)</code>.</li>
-<li><strong>Space:</strong> O(M).</li>
-<li>Brute force is O(n²) time and space — infeasible once <code>n</code> exceeds a few thousand.</li>
-</ul>
-<h2>Video</h2>
-<p>Full walkthrough: {LINK}</p>
-<h2>Article</h2>
-<p>Complete write-up with dry run, complexity analysis, and edge cases: see the
-accompanying article in this repository / newsletter.
-```</p></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/JVLzC_apwYQ' target='_blank'>▶ Watch on YouTube</a></div>
+<hr /></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/JVLzC_apwYQ' target='_blank'>▶ Watch on YouTube</a></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>

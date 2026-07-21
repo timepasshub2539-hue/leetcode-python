@@ -1,0 +1,216 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Python Basics: Variables, Loops, Lists &amp; Functions Explained Simply — Python LeetCode Solution</title><meta name="description" content="Chapters:
+0:00 Why Learn Python
+0:18 Key Terms, Plain English
+0:40 Variables, the Labeled Box
+1:00 Data Types You Will See
+1:22 Strings, Text You Can Slice
+1:44 Lists, a Row of Boxes
+2:00 If Statement">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-basics-1.html">
+<meta property="og:title" content="Python Basics: Variables, Loops, Lists &amp; Functions Explained Simply — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="Chapters:
+0:00 Why Learn Python
+0:18 Key Terms, Plain English
+0:40 Variables, the Labeled Box
+1:00 Data Types You Will See
+1:22 Strings, Text You Can Slice
+1:44 Lists, a Row of Boxes
+2:00 If Statement"><meta property="og:image" content="https://i.ytimg.com/vi/VnyBhaHk1bA/hqdefault.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Basics: Variables, Loops, Lists &amp; Functions Explained Simply</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/VnyBhaHk1bA' allowfullscreen></iframe></div><article><h2>Introduction</h2>
+<p>Every developer's Python journey starts in the same place: staring at a blinking cursor, wondering why anyone thought <code>print("Hello, World!")</code> was a reasonable first step. But here's the thing — Python earned its spot as the go-to first language for a good reason. It strips away the ceremony that languages like Java or C force on beginners and lets you focus on the actual logic of programming: storing values, making decisions, repeating work, and organizing code into reusable pieces.</p>
+<p>This matters beyond just "learning to code" for its own sake. Every technical interview, every take-home assignment, and every production codebase you'll ever touch is built from these same five ideas: variables, data types, conditionals, loops, and functions. Interviewers rarely ask you to define a variable directly, but they absolutely test whether you understand how data moves through a program — and that understanding starts here. Skipping these fundamentals is like trying to learn a language without learning the alphabet; you might memorize a few phrases, but you'll never be able to construct a new sentence with confidence.</p>
+<p>By the end of this article, you'll understand not just the syntax, but <em>why</em> Python is built the way it is — and you'll be ready to write small, real scripts of your own.</p>
+<h2>Problem Overview</h2>
+<p>The "problem" here isn't a single coding challenge — it's a conceptual gap. Beginners often learn Python syntax by copying examples without understanding what's actually happening underneath. They know <code>x = 5</code> "works," but they can't explain what a variable really <em>is</em>, why lists start counting at zero, or why <code>if</code> statements care so much about indentation.</p>
+<p>So instead of a LeetCode-style problem, think of this as reverse-engineering a mental model. We need to answer:</p>
+<ul>
+<li>What does it mean to "store" a value in Python?</li>
+<li>How does Python know the difference between text and numbers?</li>
+<li>How do you make a program choose between two paths?</li>
+<li>How do you avoid repeating the same line of code ten times?</li>
+<li>How do you package logic so you can reuse it without retyping it?</li>
+</ul>
+<p>Once you have solid answers to these five questions, everything else in Python — classes, error handling, even machine learning libraries — sits on top of this same foundation.</p>
+<h2>Example</h2>
+<p>Let's ground each concept with a concrete example instead of abstract definitions.</p>
+<pre><code class="language-python">age = 28
+name = &quot;Priya&quot;
+price = 19.99
+is_available = True
+</code></pre>
+<p>Here, <code>age</code> holds a whole number, <code>name</code> holds text, <code>price</code> holds a decimal, and <code>is_available</code> holds a <code>True</code>/<code>False</code> value. Notice we never declared a type — Python figures it out from the value itself.</p>
+<pre><code class="language-python">word = &quot;hello&quot;
+print(word[0])   # h
+</code></pre>
+<p><code>word[0]</code> returns <code>h</code> because Python indexes starting at position <code>0</code>, not <code>1</code>. This is called <strong>zero-based indexing</strong>, and it's one of the most common sources of beginner confusion.</p>
+<pre><code class="language-python">lockers = [10, 20, 30]
+print(lockers[1])   # 20
+</code></pre>
+<p>The list <code>lockers</code> is a sequence of values, each with a position number. <code>lockers[1]</code> gives you the <em>second</em> item, <code>20</code>, because counting starts at <code>0</code>.</p>
+<pre><code class="language-python">temperature = 15
+
+if temperature &lt; 0:
+    print(&quot;Freezing&quot;)
+else:
+    print(&quot;Not freezing&quot;)
+</code></pre>
+<p>This prints <code>Not freezing</code> because <code>15</code> is not less than <code>0</code>, so Python skips the <code>if</code> block and runs the <code>else</code> block instead.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer actually thinks about these concepts — not as rules to memorize, but as physical metaphors that make the syntax predictable.</p>
+<p><strong>Variables are labeled boxes.</strong> When you write <code>age = 28</code>, you're not creating "a number called age" in some abstract sense — you're sticking a label (<code>age</code>) onto a box that contains the value <code>28</code>. The box can later hold a different value; the label is just how you refer to it. This mental model explains why <code>age = 28</code> followed by <code>age = 29</code> doesn't cause an error — you're just putting a new item in the same labeled box.</p>
+<p><strong>Types exist because operations mean different things for different data.</strong> <code>3 + 4</code> gives you <code>7</code>. But <code>"3" + "4"</code> gives you <code>"34"</code> — string concatenation, not addition. Python needs to know the type of a value to know <em>which</em> behavior to use. This is also why <code>"3" + 4</code> throws an error: Python won't guess whether you meant math or text-joining.</p>
+<p><strong>Strings and lists are both sequences, so they share the same indexing logic.</strong> Once you understand that <code>word[0]</code> gets the first character of a string, <code>lockers[0]</code> getting the first item of a list feels obvious — same rule, different container.</p>
+<p><strong>Indentation in <code>if</code> statements isn't cosmetic — it's structural.</strong> Python uses whitespace instead of curly braces to define which lines belong to which block. Once you see indentation as "this is inside that block" rather than "this looks tidy," you stop making the classic beginner mistake of misaligned code that silently changes behavior.</p>
+<p><strong>Loops exist to eliminate repetition.</strong> If you ever find yourself writing the same line five times with only a small change, that's the signal a loop belongs there. A <code>for</code> loop is for "do this to each item in a known collection." A <code>while</code> loop is for "keep doing this until some condition changes" — you don't always know in advance how many times it'll run.</p>
+<p><strong>Functions are for packaging logic you'll reuse.</strong> The moment you copy-paste a block of code into a second place in your script, that's the signal to wrap it in a function instead. It's the same instinct as writing a recipe card once instead of re-explaining the steps every time you cook the dish.</p>
+<p>Once these mental models click, you stop memorizing syntax and start <em>predicting</em> it.</p>
+<h2>Brute Force Solution</h2>
+<p>There isn't a traditional "brute force vs optimal" split here since this isn't an algorithmic problem — but there is a beginner-vs-experienced-engineer split in <em>how</em> people write basic Python, which is worth calling out.</p>
+<p><strong>The brute force approach (common beginner pattern):</strong> writing everything inline with no functions, no reuse, and copy-pasted logic.</p>
+<pre><code class="language-python">print(&quot;Add: &quot;, 3 + 4)
+print(&quot;Add: &quot;, 10 + 20)
+print(&quot;Add: &quot;, 100 + 200)
+</code></pre>
+<p><strong>Advantages:</strong> Works fine for tiny, one-off scripts. Zero abstraction to think about.</p>
+<p><strong>Disadvantages:</strong> As soon as the logic needs to change (say, adding logging, or handling negative numbers), you have to update it in every single place it was copy-pasted. This is the exact pattern that causes bugs to multiply — fix it in one spot, forget the other two.</p>
+<p><strong>Time and space complexity:</strong> Not meaningfully different from the optimal version for such small operations — the real cost here is maintenance, not runtime.</p>
+<h2>Optimal Solution</h2>
+<p>The "optimal" approach uses functions to eliminate repetition and variables/lists to organize state cleanly.</p>
+<pre><code class="language-python">def add(a, b):
+    return a + b
+
+print(add(3, 4))
+print(add(10, 20))
+print(add(100, 200))
+</code></pre>
+<p>Here's what changed conceptually:</p>
+<table>
+<thead>
+<tr>
+<th>Beginner Pattern</th>
+<th>Structured Pattern</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Logic repeated inline</td>
+<td>Logic defined once in a function</td>
+</tr>
+<tr>
+<td>Hard to update</td>
+<td>Update once, affects every call</td>
+</tr>
+<tr>
+<td>No clear "unit" of behavior</td>
+<td><code>add()</code> is a clear, testable unit</td>
+</tr>
+</tbody>
+</table>
+<p>This same principle scales up: a list groups related data, a function groups related behavior, and an <code>if</code>/<code>else</code> block groups related decisions. Structuring code this way is what makes larger programs manageable.</p>
+<h2>Python Code</h2>
+<p>Here's a small, complete script that ties all five concepts together into one coherent program:</p>
+<pre><code class="language-python">def describe_temperature(temperature):
+    &quot;&quot;&quot;Return a human-readable description of a temperature in Celsius.&quot;&quot;&quot;
+    if temperature &lt; 0:
+        return &quot;Freezing&quot;
+    elif temperature &lt; 15:
+        return &quot;Cold&quot;
+    elif temperature &lt; 25:
+        return &quot;Mild&quot;
+    else:
+        return &quot;Hot&quot;
+
+
+def main():
+    readings = [-5, 10, 20, 30]  # a list of temperature readings
+
+    for temperature in readings:
+        description = describe_temperature(temperature)
+        print(f&quot;{temperature}°C is {description}&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    main()
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>def describe_temperature(temperature):</code> defines a reusable function that takes one input, <code>temperature</code>.</li>
+<li>The <code>if</code> / <code>elif</code> / <code>else</code> chain checks the value against ranges in order, top to bottom, and returns as soon as one condition is <code>True</code>.</li>
+<li><code>return</code> sends a value back to whoever called the function — it doesn't print anything itself.</li>
+<li><code>readings = [-5, 10, 20, 30]</code> is a list holding four numbers, each accessible by position (<code>readings[0]</code> is <code>-5</code>).</li>
+<li><code>for temperature in readings:</code> walks through the list one item at a time, temporarily assigning each value to <code>temperature</code>.</li>
+<li>The f-string <code>f"{temperature}°C is {description}"</code> embeds variable values directly into the printed text.</li>
+<li><code>if __name__ == "__main__":</code> is a standard guard that runs <code>main()</code> only when the file is executed directly, not when it's imported elsewhere.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Let's trace through <code>readings = [-5, 10, 20, 30]</code>:</p>
+<ol>
+<li><code>temperature = -5</code> → <code>-5 &lt; 0</code> is <code>True</code> → returns <code>"Freezing"</code> → prints <code>-5°C is Freezing</code></li>
+<li><code>temperature = 10</code> → <code>-5 &lt; 0</code> is <code>False</code>, <code>10 &lt; 15</code> is <code>True</code> → returns <code>"Cold"</code> → prints <code>10°C is Cold</code></li>
+<li><code>temperature = 20</code> → fails first two checks, <code>20 &lt; 25</code> is <code>True</code> → returns <code>"Mild"</code> → prints <code>20°C is Mild</code></li>
+<li><code>temperature = 30</code> → fails all three checks → falls to <code>else</code> → returns <code>"Hot"</code> → prints <code>30°C is Hot</code></li>
+</ol>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time complexity:</strong> O(n), where n is the number of readings in the list. Each item is visited exactly once, and the <code>if</code>/<code>elif</code> check inside is constant time (at most four comparisons regardless of list size).</li>
+<li><strong>Space complexity:</strong> O(1) additional space — we're not creating new data structures proportional to input size, just reusing a couple of variables per iteration.</li>
+</ul>
+<p>These are correct because the loop touches every element exactly once (no nested loops over the same list) and the function itself doesn't allocate memory that grows with input.</p>
+<h2>Alternative Solutions</h2>
+<p>You could replace the <code>if</code>/<code>elif</code> chain with a dictionary lookup for fixed categories, but since our conditions depend on <em>ranges</em> rather than exact values, a dictionary doesn't map cleanly here — dictionaries are ideal for exact-key lookups (like mapping a country code to a country name), not range checks. The <code>if</code>/<code>elif</code> structure is the right tool for this specific job.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty list:</strong> <code>readings = []</code> — the <code>for</code> loop simply doesn't execute, and nothing prints. No error is thrown.</li>
+<li><strong>Boundary values:</strong> <code>temperature = 0</code> — falls into the <code>elif temperature &lt; 15</code> branch, not "Freezing," since <code>0 &lt; 0</code> is <code>False</code>. Always double-check boundary behavior in range-based conditions.</li>
+<li><strong>Negative extreme values:</strong> <code>temperature = -100</code> still correctly returns <code>"Freezing"</code> since it's still less than 0.</li>
+<li><strong>Non-numeric input:</strong> Passing a string like <code>"cold"</code> into <code>describe_temperature</code> would raise a <code>TypeError</code> on the comparison — Python won't silently convert types for you.</li>
+<li><strong>Duplicate values in the list:</strong> <code>[10, 10, 10]</code> is handled identically each time — loops don't care about duplicates, they just process what's there.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Using <code>=</code> instead of <code>==</code>.</strong> <code>if temperature = 0:</code> is a syntax error — <code>=</code> assigns, <code>==</code> compares.</li>
+<li><strong>Forgetting quotes around strings.</strong> Writing <code>name = Priya</code> instead of <code>name = "Priya"</code> makes Python think <code>Priya</code> is a variable name, which causes a <code>NameError</code>.</li>
+<li><strong>Misaligned indentation.</strong> Mixing tabs and spaces, or indenting inconsistently, breaks the logical grouping of <code>if</code>/<code>for</code>/<code>def</code> blocks.</li>
+<li><strong>Off-by-one errors in loops.</strong> Assuming a list of length <code>n</code> has valid indices up to <code>n</code> instead of <code>n - 1</code> causes an <code>IndexError</code>.</li>
+<li><strong>Trying to modify a tuple.</strong> Since tuples are immutable, <code>my_tuple[0] = 5</code> raises a <code>TypeError</code> — use a list if you need to change values later.</li>
+<li><strong>Confusing <code>elif</code> order.</strong> Placing a broader condition before a narrower one (e.g., checking <code>temperature &lt; 100</code> before <code>temperature &lt; 0</code>) means the narrower branch never executes.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What's the difference between a list, a tuple, and a dictionary, and when would you choose each?</li>
+<li>Why does Python use indentation instead of braces, and what problems can that cause?</li>
+<li>What happens if you try to access an index that doesn't exist in a list?</li>
+<li>How does Python decide the type of a variable if you never declare it?</li>
+<li>What's the difference between a <code>for</code> loop and a <code>while</code> loop, and when is each more appropriate?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>FizzBuzz</strong> — reinforces loops and conditionals together, a classic first interview screening question.</li>
+<li><strong>Reverse a String</strong> — builds on string indexing and slicing fundamentals covered here.</li>
+<li><strong>Two Sum</strong> — the natural next step once you're comfortable with lists and functions, introducing dictionaries for fast lookups.</li>
+<li><strong>Valid Parentheses</strong> — extends conditional logic and loops into stack-based thinking.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Variables are labels on values, not containers with fixed types.</li>
+<li>Every value has a type, and types determine which operations are valid.</li>
+<li>Indexing starts at zero — internalize this early to avoid constant off-by-one confusion.</li>
+<li>Indentation in Python is functional, not stylistic — it defines code blocks.</li>
+<li>Loops eliminate repetition; functions eliminate duplicated logic.</li>
+<li>Choosing between lists, tuples, and dictionaries comes down to whether data changes, needs to stay fixed, or needs to be looked up by name.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>If you'd rather see these concepts explained visually with live code, watch the full walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This article is part of the <strong>Daily Python &amp; LeetCode</strong> series, where we break down one Python concept or coding problem each day — from absolute fundamentals like this one to full interview-style algorithm problems. The goal is simple: build real understanding, one small lesson at a time, instead of cramming syntax the night before an interview.</p>
+<h2>Call To Action</h2>
+<p>If this helped clarify Python fundamentals, subscribe on YouTube for daily walkthroughs, and subscribe to the Substack newsletter for the written breakdowns delivered straight to your inbox. Drop a comment with which concept you'd like explained next, and share this with anyone just starting their coding journey.</p>
+<hr /></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/VnyBhaHk1bA' target='_blank'>▶ Watch on YouTube</a></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>

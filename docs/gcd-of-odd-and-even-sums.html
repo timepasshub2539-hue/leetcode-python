@@ -8,24 +8,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>GCD of Odd and Even Sums: Why the Answer Is Always n</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/GrL0d9s8KTM' allowfullscreen></iframe></div><article><h1>SEO PACKAGE</h1>
-<h2>1. SEO Title</h2>
-<p>GCD of Odd and Even Sums in Python: Why the Answer Is Always n (LeetCode Explained)</p>
-<h2>2. SEO Subtitle</h2>
-<p>A step-by-step breakdown of why the GCD of the first n odd numbers and first n even numbers always equals n — with brute force, optimal, and one-line solutions.</p>
-<h2>3. Featured Quote</h2>
-<p>"The best optimizations aren't found in code — they're found on a whiteboard before you write any."</p>
-<h2>4. Meta Description</h2>
-<p>Learn why the GCD of the sum of the first n odd numbers and first n even numbers always equals n. Full Python walkthrough with math, code, and complexity analysis.</p>
-<h2>5. URL Slug</h2>
-<p>gcd-odd-even-sums-python-leetcode</p>
-<h2>6. Keywords</h2>
-<p>GCD Python, greatest common divisor, LeetCode easy, math.gcd, number theory, sum of odd numbers, sum of even numbers, coding interview math, Python algorithms, consecutive integers GCD, arithmetic series formula, LeetCode Python solution, Euclidean algorithm, constant time solution, brute force vs optimal, Daily Python LeetCode, math for coding interviews, algorithm intuition, data structures and algorithms, competitive programming Python</p>
-<h2>7. Tags</h2>
-<p>Python, LeetCode, Coding Interview, Algorithms, Data Structures, Number Theory, Math, GCD, Software Engineering, Problem Solving, Interview Prep, Euclidean Algorithm, Python Tips</p>
-<hr />
-<h1>MAIN ARTICLE</h1>
-<h2>Introduction</h2>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>GCD of Odd and Even Sums: Why the Answer Is Always n</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/GrL0d9s8KTM' allowfullscreen></iframe></div><article><h2>Introduction</h2>
 <p>Every so often you run into a LeetCode problem that looks like it wants you to write a loop and grind through arithmetic — and then you realize the entire problem collapses into a single return statement. GCD of Odd and Even Sums is exactly that kind of problem, and it's a great one to study even though it's labeled "easy," because it tests something interviewers genuinely care about: can you spot structure in a problem before you start coding?</p>
 <p>This problem combines two ideas that show up constantly in technical interviews — closed-form summation formulas and the greatest common divisor — and asks you to notice that they interact in a very specific way. If you brute-force it, you'll get the right answer. If you take thirty seconds to think about the structure first, you'll realize you never needed to compute anything at all. That gap between "working solution" and "understood solution" is exactly what separates a junior engineer from a senior one in an interview room, and it's worth internalizing here.</p>
 <h2>Problem Overview</h2>
@@ -204,88 +187,6 @@ def gcd_of_odd_even_sums(n: int) -&gt; int:
 <p>This post is part of the Daily Python LeetCode series, where one problem gets fully unpacked every day — the brute force, the optimal approach, and the reasoning that connects them. The goal isn't just passing test cases, it's building the pattern-recognition instincts that make future problems easier.</p>
 <h2>Call To Action</h2>
 <p>If this breakdown helped, subscribe on YouTube for the daily video walkthroughs and subscribe to the Substack newsletter for the written version with extra detail. Drop a comment with which problem you'd like covered next, and share this with anyone prepping for interviews.</p>
-<hr />
-<h1>SOCIAL MEDIA</h1>
-<h2>LinkedIn Post</h2>
-<p>Here's a LeetCode problem that looks like it needs a loop and a GCD calculation — but actually needs neither.</p>
-<p>The problem: sum the first n odd numbers, sum the first n even numbers, return their GCD.</p>
-<p>Most people simulate it directly: loop, add, loop, add, call math.gcd. That works and runs in O(n) time. But there's a cleaner path.</p>
-<p>Using the classic formulas — sum of first n odd numbers = n², sum of first n even numbers = n(n+1) — you can see that the even sum is always exactly n more than the odd sum. That single observation lets you factor n out of both terms, reducing the problem to gcd(n, n+1). And consecutive integers never share a factor greater than 1.</p>
-<p>The result: the answer is always just n. No sums, no GCD call, no loop — O(1) time and space.</p>
-<p>This is a good reminder that "easy" problems are often testing something other than syntax. They're testing whether you pause to look for structure before you start writing code. The fastest solution here wasn't found by optimizing the loop — it was found by not needing the loop at all.</p>
-<p>Full breakdown (brute force, formula-based, and fully simplified versions with complexity analysis) linked in the comments.</p>
-<h1>Python #LeetCode #CodingInterview #Algorithms #SoftwareEngineering</h1>
-<h2>Twitter/X Thread</h2>
-<p>1/ A LeetCode "easy" problem that teaches a genuinely useful lesson: sometimes the fastest code is the code you never write. Let's break down GCD of Odd and Even Sums. 🧵</p>
-<p>2/ The setup: sum the first n odd numbers (sumOdd), sum the first n even numbers (sumEven), return gcd(sumOdd, sumEven).</p>
-<p>3/ Obvious approach: loop through both sequences, add them up, call math.gcd. Works fine. O(n) time. But let's dig deeper.</p>
-<p>4/ Two classic formulas save us the loop entirely:
-sum of first n odd numbers = n²
-sum of first n even numbers = n(n+1)</p>
-<p>5/ Now notice: n(n+1) = n² + n. So sumEven is always exactly sumOdd + n. That's the whole ballgame.</p>
-<p>6/ gcd(n², n² + n) = gcd(n², n(n+1)) = n · gcd(n, n+1) — factoring n out of both terms.</p>
-<p>7/ And gcd(n, n+1) is ALWAYS 1, because consecutive integers can never share a factor greater than 1 (any common divisor would have to divide their difference, which is 1).</p>
-<p>8/ So the whole expression collapses to n · 1 = n. The answer is just the input. Always.</p>
-<p>9/ Which means the "optimal" solution is: <code>def solve(n): return n</code>. O(1) time, O(1) space, zero computation.</p>
-<p>10/ The real skill here isn't GCD or Python — it's pausing before you loop to ask "does this have a closed form?" That instinct is worth more than any specific algorithm. Full writeup + video walkthrough linked below.</p>
-<h2>Facebook Post</h2>
-<p>Ever solve a coding problem where the "answer" turns out to be way simpler than the question made it sound? That happened with today's problem: find the GCD of the sum of the first n odd numbers and the sum of the first n even numbers.</p>
-<p>Turns out, no matter what n is, the answer is just... n. Once you see why (spoiler: it comes down to the fact that two consecutive numbers never share a common factor), the whole problem turns into a one-line function. Full walkthrough with the math and the Python code is up now — great one if you enjoy those "wait, that's it?" moments in problem solving.</p>
-<h2>Reddit Summary</h2>
-<p>Working through LeetCode's "GCD of Odd and Even Sums" and it's a nice example of a problem where the brute force and the optimal solution differ by an entire order of magnitude in code volume, not just runtime.</p>
-<p>Setup: sumOdd = sum of first n odd numbers, sumEven = sum of first n even numbers, return gcd(sumOdd, sumEven).</p>
-<p>Using sum of first n odds = n² and sum of first n evens = n(n+1), you get sumEven = sumOdd + n. Factor n out of gcd(n², n²+n) and you're left with gcd(n, n+1), which is always 1 since consecutive integers share no common factor &gt; 1. So the whole thing reduces to just n.</p>
-<p>Brute force is O(n) with two loops and a real GCD call. The reduced version is O(1) — literally <code>return n</code>. Wrote up the full derivation plus complexity comparison if anyone wants the details, but wanted to share the core insight here since it's a good one for pattern-recognition practice.</p>
-<hr />
-<h1>GITHUB README</h1>
-<pre><code class="language-markdown"># GCD of Odd and Even Sums
-
-## Problem
-Given a positive integer `n`, let `sumOdd` be the sum of the first `n` odd
-positive integers and `sumEven` be the sum of the first `n` even positive
-integers. Return `gcd(sumOdd, sumEven)`.
-
-## Intuition
-Using the identities `sumOdd = n²` and `sumEven = n(n+1)`, note that
-`sumEven = sumOdd + n`. This lets us factor `n` out of the GCD:
-
-    gcd(n², n² + n) = n * gcd(n, n + 1)
-
-Since `n` and `n + 1` are consecutive integers, `gcd(n, n + 1)` is always 1.
-So the answer always simplifies to `n`.
-
-## Approach
-1. Brute force: loop-build both sums, call `math.gcd`. O(n) time.
-2. Formula-based: use `n**2` and `n*(n+1)`, call `math.gcd`. O(1) time (GCD
-   step is effectively constant for these bounds).
-3. Optimal: skip computation entirely, return `n`. O(1) time, O(1) space.
-
-## Python Solution
-\`\`\`python
-import math
-
-def gcd_of_odd_even_sums(n: int) -&gt; int:
-    return n  # proven: gcd(sumOdd, sumEven) == n for all n &gt;= 1
-
-def gcd_of_odd_even_sums_formula(n: int) -&gt; int:
-    return math.gcd(n ** 2, n * (n + 1))
-\`\`\`
-
-## Complexity
-| Approach     | Time | Space |
-|--------------|------|-------|
-| Brute force  | O(n) | O(1)  |
-| Formula+gcd  | O(1)* | O(1) |
-| Optimal      | O(1) | O(1)  |
-
-\*bounded by Euclidean algorithm steps, negligible for the given constraints.
-
-## Video
-Full walkthrough: {LINK}
-
-## Article
-Full written breakdown with dry runs, edge cases, and interview follow-ups
-is part of the Daily Python LeetCode series.
-</code></pre></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/GrL0d9s8KTM' target='_blank'>▶ Watch on YouTube</a></div>
+<hr /></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/GrL0d9s8KTM' target='_blank'>▶ Watch on YouTube</a></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>
