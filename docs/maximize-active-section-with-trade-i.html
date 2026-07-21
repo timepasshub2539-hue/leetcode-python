@@ -1,0 +1,302 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Why the O(n) Segment Trick Beats Brute Force — Maximize Active Section with Trade I LeetCode Python Solution — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://timepasshub2539-hue.github.io/leetcode-python/maximize-active-section-with-trade-i.html
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/m">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/maximize-active-section-with-trade-i.html">
+<meta property="og:title" content="Why the O(n) Segment Trick Beats Brute Force — Maximize Active Section with Trade I LeetCode Python Solution — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://timepasshub2539-hue.github.io/leetcode-python/maximize-active-section-with-trade-i.html
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/m">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Why the O(n) Segment Trick Beats Brute Force — Maximize Active Section with Trade I LeetCode Python Solution</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h1>SEO PACKAGE</h1>
+<h3>1. SEO Title</h3>
+<p>Maximize Active Section With Trade I — O(n) Python Solution (LeetCode Explained)</p>
+<h3>2. SEO Subtitle</h3>
+<p>Learn how a single pass over run-lengths beats brute-force simulation for LeetCode's "Maximize Active Section with Trade I."</p>
+<h3>3. Featured Quote</h3>
+<p>"Whatever you erase, you rebuild — the only real gain is the bread around the sandwich."</p>
+<h3>4. Meta Description</h3>
+<p>Solve LeetCode's Maximize Active Section with Trade I in O(n) using run-length encoding in Python. Full intuition, code, dry run, and edge cases.</p>
+<h3>5. URL Slug</h3>
+<p>maximize-active-section-trade-i-python-on</p>
+<h3>6. Keywords</h3>
+<p>LeetCode Python, Maximize Active Section with Trade I, binary string interview question, run-length encoding Python, groupby itertools, O(n) string algorithm, coding interview algorithms, prefix sum vs run length, brute force vs optimal, Daily Python LeetCode, string manipulation interview, data structures and algorithms, Google coding interview, Amazon coding interview, greedy algorithm string, segment scoring technique, binary string problems, Python interview prep, LeetCode string problems, algorithm complexity analysis</p>
+<h3>7. Tags</h3>
+<p>Python, LeetCode, Coding Interview, Algorithms, Data Structures, Software Engineering, String Manipulation, itertools, Interview Prep, DSA, Problem Solving, Big O Notation, Daily Python LeetCode</p>
+<hr />
+<h1>MAIN ARTICLE</h1>
+<h2>Introduction</h2>
+<p>Binary string problems show up constantly in coding interviews because they look deceptively simple — a string of 0s and 1s — while quietly testing whether you can spot structure instead of reaching for brute force. "Maximize Active Section with Trade I" is a great example. On the surface it asks you to simulate a single swap operation. Underneath, it's really testing whether you understand run-length thinking: the idea that consecutive repeated characters can be collapsed into a handful of numbers, and that most "simulate every possibility" problems secretly reduce to a single arithmetic pass.</p>
+<p>This pattern isn't just an interview trick. The same idea — grouping runs of identical values and reasoning about their boundaries — powers things like free-space coalescing in memory allocators, run-length encoding in image compression, and disk block management. Learning to recognize it here will help you recognize it again in a dozen other problems.</p>
+<p>By the end of this article, you'll understand why the brute-force approach breaks down at scale, how to reframe the problem in terms of "runs" instead of individual characters, and how to write a clean O(n) Python solution that never even needs to touch the actual string.</p>
+<h2>Problem Overview</h2>
+<p>You're given a binary string <code>s</code> made up only of <code>'0'</code> and <code>'1'</code> characters. Think of <code>'1'</code> as "active" and <code>'0'</code> as "inactive."</p>
+<p>You may perform <strong>exactly one operation</strong>: choose a maximal group of consecutive <code>1</code>s that is directly bordered by a <code>0</code> on both sides (a group that is "boxed in"), erase it, and then fill the entire span — the erased <code>1</code>s and both bordering <code>0</code>s — with <code>1</code>s.</p>
+<p>Your task is to return the <strong>maximum number of active (<code>1</code>) positions</strong> achievable after performing this operation at most once. If no valid group exists, the answer is simply the count of <code>1</code>s already in the string.</p>
+<h2>Example</h2>
+<p>Take <code>s = "1000100"</code>.</p>
+<ul>
+<li>Original active count: 2 (the two <code>1</code>s).</li>
+<li>There's a group of <code>1</code>s in the middle (<code>"1000100"</code> → index 4), boxed in by three <code>0</code>s on the left and two <code>0</code>s on the right.</li>
+<li>Trading it: erase that group, fill the whole span (both zero-runs plus the middle <code>1</code>) with <code>1</code>s.</li>
+<li>Result: <code>"1111111"</code> → 7 active positions.</li>
+</ul>
+<p>Second example: <code>s = "0100"</code>.</p>
+<ul>
+<li>Original active count: 1.</li>
+<li>The single <code>1</code> at index 1 is boxed in by one <code>0</code> on the left and two <code>0</code>s on the right.</li>
+<li>Trade it: the whole span becomes <code>1</code>s → <code>"1111"</code> → 4 active positions.</li>
+</ul>
+<p>Every output makes sense once you realize the operation doesn't really "erase and refill" — it just merges a <code>1</code>-block with its two neighboring <code>0</code>-blocks into one long run of <code>1</code>s.</p>
+<h2>Intuition</h2>
+<p>Here's the mental shortcut that unlocks this problem: <strong>the block of <code>1</code>s you erase gets turned right back into <code>1</code>s by the same operation.</strong> It cancels itself out completely. Nothing about that middle block changes the final count.</p>
+<p>So what actually changes? Only the <code>0</code>s immediately to the left and right of that block — those flip from inactive to active. That's the entire gain.</p>
+<p>Picture it as a sandwich: the <code>1</code>-block is the filling, and the <code>0</code>-runs on either side are the bread. Trading turns the bread into filling too. Your gain from any single trade is just <strong>(size of left zero-run) + (size of right zero-run)</strong>.</p>
+<p>Once you see that, the problem stops being about strings and starts being about <strong>runs</strong>. Instead of reading the string character by character, group it into runs of consecutive identical characters (<code>"1000100"</code> → <code>1</code>, <code>000</code>, <code>1</code>, <code>00</code>). Now you just need the biggest sum of two adjacent zero-runs sandwiching a one-run, added to your starting count of <code>1</code>s.</p>
+<p>To avoid special-casing the very first and last runs (what if a <code>1</code>-block sits right at the edge with no bordering <code>0</code> on one side?), pad the string with a <code>'1'</code> sentinel on each end before computing runs. That guarantees every real run has neighbors on both sides, and it can never accidentally qualify as a "boxed in" candidate itself since it's part of the padding.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> For every maximal <code>1</code>-block that has <code>0</code>s on both sides, actually perform the swap — build the new string, count the <code>1</code>s, and track the best result.</p>
+<p><strong>Algorithm:</strong>
+1. Scan the string to find every boxed-in <code>1</code>-group.
+2. For each candidate, construct the resulting string (or simulate the count directly).
+3. Track the maximum active count seen.</p>
+<p><strong>Advantages:</strong> Simple to reason about, easy to verify by hand, useful as a first correct answer in an interview to show you understand the problem before optimizing.</p>
+<p><strong>Disadvantages:</strong> Recomputing or rescanning for every candidate group is wasteful — each candidate potentially costs O(n) work, and there can be O(n) candidates.</p>
+<p><strong>Complexity:</strong> O(n²) time in the worst case (many candidate groups, each requiring an O(n) rescan), O(n) space for the working string.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach never rewrites the string at all — it only counts.</p>
+<ol>
+<li><strong>Pad the string</strong> with a <code>'1'</code> on each end. This guarantees the first and last runs are always padding, never real candidates, and removes all edge-case branching.</li>
+<li><strong>Run-length encode</strong> the padded string using <code>itertools.groupby</code>, producing pairs like <code>('1', 1), ('0', 3), ('1', 1), ('0', 2), ('1', 1)</code>.</li>
+<li><strong>Record the baseline</strong>: count of <code>1</code>s in the <em>original, unpadded</em> string.</li>
+<li><strong>Walk the runs, skipping the first and last</strong> (the sentinels). For every run of <code>1</code>s, its gain is <code>(previous run length) + (next run length)</code>, since neighboring runs are guaranteed to be <code>0</code>-runs.</li>
+<li><strong>Track the maximum gain</strong> across all interior <code>1</code>-runs.</li>
+<li><strong>Answer</strong> = baseline <code>1</code>-count + best gain (0 if no valid <code>1</code>-run exists).</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Run</th>
+<th>Type</th>
+<th>Length</th>
+<th>Gain if traded</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>pad</td>
+<td><code>1</code></td>
+<td>1</td>
+<td>— (sentinel)</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>0</code></td>
+<td>3</td>
+<td>—</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>1</code></td>
+<td>1</td>
+<td>3 + 2 = 5</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>0</code></td>
+<td>2</td>
+<td>—</td>
+</tr>
+<tr>
+<td>pad</td>
+<td><code>1</code></td>
+<td>1</td>
+<td>— (sentinel)</td>
+</tr>
+</tbody>
+</table>
+<p>For <code>"1000100"</code>: baseline = 2, best gain = 5, answer = 7. ✓</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from itertools import groupby
+
+
+def max_active_section(s: str) -&gt; int:
+    &quot;&quot;&quot;Return the max active (1) count after at most one boxed-in trade.&quot;&quot;&quot;
+    baseline_ones = s.count(&quot;1&quot;)
+
+    padded = &quot;1&quot; + s + &quot;1&quot;
+    runs = [(char, len(list(group))) for char, group in groupby(padded)]
+
+    best_gain = 0
+    for i in range(1, len(runs) - 1):  # skip sentinel runs at both ends
+        char, length = runs[i]
+        if char == &quot;1&quot;:
+            left_zeros = runs[i - 1][1]
+            right_zeros = runs[i + 1][1]
+            best_gain = max(best_gain, left_zeros + right_zeros)
+
+    return baseline_ones + best_gain
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>s.count("1")</code> grabs the starting active count from the <strong>original</strong> string, before padding — the padding is only a scanning convenience, it shouldn't count toward the answer.</li>
+<li><code>padded = "1" + s + "1"</code> adds sentinel bumpers so every real <code>1</code>-run has a bordering run on each side, eliminating edge-case checks.</li>
+<li><code>groupby(padded)</code> streams through the string and groups consecutive identical characters; wrapping each group in <code>list(group)</code> gives us its length.</li>
+<li>The loop bounds <code>range(1, len(runs) - 1)</code> explicitly skip the first and last runs, which are always the sentinel <code>1</code>s.</li>
+<li>Inside the loop, we only care about <code>1</code>-runs, since only trading a <code>1</code>-block produces a gain. Its neighbors are guaranteed to be <code>0</code>-runs (runs alternate by construction).</li>
+<li><code>best_gain</code> tracks the single largest sandwich found; the string itself is never mutated.</li>
+</ul>
+<h2>Dry Run</h2>
+<p><code>s = "00100"</code></p>
+<ol>
+<li><code>baseline_ones = 1</code>.</li>
+<li><code>padded = "1001001"</code> — wait, let's be precise: <code>"1" + "00100" + "1" = "1001001"</code>.</li>
+<li>Runs: <code>('1',1), ('0',2), ('1',1), ('0',2), ('1',1)</code>.</li>
+<li>Skip index 0 and index 4 (sentinels).</li>
+<li>Index 1: <code>('0',2)</code> — not a <code>1</code>-run, skip.</li>
+<li>Index 2: <code>('1',1)</code> — left neighbor <code>('0',2)</code> = 2, right neighbor <code>('0',2)</code> = 2 → gain = 4. <code>best_gain = 4</code>.</li>
+<li>Index 3: <code>('0',2)</code> — skip.</li>
+<li>Answer = <code>1 + 4 = 5</code>.</li>
+</ol>
+<p>Matches the expected result: <code>"00100"</code> → trade the middle <code>1</code> → <code>"11111"</code> → 5.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> O(n). <code>s.count("1")</code> is O(n), padding is O(n), <code>groupby</code> is a single linear pass producing O(n) total run elements, and the loop over runs is bounded by the number of runs, which is at most O(n). All steps are linear and sequential, so total time is O(n).</li>
+<li><strong>Space:</strong> O(n) in the worst case for the <code>runs</code> list (e.g., an alternating string like <code>"010101..."</code> produces O(n) runs), though in practice it's O(number of runs), which is often much smaller than n.</li>
+<li><strong>Why correct:</strong> Every possible trade's gain is fully determined by its two adjacent zero-run lengths, since the <code>1</code>-block being traded contributes zero net change. Taking the max over all interior <code>1</code>-runs finds the best possible trade in one pass, and the padding guarantees no valid candidate is missed or double-counted at the boundaries.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p><strong>Prefix sum approach:</strong> Precompute, for every index, how many consecutive <code>0</code>s extend to the left and to the right. Then for each <code>1</code>-block, look up the boundary values in O(1). This achieves the same O(n) time complexity but requires maintaining two additional O(n) arrays instead of one compact runs list. It's a reasonable alternative, but for this problem the run-length approach is simpler to implement and easier to reason about — there's no strong reason to prefer prefix sums unless you're already building them for another part of a larger solution.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>All zeros</strong> (<code>"0000"</code>): no <code>1</code>-run exists at all, <code>best_gain</code> stays 0, answer is 0.</li>
+<li><strong>All ones</strong> (<code>"1111"</code>): every run is <code>1</code>, but a <code>1</code>-run adjacent to another <code>1</code>-run (not <code>0</code>) never happens after <code>groupby</code>, and there are no <code>0</code>-runs to sandwich against — <code>best_gain</code> stays 0, answer equals the original count.</li>
+<li><strong>Single character</strong> (<code>"0"</code> or <code>"1"</code>): padding produces <code>"101"</code> or <code>"111"</code>; no interior boxed-in group exists, answer is the original count.</li>
+<li><strong>Empty string</strong>: <code>s.count("1")</code> is 0, padded string is <code>"11"</code>, runs are just the two sentinels, no interior runs to check, answer is 0.</li>
+<li><strong>Multiple candidate <code>1</code>-blocks of equal gain</strong>: <code>max()</code> naturally picks any one of them since we only need the best value, not which block produced it.</li>
+<li><strong><code>1</code>-block touching the true edge of the original string</strong> (e.g., <code>"100"</code>): after padding, this block is no longer adjacent to the sentinel directly — it still has a real <code>0</code>-run neighbor on one side and the sentinel on the other, correctly treated as boxed in.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting to pad the string</strong>, leading to index-out-of-range errors or incorrect special-casing for <code>1</code>-blocks that touch the actual start or end of <code>s</code>.</li>
+<li><strong>Counting <code>1</code>s from the padded string instead of the original</strong>, which inflates the baseline by 2.</li>
+<li><strong>Failing to skip the sentinel runs</strong> in the loop, which can incorrectly treat the padding itself as a candidate.</li>
+<li><strong>Actually rewriting the string for each candidate</strong> (brute-force habit) instead of just tracking run lengths, turning an O(n) solution into O(n²).</li>
+<li><strong>Assuming every <code>1</code>-run has two <code>0</code>-run neighbors without the padding trick</strong>, which breaks for <code>1</code>-blocks at the true start or end of the string.</li>
+<li><strong>Confusing "boxed in" with "any <code>1</code>-run"</strong> — a <code>1</code>-run adjacent to another <code>1</code>-run can't happen after run-length encoding, but forgetting this alternation can lead to redundant checks.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you extend this to allow <strong>k trades</strong> instead of exactly one?</li>
+<li>What if the string could contain characters other than <code>'0'</code> and <code>'1'</code>?</li>
+<li>Can you solve this without <code>itertools.groupby</code>, using manual index tracking?</li>
+<li>How would the prefix-sum variant change if the input string could be updated dynamically (point updates)?</li>
+<li>What's the maximum possible answer, and can you prove your solution never overcounts?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 485 — Max Consecutive Ones:</strong> foundational run-counting on binary strings.</li>
+<li><strong>LeetCode 763 — Partition Labels:</strong> another problem solved by tracking boundaries of grouped runs.</li>
+<li><strong>LeetCode 2760 — Longest Even Odd Subarray With Threshold:</strong> practice reasoning about contiguous run boundaries.</li>
+<li><strong>LeetCode 1446 — Consecutive Characters:</strong> direct run-length encoding practice.</li>
+<li><strong>LeetCode 838 — Push Dominoes:</strong> another "segment and simulate boundaries" style problem.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Whenever a problem asks you to simulate an operation on a string of repeated values, ask whether the operation actually changes anything in the middle, or only at the boundaries. Collapsing a string into runs turns an O(n²) simulation into a single O(n) pass. The padding trick — adding sentinel values at both ends — is a reusable habit that eliminates an entire category of edge-case bugs, not just in this problem but anywhere you're scanning for boundaries.</p>
+<h2>Watch the Video</h2>
+<p>For the full step-by-step walkthrough with visual tracing on <code>"1000100"</code>, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of the <strong>Daily Python LeetCode</strong> series, where each problem gets a complete treatment: brute force, optimized solution, complexity analysis, and the interview reasoning behind every step — all in clean, production-quality Python.</p>
+<h2>Call To Action</h2>
+<p>If this helped the idea click, subscribe on YouTube for the daily walkthroughs, subscribe to the Substack for the full written breakdowns, and drop a comment with which part clicked (or didn't) for you. Sharing this with someone prepping for interviews helps more than you'd think.</p>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h3>LinkedIn Post</h3>
+<p>Most engineers' first instinct on "Maximize Active Section with Trade I" is to simulate the swap on every candidate block. It works — until the string hits 100,000 characters and that O(n²) approach grinds to a halt.</p>
+<p>The unlock is realizing the operation doesn't actually change what you erase. A block of <code>1</code>s that gets erased is immediately rebuilt as <code>1</code>s — it's a wash. The only real gain comes from the <code>0</code>s bordering it on each side, which flip to active.</p>
+<p>Once you see that, the whole problem collapses: pad the string with sentinel <code>1</code>s to kill edge cases, run-length encode it, and take the max sum of two adjacent zero-runs around any <code>1</code>-block. One pass, O(n), done.</p>
+<p>This pattern — grouping repeated values into runs and reasoning about their boundaries — isn't just an interview trick. It's the same idea behind free-space coalescing in memory allocators and run-length compression in image formats.</p>
+<p>Full breakdown with code, dry run, and edge cases in the comments/link. Always happy to hear how others approached this one.</p>
+<h1>Python #LeetCode #CodingInterview #Algorithms #DataStructures</h1>
+<h3>Twitter/X Thread</h3>
+<p>1/ "1000100" has 2 active bits. One legal move later, it has 7. No magic — just one clean trick. Thread on LeetCode's "Maximize Active Section with Trade I" 🧵</p>
+<p>2/ The move: find a group of 1s boxed in by 0s on both sides, erase it, refill the whole span with 1s. Brute force tries this on every candidate. Works, but it's O(n²).</p>
+<p>3/ Here's the insight that kills the brute force: whatever block of 1s you erase gets turned right back into 1s. It's a wash. Nothing changes there.</p>
+<p>4/ So what actually changes? Only the 0s bordering that block. Those flip to 1s. That's the ENTIRE gain from any trade.</p>
+<p>5/ Think sandwich: the 1-block is the filling, the bordering 0-runs are the bread. Trading turns bread into filling. Gain = size of the bread.</p>
+<p>6/ Now reframe the whole string as "runs" instead of characters: "1000100" → runs of 1, 000, 1, 00. Suddenly you're doing arithmetic on a handful of numbers, not scanning repeatedly.</p>
+<p>7/ One more trick: pad the string with a '1' sentinel on each end first. Now every real block has neighbors on both sides — zero edge-case branching needed.</p>
+<p>8/ The algorithm: run-length encode the padded string, skip the two sentinel runs, and for every interior 1-run take (left zero-run + right zero-run). Track the max.</p>
+<p>9/ Answer = original 1-count + best gain. Never rewrite the string — just count. That's O(n) time, one pass, done.</p>
+<p>10/ Full code + dry run + edge cases in the article/video. If you've hit this problem, what was your first instinct — brute force or straight to runs? {LINK}</p>
+<h3>Facebook Post</h3>
+<p>Ever notice how some coding problems look way scarier than they actually are? Today's one: you've got a string of 0s and 1s, and you're allowed one move — find a group of "on" switches boxed in by "off" switches, and flip the whole boxed-in area to "on."</p>
+<p>Turns out you don't need to simulate anything to solve it fast. The trick is realizing the group you erase gets rebuilt anyway, so the only real gain is from the switches sitting right next to it. Group the string into "runs" (streaks of the same value), and the answer falls out in one pass.</p>
+<p>Full walkthrough with Python code and a practice example in the link — good one if you're brushing up for interviews. {LINK}</p>
+<h3>Reddit Summary</h3>
+<p>Worked through LeetCode's "Maximize Active Section with Trade I" — sharing the approach since the brute force vs. optimal gap here is a nice teaching example.</p>
+<p>The operation: erase a <code>1</code>-block that's boxed in by <code>0</code>s on both sides, then fill that whole span with <code>1</code>s. Naive approach simulates this for every candidate block — O(n²), falls over at n=1e5.</p>
+<p>Key realization: the block you erase gets rebuilt as <code>1</code>s regardless, so it contributes zero net change. The only actual gain comes from the <code>0</code>-runs immediately bordering it. So the problem reduces to: pad the string with <code>1</code> sentinels (kills edge cases), run-length encode it with <code>itertools.groupby</code>, and take the max of (left zero-run + right zero-run) over every interior <code>1</code>-run. Add that to your baseline <code>1</code>-count. O(n) time, no string mutation.</p>
+<p>There's also a prefix-sum variant (precompute left/right zero-run lengths per index) that's the same complexity class but needs two extra arrays instead of one runs list — runs felt like less code for the same result.</p>
+<p>Happy to discuss alternative approaches or edge cases people ran into.</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># Maximize Active Section with Trade I — Python Solution
+
+## Problem
+Given a binary string `s`, you may perform exactly one operation: erase a
+maximal group of `1`s that is bordered by `0`s on both sides, then fill the
+entire span (the erased `1`s and both bordering `0`s) with `1`s. Return the
+maximum number of active (`1`) positions achievable.
+
+## Intuition
+The block of `1`s you erase gets rebuilt as `1`s regardless — it contributes
+zero net change. The only real gain comes from the `0`-runs bordering it,
+which flip to active. So the problem reduces to finding the `1`-block whose
+two adjacent zero-runs sum to the largest value.
+
+## Approach
+1. Pad `s` with a `'1'` sentinel on each end to remove edge-case branching.
+2. Run-length encode the padded string with `itertools.groupby`.
+3. Skip the two sentinel runs; for every interior `1`-run, compute
+   `left_zero_run + right_zero_run`.
+4. Track the maximum gain, add it to the original `1`-count.
+
+## Python Solution
+\`\`\`python
+from itertools import groupby
+
+
+def max_active_section(s: str) -&gt; int:
+    baseline_ones = s.count(&quot;1&quot;)
+
+    padded = &quot;1&quot; + s + &quot;1&quot;
+    runs = [(char, len(list(group))) for char, group in groupby(padded)]
+
+    best_gain = 0
+    for i in range(1, len(runs) - 1):
+        char, length = runs[i]
+        if char == &quot;1&quot;:
+            left_zeros = runs[i - 1][1]
+            right_zeros = runs[i + 1][1]
+            best_gain = max(best_gain, left_zeros + right_zeros)
+
+    return baseline_ones + best_gain
+\`\`\`
+
+## Complexity
+- **Time:** O(n) — one pass to count, one pass to run-length encode, one
+  pass over the runs.
+- **Space:** O(n) worst case for the runs list (bounded by number of runs).
+
+## Video
+Full walkthrough with dry run and edge cases: {LINK}
+
+## Article
+Complete written breakdown: see the linked Substack article for intuition,
+brute force comparison, dry run, and interview follow-ups.
+</code></pre></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>What pattern turns two separate 1-blocks into one big block?</summary><p>Sandwich swap: flip a 0-gap between two 1-blocks (or an edge 0-run) to merge them into one contiguous run.</p></details><details class='card2'><summary>Time complexity of the optimal sandwich-swap approach?</summary><p>O(n) — one pass to split into runs, one pass to check adjacent run triples.</p></details><details class='card2'><summary>Space complexity of the run-length approach?</summary><p>O(n) worst case for the list of run lengths (or O(1) if scanning with rolling pointers instead of storing all runs).</p></details><details class='card2'><summary>Trickiest edge case in this problem?</summary><p>A 0-run touching the array boundary (no 1-block on one side) — must handle it as a one-sided merge, not a full sandwich.</p></details><details class='card2'><summary>Brute force vs optimal: what&#x27;s the key insight that avoids simulation?</summary><p>Brute force tries every possible k-swap; optimal just breaks the string into runs and evaluates merges of adjacent runs directly, no simulation needed.</p></details><details class='card2'><summary>Interview follow-up: why break the string into runs first?</summary><p>Runs reduce the problem to comparing a few adjacent group lengths instead of scanning bit-by-bit for every possible swap position.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
