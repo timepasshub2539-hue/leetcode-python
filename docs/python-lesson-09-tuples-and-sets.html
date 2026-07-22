@@ -1,0 +1,211 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 9: Tuples and Sets — Why Does Python Have THREE Ways to Store a List? — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-09-tuples-and-sets.html
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-09-tuples-and-sets.html">
+<meta property="og:title" content="Lesson 9: Tuples and Sets — Why Does Python Have THREE Ways to Store a List? — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-09-tuples-and-sets.html
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson 9: Tuples and Sets — Why Does Python Have THREE Ways to Store a List?</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every Python interview eventually circles back to one deceptively simple question: "Why didn't you use a set here instead of a list?" It sounds like a style nitpick, but it isn't. Picking the wrong container doesn't just make your code look less polished — it can silently produce wrong results or quietly tank your program's performance as the input grows.</p>
+<p>This is the kind of thing interviewers test because it separates someone who can make code <em>work</em> from someone who understands <em>why</em> it works. Lists, tuples, and sets all hold groups of values, but they encode three completely different promises about that data: can it change, does order matter, and are duplicates allowed. Once you internalize those three questions, choosing the right structure becomes automatic instead of something you second-guess mid-interview.</p>
+<p>We'll rebuild tuples and sets from the ground up — creation, unpacking, the operations that make each one shine — and dig into a bug that trips up almost every beginner at least once: trying to put a list inside a set.</p>
+<h2>Problem Overview</h2>
+<p>Python gives you three built-in ways to store a collection of items: <code>list</code>, <code>tuple</code>, and <code>set</code>. On the surface they look interchangeable — all three can hold multiple values, all three can be looped over, all three support things like <code>len()</code>. But underneath, each one makes a different trade-off:</p>
+<ul>
+<li><strong>List</strong> — ordered, changeable (mutable), duplicates allowed.</li>
+<li><strong>Tuple</strong> — ordered, unchangeable (immutable), duplicates allowed.</li>
+<li><strong>Set</strong> — unordered, changeable, duplicates automatically removed.</li>
+</ul>
+<p>The task isn't to memorize these three bullet points — it's to understand <em>why</em> those trade-offs exist and how to recognize, from the shape of your data, which one you actually need.</p>
+<h2>Example</h2>
+<p>Suppose you're modeling a single point on a map:</p>
+<pre><code class="language-python">point = (40.7128, -74.0060)  # tuple: a fixed coordinate pair
+</code></pre>
+<p>This never needs to change — a coordinate is a coordinate. A tuple signals that intent directly.</p>
+<p>Now suppose you're tracking which user IDs have already voted in a poll:</p>
+<pre><code class="language-python">voted = set()
+voted.add(101)
+voted.add(203)
+voted.add(101)  # ignored, 101 is already there
+print(voted)    # {203, 101} — order not guaranteed, no duplicate
+</code></pre>
+<p>The second <code>add(101)</code> does nothing. No error, no warning — it just vanishes, because a set's entire job is to guarantee uniqueness.</p>
+<p>And a list, for comparison, is what you reach for when the collection needs to grow, shrink, and hold duplicates in a specific order:</p>
+<pre><code class="language-python">scores = [88, 92, 88, 75]  # order and duplicates both matter here
+</code></pre>
+<h2>Intuition</h2>
+<p>Here's how an engineer actually arrives at the right structure, instead of defaulting to a list out of habit.</p>
+<p>Start by asking three questions about the data:</p>
+<ol>
+<li><strong>Will this data ever need to change after creation?</strong> If no, that's a strong signal for a tuple. Locking it down isn't a limitation — it's documentation. Anyone reading <code>point = (x, y)</code> instantly knows this is a fixed record, not something to mutate mid-program.</li>
+<li><strong>Do I care about order, or do duplicates even make sense?</strong> If you're just tracking "have I seen this before," order is irrelevant and duplicates are actively unwanted. That's exactly what a set is built for.</li>
+<li><strong>Am I going to check membership over and over?</strong> This is the question people miss most often. A list checks membership by walking through every item one at a time — O(n). A set uses hashing to jump almost directly to the answer — O(1) on average. If you're doing <code>if x in collection</code> inside a loop, a set will beat a list every single time as the data grows.</li>
+</ol>
+<p>The mental model: a list is your everyday flexible container. A tuple is that same ordered idea, frozen solid. A set throws away order entirely in exchange for uniqueness and near-instant lookups.</p>
+<h2>Brute Force Solution</h2>
+<p>There isn't really a "brute force vs optimal" split here in the algorithmic sense — this is a data structure selection problem, not a search problem. But it's useful to frame it that way, because the "brute force" instinct is: <strong>use a list for everything.</strong></p>
+<p><strong>Idea:</strong> Store every collection as a list, regardless of whether it needs to change, whether order matters, or whether duplicates should be allowed.</p>
+<p><strong>Algorithm:</strong>
+1. Create a list.
+2. Append values as needed.
+3. Check membership with <code>in</code>.
+4. Deduplicate manually with loops or extra tracking if needed.</p>
+<p><strong>Advantages:</strong>
+- Simple, one structure to remember.
+- Works for every use case, technically.</p>
+<p><strong>Disadvantages:</strong>
+- No protection against accidental mutation of "fixed" data.
+- Manual deduplication is extra code you have to write and maintain.
+- Membership checks are slow — O(n) per check.
+- Code doesn't communicate intent. A reader can't tell if a list is meant to change or not.</p>
+<p><strong>Time complexity:</strong> O(n) per membership check, O(n) for manual dedup.
+<strong>Space complexity:</strong> O(n).</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach is to match the structure to the data's actual constraints:</p>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Answer</th>
+<th>Structure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Does it need to change?</td>
+<td>No</td>
+<td>Tuple</td>
+</tr>
+<tr>
+<td>Does it need to change?</td>
+<td>Yes</td>
+<td>List or Set</td>
+</tr>
+<tr>
+<td>Do duplicates matter, and does order matter?</td>
+<td>Yes to both</td>
+<td>List</td>
+</tr>
+<tr>
+<td>Do duplicates matter, and does order matter?</td>
+<td>No to both</td>
+<td>Set</td>
+</tr>
+<tr>
+<td>Will I check membership repeatedly?</td>
+<td>Yes</td>
+<td>Set (hashing gives O(1) lookups)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Tuple creation and unpacking</strong></p>
+<pre><code class="language-python">person = (&quot;Maya&quot;, 29)
+name, age = person  # unpacking — order lines up exactly
+</code></pre>
+<p>The one-item tuple trap: <code>(5)</code> is just the integer <code>5</code> in parentheses. You need a trailing comma — <code>(5,)</code> — to actually make it a tuple. Python has no other way to tell the difference.</p>
+<p><strong>Set creation and operations</strong></p>
+<pre><code class="language-python">empty = set()        # NOT {} — that creates an empty dict
+a = {1, 2, 3}
+b = {2, 3, 4}
+
+a | b   # union: {1, 2, 3, 4}
+a &amp; b   # intersection: {2, 3}
+a - b   # difference: {1}
+</code></pre>
+<p><strong>The hashing rule</strong></p>
+<p>Sets (and dictionary keys) require every element to be <strong>hashable</strong> — meaning Python can compute a fixed "barcode" for it that never changes. Numbers, strings, and tuples are hashable because they're immutable. Lists are not, because their contents can change after the hash would have been computed, which would break the whole lookup mechanism.</p>
+<pre><code class="language-python">bad_set = {[1, 2]}  # TypeError: unhashable type: 'list'
+good_set = {(1, 2)}  # fine — tuples are hashable
+</code></pre>
+<h2>Python Code</h2>
+<pre><code class="language-python">def unique_pairs(records: list[tuple[str, int]]) -&gt; set[tuple[str, int]]:
+    &quot;&quot;&quot;Return unique (name, age) records using a set for dedup.&quot;&quot;&quot;
+    return set(records)
+
+
+def shared_users(group_a: list[int], group_b: list[int]) -&gt; set[int]:
+    &quot;&quot;&quot;Return user IDs present in both groups using set intersection.&quot;&quot;&quot;
+    return set(group_a) &amp; set(group_b)
+
+
+def fast_lookup_demo(candidates: list[int], target: int) -&gt; bool:
+    &quot;&quot;&quot;Membership check backed by a set for O(1) average lookup.&quot;&quot;&quot;
+    seen = set(candidates)
+    return target in seen
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>unique_pairs</code> converts a list of tuples into a set. Tuples are hashable, so this works and automatically drops duplicate records — no manual loop needed.</li>
+<li><code>shared_users</code> converts both lists to sets and uses <code>&amp;</code> for intersection, replacing what would otherwise be a nested loop comparing every element of one list against every element of the other.</li>
+<li><code>fast_lookup_demo</code> builds a set once, then does the membership check with <code>in</code>. That single line is O(1) on average instead of O(n), because the set hashes <code>target</code> and jumps straight to its bucket instead of scanning.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Take <code>shared_users([1, 2, 3, 4], [3, 4, 5, 6])</code>.</p>
+<ol>
+<li><code>set(group_a)</code> → <code>{1, 2, 3, 4}</code></li>
+<li><code>set(group_b)</code> → <code>{3, 4, 5, 6}</code></li>
+<li><code>&amp;</code> compares hash buckets rather than scanning element by element: both sets contain <code>3</code> and <code>4</code>.</li>
+<li>Result: <code>{3, 4}</code>.</li>
+</ol>
+<p>Compare that to the list version, which would need a nested loop checking every element of <code>group_a</code> against every element of <code>group_b</code> — 16 comparisons instead of near-instant hash lookups.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Set membership check:</strong> O(1) average time, because hashing maps a value directly to a bucket instead of scanning. Worst case O(n) if many values collide into the same hash bucket, but Python's hash design makes this rare in practice.</li>
+<li><strong>Set intersection/union/difference:</strong> O(min(len(a), len(b))) roughly, since it iterates the smaller set and checks membership in the other.</li>
+<li><strong>List membership check:</strong> O(n), since every element must be checked in the worst case.</li>
+<li><strong>Space:</strong> O(n) for all three structures — a set needs extra space internally for its hash table, but this is still linear in the number of elements.</li>
+</ul>
+<p>These are correct because they follow directly from the underlying implementation: sets are backed by hash tables, lists are backed by contiguous arrays.</p>
+<h2>Alternative Solutions</h2>
+<ul>
+<li><strong><code>frozenset</code></strong> — an immutable version of a set. Useful when you need set operations (union, intersection) but also need the result to be hashable itself, such as using a group of items as a dictionary key.</li>
+<li><strong>Dictionary instead of a set</strong> — if you catch yourself building a set just to check "does this key exist," but you also need to store a <em>value</em> associated with each key, that's a sign you actually need a <code>dict</code>, not a <code>set</code>. This is one of the most common misuses called out in the video.</li>
+</ul>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty collection:</strong> <code>set()</code> for an empty set — <code>{}</code> gives you an empty dict instead, a classic trap.</li>
+<li><strong>Single-item tuple:</strong> <code>(5,)</code> requires the trailing comma; <code>(5)</code> is just an integer.</li>
+<li><strong>Duplicate values in a set:</strong> silently ignored, no error.</li>
+<li><strong>Unhashable elements:</strong> attempting <code>{[1, 2]}</code> raises <code>TypeError</code> immediately.</li>
+<li><strong>Very large collections:</strong> this is exactly where the O(1) vs O(n) membership check gap becomes visible in real runtime.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Using <code>{}</code> expecting an empty set — it's actually an empty dict.</li>
+<li>Forgetting the trailing comma for a single-element tuple.</li>
+<li>Trying to store a list inside a set (or as a dict key) and getting a <code>TypeError</code>.</li>
+<li>Assuming a set preserves insertion order — it doesn't guarantee any order.</li>
+<li>Using a list for repeated membership checks in a hot loop instead of converting to a set first.</li>
+<li>Reaching for a set when you actually need key-value pairing, which calls for a dictionary instead.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Why are tuples hashable but lists are not?</li>
+<li>When would you choose a <code>frozenset</code> over a regular set?</li>
+<li>What's the time complexity of checking membership in a list vs. a set, and why?</li>
+<li>How would you find duplicates in a list using a set?</li>
+<li>Why can a tuple be used as a dictionary key but a list cannot?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 217 — Contains Duplicate:</strong> directly tests set-based deduplication and membership checks.</li>
+<li><strong>LeetCode 349 — Intersection of Two Arrays:</strong> a direct application of set intersection.</li>
+<li><strong>LeetCode 1 — Two Sum:</strong> commonly solved using a dictionary (a natural extension once you understand hashing and sets).</li>
+<li><strong>LeetCode 242 — Valid Anagram:</strong> tests understanding of counting and set/dict tradeoffs.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Lists, tuples, and sets aren't interchangeable conveniences — each one encodes a promise about your data. A tuple says "this is fixed." A set says "I only care about uniqueness and fast lookups, not order." A list says "I need full flexibility." Choosing correctly makes your code both correct and fast, and it makes the intent obvious to the next person reading it — including future you.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with live coding, including the list-in-a-set crash happening in real time, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of the <strong>Daily Python LeetCode</strong> series, where every video breaks down one core Python concept or interview problem — building the intuition first, then the code — so you understand <em>why</em> a solution works, not just how to type it out.</p>
+<h2>Call To Action</h2>
+<p>If this cleared up something that's been silently confusing you about Python's data structures, tap like on the video — it's the easiest way to tell me it landed. Subscribe on YouTube so you don't miss the next lesson, and subscribe to the Substack for the full written breakdown delivered straight to your inbox. Drop a comment if you've been bitten by the list-in-a-set trap before, and share this with a fellow developer who defaults to lists for everything.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Why have tuple, set, AND list instead of just list?</summary><p>Each optimizes a different need: tuple=fixed/immutable order, set=fast uniqueness/lookup, list=flexible ordered mutation.</p></details><details class='card2'><summary>Set membership check `x in my_set` — time complexity?</summary><p>O(1) average, via hashing. Compare to `x in my_list` which is O(n).</p></details><details class='card2'><summary>Why can&#x27;t you put a list inside a set?</summary><p>Lists are mutable/unhashable — sets require hashable elements. Use a tuple instead.</p></details><details class='card2'><summary>Tuple unpacking: `a, b = (1, 2)` — what&#x27;s this called and why use it?</summary><p>Unpacking; assigns each element to a variable in one line, common for returning multiple values from a function.</p></details><details class='card2'><summary>Tuple vs List: when pick tuple?</summary><p>Data won&#x27;t change (coordinates, RGB values) — signals intent, is immutable, and slightly faster/smaller.</p></details><details class='card2'><summary>Interview follow-up: how do you dedupe a list while keeping order?</summary><p>`list(dict.fromkeys(my_list))` — dict preserves insertion order and keys are unique (Python 3.7+).</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
