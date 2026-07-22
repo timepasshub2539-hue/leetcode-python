@@ -1,0 +1,343 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maximize Active Section with Trade II — LeetCode Daily Python Solution (the 0-1-0 sandwich trick) — Python LeetCode Solution</title><meta name="description" content="A gentle, three-level walkthrough of LeetCode&#x27;s Hard problem &#x27;Maximize Active Section with Trade II&#x27; in Python. We turn the scary query problem into one simple idea: the 0-1-0 sandwich. You&#x27;ll learn t">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/maximize-active-section-with-trade-ii.html">
+<meta property="og:title" content="Maximize Active Section with Trade II — LeetCode Daily Python Solution (the 0-1-0 sandwich trick) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="A gentle, three-level walkthrough of LeetCode&#x27;s Hard problem &#x27;Maximize Active Section with Trade II&#x27; in Python. We turn the scary query problem into one simple idea: the 0-1-0 sandwich. You&#x27;ll learn t">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Maximize Active Section with Trade II — LeetCode Daily Python Solution (the 0-1-0 sandwich trick)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>8. Introduction</h2>
+<p>Every developer eventually meets a LeetCode problem that <em>looks</em> terrifying and turns out to be gentle underneath. <strong>Maximize Active Section with Trade II</strong> is exactly that kind of problem. It carries the dreaded "Hard" label, it throws range queries at you, and it wraps everything in an operation that sounds convoluted the first time you read it. And yet, once you see the shape hiding inside — a small run of <code>1</code>s hugged by <code>0</code>s on both sides — the entire thing unravels.</p>
+<p>This problem matters because it tests three skills interviewers genuinely care about. First, <strong>problem reduction</strong>: can you strip away the intimidating wording and find the tiny core idea? Second, <strong>precomputation and query design</strong>: can you recognize that answering many questions cheaply requires paying an upfront cost once? Third, <strong>boundary reasoning</strong>: can you handle the two annoying edges of a window without breaking the clean middle? These are the same skills you need when you build a text editor that reflows lines, a genome scanner, or a system that packs data into bits. Range queries over strings are everywhere in real <strong>Software Engineering</strong>, which is why big companies keep asking questions shaped like this one.</p>
+<p>If you are grinding the daily challenge or prepping for interviews, this is a high-leverage problem. Learn the <strong>0‑1‑0 sandwich</strong> idea once, and you will reuse the run-decompose-then-range-max pattern for years. Take a breath. We will go slowly, build the intuition first, and only then write <strong>Python</strong>.</p>
+<h2>9. Problem Overview</h2>
+<p>You are given a binary string <code>s</code> of length <code>n</code>. Each character is either <code>1</code> (an <strong>active</strong> section) or <code>0</code> (an <strong>inactive</strong> section). You are also given a list of queries. Each query is a pair <code>[l, r]</code> describing a slice of the string from index <code>l</code> to index <code>r</code> inclusive.</p>
+<p>For each query, you may perform <strong>at most one trade</strong>, and the trade only affects the chosen slice. A trade happens in two steps:</p>
+<ol>
+<li>Take a <strong>maximal run of <code>1</code>s that has <code>0</code>s pressing against it on both sides</strong>, and turn that entire run into <code>0</code>s.</li>
+<li>Then take a <strong>maximal run of <code>0</code>s that now has <code>1</code>s on both sides</strong>, and turn that entire run into <code>1</code>s.</li>
+</ol>
+<p>After the trade, you report <strong>the total number of <code>1</code>s in the whole string</strong>, not just inside the slice.</p>
+<p>The task: for each query, return the maximum number of active sections achievable.</p>
+<p>Here is the single most important observation, and it is worth tattooing on your memory: <strong>a trade never changes the total count of <code>1</code>s by itself — it only rearranges them.</strong> Erasing a run of <code>1</code>s removes some ones; flooding the neighboring zeros adds them right back. So the net effect of any trade is purely a <strong>merge of two zero-gaps around a lonely one-run</strong>. That means:</p>
+<blockquote>
+<p><strong>answer = (total number of 1s) + (best achievable gain in this window)</strong></p>
+</blockquote>
+<p>And the "gain" of a sandwich is simply the number of zeros on its left plus the number of zeros on its right. That is the whole problem.</p>
+<h2>10. Example</h2>
+<p>Let's make it concrete. Take the tiny string:</p>
+<pre><code>0 0 0 1 0
+</code></pre>
+<p>There is exactly one <code>1</code>, sitting near the middle. It has three <code>0</code>s on its left and one <code>0</code> on its right — zeros on <strong>both</strong> sides. That makes it a valid <strong>0‑1‑0 sandwich</strong>.</p>
+<ul>
+<li><strong>Step 1:</strong> turn that run of <code>1</code>s into <code>0</code>s → <code>0 0 0 0 0</code>.</li>
+<li><strong>Step 2:</strong> the whole thing is now one solid run of zeros with <code>1</code>s pressing in from the imaginary edges; fill it → <code>1 1 1 1 1</code>.</li>
+</ul>
+<p>We went from <strong>one</strong> active section to <strong>five</strong>. The single <code>1</code> we deleted was the <em>key</em> that unlocked the zeros on both of its sides. That is the intuition in one picture.</p>
+<p>Now a slightly bigger one so the "total plus gain" formula clicks:</p>
+<pre><code>1 0 0 0 1 0 0
+index: 0 1 2 3 4 5 6
+</code></pre>
+<p>There are already <strong>two</strong> <code>1</code>s (at index 0 and index 4). The <code>1</code> at index 0 is <em>not</em> a sandwich — it only has zeros on its right, nothing on its left. But the <code>1</code> at index 4 has <strong>three zeros on its left</strong> (indices 1, 2, 3) and <strong>two zeros on its right</strong> (indices 5, 6). Its gain is <code>3 + 2 = 5</code>.</p>
+<pre><code>answer = total ones (2) + best gain (5) = 7
+</code></pre>
+<p>Trace it: delete the <code>1</code> at index 4 → <code>1 0 0 0 0 0 0</code>, then flood the big zero run bounded by the <code>1</code> at index 0 → <code>1 1 1 1 1 1 1</code>. Seven ones. The formula and the by-hand trace agree.</p>
+<h2>11. Intuition</h2>
+<p>How does an experienced engineer <em>discover</em> this instead of memorizing it? By asking, "What does the operation actually buy me?"</p>
+<p>The operation is described in two dramatic steps, but conserve the total and the drama disappears. You are not gaining ones by "creating" them — you are gaining ones by <strong>fusing two separate pools of zeros into a single fillable region.</strong> The only zeros you are allowed to claim are the ones directly adjacent to a run of <code>1</code>s on <em>both</em> sides, because that middle run is the bridge that makes both gaps fillable at the same time.</p>
+<p>So every candidate move maps to one shape: a run of <code>1</code>s with a run of <code>0</code>s on its left and a run of <code>0</code>s on its right. Name it the <strong>Zero‑One‑Zero</strong>. Its value is <code>left_zeros + right_zeros</code>. The best move in a window is the sandwich with the most bread.</p>
+<p>Now layer on the queries. Naively, each query means "look inside this slice, find the best sandwich." But sandwiches don't move — a sandwich fully inside the window has <em>exactly</em> the gain we could measure once, upfront, for the whole string. The only sandwiches whose gain changes per query are the <strong>two at the very edges</strong>, because the window boundary can slice off part of their bread. Everything strictly in the middle is invariant.</p>
+<p>That single insight — <em>only the two extreme sandwiches need special handling</em> — is what converts a slow per-query scan into two quick hand-checks plus one instant range-maximum lookup.</p>
+<h2>12. Brute Force Solution</h2>
+<p><strong>Idea.</strong> For each query independently, rebuild the slice, break it into runs, scan for the best sandwich, and add its gain to the total number of ones.</p>
+<p><strong>Algorithm.</strong>
+1. Precompute a prefix-sum of ones so the total is <code>O(1)</code> per query.
+2. For a query <code>[l, r]</code>, walk <code>s[l..r]</code>, grouping consecutive equal characters into runs.
+3. For every <code>1</code>-run that has a <code>0</code>-run on both sides <em>inside the window</em>, compute <code>left_zeros + right_zeros</code>.
+4. Return <code>total_ones + max_gain</code> (or <code>total_ones</code> if no sandwich exists).</p>
+<p><strong>Advantages.</strong>
+- Dead simple to reason about and to write correctly.
+- An excellent <strong>oracle</strong>: I genuinely write this first and use it to differential-test the fast version against random inputs. It is cheap insurance against off-by-one bugs.</p>
+<p><strong>Disadvantages.</strong>
+- It re-does all the run work for every single query.
+- With large <code>n</code> and many queries it times out.</p>
+<p><strong>Complexity.</strong> Let <code>n</code> be the string length and <code>q</code> the number of queries. Each query costs <code>O(n)</code> in the worst case, so total is <strong><code>O(n·q)</code></strong> time. With <code>n = q = 10^5</code>, that is <code>10^10</code> operations — far too slow for a Hard problem's limits. Space is <code>O(n)</code>.</p>
+<h2>13. Optimal Solution</h2>
+<p>The fast approach pays once, upfront, then answers each query almost instantly.</p>
+<p><strong>Step 1 — Decompose into runs.</strong> Walk the string a single time, grouping equal characters. Store each run's character plus its <strong>absolute</strong> inclusive start and end indices. Absolute indices matter: during a query we compare them directly against <code>l</code> and <code>r</code> with no offset math. Count the total ones here too, since it never changes again.</p>
+<p><strong>Step 2 — Precompute every sandwich's gain.</strong> Scan the runs. Whenever a <code>1</code>-run has a <code>0</code>-run immediately before <strong>and</strong> after it, record a candidate. For each candidate store:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>a</code>, <code>b</code></td>
+<td>start / end index of the <code>1</code>-run (the filling)</td>
+</tr>
+<tr>
+<td><code>c</code></td>
+<td>start index of the left <code>0</code>-run (outer left edge)</td>
+</tr>
+<tr>
+<td><code>d</code></td>
+<td>end index of the right <code>0</code>-run (outer right edge)</td>
+</tr>
+<tr>
+<td><code>gain</code></td>
+<td><code>(a - c) + (d - b)</code> → left zeros + right zeros</td>
+</tr>
+</tbody>
+</table>
+<p>Because we emit candidates left-to-right, their <code>a</code> and <code>b</code> values come out <strong>already sorted</strong>. That's what lets a query use binary search directly, no separate sort needed.</p>
+<p><strong>Step 3 — Build a sparse table over the gains.</strong> A sparse table is a precomputed "cheat sheet" that answers <em>range maximum</em> in <code>O(1)</code>. We choose it over a segment tree because the gains are <strong>static</strong> and <code>max</code> is <strong>idempotent</strong> — no lazy propagation, no updates, just fast queries.</p>
+<p><strong>Step 4 — Answer each query.</strong> For <code>[l, r]</code>:</p>
+<ol>
+<li>Use binary search to find the candidates whose <code>1</code>-run sits <strong>strictly interior</strong> to the window. In practice: bisect on <code>l+1</code> and <code>r-1</code> to grab indices <code>i0 .. i1</code>.</li>
+<li>If <code>i0 &gt; i1</code>, no valid sandwich fits → answer is <code>total_ones</code>.</li>
+<li>The two <strong>edge</strong> candidates (<code>i0</code> and <code>i1</code>) might have their zero-bread clipped by the boundary, so <strong>recompute</strong> their gains with clamped edges: left zeros become <code>a - max(c, l)</code>, right zeros become <code>min(d, r) - b</code>.</li>
+<li>Every candidate <strong>strictly between</strong> <code>i0</code> and <code>i1</code> is fully inside the window, so the sparse table hands us their maximum gain instantly.</li>
+<li>Answer = <code>total_ones + max(clipped_left_gain, clipped_right_gain, interior_max)</code>.</li>
+</ol>
+<p>Slow to build, lightning to ask.</p>
+<h2>14. Python Code</h2>
+<pre><code class="language-python">from bisect import bisect_left, bisect_right
+
+
+class Solution:
+    def maxActiveSectionsAfterTrade(self, s: str, queries):
+        n = len(s)
+        total_ones = s.count(&quot;1&quot;)
+
+        # Step 1: decompose into runs -&gt; (char, start, end) inclusive.
+        runs = []
+        i = 0
+        while i &lt; n:
+            j = i
+            while j &lt; n and s[j] == s[i]:
+                j += 1
+            runs.append((s[i], i, j - 1))
+            i = j
+
+        # Step 2: every 0-1-0 sandwich. a,b = ones run; c,d = outer zero edges.
+        cand_a, cand_b, cand_c, cand_d, gain = [], [], [], [], []
+        for k in range(1, len(runs) - 1):
+            ch, a, b = runs[k]
+            if ch != &quot;1&quot;:
+                continue
+            _, c, _ = runs[k - 1]       # left zero run start
+            _, _, d = runs[k + 1]       # right zero run end
+            cand_a.append(a)
+            cand_b.append(b)
+            cand_c.append(c)
+            cand_d.append(d)
+            gain.append((a - c) + (d - b))
+
+        # Step 3: sparse table over gain for O(1) range max.
+        sparse = self._build_sparse(gain)
+
+        # Step 4: answer queries.
+        ans = []
+        for l, r in queries:
+            best = total_ones + self._query(
+                l, r, cand_a, cand_b, cand_c, cand_d, gain, sparse
+            )
+            ans.append(best)
+        return ans
+
+    @staticmethod
+    def _build_sparse(arr):
+        m = len(arr)
+        if m == 0:
+            return []
+        LOG = m.bit_length()
+        table = [arr[:]]
+        length = 1
+        for _ in range(1, LOG):
+            prev = table[-1]
+            nxt = [
+                max(prev[i], prev[i + length])
+                for i in range(m - 2 * length + 1)
+            ]
+            if not nxt:
+                break
+            table.append(nxt)
+            length *= 2
+        return table
+
+    @staticmethod
+    def _range_max(table, lo, hi):          # inclusive [lo, hi]
+        k = (hi - lo + 1).bit_length() - 1
+        return max(table[k][lo], table[k][hi - (1 &lt;&lt; k) + 1])
+
+    def _query(self, l, r, A, B, C, D, gain, sparse):
+        # Candidates whose ones-run is strictly interior to [l, r].
+        i0 = bisect_left(A, l + 1)          # a &gt;= l + 1
+        i1 = bisect_right(B, r - 1) - 1     # b &lt;= r - 1
+        if i0 &gt; i1:
+            return 0
+
+        # Clip the two edge candidates against the window boundary.
+        left = (A[i0] - max(C[i0], l)) + (min(D[i0], r) - B[i0])
+        right = (A[i1] - max(C[i1], l)) + (min(D[i1], r) - B[i1])
+        best = max(left, right)
+
+        # Interior candidates keep their full precomputed gain.
+        if i0 + 1 &lt;= i1 - 1:
+            best = max(best, self._range_max(sparse, i0 + 1, i1 - 1))
+        return best
+
+
+def _demo():
+    sol = Solution()
+    # 1 0 0 0 1 0 0 : full window -&gt; 2 ones + gain 5 = 7
+    assert sol.maxActiveSectionsAfterTrade(&quot;1000100&quot;, [[0, 6]]) == [7]
+    # 0 0 0 1 0 : full window -&gt; 1 one + gain 4 = 5
+    assert sol.maxActiveSectionsAfterTrade(&quot;00010&quot;, [[0, 4]]) == [5]
+    # no sandwich -&gt; just the ones
+    assert sol.maxActiveSectionsAfterTrade(&quot;111&quot;, [[0, 2]]) == [3]
+    # window slicing through a 1-run disqualifies it
+    assert sol.maxActiveSectionsAfterTrade(&quot;1000100&quot;, [[2, 6]]) == [3]
+    print(&quot;all good&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    _demo()
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<ul>
+<li><strong><code>total_ones = s.count("1")</code></strong> — computed once, because a trade never changes it. This is the invariant the whole solution leans on.</li>
+<li><strong>Run decomposition (<code>while i &lt; n</code>)</strong> — the classic single-pass grouping. Each run stores its character and <em>absolute inclusive</em> endpoints, so later comparisons against <code>l</code> and <code>r</code> need no arithmetic gymnastics.</li>
+<li><strong>Candidate loop (<code>for k in range(1, len(runs) - 1)</code>)</strong> — we start at <code>1</code> and stop before the last run, because a sandwich needs a neighbor on both sides. We only keep <code>1</code>-runs (<code>if ch != "1": continue</code>). <code>c</code> is the left zero run's start, <code>d</code> is the right zero run's end. The gain <code>(a - c) + (d - b)</code> counts left zeros plus right zeros.</li>
+<li><strong><code>_build_sparse</code></strong> — standard sparse table for range maximum. Each level <code>table[k]</code> holds the max over windows of length <code>2^k</code>. Building is <code>O(m log m)</code>.</li>
+<li><strong><code>_range_max</code></strong> — the idempotent <code>max</code> trick: two overlapping power-of-two windows cover any range, so overlap doesn't matter. <code>O(1)</code> per lookup.</li>
+<li><strong><code>_query</code> binary search</strong> — <code>bisect_left(A, l + 1)</code> finds the first candidate whose <code>1</code>-run starts at <code>l+1</code> or later; <code>bisect_right(B, r - 1) - 1</code> finds the last whose <code>1</code>-run ends at <code>r-1</code> or earlier. The <code>l+1</code> / <code>r-1</code> bounds enforce <strong>strict interiority</strong>, which is what makes a window slicing through a <code>1</code>-run correctly disqualify it.</li>
+<li><strong>Edge clipping</strong> — <code>max(C[i0], l)</code> and <code>min(D[i0], r)</code> clamp the outer zero edges to the window, so a sandwich hanging past the boundary only gets credit for the bread actually inside.</li>
+</ul>
+<h2>16. Dry Run</h2>
+<p>Let's fully trace <code>s = "1000100"</code> with query <code>[0, 6]</code>.</p>
+<p><strong>Runs:</strong> <code>('1', 0, 0)</code>, <code>('0', 1, 3)</code>, <code>('1', 4, 4)</code>, <code>('0', 5, 6)</code>.</p>
+<p><strong>Total ones:</strong> <code>2</code>.</p>
+<p><strong>Candidates</strong> (index <code>k</code> from 1 to 2):
+- <code>k = 1</code> → char <code>'0'</code>, skip.
+- <code>k = 2</code> → char <code>'1'</code>, <code>a=4, b=4</code>; left run <code>('0',1,3)</code> → <code>c=1</code>; right run <code>('0',5,6)</code> → <code>d=6</code>. Gain = <code>(4 - 1) + (6 - 4) = 3 + 2 = 5</code>.</p>
+<p>So <code>A = [4]</code>, <code>B = [4]</code>, <code>C = [1]</code>, <code>D = [6]</code>, <code>gain = [5]</code>.</p>
+<p><strong>Query <code>[0, 6]</code>:</strong>
+- <code>i0 = bisect_left([4], 1) = 0</code>
+- <code>i1 = bisect_right([4], 5) - 1 = 1 - 1 = 0</code>
+- <code>i0 (0) &lt;= i1 (0)</code> → proceed.
+- Edge clip for candidate 0: <code>left_zeros = 4 - max(1, 0) = 3</code>; <code>right_zeros = min(6, 6) - 4 = 2</code>; gain = <code>5</code>.
+- No strictly-interior candidates (<code>i0+1 &gt; i1-1</code>).
+- <code>best = 5</code>.</p>
+<p><strong>Answer:</strong> <code>total_ones (2) + 5 = 7</code>. ✅ Matches our hand trace.</p>
+<h2>17. Complexity Analysis</h2>
+<p>Let <code>n</code> be the string length and <code>q</code> the number of queries.</p>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Time</th>
+<th>Space</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Run decomposition</td>
+<td><code>O(n)</code></td>
+<td><code>O(n)</code></td>
+</tr>
+<tr>
+<td>Candidate + gain precompute</td>
+<td><code>O(n)</code></td>
+<td><code>O(n)</code></td>
+</tr>
+<tr>
+<td>Sparse table build</td>
+<td><code>O(n log n)</code></td>
+<td><code>O(n log n)</code></td>
+</tr>
+<tr>
+<td>Per query (2 bisects + 1 range max)</td>
+<td><code>O(log n)</code></td>
+<td><code>O(1)</code></td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong><code>O(n log n + q log n)</code></strong></td>
+<td><strong><code>O(n log n)</code></strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Why these are correct.</strong> Each character is visited once during decomposition, so runs and candidates are linear. The sparse table has <code>log n</code> levels, each of size at most <code>n</code>. A query does two binary searches (<code>O(log n)</code>) and one constant-time range maximum, and edge clipping is <code>O(1)</code>. This comfortably beats the brute force's <code>O(n·q)</code> — <code>10^10</code> collapses to roughly <code>n log n + q log n ≈ 10^5 · 17 · 2 ≈ 3.4 × 10^6</code> operations.</p>
+<h2>18. Alternative Solutions</h2>
+<ul>
+<li><strong>Sparse table vs. segment tree.</strong> A segment tree also answers range maximum, in <code>O(log n)</code> per query and <code>O(n)</code> space. But because our gains are <strong>static</strong> and <code>max</code> is idempotent, the sparse table gives <code>O(1)</code> queries with a simpler implementation and no lazy propagation. Reach for the segment tree only if the string can <strong>mutate between queries</strong> — then the sparse table is dead, and you switch to a segment tree over candidate gains with <code>O(log n)</code> updates, re-deriving candidates around the edit.</li>
+<li><strong>Offline sorting / Mo's algorithm.</strong> You <em>could</em> sort queries and sweep, but there's no need here — the per-query work is already <code>O(log n)</code> and independent, so an online sparse table is both simpler and faster.</li>
+</ul>
+<p>The sparse table is the honest winner for this exact problem: simplest structure that hits the required complexity.</p>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong>No sandwich exists</strong> (e.g. <code>"111"</code> or <code>"000"</code>): the candidate list is empty or <code>i0 &gt; i1</code>, so the gain is <code>0</code> and the answer is just <code>total_ones</code>.</li>
+<li><strong>Window slices through a <code>1</code>-run</strong>: the <code>l+1</code> / <code>r-1</code> bisect bounds exclude any <code>1</code>-run touching the boundary, so it correctly stops qualifying.</li>
+<li><strong>Tiny window</strong> (single character, or <code>l == r</code>): <code>i0 &gt; i1</code> triggers, returning <code>total_ones</code> safely.</li>
+<li><strong>Empty or all-same string</strong>: handled by the empty candidate path.</li>
+<li><strong>Sandwich hanging past both edges</strong>: clamping with <code>max(C, l)</code> and <code>min(D, r)</code> credits only the bread inside the window.</li>
+<li><strong>Maximum-size input</strong>: the <code>O(n log n)</code> build and <code>O(log n)</code> queries keep you well within limits.</li>
+</ul>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Recounting the ones per query.</strong> The total is invariant — count it once. Recomputing it inside each query is wasted work and invites bugs.</li>
+<li><strong>Forgetting to clip the edge sandwiches.</strong> The two extreme candidates can hang past the window; using their full precomputed gain over-counts.</li>
+<li><strong>Off-by-one in the bisect bounds.</strong> It must be <code>l+1</code> and <code>r-1</code> (strict interiority), plus the <code>-1</code> after <code>bisect_right</code>. Mixing these up either includes boundary-touching runs or drops valid ones.</li>
+<li><strong>Treating a leading/trailing <code>1</code>-run as a candidate.</strong> A run at the string's very edge has zeros on only one side and must be excluded — hence the loop runs <code>k</code> from <code>1</code> to <code>len(runs) - 2</code>.</li>
+<li><strong>Building a segment tree with lazy propagation you never use.</strong> For static max, the sparse table is simpler; the extra machinery is dead flexibility.</li>
+<li><strong>Assuming the answer lives only inside the window.</strong> The problem asks for total active sections across the <em>whole</em> string, not just the slice.</li>
+</ol>
+<h2>21. Interview Questions</h2>
+<ul>
+<li><strong>"Why is the total number of ones invariant under a trade?"</strong> Because erasing a <code>1</code>-run and flooding the neighboring zeros refunds exactly the ones you removed — the net effect is only the zero-gap merge.</li>
+<li><strong>"Why does only the leftmost and rightmost sandwich need clipping?"</strong> Every candidate strictly between them has both flanking zero-runs fully inside <code>[l, r]</code>, so its precomputed gain is exact.</li>
+<li><strong>"What if the string can change between queries?"</strong> Sparse table dies; switch to a segment tree over gains with <code>O(log n)</code> updates and re-derive candidates around the edit.</li>
+<li><strong>"Why a sparse table over a segment tree here?"</strong> Static data + idempotent <code>max</code> = <code>O(1)</code> queries, no lazy propagation.</li>
+<li><strong>"How would you test the fast solution?"</strong> Keep the <code>O(n)</code> brute force as an oracle and differential-test on random inputs — cheap insurance against off-by-one bugs.</li>
+</ul>
+<h2>22. Similar Problems</h2>
+<ul>
+<li><strong>Maximize Active Section with Trade I</strong> — the single-string, no-query version; solving it first builds the sandwich intuition you reuse here.</li>
+<li><strong>Range Sum Query - Immutable / Mutable (LeetCode 303 / 307)</strong> — the same precompute-once, query-cheap philosophy, with sparse-table vs. segment-tree as the static/mutable fork.</li>
+<li><strong>Sparse Table Range Minimum/Maximum problems</strong> — direct practice for the <code>O(1)</code> range-max structure.</li>
+<li><strong>Max Consecutive Ones III (LeetCode 1004)</strong> — another "flip zeros to grow a run of ones" theme, sliding-window flavored.</li>
+<li><strong>Count Binary Substrings (LeetCode 696)</strong> — run decomposition of a binary string as the core move.</li>
+</ul>
+<p>They're related because each rewards spotting a <strong>run structure</strong> and answering <strong>range questions</strong> with a static precomputed metric.</p>
+<h2>23. Key Takeaways</h2>
+<ul>
+<li>A Hard label often hides one small shape. Here it's the <strong>0‑1‑0 sandwich</strong>.</li>
+<li><strong>Conserve the invariant</strong>: total ones never change, so <code>answer = total_ones + best_gain</code>.</li>
+<li><strong>Decompose into runs</strong>, precompute each sandwich's gain, and let a <strong>sparse table</strong> serve the middle in <code>O(1)</code>.</li>
+<li>Only the <strong>two edge sandwiches</strong> need clipping — everything between them is exact.</li>
+<li>Keep the <code>O(n)</code> brute force as an <strong>oracle</strong> for testing the fast path.</li>
+</ul>
+<p>This is the run-decompose-then-range-max pattern, and it generalizes to a whole family of interval problems.</p>
+<h2>24. Watch the Video</h2>
+<p>Watching the trace happen in real time makes the sandwich <em>stick</em>. In the video we trace <code>00010 → 11111</code> by hand, predict answers together, compare brute force against the fast approach, and walk through the exact edge cases that trip people up. If a step here felt abstract, seeing it move on screen will make it click.</p>
+<p>▶️ <strong>Watch the full three-level walkthrough here:</strong> {LINK}</p>
+<h2>25. About the Series</h2>
+<p>This is part of the <strong>Daily Python LeetCode</strong> series — one problem a day, explained the way a senior engineer would teach a teammate. No fluff, no "just memorize it." We build the intuition first, then write clean, production-quality Python, then dry-run it until it's obvious. Every problem covers brute force, the optimal approach, complexity, edge cases, and interview follow-ups, so you leave understanding the <em>why</em>, not just the answer.</p>
+<h2>26. Call To Action</h2>
+<p>If this helped the Hard label feel a little smaller:</p>
+<ul>
+<li>🔔 <strong>Subscribe on YouTube</strong> so you never miss a daily walkthrough.</li>
+<li>📬 <strong>Subscribe on Substack</strong> to get each solution and article in your inbox.</li>
+<li>💬 <strong>Comment</strong> with your own dry run of <code>1000100</code> — did you land on 7?</li>
+<li>🔁 <strong>Share</strong> this with a friend who's grinding the daily challenge.</li>
+</ul>
+<p>See you in tomorrow's problem, where this same run-plus-range-max trick cracks a genuinely nastier interval puzzle.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>String toggle puzzle: one contiguous flip to maximize same-value run. Pattern?</summary><p>Sliding-window / merge-adjacent-segments. Tell: &#x27;flip one substring&#x27; + maximize contiguous count → scan segment lengths, merge neighbors separated by a small gap.</p></details><details class='card2'><summary>Time complexity of the segment-scan solution?</summary><p>O(n) — one pass to build runs, one pass to evaluate merges. n = string length.</p></details><details class='card2'><summary>Space complexity?</summary><p>O(n) if you store the run-length list; O(1) achievable by tracking only the last few segment lengths while streaming.</p></details><details class='card2'><summary>Trickiest bug in Maximize Active Section II?</summary><p>Off-by-one at string ends and mishandling all-same strings: no inactive gap to trade, so the answer is just the existing active count.</p></details><details class='card2'><summary>This vs classic &#x27;Max Consecutive Ones III&#x27;?</summary><p>Ones III flips up to k zeros anywhere (budget window). Here one whole block moves/merges — you combine two active runs across a single gap, not flip k bits.</p></details><details class='card2'><summary>Follow-up: what if many trades allowed instead of one?</summary><p>Problem collapses — you could gather all active sections together, so the answer becomes the total active count regardless of arrangement.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
