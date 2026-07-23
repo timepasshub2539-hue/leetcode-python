@@ -1,0 +1,320 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 10: Why Is Dictionary Lookup Basically Instant? — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-10-dictionaries.html
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/pyt">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-10-dictionaries.html">
+<meta property="og:title" content="Lesson 10: Why Is Dictionary Lookup Basically Instant? — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-10-dictionaries.html
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/pyt">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson 10: Why Is Dictionary Lookup Basically Instant?</h1><span class='badge' style='background:#facc1522;color:#facc15'>🔑 Hash Maps</span><article><h2>8. Introduction</h2>
+<p>Almost every non-trivial program eventually needs to answer one question fast: <em>"Given this name, what's the record?"</em> A username to a profile. A product ID to a price. An error code to a message. How you answer that question decides whether your code feels snappy or sluggish.</p>
+<p>In Python, the tool built for exactly this is the <strong>dictionary</strong>. It's one of the most-used data structures in real software, and it's a favorite of interviewers because it quietly tests whether you understand <em>cost</em>. Anyone can loop through a list. Fewer people can explain why a dictionary finds a value in roughly one step no matter how much data you throw at it.</p>
+<p>This lesson builds that understanding. We'll cover what keys and values actually are, how to read a dictionary without crashing your program, how to loop over pairs, how to nest dictionaries to model real records, and the classic bugs that trip up beginners. By the end, you'll know not just <em>how</em> to use a dict, but <em>when</em> and <em>why</em>.</p>
+<p>If you're learning <strong>Python</strong>, preparing for a <strong>coding interview</strong>, or strengthening your grasp of core <strong>data structures</strong>, this is a foundational stop.</p>
+<h2>9. Problem Overview</h2>
+<p>Think of a coat check at a theater. You hand over a ticket, and the attendant walks straight to your coat and hands it back. They don't inspect every coat on the rack — the ticket <em>is</em> the location.</p>
+<p>A Python dictionary works the same way. Instead of storing values by <strong>position</strong> (like a list, where item 0 comes before item 1), it stores them under a <strong>name of your choosing</strong>, called a <em>key</em>. Ask for the key, and Python jumps straight to the matching <em>value</em>.</p>
+<p>Formally, a dictionary is a collection of <strong>key–value pairs</strong> with three defining rules:</p>
+<ul>
+<li>Each <strong>key is unique</strong> — one label per locker.</li>
+<li>Keys must be <strong>immutable</strong> (unchangeable) — strings, numbers, or tuples, never lists.</li>
+<li>Lookup by key is <strong>near-instant</strong> and stays fast whether you have ten entries or ten million.</li>
+</ul>
+<p>That last property is the headline feature, and it's what we'll unpack most carefully.</p>
+<h2>10. Example</h2>
+<p>Let's model people and their ages.</p>
+<pre><code class="language-python">ages = {&quot;Sam&quot;: 20, &quot;Mia&quot;: 25}
+
+print(ages[&quot;Sam&quot;])   # 20
+print(ages[&quot;Mia&quot;])   # 25
+</code></pre>
+<p>Here <code>"Sam"</code> and <code>"Mia"</code> are keys; <code>20</code> and <code>25</code> are values. Writing <code>ages["Sam"]</code> tells Python: <em>"go to the locker labeled Sam and give me what's inside."</em> The output is <code>20</code> because that's the value stored under that key — no scanning required.</p>
+<p>Now add a new person:</p>
+<pre><code class="language-python">ages[&quot;Leo&quot;] = 30
+print(ages)   # {'Sam': 20, 'Mia': 25, 'Leo': 30}
+</code></pre>
+<p>Notice there's no special "add" command. Assigning to a key that doesn't exist <strong>creates</strong> it. Assigning to a key that already exists <strong>replaces</strong> it:</p>
+<pre><code class="language-python">ages[&quot;Sam&quot;] = 99
+print(ages[&quot;Sam&quot;])   # 99  — the old 20 is gone
+</code></pre>
+<p>That's the uniqueness rule in action. One label, one locker.</p>
+<h2>11. Intuition</h2>
+<p>Here's how an experienced engineer thinks about this.</p>
+<p>When you store data in a <strong>list</strong>, the only way to find "the record for Sam" is to walk from the front, checking each item until you hit a match. With three items that's cheap. With ten million, you might scan all ten million. The cost grows with the data — that's <strong>O(n)</strong>.</p>
+<p>A dictionary refuses to search at all. The trick is a technique called <strong>hashing</strong>. When you use a key like <code>"Sam"</code>, Python runs it through a <em>hash function</em> — a small piece of math that turns the key into a number. That number tells Python <em>which slot in memory</em> the value lives in. So instead of scanning, Python computes the location directly and jumps there.</p>
+<p>This is why the key must be <strong>immutable</strong>. If a key could change after it was stored, its hash would change too, and Python would compute a <em>different</em> slot next time — it would look in the wrong locker and never find your value. A stable key means a stable address.</p>
+<p>Once you internalize "the key computes the address," the whole data structure clicks. Lookup doesn't get slower as data grows, because computing an address takes the same effort every time. That constant cost is <strong>O(1)</strong> — the reason engineers reach for dictionaries constantly.</p>
+<h2>12. Brute Force Solution</h2>
+<p>Before dictionaries, how would you build a lookup with just a <strong>list</strong>?</p>
+<p><strong>Idea:</strong> Store each record as a pair inside a list, then scan the list to find a match.</p>
+<pre><code class="language-python">people = [(&quot;Sam&quot;, 20), (&quot;Mia&quot;, 25), (&quot;Leo&quot;, 30)]
+
+def find_age(name):
+    for person_name, age in people:   # walk every item
+        if person_name == name:
+            return age
+    return None
+</code></pre>
+<p><strong>Algorithm:</strong>
+1. Loop through every element.
+2. Compare each element's name to the target.
+3. Return the value on a match; return <code>None</code> if the loop ends.</p>
+<p><strong>Advantages:</strong>
+- Simple, no special structure needed.
+- Preserves insertion order naturally.
+- Fine for tiny datasets.</p>
+<p><strong>Disadvantages:</strong>
+- Every lookup may scan the entire list.
+- Gets painfully slow as data grows.
+- No protection against duplicate names.</p>
+<p><strong>Complexity:</strong>
+- <strong>Time:</strong> <code>O(n)</code> per lookup — cost scales with the number of records.
+- <strong>Space:</strong> <code>O(n)</code> to store the records.</p>
+<p>This works, but it does exactly the "rummaging through the rack" we're trying to avoid.</p>
+<h2>13. Optimal Solution</h2>
+<p>Replace the list with a dictionary and the scan disappears.</p>
+<pre><code class="language-python">people = {&quot;Sam&quot;: 20, &quot;Mia&quot;: 25, &quot;Leo&quot;: 30}
+
+age = people[&quot;Sam&quot;]   # direct jump — no loop
+</code></pre>
+<p>Step by step, here's what happens on <code>people["Sam"]</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What Python does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Runs <code>"Sam"</code> through the hash function → a number</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Uses that number to compute a memory slot</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Jumps directly to that slot</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Returns the stored value <code>20</code></td>
+</tr>
+</tbody>
+</table>
+<p>Compare the search cost visually:</p>
+<pre><code>LIST lookup:   [box0] → [box1] → [box2] → ... → match   (scan)
+DICT lookup:   &quot;Sam&quot; → hash → slot → value             (jump)
+</code></pre>
+<p>The list's arrows grow with your data. The dict's path is the same length every time. That's the entire advantage in one picture.</p>
+<h3>Reading safely with get()</h3>
+<p>Asking for a missing key with square brackets <strong>crashes</strong> your program:</p>
+<pre><code class="language-python">people[&quot;Zoe&quot;]   # KeyError: 'Zoe' — stops execution
+</code></pre>
+<p>The <code>get()</code> method is the gentle alternative. It returns <code>None</code> (or a fallback you choose) instead of raising:</p>
+<pre><code class="language-python">people.get(&quot;Zoe&quot;)        # None
+people.get(&quot;Zoe&quot;, 0)     # 0  — your chosen default
+</code></pre>
+<p>Use <code>get()</code> whenever you're not certain the key exists.</p>
+<h2>14. Python Code</h2>
+<pre><code class="language-python">def build_directory(pairs):
+    &quot;&quot;&quot;Turn a list of (name, age) pairs into a fast lookup by name.&quot;&quot;&quot;
+    directory = {}
+    for name, age in pairs:
+        directory[name] = age          # new key creates, existing key overwrites
+    return directory
+
+
+def lookup_age(directory, name, default=None):
+    &quot;&quot;&quot;Read a value safely — never crashes on a missing name.&quot;&quot;&quot;
+    return directory.get(name, default)
+
+
+def main():
+    people = build_directory([(&quot;Sam&quot;, 20), (&quot;Mia&quot;, 25), (&quot;Leo&quot;, 30)])
+
+    # Direct, near-instant lookup
+    print(lookup_age(people, &quot;Sam&quot;))          # 20
+    print(lookup_age(people, &quot;Zoe&quot;, 0))        # 0 (safe default)
+
+    # Loop over key/value pairs together
+    for name, age in people.items():
+        print(f&quot;{name} is {age}&quot;)
+
+    # Nested dictionaries model real records
+    users = {&quot;sam&quot;: {&quot;age&quot;: 20, &quot;city&quot;: &quot;Delhi&quot;}}
+    print(users[&quot;sam&quot;][&quot;city&quot;])                # Delhi
+
+    # Everyday helpers
+    print(&quot;Mia&quot; in people)                      # True
+    print(len(people))                          # 3
+    del people[&quot;Leo&quot;]
+    print(people)                               # {'Sam': 20, 'Mia': 25}
+
+
+if __name__ == &quot;__main__&quot;:
+    main()
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<ul>
+<li><strong><code>directory = {}</code></strong> — an empty dictionary. Curly braces with nothing inside.</li>
+<li><strong><code>directory[name] = age</code></strong> — the create-or-overwrite rule. There's no separate "add" method; assignment handles both.</li>
+<li><strong><code>directory.get(name, default)</code></strong> — safe read. Returns the value if present, otherwise <code>default</code>. This is what keeps <code>lookup_age</code> from ever throwing a <code>KeyError</code>.</li>
+<li><strong><code>people.items()</code></strong> — hands back each key and value <em>together</em>, so we unpack them into <code>name, age</code> right in the <code>for</code> line. Looping over a dict <em>without</em> <code>.items()</code> gives only the keys — a common surprise.</li>
+<li><strong><code>users["sam"]["city"]</code></strong> — chained keys. First <code>users["sam"]</code> returns the inner record <code>{"age": 20, "city": "Delhi"}</code>, then <code>["city"]</code> reads from it. This is exactly how JSON data from websites and APIs is shaped.</li>
+<li><strong><code>"Mia" in people</code></strong> — checks for a key's existence before you touch it, avoiding crashes.</li>
+<li><strong><code>len(people)</code></strong> — counts the pairs.</li>
+<li><strong><code>del people["Leo"]</code></strong> — removes a pair entirely.</li>
+</ul>
+<h2>16. Dry Run</h2>
+<p>Let's trace <code>build_directory([("Sam", 20), ("Mia", 25), ("Leo", 30)])</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Iteration</th>
+<th><code>name</code>, <code>age</code></th>
+<th>Action</th>
+<th><code>directory</code> after</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>start</td>
+<td>—</td>
+<td>—</td>
+<td><code>{}</code></td>
+</tr>
+<tr>
+<td>1</td>
+<td>Sam, 20</td>
+<td>key new → create</td>
+<td><code>{'Sam': 20}</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Mia, 25</td>
+<td>key new → create</td>
+<td><code>{'Sam': 20, 'Mia': 25}</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Leo, 30</td>
+<td>key new → create</td>
+<td><code>{'Sam': 20, 'Mia': 25, 'Leo': 30}</code></td>
+</tr>
+</tbody>
+</table>
+<p>Now <code>lookup_age(directory, "Sam")</code> runs <code>directory.get("Sam", None)</code>. Python hashes <code>"Sam"</code>, jumps to its slot, finds <code>20</code>, and returns it — no iteration over the other keys at all.</p>
+<p>Then <code>lookup_age(directory, "Zoe", 0)</code>: hashing <code>"Zoe"</code> lands on an empty slot, so <code>get</code> returns the default <code>0</code> instead of crashing.</p>
+<h2>17. Complexity Analysis</h2>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Time</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lookup <code>d[k]</code> / <code>d.get(k)</code></td>
+<td><strong>O(1)</strong> average</td>
+<td>Hash computes the slot directly; no scan</td>
+</tr>
+<tr>
+<td>Insert <code>d[k] = v</code></td>
+<td><strong>O(1)</strong> average</td>
+<td>Same hashing path to find the slot</td>
+</tr>
+<tr>
+<td>Delete <code>del d[k]</code></td>
+<td><strong>O(1)</strong> average</td>
+<td>Locate slot, clear it</td>
+</tr>
+<tr>
+<td><code>k in d</code></td>
+<td><strong>O(1)</strong> average</td>
+<td>Just a lookup that returns a boolean</td>
+</tr>
+<tr>
+<td>Loop <code>d.items()</code></td>
+<td><strong>O(n)</strong></td>
+<td>Must visit every pair once</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Space:</strong> <code>O(n)</code> — the dictionary holds one entry per key, plus some extra slots so hashing stays fast.</p>
+<p>Two honest caveats. First, these are <strong>average</strong> times. In rare cases where many keys hash to the same slot (a <em>collision</em>), operations can degrade — but Python's implementation makes this extremely uncommon in practice. Second, the constant-time win isn't free: a dict uses a bit <strong>more memory</strong> than a list because it reserves spare room to keep collisions low. You trade memory for speed.</p>
+<h2>18. Alternative Solutions</h2>
+<p><strong><code>collections.defaultdict</code></strong> — when you want missing keys to auto-create a default value (useful for counting or grouping):</p>
+<pre><code class="language-python">from collections import defaultdict
+
+counts = defaultdict(int)
+for word in [&quot;a&quot;, &quot;b&quot;, &quot;a&quot;]:
+    counts[word] += 1        # no KeyError on first sight of a word
+# {'a': 2, 'b': 1}
+</code></pre>
+<p><strong><code>collections.Counter</code></strong> — a specialized dict for tallying:</p>
+<pre><code class="language-python">from collections import Counter
+Counter([&quot;a&quot;, &quot;b&quot;, &quot;a&quot;])     # Counter({'a': 2, 'b': 1})
+</code></pre>
+<p><strong>Comparison:</strong> A plain <code>dict</code> is the general tool. Use <code>defaultdict</code> to skip existence checks when building up values, and <code>Counter</code> when your whole job is counting. All three are dictionaries under the hood, so they share the same O(1) lookup.</p>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong>Empty dictionary:</strong> <code>{}</code> is valid. <code>len({})</code> is <code>0</code>, and <code>"x" in {}</code> is <code>False</code>. Reading any key raises <code>KeyError</code> — use <code>get()</code>.</li>
+<li><strong>Missing key:</strong> <code>d["nope"]</code> crashes; <code>d.get("nope")</code> returns <code>None</code>.</li>
+<li><strong>Duplicate keys at creation:</strong> <code>{"a": 1, "a": 2}</code> silently keeps the <strong>last</strong> value → <code>{"a": 2}</code>.</li>
+<li><strong>Unhashable key:</strong> using a list as a key raises <code>TypeError: unhashable type: 'list'</code>. Use a tuple instead.</li>
+<li><strong>Falsy values vs missing keys:</strong> <code>d.get("k")</code> returns <code>None</code> for a missing key <em>and</em> for a key whose value is <code>None</code>. If you must distinguish them, use <code>"k" in d</code>.</li>
+</ul>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Indexing a key that might not exist.</strong> <code>d[key]</code> crashes on absence. Reach for <code>d.get(key, default)</code> when the key is uncertain.</li>
+<li><strong>Using a list as a key.</strong> Keys must be immutable. <code>d[["a"]] = 1</code> raises <code>TypeError</code> — use a tuple: <code>d[("a",)] = 1</code>.</li>
+<li><strong>Looping without <code>.items()</code>.</strong> <code>for x in d:</code> gives only keys, not pairs. Use <code>for k, v in d.items():</code> when you need both.</li>
+<li><strong>Expecting duplicate keys to coexist.</strong> Assigning to an existing key overwrites it — the old value is gone, not stacked.</li>
+<li><strong>Confusing "key missing" with "value is None."</strong> <code>get()</code> can't tell them apart; use <code>in</code> when the difference matters.</li>
+<li><strong>Assuming dicts sort themselves.</strong> Modern Python preserves <em>insertion</em> order, not sorted order. Use <code>sorted()</code> if you need ordering.</li>
+</ol>
+<h2>21. Interview Questions</h2>
+<ul>
+<li>Why is dictionary lookup O(1) while list search is O(n)?</li>
+<li>What is a hash function, and why must dictionary keys be immutable?</li>
+<li>What happens on a hash collision, and how does Python handle it?</li>
+<li>When would you choose a list over a dictionary?</li>
+<li>What's the difference between <code>d[key]</code> and <code>d.get(key)</code>?</li>
+<li>How would you count the frequency of items in a list using a dict?</li>
+<li>Is dictionary iteration order guaranteed in modern Python?</li>
+</ul>
+<h2>22. Similar Problems</h2>
+<ul>
+<li><strong>Two Sum (LeetCode 1)</strong> — the canonical dict-for-speed problem: store seen numbers as keys for O(1) complement lookup.</li>
+<li><strong>Group Anagrams (LeetCode 49)</strong> — use a sorted-letter signature as a dict key to bucket words.</li>
+<li><strong>Valid Anagram (LeetCode 242)</strong> — count characters with a dict/<code>Counter</code> and compare.</li>
+<li><strong>Ransom Note (LeetCode 383)</strong> — tally letter counts and check availability.</li>
+<li><strong>First Unique Character in a String (LeetCode 387)</strong> — a frequency dict finds the first count of one.</li>
+</ul>
+<p>Each one replaces a slow nested scan with a single-pass dictionary lookup — the exact pattern this lesson teaches.</p>
+<h2>23. Key Takeaways</h2>
+<ul>
+<li>A dictionary stores values under <strong>keys</strong>, not positions, and finds them in roughly <strong>one step</strong> via hashing.</li>
+<li>Lookup, insert, and delete are <strong>O(1)</strong> on average, no matter the size.</li>
+<li><strong>Keys are unique and immutable</strong>; assigning to an existing key overwrites it.</li>
+<li>Use <strong><code>get()</code></strong> to read safely, <strong><code>.items()</code></strong> to loop over pairs, and <strong>nesting</strong> to model real records.</li>
+<li>Reach for a <strong>list</strong> when order and position matter; reach for a <strong>dict</strong> when you look things up by name.</li>
+</ul>
+<h2>24. Watch the Video</h2>
+<p>Seeing the coat-check and locker analogies animated makes the "jump straight to the value" idea stick far better than reading alone. Watch the full walkthrough here: {LINK}</p>
+<h2>25. About the Series</h2>
+<p>This is part of the <strong>Daily Python</strong> series — short, focused lessons that turn core Python and <strong>data structures</strong> into intuition you can actually use in interviews and real projects. Each entry teaches one idea deeply: the <em>why</em> behind it, clean <strong>Python</strong> code, and the <strong>coding interview</strong> patterns that rely on it. Follow along daily and the fundamentals compound fast.</p>
+<h2>26. Call To Action</h2>
+<p>If this cleared up why dictionaries are so fast, <strong>like the video on YouTube</strong> and <strong>subscribe</strong> so you don't miss the next lesson. <strong>Subscribe to the Substack</strong> for the written deep-dives, <strong>drop a comment</strong> with the dict trick you use most, and <strong>share</strong> this with someone who's still scanning lists to find one record.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Trigger: need instant lookup by a unique label instead of scanning?</summary><p>Pattern: dictionary (hash map). When you see &#x27;look up value by key&#x27; or &#x27;count/group by X&#x27;, reach for a dict.</p></details><details class='card2'><summary>Time complexity of dict get, set, and &#x27;in&#x27; checks?</summary><p>Average O(1) per operation. Worst case O(n) under heavy hash collisions, but effectively constant in practice.</p></details><details class='card2'><summary>Space complexity of a dictionary with n entries?</summary><p>O(n) — one slot per key-value pair, plus hash-table overhead for empty buckets.</p></details><details class='card2'><summary>Trickiest bug: accessing a missing key?</summary><p>d[key] raises KeyError. Use d.get(key, default) or `if key in d` to read safely without crashing.</p></details><details class='card2'><summary>Dictionary vs list: when to pick which?</summary><p>Dict for lookup by label/id (O(1)); list for ordered items or index access. Membership: dict O(1), list O(n).</p></details><details class='card2'><summary>Follow-up: why must dict keys be immutable?</summary><p>Keys must be hashable; lists/dicts can&#x27;t be keys since mutation would change the hash. Use tuples, strings, or numbers.</p></details></div><h2 class='ph1' style='font-size:1.4rem'>Similar problems</h2><div class='grid'><a class='card' href='rank-transform-of-an-array.html'><div class='body'><h3>Rank Transform of an Array — Sort, Set &amp; Hash Map in Python (Explained Simply)</h3><span class='badge' style='background:#facc1522;color:#facc15'>🔑 Hash Maps</span></div></a></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
