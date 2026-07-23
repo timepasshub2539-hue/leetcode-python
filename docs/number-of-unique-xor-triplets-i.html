@@ -1,0 +1,177 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Number of Unique XOR Triplets I — LeetCode Daily Python Solution (the trick nobody sees) — Python LeetCode Solution</title><meta name="description" content="📍 Jump to your level:
+🟢 Beginner: 0:15–5:33
+🟡 Intermediate: 5:33–9:13
+🔴 Advanced: 9:13–12:54
+
+📄 Full written solution: https://timepasshub2539-hue.github.io/leetcode-python/number-of-unique-xor-triple">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/number-of-unique-xor-triplets-i.html">
+<meta property="og:title" content="Number of Unique XOR Triplets I — LeetCode Daily Python Solution (the trick nobody sees) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📍 Jump to your level:
+🟢 Beginner: 0:15–5:33
+🟡 Intermediate: 5:33–9:13
+🔴 Advanced: 9:13–12:54
+
+📄 Full written solution: https://timepasshub2539-hue.github.io/leetcode-python/number-of-unique-xor-triple">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Number of Unique XOR Triplets I — LeetCode Daily Python Solution (the trick nobody sees)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every so often a LeetCode problem looks like a brute-force exercise and turns out to be a math problem in disguise. <strong>Number of Unique XOR Triplets I</strong> is exactly that kind of problem, and it's worth your time for a reason that has nothing to do with LeetCode streaks: the pattern it teaches — <em>counting the size of a result space instead of generating every result</em> — shows up constantly in real systems. Hash collision counts, checksum coverage, error-correcting code capacity, and even cache key distributions all boil down to the same question: "how many distinct outputs can this operation produce?"</p>
+<p>Interviewers like this problem because it has a trap built in. The naive triple-loop solution is easy to write and passes on small inputs, which makes candidates confident they're done. Then the constraint reveals that <code>n</code> can be up to 100,000, and a solution that felt correct suddenly can't finish in time. Watching how a candidate reacts to that — do they re-examine their assumptions, or just try to optimize the same loop? — tells an interviewer a lot.</p>
+<p>By the end of this article you'll understand why the actual numbers in the array are irrelevant, why XOR combinations of a permutation fill every value up to a power of two, and how to turn that insight into a five-line, constant-time Python solution.</p>
+<h2>Problem Overview</h2>
+<p>You're given an array <code>nums</code> that is a <strong>permutation</strong> of the integers <code>1</code> to <code>n</code> — meaning it contains every value from <code>1</code> through <code>n</code> exactly once, just shuffled into some order.</p>
+<p>You need to consider every triplet of indices <code>(i, j, k)</code> such that <code>i &lt;= j &lt;= k</code>. Because indices are allowed to repeat (you can pick the same index for <code>i</code>, <code>j</code>, and <code>k</code>), this is not the same as choosing three distinct array positions — it includes triplets like <code>i = j = k</code>.</p>
+<p>For each such triplet, compute <code>nums[i] XOR nums[j] XOR nums[k]</code>. Collect every distinct value this expression can produce, and return the count of distinct values.</p>
+<p>The tricky part isn't the XOR itself — it's recognizing that the array being a permutation makes the <em>positions</em> irrelevant, and the real question is about the <em>values</em> <code>1</code> through <code>n</code>.</p>
+<h2>Example</h2>
+<p>Let's use <code>nums = [1, 2]</code> (so <code>n = 2</code>).</p>
+<p>Valid index triplets with <code>i &lt;= j &lt;= k</code>:
+- <code>(0,0,0)</code> → <code>nums[0] XOR nums[0] XOR nums[0]</code> = <code>1 XOR 1 XOR 1</code> = <code>1</code>
+- <code>(0,0,1)</code> → <code>1 XOR 1 XOR 2</code> = <code>2</code>
+- <code>(0,1,1)</code> → <code>1 XOR 2 XOR 2</code> = <code>1</code>
+- <code>(1,1,1)</code> → <code>2 XOR 2 XOR 2</code> = <code>2</code></p>
+<p>The distinct results are <code>{1, 2}</code> — so the answer is <code>2</code>.</p>
+<p>Now try <code>n = 4</code>. Instead of enumerating every triplet by hand (there are 4×4×4 = 64 index combinations, though many index combinations produce the same value-triplet), trust the pattern for a moment: the distinct XOR results turn out to be every integer from <code>0</code> to <code>7</code> — all eight values. We'll prove why shortly.</p>
+<h2>Intuition</h2>
+<p>Start with the single fact that makes this entire problem tractable:</p>
+<blockquote>
+<p><strong><code>a XOR a = 0</code></strong> — XOR-ing a number with itself cancels it out, like flipping a light switch on and then off.</p>
+</blockquote>
+<p>This is the mechanism behind almost every XOR trick you'll ever see in an interview, from "find the single number" to "find the missing number" to this problem.</p>
+<p><strong>Step 1 — the positions don't matter.</strong>
+Since <code>nums</code> is a permutation, choosing indices <code>i &lt;= j &lt;= k</code> with repetition allowed is really just choosing a <em>multiset of three values</em> from <code>{1, ..., n}</code>, with repetition allowed. XOR is commutative (<code>a XOR b = b XOR a</code>) and repetition-aware (<code>a XOR a = 0</code>), so the order you combine values in doesn't change the result. The array's actual arrangement is a red herring — only <code>n</code> matters.</p>
+<p><strong>Step 2 — the values fill an entire range.</strong>
+This is the part that feels like magic the first time you see it. Take the smallest power of two that is <em>strictly greater</em> than <code>n</code> — call it <code>C</code> (the "ceiling"). It turns out that once <code>n &gt;= 3</code>, combining three values from <code>1</code> to <code>n</code> with XOR can produce <strong>every single integer from <code>0</code> to <code>C - 1</code></strong>.</p>
+<p>Why? Every bit position below <code>bit_length(n)</code> is "reachable" — because the numbers <code>1</code> through <code>n</code> collectively contain a number that has just that one bit set at the top, and combinations of a few such numbers with XOR let you build up any target bit pattern below that ceiling. With three numbers to combine (repetition allowed), you have enough freedom to reach every value in that range. This is really a fact from linear algebra over GF(2) — the integers <code>1..n</code>, viewed as bit vectors, span the entire space below <code>bit_length(n)</code> bits, and three "slots" (with repeats allowed, so you can effectively use fewer than three distinct numbers) is enough freedom to reach any element of that span.</p>
+<p>Check it: <code>n = 4</code>. <code>bit_length(4)</code> is <code>3</code> (binary <code>100</code>), so <code>C = 1 &lt;&lt; 3 = 8</code>. Every value <code>0</code> through <code>7</code> is reachable. No triplet needs to be tried — the ceiling alone tells you the count.</p>
+<p><strong>The two exceptions.</strong> With only one number (<code>n = 1</code>), there's exactly one possible triplet, giving one result. With two numbers (<code>n = 2</code>), there isn't enough freedom to fill the full bit range — working it out by hand always gives exactly <code>2</code> distinct results, not <code>C</code>. Both cases are handled directly rather than forced through the formula.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Loop over every <code>(i, j, k)</code> with <code>i &lt;= j &lt;= k</code>, XOR the three values, and drop the result into a set.</p>
+<p><strong>Algorithm:</strong>
+1. Create an empty set.
+2. For each <code>i</code> from <code>0</code> to <code>n-1</code>, each <code>j</code> from <code>i</code> to <code>n-1</code>, each <code>k</code> from <code>j</code> to <code>n-1</code>: compute <code>nums[i] ^ nums[j] ^ nums[k]</code> and add it to the set.
+3. Return the size of the set.</p>
+<p><strong>Advantages:</strong> Obviously correct, trivial to write, easy to reason about.</p>
+<p><strong>Disadvantages:</strong> Far too slow for the actual constraint (<code>n</code> up to 100,000). It also does unnecessary work — it never notices that only <code>n</code> matters, not the array's contents.</p>
+<p><strong>Complexity:</strong> Time <code>O(n³)</code> (or <code>O(n²)</code> with a pairwise-XOR precomputation trick), Space <code>O(n²)</code> in the worst case for the intermediate set of pairs, or <code>O(distinct results)</code> for the final set.</p>
+<h2>Optimal Solution</h2>
+<p>Once you accept the two insights from the intuition section, the algorithm collapses to almost nothing:</p>
+<table>
+<thead>
+<tr>
+<th>n</th>
+<th>Special case?</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>yes</td>
+<td>1</td>
+</tr>
+<tr>
+<td>2</td>
+<td>yes</td>
+<td>2</td>
+</tr>
+<tr>
+<td>≥ 3</td>
+<td>no</td>
+<td><code>1 &lt;&lt; n.bit_length()</code></td>
+</tr>
+</tbody>
+</table>
+<p>Here, <code>n.bit_length()</code> returns the number of bits needed to represent <code>n</code> in binary, and <code>1 &lt;&lt; k</code> computes <code>2^k</code>. Together, <code>1 &lt;&lt; n.bit_length()</code> gives you the smallest power of two strictly greater than <code>n</code> — exactly the "ceiling" from the intuition.</p>
+<p>No loop over the array is needed at all, because the array's contents never mattered — only its length.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def unique_xor_triplets(n: int) -&gt; int:
+    &quot;&quot;&quot;
+    Count distinct XOR results of nums[i] ^ nums[j] ^ nums[k]
+    for i &lt;= j &lt;= k, where nums is a permutation of 1..n.
+    &quot;&quot;&quot;
+    if n == 1:
+        return 1
+    if n == 2:
+        return 2
+    return 1 &lt;&lt; n.bit_length()
+
+
+# Self-checks
+assert unique_xor_triplets(1) == 1
+assert unique_xor_triplets(2) == 2
+assert unique_xor_triplets(4) == 8
+assert unique_xor_triplets(5) == 8
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>if n == 1: return 1</code> — with a single element, <code>i = j = k = 0</code> is the only triplet, so there's exactly one possible result.</li>
+<li><code>if n == 2: return 2</code> — too few values for the full bit-ceiling range to be reachable; verified directly by enumeration, so it's hardcoded.</li>
+<li><code>1 &lt;&lt; n.bit_length()</code> — for <code>n &gt;= 3</code>, this is the closed-form answer. <code>n.bit_length()</code> gives the number of bits in <code>n</code>; shifting <code>1</code> left by that many places gives the next power of two above <code>n</code>.</li>
+<li>No loop touches <code>nums</code> at all — the function only needs the <em>count</em> of elements, not their values.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Take <code>n = 5</code>.</p>
+<ol>
+<li><code>n != 1</code> and <code>n != 2</code>, so we fall through to the formula.</li>
+<li><code>5</code> in binary is <code>101</code>, which uses <code>3</code> bits, so <code>n.bit_length() == 3</code>.</li>
+<li><code>1 &lt;&lt; 3 == 8</code>.</li>
+<li>Return <code>8</code>.</li>
+</ol>
+<p>Sanity check: for <code>n = 5</code>, the set <code>{1, 2, 3, 4, 5}</code> should be able to XOR-combine (in triplets, repetition allowed) into every value from <code>0</code> to <code>7</code>. <code>n = 6</code> and <code>n = 7</code> also map to <code>8</code>, since the ceiling only changes when <code>n</code> crosses a power of two — the function is a step function.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> <code>O(1)</code>. <code>bit_length()</code> and a bit shift are constant-time operations on Python's arbitrary-precision integers (in practice, proportional to the number of bits in <code>n</code>, which is at most ~17 for <code>n &lt;= 100,000</code> — effectively constant).</p>
+<p><strong>Space:</strong> <code>O(1)</code>. No auxiliary data structures are allocated.</p>
+<p>This is correct because the array is never read beyond its length — the entire problem reduces to a fact about the set <code>{1, ..., n}</code>, which is fixed and doesn't depend on the array's arrangement.</p>
+<h2>Alternative Solutions</h2>
+<p>The only reasonable alternative is the <code>O(n²)</code> refinement of brute force: precompute all pairwise XORs of array elements into a set, then XOR each pair-result with every single element and collect the results. This shaves a factor of <code>n</code> off the naive triple loop but is still far too slow at <code>n = 100,000</code> (roughly 10 billion operations). It's worth knowing as a fallback if you can't see the permutation trick under interview pressure, but it isn't a substitute for the closed-form answer.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong><code>n = 1</code></strong> — only one triplet exists; handled explicitly, returns <code>1</code>.</li>
+<li><strong><code>n = 2</code></strong> — too small for the bit-ceiling pattern; handled explicitly, returns <code>2</code>.</li>
+<li><strong><code>n</code> exactly a power of two (e.g., <code>n = 8</code>)</strong> — <code>bit_length(8) = 4</code>, so the ceiling is <code>16</code>, not <code>8</code>. Double-check this boundary; it's the easiest place to introduce an off-by-one.</li>
+<li><strong>Large <code>n</code> (100,000)</strong> — the solution is <code>O(1)</code>, so this is a non-issue, unlike brute force.</li>
+<li><strong>Duplicate values</strong> — not applicable, since the array is guaranteed to be a permutation of <code>1..n</code> with no duplicates.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Looping over the array at all.</strong> If your solution reads <code>nums</code>, you've missed the core insight — the values never matter, only <code>len(nums)</code>.</li>
+<li><strong>Forgetting the <code>n = 1</code> and <code>n = 2</code> special cases</strong> and applying the bit-ceiling formula uniformly, which gives wrong answers for those two inputs.</li>
+<li><strong>Off-by-one on the ceiling.</strong> Using <code>1 &lt;&lt; (n.bit_length() - 1)</code> (the largest power of two <em>at most</em> <code>n</code>) instead of <code>1 &lt;&lt; n.bit_length()</code> (the smallest power of two <em>above</em> <code>n</code>).</li>
+<li><strong>Assuming index order matters.</strong> Spending time tracing through <code>i, j, k</code> positions in the array instead of recognizing that a permutation collapses index selection into value selection.</li>
+<li><strong>Reaching for a nested loop by default</strong> instead of first asking "does the problem's structure (permutation, fixed range) let me count outputs without generating them?"</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>"What if <code>nums</code> were <em>not</em> guaranteed to be a permutation of <code>1..n</code>?" — You'd fall back to building a linear XOR basis via Gaussian elimination over the array's values; the answer becomes <code>2^rank</code> of that basis.</li>
+<li>"Why does the closed-form only kick in at <code>n &gt;= 3</code>?" — Because three "slots" with repetition are the minimum degrees of freedom needed to span the full bit range implied by <code>bit_length(n)</code>.</li>
+<li>"What's the total number of index triplets, ignoring duplicates?" — <code>n³</code>, since each of <code>i</code>, <code>j</code>, <code>k</code> independently ranges over all <code>n</code> positions (before applying <code>i &lt;= j &lt;= k</code>).</li>
+<li>"Can you prove the ceiling bound instead of just asserting it?" — This invites the GF(2) vector-space argument: the integers <code>1..n</code> span every bit position below <code>bit_length(n)</code>.</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Single Number</strong> (LeetCode 136) — same <code>a XOR a = 0</code> cancellation idea, applied to find a unique element.</li>
+<li><strong>Missing Number</strong> (LeetCode 268) — uses XOR over a range to find a missing value, another "range property" trick.</li>
+<li><strong>Maximum XOR of Two Numbers in an Array</strong> (LeetCode 421) — uses a XOR trie/basis, relevant if <code>nums</code> isn't a clean permutation.</li>
+<li><strong>Counting Bits</strong> (LeetCode 338) — different mechanism, same theme of exploiting a numeric range's structure instead of brute force.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>When a problem gives you a <strong>permutation</strong> of <code>1..n</code>, check whether index constraints secretly reduce to value constraints.</li>
+<li><code>a XOR a = 0</code> is the single fact behind most XOR interview problems — internalize it.</li>
+<li>"Count distinct results" problems often hide a closed-form size of the output space; look for that before writing a loop.</li>
+<li><code>n.bit_length()</code> and <code>1 &lt;&lt; k</code> are the Python tools for reasoning about powers of two and bit ranges — know them cold.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>If you want to see this bit-ceiling shortcut built up visually, step by step, with the light-switch analogy and a worked walkthrough for <code>n = 5</code>, watch the full video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of the <strong>Daily Python LeetCode</strong> series, where each entry takes the current LeetCode daily challenge and rebuilds it from first principles in Python — starting from the obvious brute force, then working toward the insight that actually makes the problem fast. The goal isn't just to pass the test cases; it's to build the pattern-recognition instincts that make future problems easier to see through.</p>
+<h2>Call To Action</h2>
+<p>If this shortcut clicked for you, the video walks through the same reasoning with visuals that make the bit-ceiling idea even more intuitive — give it a watch and a like on YouTube. Subscribe there for daily problem breakdowns, and subscribe to the Substack newsletter for written deep-dives like this one delivered straight to your inbox. Drop a comment with the next problem you'd like broken down, and share this with a study partner who's grinding LeetCode for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>What pattern applies to &#x27;Number of Unique XOR Triplets I&#x27; (n≤3)?</summary><p>Small-n brute-force / bit trick: with only 1-3 elements, enumerate all XOR combinations directly instead of searching for a clever formula.</p></details><details class='card2'><summary>Time complexity for counting unique XOR triplets when n≤3?</summary><p>O(n^3) worst case, but bounded by constant since n≤3, so effectively O(1) per test but O(n^3) in general form.</p></details><details class='card2'><summary>Space complexity of the unique-XOR-triplet counting approach?</summary><p>O(n^3) in the worst case to store all triplet XOR results in a set, though with small n it&#x27;s negligible.</p></details><details class='card2'><summary>Common bug when counting &#x27;unique&#x27; XOR results?</summary><p>Forgetting to dedupe with a set/hash before counting, so repeated XOR values get counted multiple times instead of once.</p></details><details class='card2'><summary>XOR triplet brute force vs. two-pointer/prefix-XOR pattern — when does each apply?</summary><p>Brute force fits tiny fixed n (≤3); prefix-XOR with hashing scales better when n grows large and pairwise/triplet counts are needed.</p></details><details class='card2'><summary>Interview follow-up: how would you solve this if n were up to 10^5?</summary><p>Precompute prefix XORs and use a hash map to count combinations achieving each XOR value, avoiding the O(n^3) enumeration.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
