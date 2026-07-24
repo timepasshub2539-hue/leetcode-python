@@ -1,0 +1,189 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 11: Why Does return None Happen to Everyone? — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-11-functions
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesson-11-functions
+
+C">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-11-functions.html">
+<meta property="og:title" content="Lesson 11: Why Does return None Happen to Everyone? — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-11-functions
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesson-11-functions
+
+C">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson 11: Why Does return None Happen to Everyone?</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>If you've ever copy-pasted the same five lines of code into three different places in your script, you already understand the problem functions solve — you just haven't given it a name yet. Functions are the first real lever a beginner pulls to write less code that does more, and they're also one of the first things interviewers probe, because how you write a function reveals how you think: do you name things clearly, do you understand what a function actually gives back to its caller, do you know why <code>return</code> and <code>print</code> are not the same thing?</p>
+<p>This is also where a huge number of beginner bugs are born. Almost every new Python developer eventually writes a function, calls it, tries to use its result, and gets <code>None</code> back for reasons they don't understand. Once you understand <em>why</em> that happens, you've crossed a real threshold in how you think about code — and that's exactly what this lesson is about.</p>
+<h2>Problem Overview</h2>
+<p>In plain terms: a function is a named block of instructions that does nothing on its own — it only runs when you explicitly call it. A <strong>parameter</strong> is a placeholder for input the function expects; an <strong>argument</strong> is the actual value you hand over when calling it. A <strong>return value</strong> is the result the function hands back to whoever called it, so that result can be stored, reused, or passed elsewhere.</p>
+<p>On top of these basics, Python gives you a few tools to make functions more flexible:</p>
+<ul>
+<li><strong>Default arguments</strong> — a fallback value a parameter uses if the caller doesn't supply one.</li>
+<li><strong>Keyword arguments</strong> — explicitly naming which parameter a value belongs to, instead of relying on position.</li>
+<li><strong><code>*args</code> / <code>**kwargs</code></strong> — ways to accept an unknown number of positional or named inputs.</li>
+</ul>
+<p>And under all of this sits one quiet rule that trips up almost everyone at least once: if a function never uses <code>return</code>, Python hands back <code>None</code> by default — silently, with no error.</p>
+<h2>Example</h2>
+<pre><code class="language-python">def add(a, b):
+    print(a + b)
+
+result = add(3, 5)   # prints 8
+print(result)         # prints None
+</code></pre>
+<p><code>add</code> prints <code>8</code> to the screen — that part looks correct. But <code>result</code> is <code>None</code>, because <code>add</code> never actually returned anything; it only printed. Printing shows a human something on screen. Returning hands a value back to the program itself. They are unrelated actions that happen to look similar when you're staring at terminal output.</p>
+<p>Compare that to a version that returns properly:</p>
+<pre><code class="language-python">def add(a, b):
+    return a + b
+
+result = add(3, 5)
+print(result)   # prints 8
+</code></pre>
+<p>Now <code>result</code> actually holds <code>8</code>, because the function handed that value back to the caller instead of just displaying it.</p>
+<h2>Intuition</h2>
+<p>Think of a function like a vending machine. You put in money (arguments), the machine does its internal work (the function body), and it either <strong>hands you a snack</strong> (<code>return</code>) or it just <strong>lights up a display</strong> (<code>print</code>) without giving you anything you can carry away. If you walk off expecting a snack from a machine that only lights up, your hands are empty — that's exactly what happens when you try to use the result of a function that only prints.</p>
+<p>An experienced engineer doesn't discover this through memorization — they discover it the first time a variable that "should" hold a number turns out to hold <code>None</code>, and they trace it back to a missing <code>return</code>. From then on, the question "does this function return something, or does it just do something?" becomes automatic before writing a single call site.</p>
+<p>The same instinct applies to defaults and keyword arguments: a good engineer notices when a function is being called the same way 90% of the time with only one value changing, and reaches for a default. They notice when a function call is hard to read because of unlabeled values in a row, and reach for keyword arguments to label them.</p>
+<h2>Brute Force Solution</h2>
+<p>There isn't really a "brute force vs optimal" split for functions themselves — but there is one for <em>how you avoid repeating logic</em>, which is the actual problem functions solve.</p>
+<p><strong>Idea:</strong> copy-paste the same block of code everywhere you need it.</p>
+<p><strong>Algorithm:</strong> find where you need the logic, paste it, adjust variable names if needed.</p>
+<p><strong>Advantages:</strong> zero setup, works immediately, no need to think about parameters or naming.</p>
+<p><strong>Disadvantages:</strong> any bug fix or behavior change means hunting down every copy and fixing them all — and missing even one reintroduces the bug. Readability suffers because the "story" of your program gets buried in repeated implementation detail.</p>
+<p><strong>Time/space complexity:</strong> not applicable in the algorithmic sense — but "maintenance complexity" scales with the number of copies, which is exactly what functions eliminate.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach is to identify the repeated logic, wrap it in a function once, and call that function everywhere you need the behavior.</p>
+<table>
+<thead>
+<tr>
+<th>Piece</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>def name(params):</code></td>
+<td>Declares the function and what input it accepts</td>
+</tr>
+<tr>
+<td>Function body (indented)</td>
+<td>The actual work performed</td>
+</tr>
+<tr>
+<td><code>return value</code></td>
+<td>Sends a result back to the caller (optional)</td>
+</tr>
+<tr>
+<td>Default arguments</td>
+<td>Fallback values so common calls stay short</td>
+</tr>
+<tr>
+<td>Keyword arguments</td>
+<td>Explicit labeling of which value goes where</td>
+</tr>
+</tbody>
+</table>
+<p>The key structural rule: <strong>positional arguments must come before keyword arguments</strong> in a call. Python resolves positional arguments by order first, then matches keyword arguments by name, so mixing them in the wrong order raises an error.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def make_coffee(item, size=&quot;medium&quot;, milk=True):
+    &quot;&quot;&quot;Build and return a description of a coffee order.&quot;&quot;&quot;
+    milk_text = &quot;with milk&quot; if milk else &quot;without milk&quot;
+    return f&quot;{size} {item}, {milk_text}&quot;
+
+
+def total_of(*nums):
+    &quot;&quot;&quot;Sum an arbitrary number of positional values.&quot;&quot;&quot;
+    return sum(nums)
+
+
+def profile(**info):
+    &quot;&quot;&quot;Collect arbitrary keyword info into a dict.&quot;&quot;&quot;
+    return info
+
+
+def safe_add_item(item, cart=None):
+    &quot;&quot;&quot;Append item to cart, avoiding the mutable default trap.&quot;&quot;&quot;
+    if cart is None:
+        cart = []
+    cart.append(item)
+    return cart
+
+
+if __name__ == &quot;__main__&quot;:
+    assert make_coffee(&quot;latte&quot;) == &quot;medium latte, with milk&quot;
+    assert make_coffee(&quot;latte&quot;, size=&quot;large&quot;, milk=False) == &quot;large latte, without milk&quot;
+    assert total_of(1, 2, 3, 4) == 10
+    assert profile(name=&quot;Maya&quot;, age=30) == {&quot;name&quot;: &quot;Maya&quot;, &quot;age&quot;: 30}
+    assert safe_add_item(&quot;apple&quot;) == [&quot;apple&quot;]
+    assert safe_add_item(&quot;banana&quot;) == [&quot;banana&quot;]  # not [&quot;apple&quot;, &quot;banana&quot;]
+    print(&quot;all checks passed&quot;)
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>def make_coffee(item, size="medium", milk=True):</code> — <code>item</code> is required, <code>size</code> and <code>milk</code> have defaults, so callers only need to override what they care about.</li>
+<li>The docstring under <code>def</code> documents intent for anyone reading the function later, including future you.</li>
+<li><code>return f"..."</code> sends the built string back to the caller instead of just printing it, so the result can be stored, compared, or passed along.</li>
+<li><code>def total_of(*nums):</code> — the single star gathers any number of positional arguments into a tuple called <code>nums</code>, so <code>total_of(1, 2, 3, 4)</code> works regardless of how many values are passed.</li>
+<li><code>def profile(**info):</code> — double star gathers named arguments into a dictionary, letting the caller pass any number of labeled values.</li>
+<li><code>def safe_add_item(item, cart=None):</code> — this is the fix for the mutable default trap. <code>cart</code> defaults to <code>None</code> (immutable, safe), and a fresh list is only created inside the function body when needed.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Call <code>safe_add_item("banana")</code> right after <code>safe_add_item("apple")</code>:</p>
+<ol>
+<li>First call: <code>cart</code> is <code>None</code> → <code>cart</code> becomes a brand-new empty list <code>[]</code> → <code>"apple"</code> is appended → returns <code>["apple"]</code>.</li>
+<li>Second call: <code>cart</code> is again <code>None</code> (a fresh default check every time) → a brand-new empty list is created again → <code>"banana"</code> is appended → returns <code>["banana"]</code>.</li>
+</ol>
+<p>If <code>cart=[]</code> had been written directly in the signature instead, Python would create that list <strong>once</strong>, at function definition time, and reuse the same list object on every call — so the second call would return <code>["apple", "banana"]</code>, which is almost never what you want.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> each of these functions does O(1) work aside from <code>total_of</code>, which is O(n) in the number of arguments passed (it has to sum them all) — correct because summing n values fundamentally requires touching each one.</li>
+<li><strong>Space:</strong> O(1) extra space per call for the simple functions; O(n) for <code>total_of</code> and <code>profile</code> since <code>*args</code>/<code>**kwargs</code> must materialize a tuple/dict to hold the collected values — this is unavoidable since Python needs somewhere to store an unknown number of inputs.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p>Instead of <code>*args</code>, you could require callers to pass a single list: <code>total_of([1, 2, 3, 4])</code>. Functionally equivalent — the difference is purely how the caller experiences it. <code>*args</code> reads more naturally for "call this with however many numbers you want," while an explicit list parameter is clearer when the caller already has a collection built elsewhere. Neither is objectively better; it depends on how you expect the function to be called.</p>
+<p>Similarly, a <code>lambda</code> could replace a tiny one-expression function (<code>square = lambda n: n * n</code>), but a regular <code>def</code> function is almost always more readable once anything beyond a single trivial expression is involved.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>No arguments passed to a function with all defaults:</strong> should fall back cleanly to every default value.</li>
+<li><strong>Mutable default argument (list/dict):</strong> must use <code>None</code> + create-inside-body pattern, or state shared across calls silently corrupts results.</li>
+<li><strong>Misspelled keyword argument:</strong> raises <code>TypeError: unexpected keyword argument</code>, since Python matches keyword arguments by exact name.</li>
+<li><strong>Function with no <code>return</code> statement:</strong> returns <code>None</code>, not an error — a valid but easily-forgotten case.</li>
+<li><strong>Mixing positional and keyword arguments in the wrong order:</strong> positional arguments must come first, or Python raises a <code>SyntaxError</code>/<code>TypeError</code>.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Calling a function without parentheses (<code>greet</code> instead of <code>greet()</code>) — this references the function object rather than running it.</li>
+<li>Confusing <code>print</code> with <code>return</code> — the function <em>looks</em> like it works because output appears on screen, but the caller gets <code>None</code> back.</li>
+<li>Using a mutable object (<code>[]</code>, <code>{}</code>) as a default argument, causing state to leak between unrelated calls.</li>
+<li>Misspelling a keyword argument name, causing a <code>TypeError</code>.</li>
+<li>Assuming a parameter change inside a function affects the original variable outside it — for simple types like numbers and strings, it does not, since Python passes the value, not the original variable.</li>
+<li>Shadowing a built-in function name (like <code>sum</code>) with your own function of the same name, silently breaking any code that expected the original.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What's the difference between a parameter and an argument?</li>
+<li>Why does a function with no <code>return</code> statement return <code>None</code> instead of raising an error?</li>
+<li>Explain the mutable default argument bug and how you'd fix it.</li>
+<li>What's the difference between <code>*args</code> and <code>**kwargs</code>?</li>
+<li>Can positional and keyword arguments be mixed in one call? What's the rule?</li>
+<li>What is variable scope, and why does a variable defined inside a function disappear outside it?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode-style "implement a function with default behavior"</strong> problems — test the same default-argument reasoning shown here.</li>
+<li><strong>Two Sum</strong> and similar array problems — a great next step for practicing writing a function with clear parameters and a single well-defined return value.</li>
+<li><strong>Recursive problems (factorial, Fibonacci)</strong> — build directly on the function-calling-a-function idea covered here.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>A function is reusable, named logic that only runs when called. Parameters wait, arguments arrive. <code>return</code> gives your program something to actually use — <code>print</code> only shows a human something on screen. Default arguments keep common calls short; keyword arguments make calls with many parameters readable and unambiguous. And the single most common beginner bug — a mutable default argument — is avoided by defaulting to <code>None</code> and creating the mutable object fresh inside the function body.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with live coding and every example explained step by step, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of the Daily Python LeetCode series — a day-by-day walkthrough of core Python fundamentals and interview-style problems, built for anyone going from "I can read Python" to "I can confidently write and reason about it under pressure."</p>
+<h2>Call To Action</h2>
+<p>If this cleared up something that's been quietly confusing you, do three things: like the video on YouTube so it reaches more people learning the same thing, subscribe to the channel so you don't miss the next lesson, and subscribe to the Substack for the written version of every lesson delivered straight to your inbox. Drop a comment with the trickiest function bug you've personally run into — and share this with anyone still fighting the "why is this None" bug.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Why write a function instead of copy-pasting code?</summary><p>One change updates every call site; copy-pasted code drifts and bugs get fixed in only one spot.</p></details><details class='card2'><summary>Function vs parameter vs argument — what&#x27;s the difference?</summary><p>Function: named reusable block. Parameter: placeholder name in def. Argument: actual value passed when calling.</p></details><details class='card2'><summary>What does &#x27;return value&#x27; let a function do?</summary><p>Send a result back to the caller so it can be stored, printed, or used in another expression.</p></details><details class='card2'><summary>Default argument vs keyword argument?</summary><p>Default: value used if caller omits it (def f(x=5)). Keyword: caller names the param when calling (f(x=5)).</p></details><details class='card2'><summary>Why does parameter order matter in positional calls?</summary><p>Positional args fill parameters left to right by position; swapping order sends values to the wrong parameter.</p></details><details class='card2'><summary>Common bug: function has no return statement?</summary><p>It returns None implicitly; using the result elsewhere silently produces None instead of the intended value.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
