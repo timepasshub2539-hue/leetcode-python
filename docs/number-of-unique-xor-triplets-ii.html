@@ -1,0 +1,184 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Number of Unique XOR Triplets II — LeetCode Daily Python Solution (the trick nobody sees) — Python LeetCode Solution</title><meta name="description" content="📍 Jump to your level:
+🟢 Beginner: 0:19–6:59
+🟡 Intermediate: 6:59–10:52
+🔴 Advanced: 10:52–15:19
+
+📄 Full written solution: https://timepasshub2539-hue.github.io/leetcode-python/number-of-unique-xor-trip">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/number-of-unique-xor-triplets-ii.html">
+<meta property="og:title" content="Number of Unique XOR Triplets II — LeetCode Daily Python Solution (the trick nobody sees) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📍 Jump to your level:
+🟢 Beginner: 0:19–6:59
+🟡 Intermediate: 6:59–10:52
+🔴 Advanced: 10:52–15:19
+
+📄 Full written solution: https://timepasshub2539-hue.github.io/leetcode-python/number-of-unique-xor-trip"><meta property="og:image" content="https://i.ytimg.com/vi/-BBX3keqfJg/hqdefault.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Number of Unique XOR Triplets II — LeetCode Daily Python Solution (the trick nobody sees)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/-BBX3keqfJg' allowfullscreen></iframe></div><article><h2>Introduction</h2>
+<p>Picture an array of 1,500 numbers. Someone asks you: pick any three elements (repeats allowed), XOR them together, and count how many distinct results are possible. Your gut says the answer could be in the millions — there are billions of ways to pick three indices from 1,500 elements. But the real answer is capped at a few thousand, and once you see why, you'll never look at a "bounded values" constraint the same way again.</p>
+<p>This is exactly the kind of problem that shows up in interviews at companies like Google and Bloomberg, not because XOR itself is exotic, but because it tests something more valuable than knowing an operator: can you notice when a <em>value</em> constraint (rather than an <em>array length</em> constraint) changes your entire complexity strategy? XOR also isn't just an interview toy — it's the backbone of checksums, parity checks, and error detection in real systems. Learning to reason about it here pays off well beyond LeetCode.</p>
+<p>By the end of this article, you'll know how to go from a naive triple-loop to a clean, fast solution using nothing more exotic than Python sets — and you'll understand <em>why</em> it works, not just <em>that</em> it works.</p>
+<h2>Problem Overview</h2>
+<p>You're given an array of integers. Consider every triplet of indices <code>(i, j, k)</code> such that <code>i &lt;= j &lt;= k</code> — meaning an index can repeat, so the same element can be used more than once in a triplet, and order doesn't matter beyond this non-decreasing constraint.</p>
+<p>For each such triplet, compute <code>nums[i] ^ nums[j] ^ nums[k]</code>. Your task is to count how many <strong>distinct</strong> XOR values can be produced across all valid triplets.</p>
+<p>Two ideas anchor this problem:</p>
+<ul>
+<li><strong>A set</strong> never stores duplicates. Insert the same value twice, and it only shows up once — like a guest list where writing a name that's already there does nothing.</li>
+<li><strong>XOR (<code>^</code>)</strong> compares two numbers bit by bit. Matching bits produce <code>0</code>, differing bits produce <code>1</code>. A useful shortcut: <code>x ^ x = 0</code>, and <code>x ^ 0 = x</code>.</li>
+</ul>
+<h2>Example</h2>
+<pre><code>Input: nums = [2, 2]
+Output: 1
+</code></pre>
+<p>With only the value <code>2</code> available (even repeated), every possible triplet is <code>2 ^ 2 ^ 2</code>. Since <code>2 ^ 2 = 0</code> and <code>0 ^ 2 = 2</code>, every single triplet evaluates to <code>2</code>. There's exactly one distinct result.</p>
+<pre><code>Input: nums = [1, 2, 3]
+Output: 4
+</code></pre>
+<p>Here the unique triplet XORs include values like <code>1^1^1=1</code>, <code>1^2^3=0</code>, <code>2^2^3=3</code>, <code>1^1^2=2</code>, and more. Working through all combinations, the distinct results that show up are <code>{0, 1, 2, 3}</code> — four unique values.</p>
+<h2>Intuition</h2>
+<p>The instinct every beginner reaches for is to just try all three nested loops over <code>i, j, k</code> and collect results in a set. That's completely reasonable as a first move — it's simple, obviously correct, and easy to verify by hand.</p>
+<p>The problem is scale. With 1,500 elements, the number of valid <code>(i, j, k)</code> triplets is on the order of <code>n^3 / 6</code>, which is over half a billion — even more if you don't bound <code>i &lt;= j &lt;= k</code>. That's too slow to run in any reasonable time limit.</p>
+<p>So instead of asking "what are all the triplets I can form?", flip the question: "what are all the <em>values</em> I can reach by XOR-ing one, two, or three numbers together?" That reframing is the entire trick. You build up the set of reachable values in stages:</p>
+<ol>
+<li>Start with the unique values in the array (numbers reachable using just one element).</li>
+<li>XOR every pair of unique values together to get every value reachable using two elements.</li>
+<li>XOR every value from step 2 with every unique value again to get every value reachable using three elements.</li>
+</ol>
+<p>Because a set silently discards duplicates at each stage, you never do wasted work twice, and the final set size is your answer.</p>
+<p>The reason this stays fast — and this is the part that makes everything click — is that XOR never produces a result needing more bits than its inputs. If every number in the array is smaller than 1,500, each one fits in 11 bits, so every possible XOR of them is smaller than <code>2^11 = 2048</code>. That means the "reachable in two XORs" set can <em>never</em> contain more than 2048 values, no matter how large the input array grows. That fixed ceiling is what turns an exponential-feeling problem into something that scales gracefully.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Enumerate every triplet <code>(i, j, k)</code> with <code>i &lt;= j &lt;= k</code> directly, compute the XOR, and throw each result into a set.</p>
+<p><strong>Algorithm:</strong>
+1. Initialize an empty set <code>results</code>.
+2. For each <code>i</code> from <code>0</code> to <code>n-1</code>:
+   - For each <code>j</code> from <code>i</code> to <code>n-1</code>:
+     - For each <code>k</code> from <code>j</code> to <code>n-1</code>:
+       - Add <code>nums[i] ^ nums[j] ^ nums[k]</code> to <code>results</code>.
+3. Return <code>len(results)</code>.</p>
+<p><strong>Advantages:</strong> Trivial to write, trivial to verify by hand, and perfectly fine for small inputs or one-off scripts.</p>
+<p><strong>Disadvantages:</strong> Cubic time makes it unusable once <code>n</code> approaches the problem's real limits.</p>
+<p><strong>Complexity:</strong> Time <code>O(n^3)</code>, space <code>O(2048)</code> bounded by the distinct XOR values stored (though the array itself could theoretically hold up to <code>n^3</code> before deduplication, in practice the set caps at the same bound as the optimal solution).</p>
+<h2>Optimal Solution</h2>
+<p>Instead of looping over index triplets, build up XOR-reachability in stages:</p>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>What it represents</th>
+<th>Set size bound</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>uniq</code></td>
+<td>Values reachable with 1 pick</td>
+<td>up to <code>n</code>, but really up to <code>2048</code></td>
+</tr>
+<tr>
+<td><code>xor2</code></td>
+<td>Values reachable with 2 picks (pairwise XOR of <code>uniq</code>)</td>
+<td>up to <code>2048</code></td>
+</tr>
+<tr>
+<td><code>xor3</code></td>
+<td>Values reachable with 3 picks (XOR of <code>xor2</code> with <code>uniq</code>)</td>
+<td>up to <code>2048</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Step 1 — Deduplicate.</strong> Convert <code>nums</code> to a set. A repeated value can never produce a new XOR result that a single copy couldn't already produce (<code>x ^ x = 0</code> just cancels out), so duplicates are pure wasted work.</p>
+<p><strong>Step 2 — Build all pairwise XORs.</strong> For every pair of unique values (including a value paired with itself), XOR them and store the result in <code>xor2</code>. This is <code>O(u^2)</code> where <code>u = len(uniq)</code>, but since <code>u</code> is capped at roughly <code>2048</code> for this problem's constraints, this step stays fast even at the largest allowed <code>n</code>.</p>
+<p><strong>Step 3 — Extend to triples.</strong> For every value in <code>xor2</code>, XOR it against every value in <code>uniq</code> again. Store all results in <code>xor3</code>. This simulates three-way XOR without ever forming a triple explicitly — you're really just doing "reachable in 2" XOR "reachable in 1" one more time.</p>
+<p><strong>Step 4 — Return the count.</strong> <code>len(xor3)</code> is your answer.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def unique_xor_triplets(nums: list[int]) -&gt; int:
+    &quot;&quot;&quot;Count distinct XOR values from all triplets (i &lt;= j &lt;= k, repeats allowed).&quot;&quot;&quot;
+    uniq = set(nums)
+
+    # Every value reachable by XOR-ing two elements (including a value with itself)
+    xor2 = {a ^ b for a in uniq for b in uniq}
+
+    # Every value reachable by XOR-ing that result with one more element
+    xor3 = {x ^ a for x in xor2 for a in uniq}
+
+    return len(xor3)
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>uniq = set(nums)</code> — deduplicates the input. Since <code>a ^ a = 0</code> adds nothing new, keeping duplicates around would only waste cycles in the next two steps.</li>
+<li><code>xor2 = {a ^ b for a in uniq for b in uniq}</code> — a set comprehension that XORs every ordered pair of unique values (including <code>a</code> with itself). Because it's a set, any duplicate result is automatically dropped.</li>
+<li><code>xor3 = {x ^ a for x in xor2 for a in uniq}</code> — takes every "reachable in two" value and XORs it against every unique original value, producing every "reachable in three" value.</li>
+<li><code>return len(xor3)</code> — the final answer is simply how many distinct values survived into the last set.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Take <code>nums = [1, 2, 3]</code>.</p>
+<ol>
+<li><code>uniq = {1, 2, 3}</code></li>
+<li>Build <code>xor2</code>:
+   - <code>1^1=0, 1^2=3, 1^3=2</code>
+   - <code>2^1=3, 2^2=0, 2^3=1</code>
+   - <code>3^1=2, 3^2=1, 3^3=0</code>
+   - <code>xor2 = {0, 1, 2, 3}</code></li>
+<li>Build <code>xor3</code> (XOR each value in <code>xor2</code> with each in <code>uniq</code>):
+   - <code>0^1=1, 0^2=2, 0^3=3</code>
+   - <code>1^1=0, 1^2=3, 1^3=2</code>
+   - <code>2^1=3, 2^2=0, 2^3=1</code>
+   - <code>3^1=2, 3^2=1, 3^3=0</code>
+   - <code>xor3 = {0, 1, 2, 3}</code></li>
+<li><code>len(xor3) = 4</code> — matches the expected output from the earlier example.</li>
+</ol>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> <code>O(n)</code> to dedupe, plus <code>O(u^2)</code> to build <code>xor2</code>, plus <code>O(u^2)</code> to build <code>xor3</code>, where <code>u = min(n, 2048)</code> for this problem's value limits. Since <code>u</code> is capped by the bit-width of the value domain rather than growing with <code>n</code>, the practical cost is <code>O(2048^2)</code> in the worst case — a fixed ceiling, not something that grows with input size.</li>
+<li><strong>Space:</strong> <code>O(u)</code> for each set, bounded by the same <code>2048</code> ceiling.</li>
+<li><strong>Why this is correct:</strong> XOR of values under <code>2^k</code> can never require more than <code>k</code> bits, so the reachable set at every stage is bounded by <code>2^k</code> regardless of how many elements feed into it. This is the same reasoning used in bitmask DP: when the <em>value</em> domain is small, the <em>state space</em> is small, even if the input is large.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p>You could try building all three stages in a single loop with manual bit tricks, but it won't beat the set-based closure approach in clarity or performance — Python's set operations are already implemented in C and handle deduplication efficiently. Another alternative is precomputing pairwise XORs into a sorted array and binary-searching, but that adds complexity without any real speed benefit here, since the set comprehension is already bounded by the same 2048 ceiling.</p>
+<p>For small inputs (a short list in a quick script), the brute-force triple loop is a perfectly reasonable "alternative" — it's easier to read and just as fast in practice when <code>n</code> is small.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty array:</strong> Not valid per constraints, but if encountered, <code>uniq</code> would be empty and the function should return <code>0</code>.</li>
+<li><strong>Single element:</strong> <code>uniq</code> has one value, <code>xor2</code> has one value (<code>x^x=0</code>... wait, actually one value since <code>{x^x}</code> collapses to <code>{0}</code> only if there's just one unique value — trace carefully), and <code>xor3</code> ends up with exactly one value, correctly returning <code>1</code>.</li>
+<li><strong>All duplicates:</strong> Collapses to the same case as a single unique element — always returns <code>1</code>.</li>
+<li><strong>Maximum array size (1,500 elements):</strong> The middle and final sets never exceed <code>2048</code> entries regardless of how large <code>n</code> grows, so performance stays flat.</li>
+<li><strong>All distinct, maximum value range:</strong> Stress-tests the <code>2048</code> bound directly — a good sanity check that your solution doesn't silently blow past the expected ceiling.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Skipping deduplication</strong> — leads to unnecessary repeated work in the pairwise XOR step without changing correctness, just wasting time.</li>
+<li><strong>Forgetting to XOR a value with itself</strong> — self-pairing (<code>a^a=0</code>) matters because it's how <code>0</code> enters the reachable set.</li>
+<li><strong>Building triplets directly with three nested loops</strong> — technically correct but far too slow for the upper constraint.</li>
+<li><strong>Assuming the answer scales with <code>n^3</code></strong> — missing the fact that the value range, not the array length, bounds the answer once values are small.</li>
+<li><strong>Using a list instead of a set</strong> for intermediate results — this reintroduces duplicate work and inflates both time and space unnecessarily.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What if the problem asked for k-tuples instead of triplets? (Answer: repeat the closure step <code>k-1</code> times.)</li>
+<li>What if the array length were bounded but the values were unbounded? (Answer: the bounded-reachable-set trick breaks down; you'd need a different bound or accept <code>O(n^3)</code>.)</li>
+<li>Can you prove the upper bound on the number of distinct XOR values without running the code?</li>
+<li>Why is deduplication safe rather than just an optimization?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode: Number of Unique XOR Triplets I</strong> — the simpler version of this exact problem, if it exists at smaller constraints.</li>
+<li><strong>LeetCode: XOR Queries of a Subarray</strong> — reinforces prefix-XOR reasoning.</li>
+<li><strong>LeetCode: Maximum XOR of Two Numbers in an Array</strong> — uses a similar bit-level closure idea via a trie.</li>
+<li><strong>LeetCode: Single Number</strong> — foundational XOR self-cancellation intuition (<code>x^x=0</code>).</li>
+</ul>
+<p>These are related because they all lean on the same core property: XOR results are bounded by the bit-width of the inputs, and reasoning about reachable values (rather than brute-force enumeration) is the key unlock.</p>
+<h2>Key Takeaways</h2>
+<p>When a problem bounds the <em>values</em> instead of the <em>count</em> of elements, ask whether the reachable result space is what's actually capped. Build closures over that bounded space in stages rather than enumerating every combination of indices. Dedup early, let sets do the heavy lifting, and always sanity-check your solution against the smallest possible input before trusting it on the largest.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with a live pause-and-think moment and a quick quiz to test your understanding, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of the Daily Python LeetCode series, where each video takes one interview-relevant problem and builds the solution from first principles — brute force first, then the optimal approach, explained at beginner, intermediate, and advanced levels so there's something useful no matter where you're starting from.</p>
+<h2>Call To Action</h2>
+<p>If this helped clarify how bounded value ranges change your complexity thinking, hit like on the video, subscribe so you don't miss tomorrow's problem, and subscribe to the Substack for the full written breakdown delivered straight to your inbox. Drop a comment with your own approach or a problem you'd like covered next, and share this with anyone prepping for interviews.</p>
+<hr /></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/-BBX3keqfJg' target='_blank'>▶ Watch on YouTube</a></div><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>You see &#x27;count distinct XOR results from triples&#x27; with n≤1500 — what&#x27;s the pattern?</summary><p>Bounded-value dedup: build a set of pairwise XORs first, then XOR that set with each element into a final set.</p></details><details class='card2'><summary>Time complexity of the staged-set approach for triplet XOR?</summary><p>O(n²) to build pairwise XOR set, plus O(n · |set|) to combine with third element — far better than brute-force O(n³).</p></details><details class='card2'><summary>Why does space stay small despite n up to 1500?</summary><p>XOR results are capped by value bit-width (e.g. ≤2^16), so the set can&#x27;t grow past that regardless of n.</p></details><details class='card2'><summary>Common bug when building the XOR set in stages?</summary><p>Forgetting i&lt;j&lt;k ordering doesn&#x27;t matter for XOR (commutative), but reusing the same index twice does — must pick distinct triple positions.</p></details><details class='card2'><summary>Why not brute-force all n³ triples here?</summary><p>Looks fine at first since n is small, but 1500³ ≈ 3.4 billion ops — too slow; the trick exploits limited output range instead.</p></details><details class='card2'><summary>Set + XOR combo — when else does this pattern apply?</summary><p>Any &#x27;count distinct combined values&#x27; problem where the combining op is associative/commutative and output space is bounded, not input size.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
