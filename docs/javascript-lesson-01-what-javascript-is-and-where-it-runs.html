@@ -1,0 +1,204 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 1: Where Does JavaScript Actually Run? — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/javascript-lesson-01-what-javascript-is-and-where-it-runs
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/mai">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/javascript-lesson-01-what-javascript-is-and-where-it-runs.html">
+<meta property="og:title" content="Lesson 1: Where Does JavaScript Actually Run? — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/javascript-lesson-01-what-javascript-is-and-where-it-runs
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/mai">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson 1: Where Does JavaScript Actually Run?</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every developer who has ever opened a browser's DevTools and typed a line of code has, at some point, asked a very basic but surprisingly important question: where does this code actually run? It sounds trivial, but a shocking number of beginners spend their first few weeks writing JavaScript without a clear mental model of what's happening under the hood. They copy code into the console, get confused when it disappears on refresh, or paste a script tag at the wrong spot in an HTML file and can't figure out why nothing works.</p>
+<p>This matters more than it looks like on the surface. Interviewers testing JavaScript fundamentals often probe exactly this — not because they expect you to recite runtime internals, but because your answer reveals whether you actually understand the execution model or just memorized syntax. Knowing the difference between the browser environment and Node.js also directly affects how you debug, structure projects, and reason about what your code has access to (a DOM? a file system? neither?).</p>
+<p>This is lesson one for a reason. Everything else — variables, functions, closures, asynchronous code — sits on top of this foundation. Get this part solid, and a lot of confusion later on simply disappears.</p>
+<h2>Problem Overview</h2>
+<p>Let's state the core question plainly: JavaScript is a single programming language, but it can be executed in more than one environment, and each environment gives it different capabilities and different rules.</p>
+<p>There are two environments a beginner needs to know:</p>
+<ol>
+<li><strong>The browser</strong> — where JavaScript was born. It runs inside programs like Chrome, Firefox, or Safari, using a built-in engine that reads and executes your code. In this environment, JavaScript can touch the web page: click buttons, update text, validate forms, animate elements.</li>
+<li><strong>Node.js</strong> — a runtime that lets JavaScript execute completely outside a browser, directly on your machine or on a server. There's no web page, no buttons, no DOM. Instead, JavaScript running in Node can read files, talk to databases, handle network requests, and power command-line tools.</li>
+</ol>
+<p>The "problem" beginners actually run into isn't understanding that these two environments exist — it's mixing up which one they're using at a given moment, and treating temporary experiments (like typing into a browser console) as if they were permanent code.</p>
+<h2>Example</h2>
+<p>Say you open Chrome, right-click on any web page, choose <strong>Inspect</strong>, and click over to the <strong>Console</strong> tab. You type:</p>
+<pre><code class="language-js">console.log(2 + 2);
+</code></pre>
+<p>Hit enter, and <code>4</code> prints immediately. That's JavaScript running live, inside the browser's engine, with zero setup.</p>
+<p>Now compare that to writing a file called <code>app.js</code> on your computer with this content:</p>
+<pre><code class="language-js">console.log(2 + 2);
+</code></pre>
+<p>And running it from a terminal with:</p>
+<pre><code>node app.js
+</code></pre>
+<p>You'll see the exact same output — <code>4</code>. Same language, same result, but two completely different environments produced it. In the first case, a browser engine executed the code. In the second, Node.js did, with no browser involved at all.</p>
+<p>The output looks identical, but what each environment can <em>do</em> is very different. The console version has access to <code>document</code>, <code>window</code>, and the actual page you're inspecting. The Node version has access to your file system and operating system instead — and no concept of a webpage at all.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced developer thinks about this, and it's a useful mental model to adopt early: <strong>JavaScript is an actor, and the environment is the stage.</strong></p>
+<p>An actor doesn't change who they are depending on which theater they're performing in, but the props, lighting, and audience are completely different from one stage to the next. On the browser stage, JavaScript performs in front of an audience — the user — clicking things, reacting to input, updating what's visible. On the Node stage, there's no audience. It's all backstage work: reading data, talking to a database, generating a file, running some logic no one directly sees.</p>
+<p>Once that separation clicks, a lot of beginner confusion evaporates. You stop asking "why doesn't <code>document.querySelector</code> work in my Node script?" (there's no document — no stage prop for that) and you stop asking "how do I read a file from my browser JavaScript?" (browsers deliberately don't allow that, for your own safety).</p>
+<p>The other intuition worth building early: <strong>the console is not where real code lives.</strong> It's a scratchpad — great for testing a one-liner, terrible for building anything durable. Real JavaScript lives in files that get loaded intentionally, either through a <code>&lt;script&gt;</code> tag in the browser or through the <code>node</code> command outside it.</p>
+<h2>Brute Force Solution</h2>
+<p>If we're being honest, the "brute force" approach a lot of beginners default to looks like this: keep opening the browser console, typing code directly into it, and treating that as your development workflow.</p>
+<p><strong>The idea</strong>: skip files entirely. Test everything live in the console, one line at a time.</p>
+<p><strong>Why it seems appealing</strong>: instant feedback, no file to create, no <code>&lt;script&gt;</code> tag to configure, no terminal commands to remember.</p>
+<p><strong>Why it falls apart</strong>:
+- Nothing is saved. Refresh the page and your work vanishes.
+- You can't build anything with multiple functions, files, or real structure this way.
+- It teaches you to only think in single-line snippets instead of programs.
+- There's no way to share this "code" with anyone or deploy it anywhere.</p>
+<p>Think of this as the equivalent of writing an entire essay on a whiteboard instead of a document — fine for jotting a thought down, unworkable as a real process.</p>
+<p><strong>Time and space complexity, informally</strong>: this "approach" costs you nothing upfront but scales terribly — every session starts from zero, and there's no way to accumulate progress. In engineering terms, it has no persistence and no reusability, which is exactly what you want from actual project code.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach separates <em>experimentation</em> from <em>real code</em>, and gives each one the correct home.</p>
+<p><strong>Step 1 — Experiment in the console when you need instant feedback.</strong>
+Use it to test small ideas: "what does this expression evaluate to?" or "does this function return what I expect?" Nothing wrong with the console — it's simply the wrong tool for anything permanent.</p>
+<p><strong>Step 2 — Write real browser code in a linked file.</strong>
+Create an HTML file and a separate JavaScript file, then connect them with a script tag:</p>
+<pre><code class="language-html">&lt;script src=&quot;app.js&quot;&gt;&lt;/script&gt;
+</code></pre>
+<p>This is called a <strong>linked script</strong>, and it's almost always preferable to writing JavaScript directly inside the HTML (called an <strong>inline script</strong>), because a linked file can be reused across multiple pages without copying and pasting the same code everywhere.</p>
+<p><strong>Step 3 — Place the script tag correctly.</strong>
+This is the single most common beginner mistake: putting the <code>&lt;script&gt;</code> tag at the <em>top</em> of the HTML, before the page content has loaded. When that happens, your JavaScript tries to grab an element — a button, a heading — that doesn't exist in the page yet, and it fails silently or throws an error.</p>
+<table>
+<thead>
+<tr>
+<th>Script tag position</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Top of <code>&lt;head&gt;</code>, before content</td>
+<td>JavaScript runs before the DOM exists — elements aren't found</td>
+</tr>
+<tr>
+<td>Right before <code>&lt;/body&gt;</code></td>
+<td>JavaScript runs after all HTML has loaded — elements are found correctly</td>
+</tr>
+</tbody>
+</table>
+<p>The fix is simple: place your script tag right before the closing <code>&lt;/body&gt;</code> tag, so the browser has already built the entire page by the time your code runs.</p>
+<p><strong>Step 4 — Run standalone code with Node.</strong>
+When you want JavaScript to run outside a browser entirely — no page, no DOM, no button clicks — you use Node. Save your code to a file and run:</p>
+<pre><code>node app.js
+</code></pre>
+<p>Node executes the file directly as a program. This is exactly how a huge amount of backend and server infrastructure works today.</p>
+<h2>Python Code</h2>
+<p>This lesson is conceptual rather than algorithmic, so instead of a Python solution, here's the equivalent "solution" expressed as the two setups described above — the HTML/JS pairing for the browser, and the standalone file for Node.</p>
+<pre><code class="language-html">&lt;!-- index.html --&gt;
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;title&gt;My Page&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1&gt;Hello&lt;/h1&gt;
+
+  &lt;!-- Script placed right before closing body tag --&gt;
+  &lt;script src=&quot;app.js&quot;&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+<pre><code class="language-js">// app.js — runs in the browser once index.html loads it
+console.log(&quot;Running inside the browser&quot;);
+</code></pre>
+<pre><code class="language-js">// server.js — runs standalone via Node, no browser involved
+console.log(&quot;Running inside Node.js&quot;);
+</code></pre>
+<pre><code>node server.js
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><strong><code>index.html</code></strong>: defines the page structure. The <code>&lt;script src="app.js"&gt;&lt;/script&gt;</code> line tells the browser "after you finish building this page, fetch and run this JavaScript file."</li>
+<li><strong>Script tag placement</strong>: because it sits right before <code>&lt;/body&gt;</code>, the browser has already parsed the <code>&lt;h1&gt;</code> element by the time <code>app.js</code> runs — so any code trying to interact with that heading will actually find it.</li>
+<li><strong><code>app.js</code></strong>: this file only runs because a browser loaded the HTML page that references it. It has access to browser-only features like <code>document</code> and <code>window</code>.</li>
+<li><strong><code>server.js</code></strong>: this file has no relationship to any HTML page. It's executed directly by the <code>node</code> command, which starts the Node runtime, reads the file, and runs it top to bottom.</li>
+<li><strong><code>node server.js</code></strong>: this terminal command is the Node equivalent of a browser loading a script tag — it's the trigger that tells the JavaScript engine (in this case, V8 running inside Node) to execute your code.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Let's trace through the browser example step by step:</p>
+<ol>
+<li>You open <code>index.html</code> in a browser.</li>
+<li>The browser starts parsing the HTML top to bottom.</li>
+<li>It renders <code>&lt;h1&gt;Hello&lt;/h1&gt;</code> onto the page.</li>
+<li>It reaches the <code>&lt;script src="app.js"&gt;&lt;/script&gt;</code> tag, which is the last thing in <code>&lt;body&gt;</code>.</li>
+<li>The browser fetches <code>app.js</code> over the network (or from disk, if local).</li>
+<li>The browser's JavaScript engine executes the code inside <code>app.js</code>.</li>
+<li><code>console.log("Running inside the browser")</code> prints to the console — and since the <code>&lt;h1&gt;</code> already exists in the page by this point, any code that tried to modify it would succeed.</li>
+</ol>
+<p>Now the Node example:</p>
+<ol>
+<li>You run <code>node server.js</code> in a terminal.</li>
+<li>Node starts up, has no browser and no HTML page in the picture at all.</li>
+<li>Node reads <code>server.js</code> and executes it directly.</li>
+<li><code>console.log("Running inside Node.js")</code> prints straight to the terminal.</li>
+</ol>
+<p>Same language. Two completely different execution paths, triggered two completely different ways.</p>
+<h2>Complexity Analysis</h2>
+<p>There's no algorithmic time or space complexity here since this isn't a data structures problem, but it's worth framing the "cost" of each approach in engineering terms:</p>
+<ul>
+<li><strong>Console experimentation</strong>: zero setup cost, zero persistence. Great for O(1) quick checks, terrible for anything you need to keep.</li>
+<li><strong>Linked script + correct placement</strong>: small one-time setup cost (creating the file, adding the tag), but the code persists, reloads correctly every time the page loads, and can be reused across multiple pages — effectively amortizing that setup cost to near zero over time.</li>
+<li><strong>Node execution</strong>: minimal setup (install Node once), and every subsequent run is just <code>node filename.js</code> — a fixed, predictable cost with no browser overhead at all.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p>A reasonable alternative to a linked script is an <strong>inline script</strong> — writing your JavaScript directly between <code>&lt;script&gt;</code> tags in the HTML file itself:</p>
+<pre><code class="language-html">&lt;script&gt;
+  console.log(&quot;Written inline&quot;);
+&lt;/script&gt;
+</code></pre>
+<p>This works fine for a single, tiny page, but it doesn't scale: if you have five pages that all need the same JavaScript, you'd be copying and pasting that code five times. Change one line, and now you have to update it in five places. Linked scripts solve this by centralizing the code in one file that every page can reference.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty script file</strong>: if <code>app.js</code> exists but is empty, the browser loads it successfully and simply runs nothing — no error, just no effect.</li>
+<li><strong>Missing file</strong>: if the script tag points to a file that doesn't exist (a typo in the filename), the browser throws a 404-style network error in the console, but the rest of the page still renders.</li>
+<li><strong>Script tag at the top with DOM-dependent code</strong>: this is the classic failure case — code tries to select an element before the browser has parsed it, resulting in <code>null</code> or an error.</li>
+<li><strong>Running browser-only code in Node</strong>: if you try to use <code>document.querySelector</code> inside a Node script, it throws a <code>ReferenceError</code> because <code>document</code> doesn't exist outside a browser.</li>
+<li><strong>Console code after a refresh</strong>: anything typed into the console is wiped the moment the page reloads — there's no "undo" or history retained across refreshes.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Placing the script tag before the HTML content it depends on</strong>, causing the code to run before elements exist.</li>
+<li><strong>Treating the console as a place to build real projects</strong>, then losing all the work on refresh.</li>
+<li><strong>Assuming browser JavaScript and Node JavaScript have identical capabilities</strong> — forgetting that <code>document</code> and <code>window</code> don't exist in Node, and that file system access doesn't exist in the browser.</li>
+<li><strong>Overusing inline scripts</strong> instead of linked files, leading to duplicated code across multiple HTML pages.</li>
+<li><strong>Forgetting to actually load the script file</strong> — writing <code>app.js</code> but never adding a <code>&lt;script src="app.js"&gt;&lt;/script&gt;</code> tag to reference it.</li>
+<li><strong>Confusing "the code ran in the console" with "the code is saved somewhere"</strong> — these are not the same thing.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What's the difference between how JavaScript runs in a browser versus in Node.js?</li>
+<li>Why does script tag placement matter, and where should you generally put it?</li>
+<li>What's the difference between an inline script and a linked script, and when would you choose one over the other?</li>
+<li>What can browser JavaScript access that Node JavaScript cannot, and vice versa?</li>
+<li>Why doesn't <code>document</code> exist when you run a JavaScript file with Node?</li>
+<li>What is a JavaScript engine, and can you name one (for example, V8)?</li>
+</ul>
+<h2>Similar Problems</h2>
+<p>While this lesson isn't a LeetCode-style algorithm problem, the underlying skill — reasoning about execution environments and runtime behavior — connects to concepts tested in:</p>
+<ul>
+<li><strong>Understanding the Event Loop</strong> (a common JavaScript interview topic) — because how code executes over time depends on which environment (browser or Node) is running it.</li>
+<li><strong>DOM Manipulation problems</strong> — which only make sense once you understand that DOM access is a browser-only capability.</li>
+<li><strong>Module systems (CommonJS vs ES Modules)</strong> — a natural next step once you understand Node execution, since Node scripts are often split across multiple files that need to import each other.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>JavaScript is one language that runs in two very different places: the browser and Node.js.</li>
+<li>The browser gives JavaScript access to the page (DOM, buttons, forms) but sandboxes it away from your file system.</li>
+<li>Node gives JavaScript access to files, networks, and servers, but has no concept of a web page at all.</li>
+<li>The console is a scratchpad for quick experiments — never treat it as a place to store real code.</li>
+<li>Linked scripts beat inline scripts because they're reusable across multiple pages.</li>
+<li>Script tag placement matters: put it right before <code>&lt;/body&gt;</code> so your code runs after the page content exists.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>If you want to see all of this demonstrated live — opening the console, testing a script tag in the wrong position to watch it fail, then fixing it — check out the full video here: {LINK}. Watching the mistake happen in real time makes the fix much easier to remember.</p>
+<h2>About the Series</h2>
+<p>This lesson is part of the <strong>Daily Python LeetCode</strong> series' companion track on web fundamentals — short, focused daily lessons designed to build a rock-solid foundation one concept at a time, without overwhelming you with everything at once. Just like the algorithm lessons in the main series break problems down into intuition before code, this JavaScript track builds the mental models first, so the syntax that comes later actually makes sense.</p>
+<h2>Call To Action</h2>
+<p>If this cleared something up for you, do three things: like the video on YouTube so more people see it, subscribe so you don't miss the next lesson (we're covering variables and data types next), and subscribe to the Substack for the written breakdown of every lesson in this series. Drop a comment with what tripped you up when you first learned this — it helps shape what gets covered next — and share this with anyone just starting their coding journey.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Where can JavaScript actually run besides a webpage?</summary><p>In the browser (via console/script tags) and standalone via Node.js on a server or your machine.</p></details><details class='card2'><summary>Why is JS called &#x27;the actor&#x27; in this lesson&#x27;s analogy?</summary><p>HTML is the stage/structure, CSS is the costume/style, JS performs actions and makes things interactive.</p></details><details class='card2'><summary>What&#x27;s the difference between inline and linked scripts?</summary><p>Inline: JS written directly inside a &lt;script&gt; tag in HTML. Linked: JS lives in a separate .js file referenced via src attribute.</p></details><details class='card2'><summary>What is the browser console mainly used for?</summary><p>A scratchpad to quickly test/run JS snippets and see results immediately, without writing a full file.</p></details><details class='card2'><summary>Common beginner mistake when adding a script tag?</summary><p>Forgetting to close the &lt;script&gt; tag properly, or forgetting the closing &lt;/script&gt;, breaking the page.</p></details><details class='card2'><summary>Follow-up: Why might you choose Node.js over the browser to run JS?</summary><p>Node runs JS outside the browser—for servers, file access, or tooling—since browsers sandbox JS from the OS/filesystem.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
