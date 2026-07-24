@@ -1,139 +1,127 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Median of Two Sorted Arrays — LeetCode Daily Python Solution (the trick nobody sees) — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/median-of-two-sorted-arrays
-💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/median-of-two-sorted-arrays
-">
+<title>Median of Two Sorted Arrays — LeetCode Daily Python Solution (the trick nobody sees) — Python LeetCode Solution</title><meta name="description" content="📍 Jump to your level:
+🟢 Beginner: 0:14–8:06
+🟡 Intermediate: 8:06–12:28
+🔴 Advanced: 12:28–17:14
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/median-of-two-sorted-arrays
+💻 Code on GitHu">
 <meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/median-of-two-sorted-arrays.html">
 <meta property="og:title" content="Median of Two Sorted Arrays — LeetCode Daily Python Solution (the trick nobody sees) — Python LeetCode Solution"><meta property="og:type" content="website">
-<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/median-of-two-sorted-arrays
-💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/median-of-two-sorted-arrays
-">
+<meta property="og:description" content="📍 Jump to your level:
+🟢 Beginner: 0:14–8:06
+🟡 Intermediate: 8:06–12:28
+🔴 Advanced: 12:28–17:14
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/median-of-two-sorted-arrays
+💻 Code on GitHu">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
 <div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Median of Two Sorted Arrays — LeetCode Daily Python Solution (the trick nobody sees)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
-<p>If you've spent any time preparing for coding interviews, you've probably noticed that certain problems keep showing up on every "hard" list: LRU Cache, Trapping Rain Water, and near the top of that list — Median of Two Sorted Arrays. It has a reputation for being intimidating, and honestly, that reputation is earned. Not because the code is long, but because the <em>insight</em> required to get to an optimal solution isn't obvious at all.</p>
-<p>This problem is a favorite at companies that care about algorithmic depth, because it tests something more specific than "can you code a merge." It tests whether you can reason about a search space that isn't made of numbers, but of <em>positions</em> — whether you can recognize that a partition problem is secretly a binary search problem in disguise. That skill generalizes far beyond this one LeetCode question. It shows up in database engines computing percentiles across sharded, sorted data, in distributed log systems merging sorted streams without materializing the whole thing, and in any system where "sorted but split across sources" is the norm rather than the exception.</p>
-<p>Learning this problem properly means learning to ask a different question than the one you're handed. Instead of "how do I merge these," you learn to ask "where would the merge point be, without doing the work of merging." That reframing is the whole game, and once you see it, you can't unsee it.</p>
+<p>Median of Two Sorted Arrays has a reputation. It's one of the few problems LeetCode tags as "Hard" that also shows up constantly in interviews at large tech companies, and the reason isn't that the code is long — the final solution is barely twenty lines. The reason is that almost everyone's first instinct is wrong for the constraints being asked.</p>
+<p>Most people can solve this problem in O(m + n) time in under a minute: merge the arrays, find the middle. The interviewer already expects that. What they're testing is whether you can recognize that merging is unnecessary — that you can reason about the position of the median without ever touching most of the data. That skill, binary searching over an abstract "answer space" instead of a concrete array index, is one of the most reusable patterns in algorithm interviews. It reappears in problems about kth-smallest elements across multiple lists, capacity-to-ship-in-days problems, and split-array-largest-sum problems. Learning it once here pays off many times later.</p>
 <h2>Problem Overview</h2>
-<p>You're given two sorted arrays, <code>nums1</code> with <code>m</code> elements and <code>nums2</code> with <code>n</code> elements. If you were to merge them into a single sorted array, you need to find the median of that merged array — without actually building it.</p>
-<p>The median is defined the usual way:</p>
-<ul>
-<li>If the total number of elements is odd, the median is the middle element.</li>
-<li>If the total number of elements is even, the median is the average of the two middle elements.</li>
-</ul>
-<p>The constraint that makes this problem interesting is the time complexity requirement: the overall algorithm must run in <code>O(log(m + n))</code> time. That single requirement rules out any approach that touches every element, which eliminates the two most "natural" solutions before you even start coding.</p>
+<p>You're given two arrays, <code>nums1</code> and <code>nums2</code>, and both are already sorted in ascending order. Your job is to find the median of the combined set of all their elements — as if you had merged both arrays into one sorted array and then picked the middle value (or averaged the two middle values, if the total count is even).</p>
+<p>The twist that makes this "Hard" is the required time complexity: <strong>O(log(min(m, n)))</strong>, where <code>m</code> and <code>n</code> are the lengths of the two arrays. That rules out actually merging the arrays, and it even rules out a straightforward O(m + n) single pass. You need an approach whose running time barely grows even as the arrays get enormous — and that's a strong signal the problem wants binary search.</p>
 <h2>Example</h2>
-<p><strong>Example 1</strong></p>
 <pre><code>nums1 = [1, 3]
 nums2 = [2]
 </code></pre>
-<p>Merged: <code>[1, 2, 3]</code> → odd length (3), so the median is the middle element: <strong>2</strong>.</p>
-<p><strong>Example 2</strong></p>
-<pre><code>nums1 = [1, 3, 5]
-nums2 = [2, 4, 6, 8]
-</code></pre>
-<p>Merged: <code>[1, 2, 3, 4, 5, 6, 8]</code> → 7 total elements (odd), middle index is 3 (0-indexed), which holds <strong>4</strong>.</p>
-<p><strong>Example 3 (even total)</strong></p>
+<p>Merged conceptually: <code>[1, 2, 3]</code>. Three elements total, so the median is the single middle value: <strong>2</strong>.</p>
+<p>A second example with an even total:</p>
 <pre><code>nums1 = [1, 2]
 nums2 = [3, 4]
 </code></pre>
-<p>Merged: <code>[1, 2, 3, 4]</code> → 4 elements (even), median is the average of index 1 and index 2: <code>(2 + 3) / 2 = 2.5</code>.</p>
+<p>Merged conceptually: <code>[1, 2, 3, 4]</code>. Four elements, so the median is the average of the two middle values, 2 and 3: <strong>2.5</strong>.</p>
+<p>Notice both arrays stay untouched in memory in the real solution — these merged lists are just how we're reasoning about the <em>expected</em> answer, not something the algorithm actually builds.</p>
 <h2>Intuition</h2>
-<p>Start with the obvious move: merge both arrays, sort the result, and grab the middle. That works, but sorting the merged array costs <code>O((m+n) log(m+n))</code>, and even a simple linear merge (since both inputs are already sorted) costs <code>O(m+n)</code>. Neither hits the logarithmic requirement — so the problem is explicitly telling you: stop thinking about <em>values</em>, start thinking about <em>positions</em>.</p>
-<p>Here's the reframing that unlocks the solution. The median doesn't care about every element — it only cares about how many elements are smaller than it and how many are larger. So instead of asking "what is the median value," ask a different question: <strong>"If I could draw one imaginary line through each array, splitting each into a left half and a right half, where would those two lines need to sit so that combining both left halves gives you exactly the correct number of the smallest elements?"</strong></p>
-<p>That's a partition. If you get the partition right — meaning every element left of both cuts is smaller than every element right of both cuts — the median falls directly out of the four values sitting next to the cuts, without ever touching anything else in the arrays.</p>
-<p>Now, how do you <em>find</em> that correct partition quickly? This is where binary search comes in. Picking a cut position in one array automatically determines the cut position in the other array, because the total count on the left side is fixed (it has to equal half the combined length). So you only need to binary search over cut positions in <em>one</em> array. And to keep the search space as small as possible — which is the whole point of hitting <code>log</code> time — you binary search whichever array is <strong>shorter</strong>. Search the longer one and your valid range of cut positions can be badly skewed or even invalid; search the shorter one and the range is always well-behaved.</p>
-<p>At each guess, you check four border values — the element just left of each cut and just right of each cut. If both "left" values are less than or equal to both "right" values, you've found the correct partition and the median is right there. If not, you nudge your guess left or right, exactly like a normal binary search, because you can tell from <em>which side</em> is violating the condition whether your cut in the shorter array was too far right or too far left.</p>
+<p>Here's how an engineer who's seen binary-search-on-answer problems before would approach this.</p>
+<p>The brute-force instinct is to physically build the merged array and index into the middle. That's correct, but it processes every element — O(m + n) — and the problem is explicitly asking for something logarithmic. Logarithmic time is a strong hint: it usually means "you can throw away half of your remaining search space at each step," which is the definition of binary search. But binary search over <em>what</em>? There's no single sorted array to search over.</p>
+<p>The insight is that instead of searching for a <em>value</em>, you can search for a <em>position</em> — specifically, a way to slice both arrays simultaneously so that everything to the left of both cuts, combined, is exactly the left half of the total elements, and everything to the right is the right half.</p>
+<p>Picture both arrays as two rows of cards. You slide one divider through each row at the same time. If you can find dividers such that:</p>
+<ul>
+<li>every card left of either divider is ≤ every card right of either divider</li>
+</ul>
+<p>...then you've found the correct partition, and the median sits right at that boundary — no merging needed. You only ever need to look at four cards: the one just left and just right of each divider.</p>
+<p>Since a valid divider position in <code>nums1</code> fully determines the required divider position in <code>nums2</code> (the two must add up to exactly half the total count), you only need to binary search <strong>one</strong> array — and to keep the search space as small as possible, you always binary search the <em>shorter</em> array. That's where <code>O(log(min(m, n)))</code> comes from.</p>
 <h2>Brute Force Solution</h2>
-<p><strong>Idea:</strong> Merge both sorted arrays into one sorted array (using a simple linear merge since they're both already sorted), then index into the middle.</p>
+<p><strong>Idea:</strong> Merge both arrays into one sorted array, then index into the middle.</p>
 <p><strong>Algorithm:</strong>
-1. Use two pointers to walk both arrays simultaneously, always taking the smaller current element.
-2. Append to a result list until both arrays are exhausted.
-3. Index into the middle (or average the two middle elements if the length is even).</p>
-<p><strong>Advantages:</strong> Dead simple to write and reason about. Very hard to get wrong.</p>
-<p><strong>Disadvantages:</strong> Uses <code>O(m+n)</code> extra space for the merged array, and even with a smart linear merge, it does <code>O(m+n)</code> work — nowhere near the <code>O(log(m+n))</code> the problem demands.</p>
-<p><strong>Complexity:</strong> Time <code>O(m+n)</code>, Space <code>O(m+n)</code>.</p>
+1. Merge <code>nums1</code> and <code>nums2</code> using a standard two-pointer merge (like the merge step of merge sort).
+2. If the total length is odd, return the single middle element.
+3. If even, return the average of the two middle elements.</p>
+<p><strong>Advantages:</strong> Trivial to write and reason about; easy to verify by hand.</p>
+<p><strong>Disadvantages:</strong> Touches every element, and allocates extra memory for the merged array — both violate the problem's required complexity.</p>
+<p><strong>Complexity:</strong> Time O(m + n), Space O(m + n).</p>
 <h2>Optimal Solution</h2>
-<p>The optimal approach binary searches over cut positions in the <strong>shorter</strong> array. Call the shorter array <code>A</code> (length <code>m</code>) and the longer one <code>B</code> (length <code>n</code>).</p>
-<p>We want to choose a cut <code>i</code> in <code>A</code> (0 to <code>m</code> elements on A's left side) and a cut <code>j</code> in <code>B</code> such that:</p>
-<pre><code>i + j = (m + n + 1) // 2
-</code></pre>
-<p>This guarantees the combined left side always has the correct count regardless of whether <code>m+n</code> is odd or even. Since <code>i</code> determines <code>j</code> directly (<code>j = half - i</code>), we only need to binary search <code>i</code>.</p>
-<p>For a given <code>i</code> and <code>j</code>, define the four border values:</p>
+<p>We binary search over how many elements of the <strong>shorter</strong> array (call it <code>nums1</code>, after swapping if needed) go into the left half of the final merged sequence. Call that count <code>i</code>. Because the left half must always contain exactly <code>half = (m + n + 1) // 2</code> elements total, the matching count from <code>nums2</code> is forced: <code>j = half - i</code>.</p>
+<p>At any guess <code>i</code>, we look at four border values:</p>
 <table>
 <thead>
 <tr>
-<th>Value</th>
+<th>Name</th>
 <th>Meaning</th>
+<th>Value if out of bounds</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>Aleft</code></td>
-<td><code>A[i-1]</code> if <code>i &gt; 0</code>, else <code>-infinity</code></td>
+<td><code>left1</code></td>
+<td>last element in nums1's left partition</td>
+<td><code>-infinity</code> if <code>i == 0</code></td>
 </tr>
 <tr>
-<td><code>Aright</code></td>
-<td><code>A[i]</code> if <code>i &lt; m</code>, else <code>+infinity</code></td>
+<td><code>right1</code></td>
+<td>first element in nums1's right partition</td>
+<td><code>+infinity</code> if <code>i == m</code></td>
 </tr>
 <tr>
-<td><code>Bleft</code></td>
-<td><code>B[j-1]</code> if <code>j &gt; 0</code>, else <code>-infinity</code></td>
+<td><code>left2</code></td>
+<td>last element in nums2's left partition</td>
+<td><code>-infinity</code> if <code>j == 0</code></td>
 </tr>
 <tr>
-<td><code>Bright</code></td>
-<td><code>B[j]</code> if <code>j &lt; n</code>, else <code>+infinity</code></td>
+<td><code>right2</code></td>
+<td>first element in nums2's right partition</td>
+<td><code>+infinity</code> if <code>j == n</code></td>
 </tr>
 </tbody>
 </table>
-<p>Using infinity for missing borders means you never need a special case for an empty array or a cut sitting at the very edge — the comparisons just work.</p>
-<p>The cut is correct when:</p>
-<pre><code>Aleft &lt;= Bright  and  Bleft &lt;= Aright
-</code></pre>
-<ul>
-<li>If <code>Aleft &gt; Bright</code>, your cut in <code>A</code> is too far right — move <code>i</code> left.</li>
-<li>If <code>Bleft &gt; Aright</code>, your cut in <code>A</code> is too far left — move <code>i</code> right.</li>
-</ul>
-<p>Once the condition holds:
-- Odd total length → median is <code>max(Aleft, Bleft)</code>.
-- Even total length → median is <code>(max(Aleft, Bleft) + min(Aright, Bright)) / 2</code>.</p>
-<p><strong>Diagram</strong></p>
-<pre><code>        A cut (i)                B cut (j)
-A: [ ... Aleft | Aright ... ]
-B: [ ... Bleft | Bright ... ]
-
-Combined left side  = i + j elements  (always the smaller/equal half)
-Combined right side = (m-i) + (n-j) elements
-</code></pre>
+<p>The partition is correct when <code>left1 &lt;= right2</code> <strong>and</strong> <code>left2 &lt;= right1</code>. If <code>left1 &gt; right2</code>, we included too many elements from <code>nums1</code> on the left, so we move the guess <code>i</code> down. Otherwise, we move it up. This is standard binary search, just applied to a partition count instead of an array index.</p>
+<p>Once the correct partition is found:
+- If the total length is odd, the median is <code>max(left1, left2)</code>.
+- If even, the median is the average of <code>max(left1, left2)</code> and <code>min(right1, right2)</code>.</p>
+<p>The <code>(m + n + 1) // 2</code> formula (note the <code>+1</code>) is what makes both the odd and even cases fall out of the same code path without a separate branch — for odd totals, the left half simply ends up one element larger, which is exactly the extra element the odd-case return picks up.</p>
 <h2>Python Code</h2>
 <pre><code class="language-python">from typing import List
 
 
 def find_median_sorted_arrays(nums1: List[int], nums2: List[int]) -&gt; float:
-    # Always binary search the shorter array to keep the range valid and small.
+    # Always binary search the shorter array to minimize the search space.
     if len(nums1) &gt; len(nums2):
         nums1, nums2 = nums2, nums1
 
     m, n = len(nums1), len(nums2)
     half = (m + n + 1) // 2
-
     lo, hi = 0, m
+
     while lo &lt;= hi:
-        i = (lo + hi) // 2   # cut position in the shorter array
-        j = half - i         # forced cut position in the longer array
+        i = (lo + hi) // 2       # partition index in nums1
+        j = half - i             # forced partition index in nums2
 
-        a_left = nums1[i - 1] if i &gt; 0 else float(&quot;-inf&quot;)
-        a_right = nums1[i] if i &lt; m else float(&quot;inf&quot;)
-        b_left = nums2[j - 1] if j &gt; 0 else float(&quot;-inf&quot;)
-        b_right = nums2[j] if j &lt; n else float(&quot;inf&quot;)
+        left1 = nums1[i - 1] if i &gt; 0 else float(&quot;-inf&quot;)
+        right1 = nums1[i] if i &lt; m else float(&quot;inf&quot;)
+        left2 = nums2[j - 1] if j &gt; 0 else float(&quot;-inf&quot;)
+        right2 = nums2[j] if j &lt; n else float(&quot;inf&quot;)
 
-        if a_left &lt;= b_right and b_left &lt;= a_right:
+        if left1 &lt;= right2 and left2 &lt;= right1:
             if (m + n) % 2 == 1:
-                return max(a_left, b_left)
-            return (max(a_left, b_left) + min(a_right, b_right)) / 2
-        elif a_left &gt; b_right:
+                return max(left1, left2)
+            return (max(left1, left2) + min(right1, right2)) / 2
+        elif left1 &gt; right2:
             hi = i - 1
         else:
             lo = i + 1
@@ -142,81 +130,70 @@ def find_median_sorted_arrays(nums1: List[int], nums2: List[int]) -&gt; float:
 </code></pre>
 <h2>Code Walkthrough</h2>
 <ul>
-<li><strong>Swap step:</strong> <code>if len(nums1) &gt; len(nums2): nums1, nums2 = nums2, nums1</code> guarantees we always binary search the shorter array — this is what keeps the search range bounded correctly.</li>
-<li><strong><code>half</code>:</strong> the number of elements that must sit on the left side of the combined partition. Using <code>(m + n + 1) // 2</code> handles both even and odd totals with the same formula.</li>
-<li><strong><code>lo, hi = 0, m</code>:</strong> the cut in the shorter array can range from 0 (nothing on the left) to <code>m</code> (everything on the left).</li>
-<li><strong><code>i</code> and <code>j</code>:</strong> <code>i</code> is our current guess; <code>j</code> is forced by the constraint that the two cuts together must produce exactly <code>half</code> elements on the left.</li>
-<li><strong>Border values with infinity:</strong> eliminates every special case for empty arrays or edge cuts — comparisons against infinity behave exactly as you'd want.</li>
-<li><strong>The correctness check:</strong> if both cross-comparisons hold, the partition is valid and the median can be read directly.</li>
-<li><strong>Adjustment branches:</strong> mirror standard binary search — narrow the range based on which side violated the condition.</li>
+<li><strong>Swap step:</strong> guarantees <code>nums1</code> is the shorter (or equal-length) array, which is what keeps <code>j</code> guaranteed to land inside <code>[0, n]</code> for every <code>i</code> we try.</li>
+<li><strong><code>half</code>:</strong> the required size of the combined left half, computed once outside the loop.</li>
+<li><strong><code>lo, hi = 0, m</code>:</strong> the binary search range is over <em>how many elements of <code>nums1</code></em> to place on the left — not over values, and not over <code>nums1</code>'s indices in the usual sense.</li>
+<li><strong><code>i</code> and <code>j</code>:</strong> <code>i</code> is our guess; <code>j</code> is derived, not guessed, since the two must always sum to <code>half</code>.</li>
+<li><strong>Sentinel infinities:</strong> let a partition sit exactly at an array's start or end without special-casing — there's simply "nothing" on that side, and infinity/negative-infinity behave correctly in comparisons.</li>
+<li><strong>The condition:</strong> <code>left1 &lt;= right2 and left2 &lt;= right1</code> is the correctness check. Note the code never explicitly checks the reverse direction as a third branch — if <code>left1 &gt; right2</code> fails, <code>left2 &gt; right1</code> is the only remaining failure mode, so the <code>else</code> covers it.</li>
+<li><strong>Median extraction:</strong> odd totals take the max of both left values; even totals average that max with the min of both right values.</li>
 </ul>
 <h2>Dry Run</h2>
-<p><code>nums1 = [1, 3, 5]</code>, <code>nums2 = [2, 4, 6, 8]</code></p>
-<p><code>len(nums1) = 3 &lt;= len(nums2) = 4</code>, so no swap. <code>m=3, n=4</code>, <code>half = (3+4+1)//2 = 4</code>.</p>
-<p><code>lo=0, hi=3</code></p>
-<p><strong>Iteration 1:</strong> <code>i = 1</code>, <code>j = 3</code>
-<code>a_left = nums1[0] = 1</code>, <code>a_right = nums1[1] = 3</code>
-<code>b_left = nums2[2] = 6</code>, <code>b_right = nums2[3] = 8</code>
-Check: <code>a_left(1) &lt;= b_right(8)</code> ✓, but <code>b_left(6) &lt;= a_right(3)</code> ✗ → move right: <code>lo = 2</code></p>
-<p><strong>Iteration 2:</strong> <code>i = 2</code>, <code>j = 2</code>
-<code>a_left = nums1[1] = 3</code>, <code>a_right = nums1[2] = 5</code>
-<code>b_left = nums2[1] = 4</code>, <code>b_right = nums2[2] = 6</code>
-Check: <code>a_left(3) &lt;= b_right(6)</code> ✓, <code>b_left(4) &lt;= a_right(5)</code> ✓ → valid partition!</p>
-<p>Total length <code>m+n = 7</code> is odd → median = <code>max(a_left, b_left) = max(3, 4) = 4</code>.</p>
-<p>Matches the merged array <code>[1,2,3,4,5,6,8]</code>, where the middle element is <code>4</code>. ✅</p>
+<p><code>nums1 = [1, 3]</code>, <code>nums2 = [2]</code>. Already <code>nums1</code> is the shorter array, so no swap. <code>m = 2</code>, <code>n = 1</code>, <code>half = (2 + 1 + 1) // 2 = 2</code>.</p>
+<p><code>lo = 0, hi = 2</code>. First guess: <code>i = 1</code>, so <code>j = half - i = 1</code>.</p>
+<ul>
+<li><code>left1 = nums1[0] = 1</code></li>
+<li><code>right1 = nums1[1] = 3</code></li>
+<li><code>left2 = nums2[0] = 2</code></li>
+<li><code>right2 = +inf</code> (j == n, nothing left in nums2)</li>
+</ul>
+<p>Check: <code>left1 (1) &lt;= right2 (inf)</code> ✓, <code>left2 (2) &lt;= right1 (3)</code> ✓. Partition is valid.</p>
+<p>Total length <code>m + n = 3</code> is odd, so return <code>max(left1, left2) = max(1, 2) = 2</code>.</p>
+<p>Matches the expected answer from merging by hand: <code>[1, 2, 3]</code> → median <code>2</code>.</p>
 <h2>Complexity Analysis</h2>
-<ul>
-<li><strong>Time:</strong> <code>O(log(min(m, n)))</code> — the binary search only runs over the shorter array's index range, and each iteration does constant work.</li>
-<li><strong>Space:</strong> <code>O(1)</code> — only a handful of scalar variables regardless of input size.</li>
-</ul>
-<p>This is correct because binary search halves the candidate range each iteration, and the range size is bounded by the length of the shorter array, not the combined length.</p>
+<p><strong>Time: O(log(min(m, n)))</strong> — the binary search only ever runs over the shorter array's index range, halving the range each iteration; <code>j</code> is computed in O(1), not searched.</p>
+<p><strong>Space: O(1)</strong> — no merged array, no auxiliary data structures; only a handful of scalar variables.</p>
+<p>Why these are correct: because both arrays are individually sorted, moving <code>i</code> monotonically moves <code>left1</code>/<code>right1</code> monotonically as well. That monotonicity is exactly what guarantees binary search converges to the correct partition rather than getting stuck or oscillating.</p>
 <h2>Alternative Solutions</h2>
-<p><strong>Two-pointer merge (without full materialization):</strong> walk both arrays with two pointers, counting elements until you reach the middle position(s), tracking just the last one or two values you'd have appended instead of building the whole merged array.</p>
-<ul>
-<li>Time: <code>O(m+n)</code></li>
-<li>Space: <code>O(1)</code></li>
-<li>Simpler to write and debug than the partition approach, and in most real production code, <code>m+n</code> isn't large enough for the difference between linear and logarithmic to matter. It's a very reasonable engineering tradeoff outside of an interview setting — just not what this specific problem is grading you on.</li>
-</ul>
+<p>A reasonable middle ground between brute force and the optimal partition trick is a <strong>two-pointer "count to the middle" walk</strong>: advance pointers through both arrays simultaneously, counting elements, and stop once you've passed the halfway point, tracking the last one or two values seen. This avoids allocating a merged array (O(1) space) but still runs in O(m + n) time, since it walks roughly half of the combined elements. It's a fine fallback if you're asked to solve this without hitting logarithmic time, and it's a good way to sanity-check the partition solution against a smaller, easier-to-trust approach.</p>
 <h2>Edge Cases</h2>
 <ul>
-<li><strong>One array is empty:</strong> the infinity-based border logic handles this automatically — no special branch needed.</li>
-<li><strong>Arrays of drastically different sizes:</strong> always binary searching the shorter array keeps the search space valid no matter how skewed the sizes are.</li>
-<li><strong>All elements in one array smaller than all elements in the other:</strong> the cut in the shorter array will land at one extreme (0 or <code>m</code>), and infinity borders handle it cleanly.</li>
-<li><strong>Duplicate values across arrays:</strong> the algorithm only compares values relative to partition position, so duplicates don't break anything.</li>
-<li><strong>Single-element arrays:</strong> works the same way; <code>m</code> or <code>n</code> being 1 just narrows the binary search range immediately.</li>
+<li><strong>One array is empty:</strong> the sentinel infinities take over — the divider index for the empty array pins to <code>0</code> for its entire binary search, and the logic still holds.</li>
+<li><strong>Arrays of very different lengths:</strong> handled automatically, since we always binary search the shorter array regardless of how large the other one is.</li>
+<li><strong>Duplicate values across both arrays:</strong> the <code>&lt;=</code> comparison (not strict <code>&lt;</code>) correctly allows ties at the cut boundary.</li>
+<li><strong>Single-element arrays:</strong> works the same way — <code>i</code> and <code>j</code> can only be <code>0</code> or <code>1</code>, and the sentinels handle both boundary positions.</li>
+<li><strong>Total length is even vs. odd:</strong> both handled by the same <code>(m + n + 1) // 2</code> formula without a separate code path for each case.</li>
 </ul>
 <h2>Common Mistakes</h2>
 <ol>
-<li><strong>Binary searching the longer array instead of the shorter one</strong> — this can produce an invalid or unnecessarily large search range and breaks the log-time guarantee.</li>
-<li><strong>Forgetting to swap when <code>nums1</code> is longer than <code>nums2</code></strong> — leads to index errors or incorrect results on skewed inputs.</li>
-<li><strong>Off-by-one errors in the <code>half</code> formula</strong> — using <code>(m+n)//2</code> instead of <code>(m+n+1)//2</code> breaks the odd-length case.</li>
-<li><strong>Not handling edge cuts with infinity</strong> — writing manual <code>if i == 0</code> / <code>if i == m</code> branches instead of using <code>-inf</code>/<code>inf</code> sentinels, which is more error-prone.</li>
-<li><strong>Confusing which condition means "move left" vs "move right"</strong> — swapping <code>a_left &gt; b_right</code> and <code>b_left &gt; a_right</code> silently produces wrong answers instead of crashing.</li>
-<li><strong>Returning an integer instead of a float for even-length medians</strong> — dividing with <code>/</code> in Python 3 handles this correctly, but it's a common bug in other languages.</li>
+<li><strong>Binary searching the longer array instead of the shorter one.</strong> This can push <code>j</code> outside a valid range and requires extra bounds handling that the shorter-array approach avoids entirely.</li>
+<li><strong>Forgetting the sentinel infinities</strong>, causing index-out-of-range errors when a partition sits at an array's edge.</li>
+<li><strong>Using strict <code>&lt;</code> instead of <code>&lt;=</code></strong> in the validity check, which incorrectly rejects valid partitions when duplicate values sit right at the cut.</li>
+<li><strong>Miscomputing <code>half</code></strong> — dropping the <code>+1</code> breaks the odd-length case, since the left half needs to be one element larger for odd totals.</li>
+<li><strong>Actually merging the arrays</strong> to "double check," then submitting that as the final solution — it passes small test cases but fails the time complexity requirement on large inputs.</li>
 </ol>
 <h2>Interview Questions</h2>
 <ul>
-<li>Why does binary searching the shorter array guarantee correctness and the log(min(m,n)) bound?</li>
-<li>How would you extend this to find the k-th smallest element across two sorted arrays instead of just the median?</li>
-<li>What happens to the algorithm if the arrays aren't sorted? Can you detect that case?</li>
-<li>How would this generalize to finding the median across more than two sorted arrays?</li>
-<li>Can you prove the binary search loop always terminates?</li>
+<li>"Can you do better than O(log(min(m, n)))?" — No, for arbitrary sorted arrays, you need at least that many comparisons to locate the correct partition boundary in the worst case.</li>
+<li>"What if <code>nums2</code> were empty?" — <code>j</code> pins to <code>0</code> for the entire search, and the sentinel infinities on <code>nums2</code>'s side handle it without any special-casing.</li>
+<li>"How would you find the kth smallest element across two sorted arrays instead of the median?" — Same invariant, different target size for the left half.</li>
+<li>"Why do we always search the smaller array?" — Because the partition point in the larger array is derived from it; searching the larger array wastes steps and risks an invalid <code>j</code>.</li>
 </ul>
 <h2>Similar Problems</h2>
 <ul>
-<li><strong>Kth Smallest Element in a Sorted Matrix</strong> — same partition/binary-search-on-answer mindset applied to a 2D structure.</li>
-<li><strong>Merge Sorted Array</strong> — the brute-force building block this problem deliberately avoids using at scale.</li>
-<li><strong>Find K-th Smallest Pair Distance</strong> — another problem where binary searching over "positions/values" beats brute-force enumeration.</li>
-<li><strong>Split Array Largest Sum</strong> — binary search over a monotonic answer space, the same core technique in a different costume.</li>
+<li><strong>Kth Smallest Element in Two Sorted Arrays</strong> — the exact same partition invariant, generalized to an arbitrary target rank instead of the median.</li>
+<li><strong>Merge Sorted Array (LeetCode 88)</strong> — the brute-force building block this problem asks you to avoid; useful for understanding why merging is O(m + n).</li>
+<li><strong>Capacity To Ship Packages Within D Days</strong> — another "binary search on the answer" problem, where you search a value range instead of an array index.</li>
+<li><strong>Split Array Largest Sum</strong> — same underlying pattern: binary search over a monotonic predicate rather than concrete indices.</li>
 </ul>
 <h2>Key Takeaways</h2>
-<p>The real lesson here isn't the specific code — it's the pattern: when a problem asks for a value derived from combining sorted data, and demands better-than-linear time, stop thinking about merging and start thinking about <strong>partitions</strong>. Binary search doesn't only work on sorted arrays of numbers; it works on any monotonic search space, including "where should this cut go." Once that clicks, a whole category of hard problems becomes approachable.</p>
+<p>Merging is the obvious first move, but it's the wrong tool once a problem explicitly asks for logarithmic time. The real lesson here is recognizing when you can binary search over an abstract quantity — a partition count, a capacity, a target sum — rather than over a literal array index. Once you spot that pattern, this "Hard" problem collapses into checking four numbers and nudging a guess left or right.</p>
 <h2>Watch the Video</h2>
-<p>For the full walkthrough with diagrams, the brute-force build-up, and two live quizzes to test your understanding as you go, watch the video here: {LINK}</p>
+<p>For the full visual walkthrough — including the card-and-divider mental model and a live trace of the binary search — check out the video here: {LINK}</p>
 <h2>About the Series</h2>
-<p>This is part of the Daily Python LeetCode series, where one problem gets broken down from first principles every day — starting with the brute-force approach, building up the intuition, and arriving at the optimal solution the way you'd actually discover it in an interview, not just handing you memorized code.</p>
+<p>This breakdown is part of the Daily Python LeetCode series, where one problem gets solved from first principles every day — brute force first, then the optimal approach, with full Python code and a dry run every time. The goal is to build real intuition, not just memorize solutions.</p>
 <h2>Call To Action</h2>
-<p>If this breakdown helped the partition trick finally click, drop a like on the video and subscribe on YouTube for tomorrow's problem. Subscribe to the Substack for the full written breakdown of every solution, and leave a comment if you'd like to see the k-th smallest element generalization covered next. Sharing this with someone prepping for interviews helps more than you'd think.</p>
-<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Two sorted arrays, need median in log time — which pattern?</summary><p>Binary search on the partition/cut point, not a merge. Trigger: &#x27;sorted arrays&#x27; + &#x27;log time&#x27; + median/kth element.</p></details><details class='card2'><summary>Time complexity of the partition-based median solution?</summary><p>O(log(min(m,n))) — binary search runs on the shorter array only.</p></details><details class='card2'><summary>Space complexity of the cut-based approach?</summary><p>O(1) — no merged array is built, just index pointers and four border values.</p></details><details class='card2'><summary>Trickiest edge case in this problem?</summary><p>Empty array, or a cut landing at index 0/length (use -infinity/+infinity sentinels for out-of-range borders).</p></details><details class='card2'><summary>Naive merge approach vs the two-pointer cut trick?</summary><p>Merge: O(m+n) time, O(m+n) or O(1) space but slow. Cut trick: O(log min(m,n)) time by binary searching partitions instead of merging.</p></details><details class='card2'><summary>Follow-up: why binary search the shorter array, not either?</summary><p>Bounds the search space to O(log min(m,n)) and guarantees the complementary cut in the longer array stays within valid range.</p></details></div>
+<p>If this helped the partition trick click, drop a like on the video — it's the simplest way to tell me it landed. Subscribe on YouTube for tomorrow's problem, and subscribe to the Substack if you'd rather get the full write-up in your inbox. Comments with your own dry runs or alternative approaches are always welcome, and sharing this with someone prepping for interviews helps more than you'd think.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Two sorted arrays, need median fast — which pattern applies?</summary><p>Binary search on the partition point of the smaller array, not merging. Trigger: &#x27;sorted arrays&#x27; + &#x27;find kth/median&#x27; + need better than O(n).</p></details><details class='card2'><summary>Time complexity of the partition-based median solution?</summary><p>O(log(min(m,n))) — binary search runs only over the shorter array&#x27;s index range.</p></details><details class='card2'><summary>Space complexity of the optimal approach?</summary><p>O(1) — only a few index/pointer variables, no extra arrays or merging.</p></details><details class='card2'><summary>Trickiest edge case in this problem?</summary><p>One array empty, or partition lands at index 0/length (use -infinity/+infinity sentinels to avoid out-of-bounds comparisons).</p></details><details class='card2'><summary>Naive merge approach vs optimal partition approach?</summary><p>Merge: O(m+n) time, easy but too slow for &#x27;hard&#x27; bound. Partition: O(log min(m,n)), exploits sortedness via binary search instead of scanning.</p></details><details class='card2'><summary>Interview follow-up: why binary search the smaller array?</summary><p>Bounds iterations by the smaller size and guarantees the complementary partition index in the larger array stays valid (avoids negative/out-of-range indices).</p></details></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>
