@@ -1,0 +1,235 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson: How Does an AI Agent Catch Its Own Mistakes? — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/the-reflexion-pattern-how-to-build-a-self-correcting-ai-agent
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/the-reflexion-pattern-how-to-build-a-self-correcting-ai-agent.html">
+<meta property="og:title" content="Lesson: How Does an AI Agent Catch Its Own Mistakes? — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/the-reflexion-pattern-how-to-build-a-self-correcting-ai-agent
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson: How Does an AI Agent Catch Its Own Mistakes?</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>If you've built anything with an LLM-powered agent, you've hit this wall: the agent gives you an answer with total confidence, and the answer is wrong. Not "I'm not sure, but..." wrong — flat-out, stated-as-fact wrong. No error message, no hesitation, nothing to signal that something broke.</p>
+<p>This matters more than it sounds like it should. As agents move from answering trivia questions to writing code, calling APIs, and taking actions with real consequences, a silent wrong answer is far more expensive than a slow right one. Interviewers and engineering teams alike are starting to care less about whether you can call an LLM and more about whether you can build a system that notices when it's wrong and does something about it.</p>
+<p>That's exactly what the Reflexion pattern solves. It's a simple idea with an outsized effect: let the agent grade its own work, write down what went wrong in plain language, and hand that note to itself on the next attempt. No retraining, no new model weights, just a smarter loop.</p>
+<p>In this lesson we'll build the intuition from scratch, walk through a concrete coding bug the way an agent would actually encounter it, and compare Reflexion against the two things people confuse it with — plain retrying and fine-tuning.</p>
+<h2>Problem Overview</h2>
+<p>Strip away the AI framing for a second and the problem is this: you have a system that produces an output, and sometimes that output is wrong. You want the system to improve its own output across multiple attempts, using only information it generates itself — no human in the loop correcting it, no additional training data, no gradient updates.</p>
+<p>Formally, Reflexion frames this as three cooperating roles:</p>
+<ul>
+<li><strong>Actor</strong> — the part that actually attempts the task (writes the code, answers the question, takes the action).</li>
+<li><strong>Evaluator</strong> — the part that checks the actor's output against some notion of correctness (a test suite, a rubric, a set of constraints) and produces a verdict.</li>
+<li><strong>Self-reflection</strong> — the part that looks at a <em>failed</em> verdict and writes a short, specific, natural-language note about what went wrong and why.</li>
+</ul>
+<p>That note then gets folded into the next attempt's prompt. The actor doesn't start over — it starts from the lesson. The loop repeats until the evaluator is satisfied or you hit a cap on the number of attempts.</p>
+<h2>Example</h2>
+<p>Let's make this concrete with the example from the lesson: an agent is asked to write a Python function that sums a list of numbers.</p>
+<p><strong>Attempt 1</strong> — the agent writes:</p>
+<pre><code class="language-python">def sum_list(nums):
+    total = nums[0]
+    for n in nums[1:]:
+        total += n
+    return total
+</code></pre>
+<p>This works for <code>[1, 2, 3]</code> (returns <code>6</code>) and even for a single-item list <code>[5]</code> (returns <code>5</code>). It looks correct — until the evaluator runs it against <code>[]</code>, an empty list, and it throws <code>IndexError: list index out of range</code>.</p>
+<p><strong>Evaluator output:</strong> "Failed on input <code>[]</code> with <code>IndexError</code>."</p>
+<p><strong>Reflection note (written by the agent, in plain language):</strong> "The function assumes the list has at least one element by reading <code>nums[0]</code> directly. It needs to handle the empty-list case before indexing."</p>
+<p><strong>Attempt 2</strong> — with that note prepended to the prompt, the agent writes:</p>
+<pre><code class="language-python">def sum_list(nums):
+    total = 0
+    for n in nums:
+        total += n
+    return total
+</code></pre>
+<p>This version starts from <code>0</code> and never indexes directly, so it handles <code>[]</code> (returns <code>0</code>), <code>[5]</code> (returns <code>5</code>), and <code>[1, 2, 3]</code> (returns <code>6</code>) correctly. The evaluator reruns all cases, everything passes, and the loop stops.</p>
+<p>Notice what actually changed between attempts: not the agent's general coding ability, not its "training," just the information available to it at generation time.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer would arrive at this pattern, before ever hearing the word "Reflexion."</p>
+<p>Think about writing an essay. Nobody nails a first draft. You write it, you read it back, you circle the weak paragraph, and you rewrite <em>just that part</em> — you don't burn the whole essay and start from a blank page. The reason a second draft is better isn't that you got smarter between draft one and draft two. It's that you now have specific, targeted information about what was wrong with draft one.</p>
+<p>Now split that single person into three roles: a writer who drafts, an editor who circles the weak paragraph, and a tutor who writes "fix this next time" in the margin. That's the entire Reflexion pattern. The actor is the writer, the evaluator is the editor, and the self-reflection step is the tutor's margin note.</p>
+<p>The key insight — the thing that separates this from just "try again" — is that the note has to be <em>specific</em>. "This was wrong" is useless. "This crashed on an empty list because you indexed <code>nums[0]</code> before checking length" is something the next attempt can actually act on. Specificity is what turns a retry into a correction.</p>
+<p>And the memory question — where does this note live? — has a clean answer once you separate two timescales:</p>
+<ul>
+<li><strong>Short-term memory</strong> is the sticky note on your desk. It holds the reflection for <em>this</em> task only, and gets thrown away once the task succeeds or you give up.</li>
+<li><strong>Long-term memory</strong> is the notebook you keep for weeks. A lesson from last Tuesday's task ("don't assume non-empty input") can quietly prevent a mistake in an unrelated task today.</li>
+</ul>
+<p>Most simple Reflexion setups only need short-term memory. Long-term memory is where it gets genuinely powerful, because the agent stops re-learning the same lesson on every new task.</p>
+<h2>Brute Force Solution</h2>
+<p>The "brute force" version of self-correction is <strong>plain retry</strong>: run the actor again with the same prompt (maybe with a higher temperature) and hope randomness lands differently.</p>
+<p><strong>Idea:</strong> Sampling is stochastic, so a second sample might avoid the mistake the first one made.</p>
+<p><strong>Algorithm:</strong>
+1. Run the actor.
+2. If it fails, run the actor again, unchanged.
+3. Repeat up to N times.</p>
+<p><strong>Advantages:</strong>
+- Trivial to implement — no evaluator, no reflection step, no extra prompt engineering.
+- Actually works reasonably well for failures that are genuinely random (an unlucky token sample, a flaky formatting slip).</p>
+<p><strong>Disadvantages:</strong>
+- No memory of <em>why</em> it failed, so it can make the exact same mistake on every attempt.
+- Wastes attempts on systematic bugs — a logic error like "forgot to handle the empty list" isn't random, and rerolling the dice won't fix it.
+- No principled stopping condition beyond a fixed retry count.</p>
+<p><strong>Complexity (informal):</strong> Time cost scales linearly with number of retries, with no guarantee of improvement per retry — it's O(N) attempts with no monotonic progress. Space cost is minimal since nothing is retained between attempts.</p>
+<h2>Optimal Solution</h2>
+<p>Reflexion is what you get when you replace "retry blindly" with "retry informed." The loop looks like this:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Role</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Actor</td>
+<td>Attempts the task, produces an output</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Evaluator</td>
+<td>Scores the output against a correctness check</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Self-reflection</td>
+<td>If the score fails, writes a specific note explaining what broke and why</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Memory</td>
+<td>Stores the note (short-term for this task, optionally long-term across tasks)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Actor</td>
+<td>Re-attempts, with the note included in its next prompt</td>
+</tr>
+<tr>
+<td>—</td>
+<td>Loop</td>
+<td>Repeat 2–5 until evaluator passes, or attempt limit is hit</td>
+</tr>
+</tbody>
+</table>
+<p>The two design decisions that make or break this pattern:</p>
+<ol>
+<li><strong>The stopping condition.</strong> Without a hard cap, the loop can burn through your token budget "refining" an answer that was already good enough, chasing marginal improvements forever. Cap it — three to five attempts is a reasonable default — and accept the best attempt after that.</li>
+<li><strong>The quality of the reflection.</strong> A vague note ("that was wrong") gives the next attempt nothing to work with, so you're effectively back to plain retry with extra steps. A useful note names the specific failure — which test failed, which line broke, which assumption was violated.</li>
+</ol>
+<p>Get both right, and the loop converges fast because every attempt after the first is informed rather than random.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from dataclasses import dataclass, field
+from typing import Callable, Optional
+
+
+@dataclass
+class ReflexionResult:
+    success: bool
+    output: Optional[str]
+    attempts: int
+    reflections: list = field(default_factory=list)
+
+
+def run_reflexion(
+    actor: Callable[[list], str],
+    evaluator: Callable[[str], Optional[str]],
+    reflector: Callable[[str, str], str],
+    max_attempts: int = 4,
+) -&gt; ReflexionResult:
+    &quot;&quot;&quot;
+    actor(reflections) -&gt; output
+    evaluator(output) -&gt; None if pass, else a failure description
+    reflector(output, failure) -&gt; a specific reflection note
+    &quot;&quot;&quot;
+    reflections = []
+
+    for attempt in range(1, max_attempts + 1):
+        output = actor(reflections)
+        failure = evaluator(output)
+
+        if failure is None:
+            return ReflexionResult(True, output, attempt, reflections)
+
+        note = reflector(output, failure)
+        reflections.append(note)
+
+    # Attempt limit reached; return the last attempt as the best effort.
+    return ReflexionResult(False, output, max_attempts, reflections)
+</code></pre>
+<p>Applied to the sum-list example, <code>actor</code>, <code>evaluator</code>, and <code>reflector</code> would be swapped for real LLM calls, but the control flow — attempt, evaluate, reflect, retry, cap — stays identical.</p>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>ReflexionResult</code> is just a small record of what happened: did it succeed, what was the final output, how many attempts did it take, and what did the agent learn along the way. Useful for logging and debugging your agent later.</li>
+<li><code>actor(reflections)</code> takes the accumulated notes and produces a new attempt — this is where the reflection notes actually change behavior, by being part of the prompt/context passed in.</li>
+<li><code>evaluator(output)</code> returns <code>None</code> on success or a description of the failure. This is deliberately generic — it can be a Python test runner, a rubric checker, or another LLM call acting as a judge.</li>
+<li><code>reflector(output, failure)</code> is the "tutor writing in the margin" step — it turns a raw failure into a specific, reusable lesson.</li>
+<li>The <code>for</code> loop is the entire self-correction cycle: try, check, learn, repeat — bounded by <code>max_attempts</code> so it can never run away.</li>
+<li>Reflections accumulate in a list rather than replacing each other, so by attempt three the actor has the lessons from attempts one <em>and</em> two, not just the most recent one.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using the sum-list example with <code>max_attempts=2</code>:</p>
+<p><strong>Attempt 1:</strong>
+- <code>reflections = []</code>
+- <code>actor([])</code> → returns the version that reads <code>nums[0]</code> directly
+- <code>evaluator(output)</code> → runs against <code>[]</code>, <code>[5]</code>, <code>[1,2,3]</code> → fails on <code>[]</code> with <code>IndexError</code> → returns <code>"IndexError on empty list input"</code>
+- <code>reflector(output, failure)</code> → <code>"Function indexes nums[0] before checking length; must initialize total=0 and handle empty input."</code>
+- <code>reflections = ["Function indexes nums[0]..."]</code></p>
+<p><strong>Attempt 2:</strong>
+- <code>actor(reflections)</code> → now sees the note in its prompt, writes the <code>total = 0</code> version
+- <code>evaluator(output)</code> → passes all three cases → returns <code>None</code>
+- Loop returns <code>ReflexionResult(success=True, output=&lt;final code&gt;, attempts=2, reflections=[...])</code></p>
+<p>Two attempts, one specific note, done.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> O(k) actor calls and O(k) evaluator calls, where k is the number of attempts actually used (bounded above by <code>max_attempts</code>). This is correct because each iteration performs exactly one actor call, one evaluator call, and — on failure — one reflector call, and the loop terminates the instant the evaluator passes or the cap is hit.</li>
+<li><strong>Space:</strong> O(k) to store the accumulated reflections, since each failed attempt appends one note. In practice k is small (3–5), so this is negligible — the real cost is the token budget consumed by re-sending accumulated reflections in each new prompt, which grows linearly with the number of stored notes.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p><strong>Plain retry</strong> (covered above) is worth using when failures are genuinely stochastic — an unlucky sample, a formatting hiccup that resolves itself on a reroll. It's cheap and requires no extra infrastructure.</p>
+<p><strong>Fine-tuning</strong> solves a different problem entirely: it permanently updates the model's weights using a large set of examples, which costs time, data, and compute, but the improvement persists across every future task without needing a prompt-time note. Reflexion changes nothing about the model — it's a smarter prompt, not a smarter model — so the improvement only exists within the conversation or session where the reflection was written (unless you persist it to long-term memory).</p>
+<p>The practical rule of thumb: if you need better results <em>this week</em>, reach for Reflexion. If you're seeing the same class of mistake across thousands of unrelated tasks and have the data and time to invest, fine-tuning is the better long-term fix.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty input</strong> — exactly the bug in our worked example; the evaluator must include an empty-input test case or this slips through silently.</li>
+<li><strong>Duplicate failures</strong> — if the agent makes the same mistake twice in a row despite a reflection note, that's a signal the note wasn't specific enough, not that the loop needs more attempts.</li>
+<li><strong>Evaluator that never passes</strong> — if the task is genuinely unsolvable or the evaluator is miscalibrated, the loop will exhaust <code>max_attempts</code> every time; make sure you're returning the best attempt rather than nothing.</li>
+<li><strong>Reflection note grows unbounded</strong> — across many attempts, accumulated notes can bloat the prompt; consider summarizing or capping stored reflections for long loops.</li>
+<li><strong>Zero attempts allowed</strong> — <code>max_attempts=0</code> should be rejected or treated as "run the actor once with no evaluation," not silently return an empty result.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>No stopping condition.</strong> Letting the loop run unbounded burns tokens re-refining an answer that was already good enough.</li>
+<li><strong>Vague reflections.</strong> "The attempt was wrong" gives the next attempt nothing actionable — it has to name the specific failure.</li>
+<li><strong>Treating Reflexion as a substitute for fine-tuning.</strong> They solve different problems; reaching for the wrong one wastes time or money.</li>
+<li><strong>Ignoring stochastic failures.</strong> If a failure was pure bad luck, Reflexion's overhead (extra tokens, extra latency) isn't buying you anything over a plain retry.</li>
+<li><strong>Discarding reflections between unrelated tasks.</strong> If the same category of mistake keeps recurring across sessions, that's a sign you need long-term memory, not just short-term memory per task.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you design the evaluator for a task where "correctness" isn't a simple pass/fail test, like open-ended writing?</li>
+<li>What happens to this pattern if the evaluator itself is unreliable — how do you evaluate the evaluator?</li>
+<li>How would you decide when to promote a reflection from short-term to long-term memory?</li>
+<li>How does Reflexion's cost (tokens, latency) compare to a single well-engineered prompt, and when is the tradeoff worth it?</li>
+<li>How would you prevent reflection notes from growing unbounded across many attempts or many tasks?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Self-consistency decoding</strong> — sampling multiple outputs and taking a majority vote; related because it's another way of squeezing a better answer out of multiple attempts, but without any explicit feedback loop.</li>
+<li><strong>Tree-of-thought reasoning</strong> — explores multiple reasoning paths rather than multiple full attempts; related in spirit (structured exploration beats one-shot generation) but different in mechanism.</li>
+<li><strong>Test-driven development (the human version)</strong> — write a test, watch it fail, fix the code; Reflexion is essentially this loop automated and narrated in natural language by the agent itself.</li>
+<li><strong>Debugging with a linter/type checker</strong> — an evaluator that catches specific, nameable failures before runtime, which is exactly the kind of specific signal a good reflection step needs.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Reflexion isn't a new model or a training technique — it's a loop: an actor attempts, an evaluator scores, and a reflection step writes down exactly what went wrong so the next attempt starts informed instead of blind. The two things that make or break it are a hard cap on attempts and reflections specific enough to actually change behavior. Used on the right kind of failure — systematic logic bugs rather than random noise — it turns a shaky agent into one that visibly gets better within a single session, at the cost of extra tokens and latency, and without touching a single training weight.</p>
+<h2>Watch the Video</h2>
+<p>If you want to see this pattern explained end-to-end with the full worked example, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of the Daily Python LeetCode series, where each entry breaks down one interview-relevant concept or problem — sometimes a classic algorithm, sometimes a systems idea like this one — with the intuition explained before a single line of code.</p>
+<h2>Call To Action</h2>
+<p>If this helped the Reflexion pattern click, like the video on YouTube, subscribe for the next lesson, and subscribe to the Substack so you don't miss future breakdowns. Drop a comment with the trickiest bug your own agent has confidently gotten wrong, and share this with a teammate who's building agents right now.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Pattern name: agent checks its own output and retries. Trigger phrase?</summary><p>Reflexion Pattern — trigger: &#x27;agent produces wrong answer with no self-check step&#x27;</p></details><details class='card2'><summary>Time complexity of one Reflexion loop with k retries?</summary><p>O(k) LLM calls — linear in max retries, each retry re-runs generate+critique+fix</p></details><details class='card2'><summary>Space complexity of Reflexion memory across attempts?</summary><p>O(k) — stores one reflection note per failed attempt until stop condition hits</p></details><details class='card2'><summary>Trickiest bug when implementing Reflexion loops?</summary><p>No stopping point — loop retries forever; must cap attempts or detect no-progress convergence</p></details><details class='card2'><summary>Common mistake with the self-reflection note content?</summary><p>Vague critique like &#x27;try again&#x27; — note must name the specific error, not just flag failure</p></details><details class='card2'><summary>Reflexion vs plain retry-on-error: key difference?</summary><p>Plain retry repeats same input; Reflexion injects a written critique into memory before next attempt</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
