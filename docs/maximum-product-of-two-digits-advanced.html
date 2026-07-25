@@ -1,0 +1,197 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maximum Product of Two Digits — 🔴 Advanced (3/3) — LeetCode Daily Python Solution (swap one digit, +60) — Python LeetCode Solution</title><meta name="description" content="📍 Jump to your level:
+🔴 Advanced: 0:18–3:50
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/maximum-product-of-two-digits-advanced
+💻 Code on GitHub: https://github.com/timepasshub2539-hu">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/maximum-product-of-two-digits-advanced.html">
+<meta property="og:title" content="Maximum Product of Two Digits — 🔴 Advanced (3/3) — LeetCode Daily Python Solution (swap one digit, +60) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📍 Jump to your level:
+🔴 Advanced: 0:18–3:50
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/maximum-product-of-two-digits-advanced
+💻 Code on GitHub: https://github.com/timepasshub2539-hu">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Maximum Product of Two Digits — 🔴 Advanced (3/3) — LeetCode Daily Python Solution (swap one digit, +60)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every developer runs into problems that look small on the surface but hide a much bigger idea underneath. Maximum Product of Two Digits is exactly that kind of problem. On the surface, it's asking you to pull two digits out of a number and multiply them for the biggest possible result. Underneath, it's testing something interviewers care about a lot more: can you track the "top two" values in a single pass without reaching for a heap, a sort, or nested loops?</p>
+<p>This pattern shows up constantly outside of interviews too. Bidding engines that need the top two bids, leaderboards that display the top two scores, monitoring systems that flag the two highest latency spikes — all of these use the exact same mental model you'll build here. Learning to solve this problem well isn't just about passing a LeetCode question. It's about internalizing a technique you'll reuse for the rest of your career: constant-space top-k tracking when k is small and fixed.</p>
+<p>By the end of this article, you'll understand not just how to write the solution, but why the order of your comparisons matters, why duplicate digits don't need special-case handling, and how this problem sets you up for the natural follow-up question every interviewer eventually asks.</p>
+<h2>Problem Overview</h2>
+<p>You're given a positive whole number <code>n</code>. Your task is to look at every digit in that number and find the two digits whose product is the largest possible.</p>
+<p>The important rule: if a digit appears more than once in the number, you're allowed to use each occurrence as a separate, independent digit. So if the number contains two 9s, you can multiply 9 × 9 — you are not restricted to picking distinct digit values.</p>
+<p>There's no negative sign to worry about, no decimal points, and no digits outside the 0–9 range. You just need to break the number down into its digits and figure out which two, multiplied together, give the maximum result.</p>
+<h2>Example</h2>
+<p><strong>Example 1:</strong></p>
+<pre><code>Input: n = 199
+Output: 81
+</code></pre>
+<p>The digits are <code>1, 9, 9</code>. The two largest digits are <code>9</code> and <code>9</code> (the two separate occurrences of 9 count individually). Multiplying them gives <code>9 × 9 = 81</code>.</p>
+<p><strong>Example 2:</strong></p>
+<pre><code>Input: n = 22
+Output: 4
+</code></pre>
+<p>The digits are <code>2, 2</code>. Both digits are <code>2</code>, so the maximum product is <code>2 × 2 = 4</code>. This is the classic edge case: every digit is a duplicate, and your solution still has to produce the right answer without any special-case branch for equal values.</p>
+<p><strong>Example 3:</strong></p>
+<pre><code>Input: n = 508
+Output: 40
+</code></pre>
+<p>The digits are <code>5, 0, 8</code>. The two largest are <code>8</code> and <code>5</code>, giving <code>8 × 5 = 40</code>. Notice the <code>0</code> digit doesn't break anything — it's simply never picked because it's never among the top two.</p>
+<h2>Intuition</h2>
+<p>The naive instinct when you see "two digits, maximum product" is to reach for position: grab the first two digits, or the last two, or sort the whole number as a string and slice the ends. That instinct is the trap. The problem never says anything about position — it says "any two digits." What you actually need are the two <strong>largest values</strong> in the digit list, regardless of where they sit.</p>
+<p>Once you reframe it that way, the problem becomes a specific case of a much more general pattern: finding the top-k elements in a stream. When k is large or variable, you'd typically reach for a min-heap of size k, popping the smallest whenever a bigger element shows up. But here, k is fixed at exactly 2. That's small enough that you don't need a heap at all — you can just hardcode two variables, <code>max1</code> and <code>max2</code>, and update them as you scan.</p>
+<p>The subtlety that trips people up is the update order. You want to always keep <code>max1 &gt;= max2</code>. So when you see a new digit:</p>
+<ul>
+<li>If it's bigger than <code>max1</code>, it becomes the new <code>max1</code>, and the <em>old</em> <code>max1</code> slides down to become the new <code>max2</code>.</li>
+<li>Otherwise, if it's bigger than <code>max2</code> (but not <code>max1</code>), it just replaces <code>max2</code>.</li>
+</ul>
+<p>This cascading order is what makes duplicates work automatically. Take <code>n = 22</code>. On the first <code>2</code>, it beats <code>max1</code> (which starts at 0), so <code>max1</code> becomes <code>2</code> and <code>max2</code> stays <code>0</code>. On the second <code>2</code>, it does <strong>not</strong> beat <code>max1</code> (they're equal, and the check is strict <code>&gt;</code>), but it <strong>does</strong> beat <code>max2</code> (<code>2 &gt; 0</code>), so <code>max2</code> becomes <code>2</code> too. Now both trackers hold <code>2</code>, and the product is <code>4</code> — exactly right, with no special "handle equal digits" branch anywhere in the code.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Extract every digit into a list, then check every possible pair of digits and keep the maximum product.</p>
+<p><strong>Algorithm:</strong>
+1. Convert the number to its list of digits.
+2. Use two nested loops to consider every pair <code>(i, j)</code> where <code>i != j</code>.
+3. Track the maximum product seen across all pairs.</p>
+<p><strong>Advantages:</strong>
+- Dead simple to write and reason about.
+- Naturally extends if the problem changed to "return every pair's product" instead of just the max.
+- Useful if you needed the <em>indices</em> of both chosen digits rather than just their values.</p>
+<p><strong>Disadvantages:</strong>
+- Doesn't demonstrate that you understand the top-k generalization, which is almost certainly the interviewer's follow-up.
+- Wasted work: you're comparing pairs you already know can't beat the top two.</p>
+<p><strong>Complexity:</strong> O(n²) time where n is the number of digits, O(n) space to hold the digit list. Since a number is bounded to about 10-11 digits at most, this runs in well under a microsecond in practice — the complexity here is a signaling issue in an interview, not a performance issue.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach tracks the two largest digits seen so far in a single pass, using two variables instead of any data structure.</p>
+<p>Here's the state you carry as you scan the digits of <code>n = 199</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Digit seen</th>
+<th>Check</th>
+<th>max1</th>
+<th>max2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>start</td>
+<td>—</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>1 &gt; 0</code> → yes</td>
+<td>1</td>
+<td>0</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>9 &gt; 1</code> → yes</td>
+<td>9</td>
+<td>1</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>9 &gt; 9</code>? no. <code>9 &gt; 1</code>? yes</td>
+<td>9</td>
+<td>9</td>
+</tr>
+</tbody>
+</table>
+<p>Final answer: <code>max1 * max2 = 9 * 9 = 81</code>.</p>
+<p>The key invariant: <code>max2</code> starts at <code>0</code> and only ever updates on a <strong>strict</strong> <code>&gt;</code> comparison against <code>max2</code> itself — never against <code>max1</code>. That single design choice is what makes ties and duplicates fall out correctly without any extra logic.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def max_product(n: int) -&gt; int:
+    &quot;&quot;&quot;Return the maximum product of any two digits in n.&quot;&quot;&quot;
+    max1 = max2 = 0
+
+    for char in str(n):
+        digit = int(char)
+        if digit &gt; max1:
+            max1, max2 = digit, max1  # old max1 cascades down to max2
+        elif digit &gt; max2:
+            max2 = digit
+
+    return max1 * max2
+
+
+if __name__ == &quot;__main__&quot;:
+    assert max_product(199) == 81
+    assert max_product(22) == 4
+    assert max_product(508) == 40
+    assert max_product(10) == 0
+    assert max_product(5) == 0  # single digit, no valid second digit -&gt; 0
+    print(&quot;all checks passed&quot;)
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>max1 = max2 = 0</code> — both trackers start at zero, which safely handles the "no digit found yet" state since digits are always non-negative.</li>
+<li><code>for char in str(n)</code> — converts the number to a string so we can iterate its digits one character at a time.</li>
+<li><code>digit = int(char)</code> — converts each character back to an integer for comparison and multiplication.</li>
+<li><code>if digit &gt; max1</code> — strict comparison. If the new digit beats the current leader, we promote it to <code>max1</code> and demote the old <code>max1</code> down to <code>max2</code> in one line via tuple assignment.</li>
+<li><code>elif digit &gt; max2</code> — only runs if the digit didn't beat <code>max1</code>. If it beats the second-place tracker, it takes that spot.</li>
+<li><code>return max1 * max2</code> — the only line where both trackers are used together; everything before this was bookkeeping.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Let's trace <code>n = 199</code> step by step.</p>
+<ol>
+<li>Start: <code>max1 = 0</code>, <code>max2 = 0</code></li>
+<li>Digit <code>1</code>: <code>1 &gt; 0</code> is true → <code>max1 = 1</code>, <code>max2 = 0</code> (old max1)</li>
+<li>Digit <code>9</code>: <code>9 &gt; 1</code> is true → <code>max1 = 9</code>, <code>max2 = 1</code> (old max1)</li>
+<li>Digit <code>9</code>: <code>9 &gt; 9</code> is false → check <code>elif 9 &gt; 1</code> → true → <code>max2 = 9</code></li>
+<li>Final: <code>max1 = 9</code>, <code>max2 = 9</code> → <code>9 * 9 = 81</code></li>
+</ol>
+<p>Matches the expected output.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(n), where n is the number of digits in the input. Each digit is visited exactly once, and every operation inside the loop is O(1).</p>
+<p><strong>Space:</strong> O(1) extra space. We only ever hold two integer variables regardless of how many digits the number has. (Technically <code>str(n)</code> allocates a string of length n, but that's the input representation, not extra working state — and even that can be avoided by extracting digits with <code>% 10</code> and <code>// 10</code> if you want to skip the string allocation entirely.)</p>
+<p>This is correct because at every point in the loop, <code>max1</code> and <code>max2</code> hold the two largest digits seen <em>so far</em>, which is an invariant maintained by the cascade-on-<code>max1</code>, replace-on-<code>max2</code> update rule — by the time the loop ends, they hold the two largest digits overall.</p>
+<h2>Alternative Solutions</h2>
+<p>You could pull digits using arithmetic (<code>n % 10</code>, <code>n //= 10</code>) instead of string conversion, avoiding the string allocation entirely. At the input sizes this problem allows (n ≤ 10^10 or so), this makes no measurable difference — but it's worth mentioning if an interviewer asks about avoiding unnecessary allocations.</p>
+<p>You could also generalize immediately to a min-heap of size <code>k</code> and set <code>k = 2</code>. This is overkill for this exact problem, but it's the natural bridge to the follow-up question: "what if you needed the top k digits instead of just two?" At that point, the two-variable trick stops scaling and a heap becomes the right tool.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Single-digit number</strong> (e.g., <code>n = 5</code>): There's only one digit, so <code>max2</code> never updates past <code>0</code>, and the product is <code>0</code>. Worth clarifying with your interviewer whether this is valid input or whether <code>n</code> is guaranteed to have at least two digits.</li>
+<li><strong>All duplicate digits</strong> (e.g., <code>n = 22</code>, <code>n = 999</code>): Handled automatically by the strict-inequality cascade — no special casing needed.</li>
+<li><strong>A zero digit present</strong> (e.g., <code>n = 10</code>): Zero is never selected as one of the top two unless every other digit is also zero, since any nonzero digit beats it.</li>
+<li><strong>Maximum-length input</strong>: Even at the largest number size allowed by constraints, the algorithm stays O(n) with constant extra space — no degradation.</li>
+<li><strong>Digits already in descending order</strong> (e.g., <code>n = 987</code>): First digit sets <code>max1</code>, second digit correctly cascades into <code>max2</code>, third digit is ignored since it beats neither tracker.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Checking <code>max2</code> before <code>max1</code>.</strong> If you test the new digit against <code>max2</code> first, you can overwrite the wrong tracker and break the invariant that <code>max1 &gt;= max2</code>.</li>
+<li><strong>Using <code>&gt;=</code> instead of <code>&gt;</code>.</strong> This looks harmless but changes which occurrence "wins" in tie situations and can cause subtly wrong cascading.</li>
+<li><strong>Special-casing <code>digit == max1</code>.</strong> It feels intuitive to add a branch for exact ties, but the <code>elif digit &gt; max2</code> branch already covers this correctly — adding a special case is redundant and a common source of bugs.</li>
+<li><strong>Reaching for position instead of value.</strong> Grabbing the first two or last two digits of the string ignores the actual problem statement — you want the two largest <em>values</em>, not the two digits at specific indices.</li>
+<li><strong>Forgetting digits can repeat.</strong> Some candidates try to deduplicate digits before comparing, which silently breaks inputs like <code>n = 22</code>.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What if you needed the top 3 (or top k) digits instead of just 2? (Answer: switch to a min-heap of size k.)</li>
+<li>What if the input were a list of arbitrary integers instead of digits of a single number — does your approach still work?</li>
+<li>Can you solve this without converting the number to a string at all?</li>
+<li>What's the smallest input for which brute force and the optimal solution differ in runtime in any noticeable way?</li>
+<li>How would you modify this to return the <em>indices</em> of the two digits instead of their product?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Third Maximum Number (LeetCode 414)</strong> — same top-k tracking pattern, extended to k = 3.</li>
+<li><strong>Kth Largest Element in an Array (LeetCode 215)</strong> — the general case where a heap or quickselect becomes necessary.</li>
+<li><strong>Maximum Product of Three Numbers (LeetCode 628)</strong> — tests the same "track the extremes as you scan" intuition, complicated by negative numbers.</li>
+<li><strong>Two Sum (LeetCode 1)</strong> — a different pairing problem, but shares the lesson that single-pass tracking beats nested loops when possible.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The real lesson here isn't the two lines of arithmetic — it's the discipline of recognizing a top-k problem in disguise and picking the right-sized tool for a fixed, small k. Two variables and a carefully ordered pair of comparisons replace an entire heap. Get the branch order right, and duplicate values, ties, and zero digits all resolve themselves without a single extra line of special-case code. That's the kind of solution that signals real understanding in an interview, not just a working answer.</p>
+<h2>Watch the Video</h2>
+<p>If you want to see this solution built up live, step by step, including the brute-force detour and the moment the top-two tracking trick clicks, check out the full walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of the Daily Python LeetCode series, where each problem is solved from first principles in Python — starting with the naive approach, building the intuition for the optimal one, and connecting it to the broader patterns that show up again and again in real interviews.</p>
+<h2>Call To Action</h2>
+<p>If this helped make the top-two tracking pattern click, give the video a like on YouTube and subscribe so you don't miss the next problem in the series. Subscribe to the Substack for the full written breakdown delivered straight to your inbox, and drop a comment with your own trace of <code>n = 22</code> or <code>n = 199</code> — seeing how you worked through it helps shape what gets covered next. Sharing this with a friend prepping for interviews helps the series grow too.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>What pattern applies to &#x27;find the two largest values in one pass&#x27;?</summary><p>Single-pass tracking of top-K variables — when you see &#x27;largest/smallest two of N&#x27;, think two running max/min holders, not sort.</p></details><details class='card2'><summary>Time complexity of the digit-extraction + top-two-track approach?</summary><p>O(d) where d = number of digits in n (effectively O(log n)).</p></details><details class='card2'><summary>Space complexity of tracking top two digits while scanning?</summary><p>O(1) — only a couple of variables needed, no array of digits required.</p></details><details class='card2'><summary>Trickiest bug when tracking top two digits in one pass?</summary><p>Updating second-max before checking against first-max, or comparing against a stale first-max — order of comparisons matters.</p></details><details class='card2'><summary>Top-two-tracking vs sort-then-pick-two — when to prefer which?</summary><p>Tracking wins for O(n)/O(1) single pass; sorting (O(n log n)) is simpler to write but wasteful when you only need 2 values.</p></details><details class='card2'><summary>Interview follow-up: how would swapping one digit change the max product?</summary><p>Swapping can only help if it raises a digit currently in the top-two set or displaces a smaller digit into it — check marginal gain, not brute force.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
