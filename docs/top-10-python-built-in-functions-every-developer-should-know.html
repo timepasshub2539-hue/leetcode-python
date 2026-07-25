@@ -1,0 +1,252 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson: The 10 Python Functions You&#x27;ve Used 1,000 Times — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/top-10-python-built-in-functions-every-developer-should-know
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/top-10-python-built-in-functions-every-developer-should-know.html">
+<meta property="og:title" content="Lesson: The 10 Python Functions You&#x27;ve Used 1,000 Times — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/top-10-python-built-in-functions-every-developer-should-know
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Daily <b>Python</b> LeetCode</a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson: The 10 Python Functions You&#x27;ve Used 1,000 Times</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every Python developer, whether they've written ten scripts or ten thousand, leans on the same small set of built-in functions constantly. <code>print()</code>, <code>len()</code>, <code>range()</code> — these show up so often that most people stop thinking about what they actually do. That's a problem, because interviewers <em>do</em> think about it. A candidate who can't explain why <code>input()</code> returns a string, or why <code>sorted()</code> doesn't touch the original list, signals a shaky mental model — even if they can solve a medium-difficulty LeetCode problem.</p>
+<p>This lesson isn't about memorizing syntax. It's about understanding the ten built-in functions that form the actual foundation of everyday Python: <code>print</code>, <code>len</code>, <code>range</code>, <code>type</code>, <code>input</code>, <code>sorted</code>, <code>sum</code>, <code>max</code>, and the trio of converters <code>str</code>, <code>int</code>, and <code>float</code>. Get these solid, and a huge chunk of "why is my code broken" confusion disappears. This is also exactly the kind of fundamentals check that shows up early in technical interviews — not as a standalone question, but as the invisible scaffolding underneath everything else you're asked to build.</p>
+<h2>Problem Overview</h2>
+<p>There's no LeetCode-style problem statement here — this is a fundamentals lesson. But it's worth framing it like one, because the underlying skill being tested is identical to what interviewers probe for: do you understand what your tools actually do, or are you just pattern-matching syntax you've memorized?</p>
+<p>The "problem" is this: Python ships with a set of functions available in every file, with no import required. These are called <strong>built-in functions</strong>. Knowing which one to reach for — and what type it hands back — is the difference between code that flows naturally and code where you're constantly fighting <code>TypeError</code>s and off-by-one bugs.</p>
+<p>We'll group them into four categories:</p>
+<ul>
+<li><strong>Inspecting values</strong>: <code>print</code>, <code>type</code>, <code>len</code></li>
+<li><strong>Generating sequences</strong>: <code>range</code></li>
+<li><strong>Talking to the user</strong>: <code>input</code></li>
+<li><strong>Working with collections</strong>: <code>sorted</code>, <code>sum</code>, <code>max</code></li>
+<li><strong>Converting between types</strong>: <code>str</code>, <code>int</code>, <code>float</code></li>
+</ul>
+<h2>Example</h2>
+<pre><code class="language-python">print(&quot;Hello&quot;)               # Hello
+len(&quot;cat&quot;)                   # 3
+list(range(3))                # [0, 1, 2]
+type(5)                       # &lt;class 'int'&gt;
+type(&quot;hi&quot;)                    # &lt;class 'str'&gt;
+sorted([5, 1, 4])              # [1, 4, 5]
+sum([5, 1, 4])                 # 10
+max([5, 1, 4])                 # 5
+int(&quot;5&quot;) + int(&quot;3&quot;)            # 8
+</code></pre>
+<p>Walking through the outputs:</p>
+<ul>
+<li><code>len("cat")</code> returns <code>3</code> because it counts the characters in the string — not the value of anything, just the count of items.</li>
+<li><code>list(range(3))</code> produces <code>[0, 1, 2]</code> — three numbers starting at zero, because <code>range</code> is zero-indexed by default and stops <em>before</em> the number you give it.</li>
+<li><code>sorted([5, 1, 4])</code> returns a <strong>new</strong> list, <code>[1, 4, 5]</code>. The original list passed in is untouched.</li>
+<li><code>sum([5, 1, 4])</code> adds everything together and collapses the list into a single number, <code>10</code>.</li>
+<li><code>max([5, 1, 4])</code> does the same collapsing, but keeps only the largest value, <code>5</code>.</li>
+<li><code>int("5") + int("3")</code> equals <code>8</code> because both strings were converted to integers <em>before</em> the addition. Skip the conversion and <code>"5" + "3"</code> gives you <code>"53"</code> — string concatenation, not arithmetic.</li>
+</ul>
+<h2>Intuition</h2>
+<p>Here's how an experienced developer actually thinks about built-ins — not as a list to memorize, but as answers to recurring questions your code asks.</p>
+<p>Every program needs to do a small number of things repeatedly: show me what's happening (<code>print</code>), tell me how big this is (<code>len</code>), give me a sequence of numbers (<code>range</code>), tell me what kind of thing this is (<code>type</code>), get input from a person (<code>input</code>), and organize or summarize a collection (<code>sorted</code>, <code>sum</code>, <code>max</code>). Python's designers noticed these needs are so universal that making developers import a module or write a helper function for each one would be needless friction. So they became <strong>built-in</strong> — always available, no import needed.</p>
+<p>The mental model that clicks for most people: built-ins are the utensil drawer in your kitchen. You don't buy a spoon every time you need one — it's just there. Same with <code>len()</code>. You don't write a loop to count characters — it's already in your hand.</p>
+<p>The one concept that trips up nearly everyone starting out is <strong>type</strong>. Python doesn't automatically know that the text <code>"5"</code> you typed at a keyboard prompt means the number 5. To Python, it's just a string of characters until you explicitly say otherwise. That single fact explains almost every "why doesn't my code work" question a beginner has about <code>input()</code>.</p>
+<h2>Brute Force Solution</h2>
+<p>There isn't really a "brute force" version of using a built-in function — but there <em>is</em> a brute-force version of what these functions save you from writing yourself. Consider <code>sum()</code>:</p>
+<pre><code class="language-python">def my_sum(numbers):
+    total = 0
+    for n in numbers:
+        total += n
+    return total
+</code></pre>
+<p><strong>Idea</strong>: manually loop through the collection and accumulate a result.</p>
+<p><strong>Algorithm</strong>: initialize an accumulator, iterate once, update the accumulator on each step, return it.</p>
+<p><strong>Advantages</strong>: transparent — you can see exactly what's happening, and it's a useful exercise for understanding how <code>sum()</code> works internally.</p>
+<p><strong>Disadvantages</strong>: more code to maintain, more room for bugs (forgetting to initialize <code>total</code>, off-by-one errors), and it reinvents something the language already gives you for free.</p>
+<p><strong>Time complexity</strong>: O(n) — same as the built-in.
+<strong>Space complexity</strong>: O(1) — same as the built-in.</p>
+<p>The built-in <code>sum()</code> does the identical work, just implemented in C under the hood, which makes it faster and — more importantly — impossible to get wrong.</p>
+<h2>Optimal Solution</h2>
+<p>The "optimal solution" here is simply: use the built-in. Each one is doing meaningful work under the hood, and understanding what that work is makes you faster at reading and writing code.</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>What it does</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>print(x)</code></td>
+<td>Displays a value on screen</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td><code>len(x)</code></td>
+<td>Counts items in a sequence</td>
+<td><code>int</code></td>
+</tr>
+<tr>
+<td><code>range(n)</code></td>
+<td>Generates a sequence of numbers</td>
+<td><code>range</code> object (iterable)</td>
+</tr>
+<tr>
+<td><code>type(x)</code></td>
+<td>Reports the category of a value</td>
+<td><code>type</code></td>
+</tr>
+<tr>
+<td><code>input(prompt)</code></td>
+<td>Pauses and waits for user text</td>
+<td><code>str</code> (always)</td>
+</tr>
+<tr>
+<td><code>sorted(x)</code></td>
+<td>Returns a new sorted copy</td>
+<td><code>list</code></td>
+</tr>
+<tr>
+<td><code>sum(x)</code></td>
+<td>Adds all items together</td>
+<td><code>int</code>/<code>float</code></td>
+</tr>
+<tr>
+<td><code>max(x)</code></td>
+<td>Returns the largest item</td>
+<td>matches item type</td>
+</tr>
+<tr>
+<td><code>str(x)</code>, <code>int(x)</code>, <code>float(x)</code></td>
+<td>Converts between types</td>
+<td>matches target type</td>
+</tr>
+</tbody>
+</table>
+<p>The one detail worth burning into memory: <strong><code>input()</code> always returns a string</strong>, no matter what the user typed. If you need a number, you convert it — every time, no exceptions.</p>
+<pre><code class="language-python">age = input(&quot;How old are you? &quot;)   # age is a string, e.g. &quot;25&quot;
+age = int(age)                      # now age is 25, an integer
+</code></pre>
+<p>And the classic mix-up worth locking in: <code>len()</code> tells you <em>how many</em> items are in a collection. <code>sum()</code> tells you <em>what they add up to</em>. They sound similar and solve completely different problems — pause and ask yourself which one you actually need.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def demo_built_ins() -&gt; None:
+    &quot;&quot;&quot;Show each of the ten core built-in functions in action.&quot;&quot;&quot;
+    # print — display output
+    print(&quot;Hello, Python!&quot;)
+
+    # len — measure size
+    word = &quot;cat&quot;
+    print(len(word))  # 3
+
+    # range — generate a sequence
+    numbers = list(range(3))
+    print(numbers)  # [0, 1, 2]
+
+    # type — inspect category
+    print(type(5))     # &lt;class 'int'&gt;
+    print(type(&quot;hi&quot;))  # &lt;class 'str'&gt;
+
+    # input — get user text (always returns str)
+    raw = input(&quot;Enter a number: &quot;)
+    value = int(raw)  # must convert before doing math
+    print(value + 1)
+
+    # sorted — organize without mutating the original
+    messy = [5, 1, 4]
+    print(sorted(messy))  # [1, 4, 5]
+    print(messy)           # [5, 1, 4] — unchanged
+
+    # sum and max — collapse a list to one value
+    print(sum(messy))  # 10
+    print(max(messy))  # 5
+
+    # str, int, float — convert between types
+    print(int(&quot;5&quot;) + int(&quot;3&quot;))    # 8, not &quot;53&quot;
+    print(float(&quot;3.14&quot;))          # 3.14
+    print(str(42) + &quot; items&quot;)     # &quot;42 items&quot;
+
+
+if __name__ == &quot;__main__&quot;:
+    demo_built_ins()
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><strong><code>print("Hello, Python!")</code></strong> — sends text to the console. It returns <code>None</code>; it's a side effect, not a value you use downstream.</li>
+<li><strong><code>len(word)</code></strong> — counts the characters in the string <code>"cat"</code>, returning <code>3</code> as an <code>int</code>.</li>
+<li><strong><code>list(range(3))</code></strong> — <code>range(3)</code> produces a lazy sequence of <code>0, 1, 2</code>; wrapping it in <code>list()</code> forces it into a concrete list so we can print it directly.</li>
+<li><strong><code>type(5)</code> / <code>type("hi")</code></strong> — returns the class of the object, letting you check <code>int</code> vs <code>str</code> before you act on a value.</li>
+<li><strong><code>input("Enter a number: ")</code></strong> — pauses execution, waits for the user, and returns whatever they typed as a <code>str</code>, regardless of content.</li>
+<li><strong><code>int(raw)</code></strong> — explicitly converts that string to an integer. Skip this step and <code>value + 1</code> throws a <code>TypeError</code>, because you can't add an integer to text.</li>
+<li><strong><code>sorted(messy)</code></strong> — builds and returns a new list in ascending order. <code>messy</code> itself is never modified — you can verify this by printing it again afterward.</li>
+<li><strong><code>sum(messy)</code> / <code>max(messy)</code></strong> — both walk the list once, but <code>sum</code> accumulates a running total while <code>max</code> tracks the largest value seen.</li>
+<li><strong><code>int("5") + int("3")</code></strong> — each string is converted to an integer <em>before</em> the <code>+</code> operator runs, so this performs arithmetic (<code>8</code>) instead of string concatenation (<code>"53"</code>).</li>
+<li><strong><code>str(42) + " items"</code></strong> — converts the integer <code>42</code> to <code>"42"</code> so it can be concatenated with another string.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Take the input-conversion line: <code>age = input("How old are you? ")</code> followed by <code>age = int(age)</code>.</p>
+<ol>
+<li>Python displays <code>"How old are you? "</code> and pauses.</li>
+<li>The user types <code>25</code> and presses enter.</li>
+<li><code>input()</code> returns the string <code>"25"</code> — note the quotes; it is text, not a number.</li>
+<li><code>age</code> now holds <code>"25"</code> (type <code>str</code>).</li>
+<li><code>int(age)</code> reads the string, parses it as a whole number, and returns <code>25</code> (type <code>int</code>).</li>
+<li><code>age</code> is reassigned to <code>25</code> — now safe to use in arithmetic like <code>age + 1</code>, which evaluates to <code>26</code>.</li>
+</ol>
+<p>Skip step 5, and <code>age + 1</code> raises <code>TypeError: can only concatenate str (not "int") to str</code> — the exact mistake almost every beginner hits in their first month.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong><code>len()</code></strong>: O(1) for lists and strings — Python stores the length as metadata, it doesn't count elements each time.</li>
+<li><strong><code>range(n)</code></strong>: O(1) to create (it's lazy), O(n) to fully iterate or materialize into a list.</li>
+<li><strong><code>sorted()</code></strong>: O(n log n) time, since it uses Timsort under the hood; O(n) space for the new list it builds.</li>
+<li><strong><code>sum()</code> / <code>max()</code></strong>: O(n) time — each must look at every element once; O(1) space, since they only track a running accumulator.</li>
+<li><strong><code>type()</code>, <code>str()</code>, <code>int()</code>, <code>float()</code></strong>: O(1) for typical scalar conversions.</li>
+</ul>
+<p>These are correct because none of these operations require more information than a single pass over the input (or, for <code>len</code>, no pass at all — just a stored count).</p>
+<h2>Alternative Solutions</h2>
+<p>For <code>sorted()</code> specifically, Python also offers <code>list.sort()</code>, which sorts <strong>in place</strong> and returns <code>None</code> instead of returning a new list. Use <code>sorted()</code> when you need to preserve the original order elsewhere in your program; use <code>.sort()</code> when you don't need the original and want to avoid the memory overhead of a second list.</p>
+<pre><code class="language-python">messy = [5, 1, 4]
+messy.sort()       # mutates messy directly, returns None
+</code></pre>
+<p>There's no real alternative to <code>len</code>, <code>range</code>, <code>type</code>, or the converters — they're thin, direct operations with no meaningful competing approach.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty input</strong>: <code>len([])</code> returns <code>0</code>, <code>sum([])</code> returns <code>0</code>, but <code>max([])</code> raises <code>ValueError: max() arg is an empty sequence</code> — max needs at least one item to compare.</li>
+<li><strong>Duplicates</strong>: <code>sorted([3, 1, 3, 2])</code> handles duplicates fine, returning <code>[1, 2, 3, 3]</code> — no special casing needed.</li>
+<li><strong>Non-numeric input to <code>int()</code></strong>: <code>int("abc")</code> raises <code>ValueError</code>. Always validate or wrap in a <code>try/except</code> when converting untrusted user input.</li>
+<li><strong>Negative or zero <code>range()</code></strong>: <code>range(0)</code> produces an empty sequence; <code>range(-3)</code> also produces an empty sequence unless you supply a negative step.</li>
+<li><strong>Mixed types in <code>sorted()</code> or <code>sum()</code></strong>: sorting or summing a list with both <code>int</code> and <code>str</code> values raises <code>TypeError</code> — Python won't guess how to compare or add across types.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting <code>input()</code> returns a string</strong> and trying to do math on it directly, causing a <code>TypeError</code>.</li>
+<li><strong>Confusing <code>len()</code> and <code>sum()</code></strong> — asking "how many" when you meant "what's the total," or vice versa.</li>
+<li><strong>Assuming <code>sorted()</code> mutates the original list</strong> — it doesn't; you have to reassign the result if you want to keep it.</li>
+<li><strong>Calling <code>max()</code> on an empty collection</strong> without a default, causing an unhandled <code>ValueError</code>.</li>
+<li><strong>Concatenating instead of converting</strong> — writing <code>"Total: " + 5</code> instead of <code>"Total: " + str(5)</code>, which raises <code>TypeError: can only concatenate str (not "int") to str</code>.</li>
+<li><strong>Overusing <code>print()</code> for debugging</strong> in larger projects instead of learning a proper debugger — fine for a ten-line script, painful in a codebase with real depth.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What's the time complexity of <code>len()</code> on a Python list, and why is it O(1) instead of O(n)?</li>
+<li>What does <code>sorted()</code> return versus <code>list.sort()</code>, and when would you choose one over the other?</li>
+<li>Why does <code>input()</code> always return a string, and what's the risk of skipping conversion?</li>
+<li>How would you safely convert user input to an integer without crashing on bad data?</li>
+<li>What's the difference between <code>range(5)</code> and <code>list(range(5))</code> in terms of what's actually created in memory?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Two Sum (LeetCode 1)</strong> — relies on understanding iteration and collection lookups, the same fundamentals <code>sum</code>/<code>max</code> build toward.</li>
+<li><strong>Valid Anagram (LeetCode 242)</strong> — a natural next step using <code>sorted()</code> to compare character arrangements.</li>
+<li><strong>Contains Duplicate (LeetCode 217)</strong> — leans on <code>len()</code> and set conversion, reinforcing the "how big is this collection" instinct.</li>
+<li><strong>Merge Sorted Array (LeetCode 88)</strong> — deepens the intuition behind what <code>sorted()</code> is actually doing internally.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Built-in functions aren't training wheels — they're the actual tools professional Python developers use every day. <code>print</code> shows you what's happening. <code>len</code> measures. <code>range</code> generates. <code>type</code> and <code>input</code> inspect and ask. <code>sorted</code>, <code>sum</code>, and <code>max</code> summarize collections without a manual loop. <code>str</code>, <code>int</code>, and <code>float</code> convert between forms without changing meaning. Master these ten, and most everyday Python code stops feeling mysterious — freeing up your attention for the actual problem you're solving instead of fighting the language.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with live examples and the input-conversion mistake explained in real time, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of the <strong>Daily Python LeetCode</strong> series — short, focused breakdowns of Python fundamentals and interview-style problems, built for developers who want to strengthen their core skills one concept at a time, without wading through hour-long tutorials.</p>
+<h2>Call To Action</h2>
+<p>If this cleared something up, hit like on the video — it genuinely helps the channel reach more developers. Subscribe on YouTube so you don't miss the next lesson, and subscribe to the Substack newsletter for the written breakdown delivered straight to your inbox. Drop a comment with which built-in function trips you up most, and share this with a teammate who's still debugging their first <code>TypeError</code>.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When memorizing print, what&#x27;s the trigger?</summary><p>Need to display output to console → use print(). Default sep=&#x27; &#x27;, end=&#x27;\n&#x27;.</p></details><details class='card2'><summary>len() vs manually counting — time complexity?</summary><p>O(1) for built-in sequences/dicts (length is stored), not O(n) recount.</p></details><details class='card2'><summary>range(n) space complexity — trap to know?</summary><p>O(1): range is a lazy iterator, doesn&#x27;t store all numbers in memory.</p></details><details class='card2'><summary>Trickiest bug with sorted() on custom objects?</summary><p>Sorting mixed/uncomparable types raises TypeError; use key= instead of assuming default ordering.</p></details><details class='card2'><summary>sorted() vs list.sort() — key difference?</summary><p>sorted() returns new list (works on any iterable); .sort() mutates in place, list only, returns None.</p></details><details class='card2'><summary>Interview follow-up: why avoid input() in production code?</summary><p>Blocks execution waiting for stdin; unsuitable for automated/non-interactive environments like servers or tests.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
