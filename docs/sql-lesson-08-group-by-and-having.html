@@ -1,0 +1,383 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SQL Lesson 8: Turn 10,000 Rows Into 5 Answers With GROUP BY — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-08-group-by-and-having
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson-08-group-by">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/sql-lesson-08-group-by-and-having.html">
+<meta property="og:title" content="SQL Lesson 8: Turn 10,000 Rows Into 5 Answers With GROUP BY — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-08-group-by-and-having
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson-08-group-by">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>SQL Lesson 8: Turn 10,000 Rows Into 5 Answers With GROUP BY</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>8. Introduction</h2>
+<p>Every developer eventually hits the same wall. You have a table with thousands of rows, and someone asks a deceptively simple question: <em>"How many orders did we get per city?"</em> or <em>"What's the average score in each class?"</em> You could export the data and count by hand, but that isn't engineering — that's data entry.</p>
+<p>This is exactly where SQL earns its keep. Two clauses, <code>GROUP BY</code> and <code>HAVING</code>, quietly turn ten thousand raw rows into five clean answers. They're among the most-used tools in any backend engineer's daily work, and they show up constantly in coding interviews for data-heavy roles. Interviewers love them because they test something deeper than syntax: <strong>do you understand how a database actually processes a query, step by step?</strong></p>
+<p>If you've ever written <code>WHERE COUNT(*) &gt; 100</code> and been rewarded with a cryptic error, this article is for you. By the end, you'll know how aggregate functions collapse rows, how grouping sorts data into buckets, why <code>WHERE</code> and <code>HAVING</code> are <em>not</em> interchangeable, and how to avoid the three mistakes that trip up nearly every beginner. We'll build the intuition first, then write clean queries, then look at the same idea in Python so it truly sticks.</p>
+<h2>9. Problem Overview</h2>
+<p>Here's the problem in plain terms.</p>
+<p>You have a table where each row is one small fact — a single order, a single receipt, a single test result. That's great for detail, but useless for the big picture. Nobody wants to scroll through 10,000 orders. They want a <strong>summary</strong>: one number per category.</p>
+<p>The task is to answer questions of the form <em>"give me one summary value for each group of related rows."</em> Total sales per city. Number of students per class. Average rating per product. The raw data holds the answer, but it's scattered across many rows that need to be <strong>combined</strong>.</p>
+<p>To solve this cleanly, you need three concepts working together:</p>
+<ul>
+<li><strong>Aggregate functions</strong> — tools like <code>COUNT</code>, <code>SUM</code>, and <code>AVG</code> that take <em>many</em> rows and return <em>one</em> number.</li>
+<li><strong><code>GROUP BY</code></strong> — the instruction that decides <em>which</em> rows belong together in the same bucket before that number is computed.</li>
+<li><strong><code>HAVING</code></strong> — a filter that runs <em>after</em> the buckets are formed, keeping only the groups you care about.</li>
+</ul>
+<p>Master these three and you can reshape almost any dataset into a report.</p>
+<h2>10. Example</h2>
+<p>Imagine an <code>orders</code> table:</p>
+<table>
+<thead>
+<tr>
+<th>order_id</th>
+<th>city</th>
+<th>amount</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Delhi</td>
+<td>250</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Mumbai</td>
+<td>400</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Delhi</td>
+<td>150</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Mumbai</td>
+<td>100</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Delhi</td>
+<td>300</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Pune</td>
+<td>500</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Question:</strong> How many orders and how much total revenue came from each city?</p>
+<pre><code class="language-sql">SELECT city,
+       COUNT(*)   AS order_count,
+       SUM(amount) AS total_revenue
+FROM orders
+GROUP BY city;
+</code></pre>
+<p><strong>Output:</strong></p>
+<table>
+<thead>
+<tr>
+<th>city</th>
+<th>order_count</th>
+<th>total_revenue</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Delhi</td>
+<td>3</td>
+<td>700</td>
+</tr>
+<tr>
+<td>Mumbai</td>
+<td>2</td>
+<td>500</td>
+</tr>
+<tr>
+<td>Pune</td>
+<td>1</td>
+<td>500</td>
+</tr>
+</tbody>
+</table>
+<p>Read what happened. All the Delhi rows drifted into one pile: three orders totaling <code>250 + 150 + 300 = 700</code>. Mumbai formed its own pile with two orders summing to <code>500</code>. Pune had a single order. Six input rows collapsed into three summary rows — one per city. <strong>That collapse is the entire point of <code>GROUP BY</code>.</strong></p>
+<h2>11. Intuition</h2>
+<p>Forget syntax for a moment and picture a shoebox full of shop receipts.</p>
+<p><code>GROUP BY</code> is you sorting those receipts into piles — one pile per store. You don't read every receipt anymore. Instead, you write a single total on the front of each pile. That's the mental model, and it's worth burning into memory: <strong>GROUP BY makes piles, and you report one summary number per pile.</strong></p>
+<p>Now, how does an experienced engineer <em>discover</em> this solution when facing a real dataset? They ask a sequence of questions:</p>
+<ol>
+<li><em>"What's the unit of my answer?"</em> If the answer is "one row per city," then city is what you group by.</li>
+<li><em>"What number do I want on each pile?"</em> A count? A sum? An average? That tells you which aggregate function to reach for.</li>
+<li><em>"Do I want all the piles, or only some of them?"</em> If only some — say, only cities with more than 100 orders — that filter has to happen <em>after</em> the piles exist. That's <code>HAVING</code>.</li>
+</ol>
+<p>Notice the order of thinking mirrors the order the database executes: filter individual rows first, form the groups, compute the summary, then filter the groups. Once you internalize that pipeline, the confusing errors disappear, because you can always ask <em>"has the count been computed yet at this stage?"</em> If the answer is no, you can't filter on it.</p>
+<p>That single question — <strong>"does this value exist yet?"</strong> — is the key that unlocks the whole topic.</p>
+<h2>12. Brute Force Solution</h2>
+<p><strong>Idea:</strong> Before <code>GROUP BY</code> exists in your mind, the naive way to get per-city counts is to query each city separately.</p>
+<pre><code class="language-sql">SELECT COUNT(*) FROM orders WHERE city = 'Delhi';
+SELECT COUNT(*) FROM orders WHERE city = 'Mumbai';
+SELECT COUNT(*) FROM orders WHERE city = 'Pune';
+</code></pre>
+<p><strong>Algorithm:</strong>
+1. Find every distinct city (often a separate <code>SELECT DISTINCT city</code> query).
+2. Loop over those cities in your application code.
+3. Fire one filtered aggregate query per city.
+4. Collect the results back together.</p>
+<p><strong>Advantages:</strong>
+- Conceptually simple — each query is a plain filtered count.
+- Easy to reason about one city at a time.</p>
+<p><strong>Disadvantages:</strong>
+- You must know the cities in advance, or run an extra query to discover them.
+- N round-trips to the database instead of one. On a large or remote database, network latency dominates.
+- The database re-scans the table for every single city.
+- The logic lives in your application, not the database — more code, more bugs.</p>
+<p><strong>Time complexity:</strong> Roughly <code>O(k × n)</code> where <code>k</code> is the number of distinct cities and <code>n</code> is the number of rows, since each of the <code>k</code> queries can scan up to <code>n</code> rows.
+<strong>Space complexity:</strong> <code>O(k)</code> to hold the results, plus the overhead of <code>k</code> separate query executions.</p>
+<p>This works, but it fights against the database instead of using it. There's a far better way.</p>
+<h2>13. Optimal Solution</h2>
+<p>The optimal solution lets the database do the bucketing in a single pass. Here's the mental pipeline SQL follows, in order:</p>
+<pre><code>FROM      →  read the rows
+WHERE     →  filter individual rows        (no aggregates allowed here)
+GROUP BY  →  sort surviving rows into piles
+Aggregate →  compute COUNT / SUM / AVG per pile
+HAVING    →  filter the piles              (aggregates allowed here)
+SELECT    →  choose columns to show
+ORDER BY  →  sort the final rows
+</code></pre>
+<p>Walk through a fully-loaded example: <em>"Show cities with more than 2 orders whose orders were placed in 2024, ranked by revenue."</em></p>
+<pre><code class="language-sql">SELECT city,
+       COUNT(*)    AS order_count,
+       SUM(amount) AS total_revenue
+FROM orders
+WHERE order_year = 2024        -- filters raw rows BEFORE grouping
+GROUP BY city                  -- makes one pile per city
+HAVING COUNT(*) &gt; 2            -- filters piles AFTER grouping
+ORDER BY total_revenue DESC;
+</code></pre>
+<p>Two filters, two different jobs:</p>
+<table>
+<thead>
+<tr>
+<th>Clause</th>
+<th>Runs when</th>
+<th>Sees</th>
+<th>Use it for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>WHERE</code></td>
+<td>Before grouping</td>
+<td>Individual raw rows</td>
+<td>Filtering rows (year, city)</td>
+</tr>
+<tr>
+<td><code>HAVING</code></td>
+<td>After grouping</td>
+<td>Whole piles</td>
+<td>Filtering groups (<code>COUNT</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>This is the "two-stage checkpoint": <strong><code>WHERE</code> is the bouncer at the door checking people; <code>HAVING</code> is the inspector checking the finished piles.</strong></p>
+<h3>The Golden Rule</h3>
+<p>There's one rule you cannot break:</p>
+<blockquote>
+<p><strong>Every column in <code>SELECT</code> must either appear in <code>GROUP BY</code> or be wrapped in an aggregate function.</strong></p>
+</blockquote>
+<p>Why? A Delhi pile holds three different <code>order_id</code> values. If you write <code>SELECT city, order_id ... GROUP BY city</code>, you're asking the database to print <em>one</em> <code>order_id</code> for a pile that has three — it can't choose, so it refuses. Either group by that column too, or aggregate it (<code>MAX(order_id)</code>, <code>COUNT(order_id)</code>, and so on). <strong>Don't ask for a single value from a pile that holds many.</strong></p>
+<h2>14. Python Code</h2>
+<p>The same GROUP BY logic appears constantly in Python data work — both in raw SQL through <code>sqlite3</code> and in pandas. Here's a clean, production-quality version of both so the concept transfers across your stack.</p>
+<pre><code class="language-python">import sqlite3
+import pandas as pd
+
+# --- Sample data ---
+orders = pd.DataFrame(
+    {
+        &quot;order_id&quot;: [1, 2, 3, 4, 5, 6],
+        &quot;city&quot;: [&quot;Delhi&quot;, &quot;Mumbai&quot;, &quot;Delhi&quot;, &quot;Mumbai&quot;, &quot;Delhi&quot;, &quot;Pune&quot;],
+        &quot;amount&quot;: [250, 400, 150, 100, 300, 500],
+    }
+)
+
+
+def summarize_with_sql(df: pd.DataFrame, min_orders: int = 1) -&gt; pd.DataFrame:
+    &quot;&quot;&quot;Run a GROUP BY / HAVING query against an in-memory SQLite table.&quot;&quot;&quot;
+    with sqlite3.connect(&quot;:memory:&quot;) as conn:
+        df.to_sql(&quot;orders&quot;, conn, index=False, if_exists=&quot;replace&quot;)
+        query = &quot;&quot;&quot;
+            SELECT city,
+                   COUNT(*)    AS order_count,
+                   SUM(amount) AS total_revenue
+            FROM orders
+            GROUP BY city
+            HAVING COUNT(*) &gt;= ?
+            ORDER BY total_revenue DESC
+        &quot;&quot;&quot;
+        return pd.read_sql_query(query, conn, params=(min_orders,))
+
+
+def summarize_with_pandas(df: pd.DataFrame, min_orders: int = 1) -&gt; pd.DataFrame:
+    &quot;&quot;&quot;The same result using the pandas equivalent of GROUP BY / HAVING.&quot;&quot;&quot;
+    grouped = (
+        df.groupby(&quot;city&quot;)                       # GROUP BY city
+        .agg(order_count=(&quot;order_id&quot;, &quot;count&quot;),  # COUNT(*)
+             total_revenue=(&quot;amount&quot;, &quot;sum&quot;))    # SUM(amount)
+        .reset_index()
+    )
+    # HAVING COUNT(*) &gt;= min_orders
+    filtered = grouped[grouped[&quot;order_count&quot;] &gt;= min_orders]
+    return filtered.sort_values(&quot;total_revenue&quot;, ascending=False)
+
+
+if __name__ == &quot;__main__&quot;:
+    expected = {&quot;Delhi&quot;: (3, 700), &quot;Mumbai&quot;: (2, 500), &quot;Pune&quot;: (1, 500)}
+
+    for fn in (summarize_with_sql, summarize_with_pandas):
+        result = fn(orders).set_index(&quot;city&quot;)
+        for city, (count, revenue) in expected.items():
+            assert int(result.loc[city, &quot;order_count&quot;]) == count
+            assert int(result.loc[city, &quot;total_revenue&quot;]) == revenue
+    print(&quot;All GROUP BY checks passed.&quot;)
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<ul>
+<li><strong><code>df.to_sql("orders", conn, ...)</code></strong> loads the DataFrame into a real, queryable SQLite table so we can run genuine SQL against it.</li>
+<li><strong>The SQL string</strong> is the star: <code>GROUP BY city</code> forms the piles, <code>COUNT(*)</code> and <code>SUM(amount)</code> compute the per-pile numbers, and <code>HAVING COUNT(*) &gt;= ?</code> filters piles <em>after</em> they exist. The <code>?</code> placeholder is a parameterized query — never build SQL with string concatenation, as that invites SQL injection.</li>
+<li><strong><code>summarize_with_pandas</code></strong> mirrors the SQL exactly. <code>.groupby("city")</code> is <code>GROUP BY</code>, <code>.agg(...)</code> supplies the aggregate functions, and the boolean mask <code>grouped["order_count"] &gt;= min_orders</code> plays the role of <code>HAVING</code>. Notice the filter happens <em>after</em> <code>.agg()</code> — you can't filter on a count that hasn't been computed yet, in Python just as in SQL.</li>
+<li><strong>The <code>__main__</code> block</strong> is a small self-check: it asserts both implementations produce identical, correct numbers. If either GROUP BY breaks, the script fails loudly instead of silently returning wrong data.</li>
+</ul>
+<h2>16. Dry Run</h2>
+<p>Let's trace <code>summarize_with_sql(orders, min_orders=2)</code> end to end.</p>
+<ol>
+<li><strong>FROM / load:</strong> Six rows enter the pipeline.</li>
+<li><strong>WHERE:</strong> No <code>WHERE</code> clause here, so all six rows survive.</li>
+<li><strong>GROUP BY city:</strong> Rows sort into three piles.
+   - Delhi → rows 1, 3, 5
+   - Mumbai → rows 2, 4
+   - Pune → row 6</li>
+<li><strong>Aggregate:</strong> Compute per pile.
+   - Delhi → <code>COUNT = 3</code>, <code>SUM = 700</code>
+   - Mumbai → <code>COUNT = 2</code>, <code>SUM = 500</code>
+   - Pune → <code>COUNT = 1</code>, <code>SUM = 500</code></li>
+<li><strong>HAVING COUNT(*) &gt;= 2:</strong> Pune has a count of 1, so its pile is discarded. Delhi and Mumbai stay.</li>
+<li><strong>ORDER BY total_revenue DESC:</strong> Delhi (700) comes before Mumbai (500).</li>
+</ol>
+<p><strong>Final result:</strong></p>
+<table>
+<thead>
+<tr>
+<th>city</th>
+<th>order_count</th>
+<th>total_revenue</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Delhi</td>
+<td>3</td>
+<td>700</td>
+</tr>
+<tr>
+<td>Mumbai</td>
+<td>2</td>
+<td>500</td>
+</tr>
+</tbody>
+</table>
+<p>Pune vanished not because of a bad row, but because its <em>finished pile</em> failed the <code>HAVING</code> test — the perfect illustration of why <code>HAVING</code> runs last.</p>
+<h2>17. Complexity Analysis</h2>
+<p><strong>Time complexity: <code>O(n)</code> on average</strong> (or <code>O(n log n)</code> if grouping requires a sort). The database makes a single pass over the <code>n</code> rows, dropping each into its bucket — typically via a hash on the grouping key. Compare that to the brute-force <code>O(k × n)</code> of one query per group. One scan beats many.</p>
+<p><strong>Space complexity: <code>O(g)</code></strong>, where <code>g</code> is the number of distinct groups. The engine holds one accumulator per group (a running count and sum). If every row were unique in the grouping column, <code>g</code> approaches <code>n</code> in the worst case, but for real reports <code>g</code> is tiny — five cities, twelve months, a handful of categories.</p>
+<p>The reason this is optimal: you fundamentally must look at every row at least once to summarize it, so you can't beat <code>O(n)</code> on the read. <code>GROUP BY</code> hits that lower bound in a single pass.</p>
+<h2>18. Alternative Solutions</h2>
+<p><code>GROUP BY</code> isn't always the right tool. Here's how it compares:</p>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>What it does</th>
+<th>When to use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>GROUP BY</strong></td>
+<td>Collapses rows into one summary per group</td>
+<td>You want a report: one row per category, detail lost</td>
+</tr>
+<tr>
+<td><strong>Window functions</strong></td>
+<td>Adds a running total or per-group average <em>while keeping every original row</em></td>
+<td>You need both the detail and the summary</td>
+</tr>
+<tr>
+<td><strong>DISTINCT</strong></td>
+<td>Removes duplicate rows only</td>
+<td>You just want unique values, no summarizing</td>
+</tr>
+</tbody>
+</table>
+<p>A window function example that keeps every row while adding a city total:</p>
+<pre><code class="language-sql">SELECT order_id,
+       city,
+       amount,
+       SUM(amount) OVER (PARTITION BY city) AS city_total
+FROM orders;
+</code></pre>
+<p>Here you still see all six orders, but each row now carries its city's total alongside it. Reach for <code>GROUP BY</code> when you genuinely want one row per category and are happy to lose the individual rows.</p>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong>Empty table:</strong> <code>SELECT COUNT(*) FROM orders</code> returns <code>0</code> (one row). But <code>SELECT city, COUNT(*) FROM orders GROUP BY city</code> returns <em>zero rows</em> — no rows means no piles.</li>
+<li><strong><code>NULL</code> in the grouping column:</strong> All <code>NULL</code>s collect into a single group of their own. Don't assume they vanish.</li>
+<li><strong><code>SUM</code> / <code>AVG</code> ignoring <code>NULL</code>:</strong> Aggregates skip <code>NULL</code> values. <code>AVG</code> divides by the count of <em>non-null</em> values, which can surprise you if you expected <code>NULL</code> treated as zero.</li>
+<li><strong>Every row unique:</strong> Grouping by a primary key gives you one group per row — technically valid, but pointless, since nothing collapses.</li>
+<li><strong>Aggregate with no <code>GROUP BY</code>:</strong> <code>SELECT city, COUNT(*) FROM orders</code> (no <code>GROUP BY</code>) is either an error or silently collapses everything into a single row — rarely what you meant.</li>
+</ul>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Putting an aggregate in <code>WHERE</code>.</strong> <code>WHERE COUNT(*) &gt; 100</code> always errors, because <code>WHERE</code> runs <em>before</em> any count is computed. Move it to <code>HAVING</code>. This is the classic bug — the count simply doesn't exist yet when <code>WHERE</code> runs.</li>
+<li><strong>Selecting an ungrouped, unaggregated column.</strong> <code>SELECT city, customer_name ... GROUP BY city</code> breaks, because each city pile holds many names. Group by it or aggregate it.</li>
+<li><strong>Using an aggregate but forgetting <code>GROUP BY</code>.</strong> This quietly collapses the whole table into one row when you wanted one row per category — a silent logic bug, not an error.</li>
+<li><strong>Filtering raw values in <code>HAVING</code> when <code>WHERE</code> would do.</strong> Both may work, but <code>HAVING</code> builds every pile <em>first</em> and then throws most away. On a million-row table, that's the difference between instant and painful. <strong>Rule of thumb: raw values go in <code>WHERE</code>, group totals go in <code>HAVING</code>.</strong></li>
+<li><strong>Assuming aggregates count <code>NULL</code>s.</strong> <code>COUNT(column)</code> skips <code>NULL</code>, while <code>COUNT(*)</code> counts rows regardless. Mixing these up produces subtly wrong totals.</li>
+</ol>
+<h2>21. Interview Questions</h2>
+<ul>
+<li>What's the difference between <code>WHERE</code> and <code>HAVING</code>, and why can't you swap them?</li>
+<li>In what order does SQL logically execute the clauses of a query?</li>
+<li>Why must every non-aggregated column in <code>SELECT</code> appear in <code>GROUP BY</code>?</li>
+<li>What's the difference between <code>COUNT(*)</code> and <code>COUNT(column)</code>?</li>
+<li>Given a slow report, how would you decide whether a filter belongs in <code>WHERE</code> or <code>HAVING</code>?</li>
+<li>When would you choose a window function over <code>GROUP BY</code>?</li>
+<li>How does <code>GROUP BY</code> treat <code>NULL</code> values in the grouping column?</li>
+</ul>
+<h2>22. Similar Problems</h2>
+<p>While <code>GROUP BY</code> is a SQL construct, the <em>aggregation-by-key</em> pattern is everywhere in coding interviews and data structures work:</p>
+<ul>
+<li><strong>LeetCode 1741 — Find Total Time Spent by Each Employee:</strong> direct <code>GROUP BY</code> and <code>SUM</code> practice.</li>
+<li><strong>LeetCode 1050 — Actors and Directors Who Cooperated At Least Three Times:</strong> <code>GROUP BY</code> plus <code>HAVING COUNT(*) &gt;= 3</code>.</li>
+<li><strong>LeetCode 596 — Classes More Than 5 Students:</strong> the canonical <code>HAVING</code> filter on a count.</li>
+<li><strong>LeetCode 1 — Two Sum:</strong> not SQL, but the same "hash rows into buckets by a key" idea that powers how databases group internally.</li>
+</ul>
+<p>They're related because all of them reduce many records to a per-key summary — the exact mental model behind aggregate functions and <code>GROUP BY</code>.</p>
+<h2>23. Key Takeaways</h2>
+<ul>
+<li><strong>Aggregate functions</strong> (<code>COUNT</code>, <code>SUM</code>, <code>AVG</code>) crush many rows into one number.</li>
+<li><strong><code>GROUP BY</code></strong> decides which rows share a pile, then runs the aggregate on each pile.</li>
+<li><strong><code>WHERE</code> filters rows <em>before</em> grouping; <code>HAVING</code> filters piles <em>after</em>.</strong> Never put an aggregate in <code>WHERE</code>.</li>
+<li><strong>The golden rule:</strong> every <code>SELECT</code> column must be grouped or aggregated.</li>
+<li><strong>Performance:</strong> push raw-value filters into <code>WHERE</code> so you build fewer piles from the start.</li>
+</ul>
+<p>Keep asking <em>"does this value exist yet at this stage?"</em> and GROUP BY stops being confusing.</p>
+<h2>24. Watch the Video</h2>
+<p>Reading builds the map; watching the animation makes it move. See the rows physically drift into their colored piles and collapse into summary rows — it's the moment GROUP BY finally clicks. <strong>Watch Lesson 8 here: {LINK}</strong></p>
+<h2>25. About the Series</h2>
+<p>This is Lesson 8 of the <strong>Fun with Learning Technology</strong> series — a hands-on journey through SQL and software engineering that trades dry theory for real intuition. Each lesson takes one concept most tutorials rush past, breaks it down with plain-language mental models, and shows you the mistakes to dodge before they cost you an interview or a production bug. Whether you're learning your first <code>SELECT</code> or sharpening for a data-engineering role, the series meets you where you are and levels you up one clear idea at a time.</p>
+<h2>26. Call To Action</h2>
+<p>If this made GROUP BY click, <strong>like the video on YouTube</strong> — it genuinely helps the channel reach more developers. <strong>Subscribe</strong> so you don't miss the next lesson on window functions, and <strong>subscribe to the Substack</strong> for the written deep-dives like this one. Got a query that stumped you? <strong>Drop it in the comments</strong> — real questions become future lessons. And if a teammate keeps writing <code>WHERE COUNT(*)</code>, <strong>share this with them</strong>. A like and a follow take none of your time and mean a lot.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>GROUP BY &amp; HAVING: when do you reach for them?</summary><p>When a question needs per-category summaries or filtering by a computed metric (&#x27;per&#x27;, &#x27;each&#x27;, &#x27;average&#x27;, &#x27;count of&#x27;). Tell: aggregate + a grouping attribute.</p></details><details class='card2'><summary>Time complexity of a GROUP BY aggregation?</summary><p>O(n) with a hash aggregate over n rows; O(n log n) if the engine sorts rows to group them. Each row is visited once.</p></details><details class='card2'><summary>Space complexity of GROUP BY?</summary><p>O(g) for g distinct groups held in the hash/aggregate table. Worst case O(n) when every row is its own group.</p></details><details class='card2'><summary>Common bug: filtering an aggregate in WHERE?</summary><p>WHERE runs before grouping, so it can&#x27;t see aggregates. Filter computed metrics like COUNT(*)&gt;5 in HAVING; filter raw rows in WHERE.</p></details><details class='card2'><summary>WHERE vs HAVING?</summary><p>WHERE filters individual rows before grouping; HAVING filters whole groups after aggregation. Use WHERE to shrink input, HAVING to test group results.</p></details><details class='card2'><summary>Interview: non-aggregated column not in GROUP BY?</summary><p>Illegal in standard SQL — every selected column must be grouped or aggregated. MySQL may allow it but returns an arbitrary row&#x27;s value.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
