@@ -1,0 +1,284 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 18: Stop Grouping! See Previous Rows Without Collapsing Data — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-18-lag-lead-first_value-last_value
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/sql-lesson-18-lag-lead-first_value-last_value.html">
+<meta property="og:title" content="Lesson 18: Stop Grouping! See Previous Rows Without Collapsing Data — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-18-lag-lead-first_value-last_value
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson 18: Stop Grouping! See Previous Rows Without Collapsing Data</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>8. Introduction: Why This Matters in Data Engineering</h2>
+<p>Welcome back to the series. If you've ever built a dashboard where every single row gets collapsed into a grand total sum, or if you've felt frustrated by having to join your table with a self-join just to see "yesterday's" value, this lesson is for you.</p>
+<p>In the world of <strong>software engineering</strong> and <strong>data analysis</strong>, we often fall into the trap of over-summarizing data. We are taught early on that <code>GROUP BY</code> is our friend, but it can also be a foe when you need to retain individual row granularity while still having context about neighboring rows.</p>
+<p>Interviewers at top tech companies love to test this specific skill. They want to know: <em>"Do you understand the difference between aggregating data and maintaining its structure?"</em> They are looking for candidates who can perform <strong>period-over-period</strong> analysis—like calculating a month-over-month growth rate—without resorting to clunky self-joins or temporary tables that slow down your query plan.</p>
+<p>By mastering these tools, you move from writing basic SQL queries to writing professional-grade analytical queries. You stop summarizing; you start exploring.</p>
+<h2>9. Problem Overview</h2>
+<p>The challenge we are tackling today is simple to state but powerful in application: <strong>How can we access data from the previous or next row relative to the current row without collapsing our result set?</strong></p>
+<p>In traditional SQL, if you want to know what the price was yesterday while looking at today's price, you might be tempted to join the table to itself. You'd create a <code>current_date</code> table and a <code>previous_date</code> table and match them. But that is heavy on resources and often unnecessary.</p>
+<p>We need a way to say, "For this specific record (ordered by date), give me the value of the record that came immediately before it," and we want to do this <em>inside</em> the same row. We want to keep our full list of records intact, not turn them into a single aggregated summary. This is where <strong>Window Functions</strong> come in, specifically those designed for looking back (Lag) and forward (Lead).</p>
+<h2>10. Examples</h2>
+<p>Let's ground this with some concrete data. Imagine we are tracking the stock price of a fictional company, "MainStreet Inc." over five days. We want to calculate the drop in price from Day $N$ to Day $N-1$.</p>
+<h3>Input Data</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Date</th>
+<th style="text-align: left;">Price</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">2023-01-01</td>
+<td style="text-align: left;">110</td>
+</tr>
+<tr>
+<td style="text-align: left;">2023-01-02</td>
+<td style="text-align: left;">108</td>
+</tr>
+<tr>
+<td style="text-align: left;">2023-01-03</td>
+<td style="text-align: left;">115</td>
+</tr>
+<tr>
+<td style="text-align: left;">2023-01-04</td>
+<td style="text-align: left;">105</td>
+</tr>
+<tr>
+<td style="text-align: left;">2023-01-05</td>
+<td style="text-align: left;">112</td>
+</tr>
+</tbody>
+</table>
+<h3>Desired Output</h3>
+<p>We want our final table to look exactly like the input, but with two new columns added: <code>Price_Prev</code> and <code>Price_Next</code>.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Date</th>
+<th style="text-align: left;">Price</th>
+<th style="text-align: left;">Price_Prev</th>
+<th style="text-align: left;">Price_Next</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">2023-01-01</td>
+<td style="text-align: left;">110</td>
+<td style="text-align: left;">NULL</td>
+<td style="text-align: left;">108</td>
+</tr>
+<tr>
+<td style="text-align: left;">2023-01-02</td>
+<td style="text-align: left;">108</td>
+<td style="text-align: left;">110</td>
+<td style="text-align: left;">115</td>
+</tr>
+<tr>
+<td style="text-align: left;">2023-01-03</td>
+<td style="text-align: left;">115</td>
+<td style="text-align: left;">108</td>
+<td style="text-align: left;">105</td>
+</tr>
+<tr>
+<td style="text-align: left;">2023-01-04</td>
+<td style="text-align: left;">105</td>
+<td style="text-align: left;">115</td>
+<td style="text-align: left;">112</td>
+</tr>
+<tr>
+<td style="text-align: left;">2023-01-05</td>
+<td style="text-align: left;">112</td>
+<td style="text-align: left;">105</td>
+<td style="text-align: left;">NULL</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Explanation of Output:</strong>
+*   <strong>Row 1 (Jan 1):</strong> There is no previous row, so <code>Price_Prev</code> is <code>NULL</code>. The next price is 108.
+*   <strong>Row 2 (Jan 2):</strong> The previous price was 110. The next price is 115.
+*   <strong>Last Row (Jan 5):</strong> There is no next row, so <code>Price_Next</code> is <code>NULL</code>.</p>
+<h2>11. Intuition: The Moving Car Analogy</h2>
+<p>How do we solve this? Imagine you are driving a car down "Main Street," which represents our timeline ordered by date.</p>
+<p>You are the current row (the <code>SELECT *</code>). As you drive, you can see two things clearly without stopping your engine or merging into a different parking spot:
+1.  The house to your <strong>left</strong> (the one you just passed). This is your <strong>Previous</strong> value.
+2.  The house ahead of you that is coming up on the horizon. This is your <strong>Next</strong> value.</p>
+<p>In data terms, we are "windowing" into the dataset. We tell SQL: <em>"Look at this specific window of rows around me."</em></p>
+<ul>
+<li>If we look strictly back one step, we use <strong>LAG</strong>.</li>
+<li>If we look strictly forward one step, we use <strong>LEAD</strong>.</li>
+<li>If we want to know what was there very long ago or the first thing in the set, we might need <code>FIRST_VALUE</code> (though in this specific 'moving' context, LAG handles it via recursion or iteration logic).</li>
+</ul>
+<p>The key intuition here is <strong>context</strong>. Standard <code>SELECT</code> statements are about retrieving a snapshot. Window functions allow us to retrieve the <em>relationship</em> between rows while preserving the original row.</p>
+<h2>12. Brute Force Solution</h2>
+<p>Before we use the magic window functions, let's look at how an engineer might attempt this without knowing them. This is often called the "Brute Force" or "Self-Join" approach.</p>
+<h3>The Idea</h3>
+<p>To find the previous price, you need to join your table (<code>prices</code>) with itself. You create an alias <code>curr</code> for the current row and <code>prev</code> for the row from yesterday. You join them on a condition like:
+<code>curr.date = prev.date + INTERVAL '1 day'</code> (or whatever your time unit is).</p>
+<h3>Algorithm</h3>
+<ol>
+<li>Create a self-join between two instances of the table.</li>
+<li>Match each row in <code>curr</code> to the immediate predecessor in <code>prev</code>.</li>
+<li>Select columns from both tables.</li>
+</ol>
+<h3>Advantages</h3>
+<ul>
+<li><strong>Universal:</strong> Works on almost every SQL dialect (Postgres, MySQL, Oracle, Snowflake) even if they didn't support window functions yet.</li>
+</ul>
+<h3>Disadvantages</h3>
+<ul>
+<li><strong>Performance:</strong> If your table has 10 million rows, you are creating a temporary relationship matrix that is computationally expensive ($O(N^2)$ in worst-case scenarios without strict indexing).</li>
+<li><strong>Complexity:</strong> The SQL becomes messy quickly as you try to handle gaps (e.g., weekends with no data).</li>
+<li><strong>Readability:</strong> It's hard to read compared to the window function one-liner.</li>
+</ul>
+<h3>Complexity Analysis (Brute Force)</h3>
+<ul>
+<li><strong>Time Complexity:</strong> $O(N)$ <em>if</em> indexed correctly on dates, but setup overhead is high. Without perfect indexes, it degrades significantly.</li>
+<li><strong>Space Complexity:</strong> High, as you are holding two full datasets in memory to perform the join.</li>
+</ul>
+<h2>13. Optimal Solution: Using Window Functions</h2>
+<p>Now, let's write the professional solution using <code>LAG</code>, <code>LEAD</code>, and proper ordering. This approach keeps everything in a single pass through the data.</p>
+<h3>The Approach</h3>
+<p>We use the syntax:
+<code>FUNCTION(column_name) OVER (ORDER BY column_sequence)</code></p>
+<p>The <code>OVER</code> clause is the container that tells SQL "Look at the ordered sequence of rows." Inside that window, we ask LAG to peek back one row.</p>
+<h3>Step-by-Step Breakdown</h3>
+<ol>
+<li><strong>Define the Frame:</strong> We use <code>ORDER BY date</code>. This is crucial. Without ordering, SQL doesn't know what "previous" means (it could be alphabetical or random).</li>
+<li><strong>Select Columns:</strong> We select all original columns.</li>
+<li><strong>Apply LAG:</strong> We add <code>LAG(Price) OVER (ORDER BY Date)</code> to fetch the previous price.</li>
+<li><strong>Apply LEAD:</strong> We add <code>LEAD(Price) OVER (ORDER BY Date)</code> to fetch the next price.</li>
+</ol>
+<p>This creates a "sliding window" that moves down your result set, one row at a time.</p>
+<h2>14. Python Code</h2>
+<p>Here is a clean, production-quality solution using standard SQL syntax (compatible with PostgreSQL, Snowflake, BigQuery, and MySQL 8+). If you are running this in Python via <code>sqlite3</code> or a pandas DataFrame context that supports SQL execution, this logic holds true.</p>
+<pre><code class="language-python">def get_row_context_query(df_data):
+    &quot;&quot;&quot;
+    Generates the optimal SQL query string to access previous/next rows.
+    This assumes 'df_data' is represented as a dictionary of columns for illustration.
+
+    Returns a formatted SQL Query string.
+    &quot;&quot;&quot;
+
+    # Define the column names dynamically based on input if needed, 
+    # but here we assume standard schema: 'date', 'price'
+    base_columns = [&quot;date&quot;, &quot;price&quot;]
+    window_exprs = [
+        f&quot;LAG({base_columns[1]}) OVER (ORDER BY {base_columns[0]}) AS price_prev&quot;,
+        f&quot;LEAD({base_columns[1]}) OVER (ORDER BY {base_columns[0]}) AS price_next&quot;
+    ]
+
+    # Constructing the query manually to demonstrate structure
+    columns_clause = &quot;, &quot;.join([c for c in base_columns] + window_exprs)
+
+    query = f&quot;&quot;&quot;
+    SELECT 
+        {columns_clause}
+    FROM prices_table -- Replace with your actual table name
+    ORDER BY date
+    &quot;&quot;&quot;
+
+    return query
+
+# Example usage logic (conceptual Python representation of SQL result):
+# If you were doing this in Pandas directly for comparison:
+import pandas as pd
+
+# Simulated data preparation
+df = pd.DataFrame({
+    &quot;date&quot;: [&quot;2023-01-01&quot;, &quot;2023-01-02&quot;, &quot;2023-01-03&quot;],
+    &quot;price&quot;: [110, 108, 115]
+})
+
+# Pandas equivalent logic using shift (which maps to SQL LAG/LEAD)
+# df['price_prev'] = df['price'].shift(1) 
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<p>Let's break down the SQL query returned by the function above line by line.</p>
+<ul>
+<li><code>SELECT</code>: We start by selecting all our base columns: <code>date</code> and <code>price</code>.</li>
+<li><code>LAG(price) OVER (...)</code>: This is the core window function.<ul>
+<li><code>LAG(price)</code>: Tells the engine to take the value from column <code>price</code>.</li>
+<li><code>OVER (ORDER BY date)</code>: This defines the window frame. It says, "Organize all rows by <code>date</code>." Then, look back one row in that specific order.</li>
+</ul>
+</li>
+<li><code>AS price_prev</code>: We alias the result so we know this new column represents the previous price.</li>
+<li><code>LEAD(...)</code>: Similar to LAG, but instead of looking back at the start of the window frame, it looks forward to the next element.</li>
+<li><code>ORDER BY date</code> (at the end): While often redundant inside a window function if ordered correctly, keeping an outer <code>ORDER BY</code> ensures your final display matches the chronological timeline perfectly.</li>
+</ul>
+<h2>16. Dry Run: Walking Through an Example</h2>
+<p>Let's trace the execution plan mentally for our "Main Street" car analogy with three days of data.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Date</th>
+<th style="text-align: left;">Price</th>
+<th style="text-align: left;">LAG Logic (Look Back)</th>
+<th style="text-align: left;">LEAD Logic (Look Forward)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Day 1</strong></td>
+<td style="text-align: left;">100</td>
+<td style="text-align: left;"><strong>NULL</strong> (No row before Day 1 to look back at)</td>
+<td style="text-align: left;">110 (The price in the next row, Day 2)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Day 2</strong></td>
+<td style="text-align: left;">110</td>
+<td style="text-align: left;">100 (We are now "at" Day 2. The engine looks behind us to Day 1)</td>
+<td style="text-align: left;">120 (The price in the next row, Day 3)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Day 3</strong></td>
+<td style="text-align: left;">120</td>
+<td style="text-align: left;">110 (Looking back to Day 2)</td>
+<td style="text-align: left;"><strong>NULL</strong> (No row after Day 3 exists)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Execution Flow:</strong>
+1.  The database sorts the data by <code>date</code>.
+2.  It initializes a "window" for Row 1. It calculates <code>LAG</code>: finds nothing before, returns NULL. It calculates <code>LEAD</code>: finds Row 2's price (110), returns 110.
+3.  It slides the window to Row 2. <code>LAG</code> now sees Row 1's price (100). <code>LEAD</code> looks at Row 3 (120).
+4.  It slides to Row 3. <code>LAG</code> sees Row 2 (110). <code>LEAD</code> finds nothing, returns NULL.</p>
+<h2>17. Complexity Analysis</h2>
+<p>Why is this better than the brute force method?</p>
+<ul>
+<li><strong>Time Complexity:</strong> $O(N)$. The database scans the table exactly once (or a logarithmic amount of times depending on indexing for sorting), calculating values in parallel with the sort operation. It does not need to construct a massive temporary join matrix.</li>
+<li><strong>Space Complexity:</strong> $O(1)$ additional space <em>per row</em> relative to the input size, effectively $O(N)$ total for the output, but it doesn't require creating intermediate result sets like self-joins do. The "window" is virtual; it exists in memory only as a pointer during the sort pass.</li>
+</ul>
+<h2>18. Alternative Solutions</h2>
+<p>Are there other ways to look at previous/next rows?</p>
+<h3>FIRST_VALUE and LAST_VALUE</h3>
+<p>You might see <code>FIRST_VALUE(price) OVER (ORDER BY date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)</code>. This is essentially a way to say "Get the very first price in the entire history." While valid, it's less dynamic than LAG because it doesn't move with your current row; it always points to the static start of the dataset. LAG is the tool for <em>relative</em> movement.</p>
+<h3><code>NTH_VALUE</code> (Oracle/Postgres specific)</h3>
+<p>Some databases offer <code>NTH_VALUE(price, -1)</code> which mimics LAG perfectly. However, standard SQL and LeetCode environments usually prefer the explicit <code>LAG</code> syntax for clarity.</p>
+<p><strong>Comparison:</strong>
+*   <strong>Self-Join:</strong> Powerful but heavy ($O(N \log N)$ or worse). Hard to maintain.
+*   <strong>LAG/LEAD:</strong> Lightweight ($O(N)$), readable, standard in modern SQL.</p>
+<h2>19. Edge Cases</h2>
+<p>What happens when things get weird?</p>
+<ol>
+<li><strong>Empty Input:</strong> If the table is empty, <code>LAG</code> and <code>LEAD</code> simply return no rows. No errors occur.</li>
+<li><strong>Gaps in Dates:</strong> What if you have a row for Jan 1st and then immediately Jan 3rd (Jan 2nd was missing)?<ul>
+<li>Since we ordered by <code>date</code>, <code>LAG</code> will see Jan 1st as the previous row to Jan 3rd. This is usually <strong>desired behavior</strong> in analytics unless you explicitly want to skip weekends using a specific gap-filling window frame (e.g., <code>RANGE BETWEEN</code>).</li>
+</ul>
+</li>
+<li><strong>Duplicates:</strong> If two rows have the exact same timestamp, the order is technically indeterminate without a secondary sort key (like an <code>id</code>). If you want strict chronology with duplicates, add <code>ORDER BY date, id</code>.</li>
+<li><strong>NULL Values:</strong> <code>LAG</code> will propagate NULLs correctly. If <code>price</code> is NULL on Day 2, LAG on Day 3 will correctly see that NULL from Day 2.</li>
+</ol>
+<h2>20. Common Mistakes</h2>
+<p>Here are five traps I see developers fall into during interviews and production:</p>
+<ol>
+<li><strong>Forgetting the <code>ORDER BY</code>:</strong> This is the #1 mistake. If you don't specify an order, LAG doesn't know which row is "previous." You might get a random previous value or NULLs everywhere.</li>
+<li><strong>Using Group By:</strong> Don't use <code>GROUP BY</code> here! <code>LAG</code> is a window function that works on rows. If you <code>GROUP BY</code> your data, you collapse it into one row per group, and the window function disappears.</li>
+<li><strong>Misunderstanding NULLs:</strong> Beginners expect LAG to "skip" over NULL prices. It does not. It looks at the <em>row</em>, regardless of whether the value inside is NULL or not. You must handle NULL logic explicitly (e.g., <code>COALESCE(LAG(price)...)</code>).</li>
+<li><strong>Wrong Partitioning:</strong> If your data spans multiple years and you calculate Year-over-Year growth, you might need <code>PARTITION BY year</code>. Without it, LAG looks at the very last row of 2023 as the previous row for 2024. Always check if you need to partition!
+5.</li>
+</ol></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When do you use LAG or LEAD instead of GROUP BY?</summary><p>Use them when you need to access data from adjacent rows relative to the current row without collapsing the result set into a single group.</p></details><details class='card2'><summary>What is the time complexity of window functions like LAG?</summary><p>O(n), where n is the number of rows, as they must process the entire partitioned dataset sequentially.</p></details><details class='card2'><summary>What space complexity do standard LAG/LEAD functions have?</summary><p>O(n) in SQL engines to maintain internal state for the window frame or partition before emitting results.</p></details><details class='card2'><summary>What is the common bug if a column has NULLs in the past row?</summary><p>LAG returns NULL for the current row; you must use COALESCE to handle missing values from previous periods.</p></details><details class='card2'><summary>How does LEAD differ from LAG in terms of direction?</summary><p>LAG looks backward at the previous row, while LEAD looks forward at the next row.</p></details><details class='card2'><summary>What follow-up question tests understanding of window frames?</summary><p>&quot;How do I apply LAG only when a condition is met?&quot; Answer: Use FILTER clause or conditional logic within the window definition.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
