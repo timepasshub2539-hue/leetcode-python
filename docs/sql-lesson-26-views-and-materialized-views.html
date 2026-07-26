@@ -1,0 +1,396 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SQL Lesson 26: Why Your View Recomputes Every Single Time — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-26-views-and-materialized-views
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson-26">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/sql-lesson-26-views-and-materialized-views.html">
+<meta property="og:title" content="SQL Lesson 26: Why Your View Recomputes Every Single Time — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-26-views-and-materialized-views
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson-26">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>SQL Lesson 26: Why Your View Recomputes Every Single Time</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>8. Introduction</h2>
+<p>If you have written the same twelve-line SQL query for the fifth time this week, you have already felt the pull toward <strong>views</strong>. And if a dashboard that used to load in a second now spins for thirty, you are about to meet <strong>materialized views</strong>.</p>
+<p>These two features sound like enterprise jargon, but they solve everyday problems: cutting repetition, hiding sensitive columns, and making slow reports fast. They also hide a trap that catches beginners and senior engineers alike — one that silently turns a "simple" query into a resource hog.</p>
+<p>Interviewers love this topic because it reveals whether you understand what the database <em>actually does</em> when you run a query. Anyone can memorize <code>CREATE VIEW</code>. Far fewer can explain <em>why</em> a view recomputes on every read, what a materialized view trades away to be fast, and when reaching for the fancier tool is a mistake. That distinction is the difference between a developer who writes SQL and one who reasons about databases.</p>
+<p>By the end of this article you will know exactly which one to reach for, and — just as important — when <em>not</em> to.</p>
+<h2>9. Problem Overview</h2>
+<p>Let's frame the real problem in plain terms.</p>
+<p>You have complex queries: multi-table joins, filters, aggregations. Typing them repeatedly is error-prone and hard to maintain. You also have data you don't want everyone to see — salaries, personal details — but the underlying table mixes safe and sensitive columns together.</p>
+<p>A <strong>view</strong> solves both. It is a <em>named query</em>. You define it once, and afterward you can <code>SELECT</code> from it as if it were an ordinary table. Nothing is stored on disk; the view is <strong>virtual</strong>. Each time you query it, the database re-runs the underlying query against the current data in the <strong>base table</strong> (the real, physical table where rows actually live).</p>
+<p>That freshness is a feature — until it becomes a cost. When the underlying query is expensive, <em>every single read</em> pays the full computation price again. There is no memory of the last result.</p>
+<p>A <strong>materialized view</strong> flips the trade. It runs the query once and <strong>stores the result on disk</strong>. Reads become nearly instant because the answer is already computed. The price: the stored copy freezes at the moment it was built and slowly drifts out of date. It only catches up when you explicitly <strong>refresh</strong> it.</p>
+<p>So the core problem this lesson answers is: <em>How do you reuse and secure complex queries, and how do you decide between always-fresh-but-recomputed and instant-but-possibly-stale?</em></p>
+<h2>10. Example</h2>
+<p>Imagine an <code>orders</code> table:</p>
+<table>
+<thead>
+<tr>
+<th>order_id</th>
+<th>customer</th>
+<th>amount</th>
+<th>status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Ann</td>
+<td>120</td>
+<td>paid</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Bilal</td>
+<td>80</td>
+<td>pending</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Chen</td>
+<td>200</td>
+<td>paid</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Dana</td>
+<td>50</td>
+<td>paid</td>
+</tr>
+</tbody>
+</table>
+<p>You constantly need only the paid orders. Instead of repeating the filter, you create a view:</p>
+<pre><code class="language-sql">CREATE VIEW paid_orders AS
+SELECT order_id, customer, amount
+FROM orders
+WHERE status = 'paid';
+</code></pre>
+<p>Now:</p>
+<pre><code class="language-sql">SELECT * FROM paid_orders;
+</code></pre>
+<p><strong>Output:</strong></p>
+<table>
+<thead>
+<tr>
+<th>order_id</th>
+<th>customer</th>
+<th>amount</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Ann</td>
+<td>120</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Chen</td>
+<td>200</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Dana</td>
+<td>50</td>
+</tr>
+</tbody>
+</table>
+<p>The view returned three rows because three orders have <code>status = 'paid'</code>. Notice we queried <code>paid_orders</code> exactly like a table — no <code>WHERE</code> clause needed. The filter lives inside the definition.</p>
+<p>Now insert a new paid order and query again: the view <em>immediately</em> shows it, because it re-ran the query. That is the always-fresh behavior. A materialized view, as we'll see, would still show the old three rows until refreshed.</p>
+<h2>11. Intuition</h2>
+<p>Here is how an experienced engineer thinks through this, without memorizing anything.</p>
+<p>Start with a real annoyance: you keep re-typing a gnarly query. The instinct is <em>"give this a name."</em> That naming instinct is the entire idea behind a view. Think of a <strong>saved search on your phone</strong> — you don't save the <em>results</em>, you save the <em>search</em>. Open it tomorrow and it runs against tomorrow's data.</p>
+<p>So a view is a nickname for a query. Cheap, always current, zero storage. Perfect.</p>
+<p>Then reality arrives. Your named query joins ten tables and scans millions of rows. Every teammate hitting that view triggers the full computation. The database has no memory — it cooks the meal from scratch each time. You start wondering: <em>why are we recalculating the exact same numbers a thousand times an hour?</em></p>
+<p>That question is the seed of the materialized view. If the answer barely changes minute to minute, why not compute it <strong>once</strong>, store it, and let everyone read the stored copy? Think of a <strong>printed report pinned to the wall</strong>: someone ran the numbers, printed them, and now everyone reads instantly.</p>
+<p>But a printed report has an obvious flaw — it's a snapshot. The moment new orders arrive, the print is behind reality. You must <strong>reprint</strong> (refresh) to catch up. And there's your trade, discovered naturally: you swapped <em>always fresh but slow</em> for <em>instant but stale</em>.</p>
+<p>No one needs to hand you a rule. If freshness matters most → plain view. If read speed matters most and slightly-old is acceptable → materialized view. You <em>derived</em> it.</p>
+<h2>12. Brute Force Solution</h2>
+<p><strong>Idea:</strong> Skip views entirely. Every time you need the data, write the full query inline.</p>
+<pre><code class="language-sql">SELECT order_id, customer, amount
+FROM orders
+WHERE status = 'paid';
+-- copy-paste this everywhere it's needed
+</code></pre>
+<p><strong>Algorithm:</strong>
+1. Identify the data you need.
+2. Write the complete query each time.
+3. Repeat across every report, script, and application.</p>
+<p><strong>Advantages:</strong>
+- Nothing to learn — plain <code>SELECT</code>.
+- Always current data.
+- No hidden abstraction; what you see is what runs.</p>
+<p><strong>Disadvantages:</strong>
+- Massive repetition; a logic change must be edited in dozens of places.
+- No column-level security — everyone sees the raw table, salaries included.
+- Definitions drift, so teams report mismatched numbers.
+- No path to caching heavy results.</p>
+<p><strong>Time complexity:</strong> Each read costs the full query execution — call it <code>O(Q)</code>, where <code>Q</code> is the query's cost. Repeated <code>N</code> times, <code>O(N · Q)</code>.</p>
+<p><strong>Space complexity:</strong> <code>O(1)</code> extra — nothing stored beyond the base table.</p>
+<p>This "works," but it's a maintenance and security liability. Views fix the repetition and security; materialized views fix the repeated cost.</p>
+<h2>13. Optimal Solution</h2>
+<p>The optimal approach is to <strong>use the right abstraction for the workload</strong>.</p>
+<h3>Step 1 — Wrap repeated queries in a view</h3>
+<pre><code class="language-sql">CREATE VIEW paid_orders AS
+SELECT order_id, customer, amount
+FROM orders
+WHERE status = 'paid';
+</code></pre>
+<p>One definition, reused everywhere. Change the logic once, and every consumer updates.</p>
+<h3>Step 2 — Use views for column-level security</h3>
+<p>Picture a frosted glass window: people see the shapes you allow, nothing behind.</p>
+<pre><code class="language-sql">CREATE VIEW employee_directory AS
+SELECT name, department
+FROM employees;   -- salary column deliberately excluded
+</code></pre>
+<p>Grant interns access to the <em>view</em>, not the <em>table</em>:</p>
+<pre><code class="language-sql">GRANT SELECT ON employee_directory TO interns;
+</code></pre>
+<p>In the interns' world, the <code>salary</code> column simply does not exist.</p>
+<h3>Step 3 — When reads get expensive, materialize</h3>
+<p>Only after a real performance problem appears, store the result:</p>
+<pre><code class="language-sql">CREATE MATERIALIZED VIEW daily_sales AS
+SELECT order_date, SUM(amount) AS total
+FROM orders
+GROUP BY order_date;
+</code></pre>
+<p>Now <code>daily_sales</code> holds actual summed rows. Dashboards read them instantly.</p>
+<h3>Step 4 — Refresh on a schedule that fits the freshness need</h3>
+<pre><code class="language-sql">REFRESH MATERIALIZED VIEW daily_sales;
+</code></pre>
+<p>Here is the freshness flow at a glance:</p>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Base table <code>orders</code></th>
+<th>Materialized <code>daily_sales</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>09:00 (refresh)</td>
+<td>500 orders</td>
+<td>total reflects 500</td>
+</tr>
+<tr>
+<td>09:30</td>
+<td>540 orders</td>
+<td><strong>still reflects 500</strong></td>
+</tr>
+<tr>
+<td>10:00 (refresh)</td>
+<td>560 orders</td>
+<td>total reflects 560</td>
+</tr>
+</tbody>
+</table>
+<p>Between refreshes, the materialized view is <em>intentionally</em> a little in the past.</p>
+<h3>The decision table</h3>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Plain View</th>
+<th>Materialized View</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Stored on disk?</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Data freshness</td>
+<td>Always current</td>
+<td>Stale until refreshed</td>
+</tr>
+<tr>
+<td>Read speed</td>
+<td>Pays query cost every time</td>
+<td>Instant</td>
+</tr>
+<tr>
+<td>Needs refreshing?</td>
+<td>Never</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Best for</td>
+<td>Live data, light queries, security</td>
+<td>Heavy dashboards, tolerable staleness</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Rule of thumb:</strong> Start with a plain view. Reach for materialized only when a measured speed problem shows up. Don't optimize a pain you don't have yet.</p>
+<h2>14. Python Code</h2>
+<p>Here is a runnable, self-contained simulation using Python's built-in <code>sqlite3</code> (no external dependencies). SQLite lacks native materialized views, so we emulate one with a real table plus an explicit refresh — which is exactly the mental model that matters.</p>
+<pre><code class="language-python">&quot;&quot;&quot;Demonstrate SQL views vs. materialized views using the standard library.&quot;&quot;&quot;
+import sqlite3
+
+
+def setup(conn: sqlite3.Connection) -&gt; None:
+    &quot;&quot;&quot;Create the base table and seed a few orders.&quot;&quot;&quot;
+    conn.executescript(
+        &quot;&quot;&quot;
+        CREATE TABLE orders (
+            order_id INTEGER PRIMARY KEY,
+            customer TEXT,
+            amount   INTEGER,
+            status   TEXT
+        );
+        INSERT INTO orders (customer, amount, status) VALUES
+            ('Ann',   120, 'paid'),
+            ('Bilal',  80, 'pending'),
+            ('Chen',  200, 'paid'),
+            ('Dana',   50, 'paid');
+        &quot;&quot;&quot;
+    )
+
+
+def create_view(conn: sqlite3.Connection) -&gt; None:
+    &quot;&quot;&quot;A view stores the query, not the rows — always fresh on read.&quot;&quot;&quot;
+    conn.execute(
+        &quot;CREATE VIEW paid_orders AS &quot;
+        &quot;SELECT order_id, customer, amount FROM orders WHERE status = 'paid'&quot;
+    )
+
+
+def refresh_materialized(conn: sqlite3.Connection) -&gt; None:
+    &quot;&quot;&quot;Emulate a materialized view: store the computed result on disk.&quot;&quot;&quot;
+    conn.execute(&quot;DROP TABLE IF EXISTS paid_orders_matview&quot;)
+    conn.execute(
+        &quot;CREATE TABLE paid_orders_matview AS &quot;
+        &quot;SELECT order_id, customer, amount FROM orders WHERE status = 'paid'&quot;
+    )
+
+
+def total(conn: sqlite3.Connection, source: str) -&gt; int:
+    &quot;&quot;&quot;Return the summed amount from a view or materialized table.&quot;&quot;&quot;
+    (result,) = conn.execute(f&quot;SELECT COALESCE(SUM(amount), 0) FROM {source}&quot;).fetchone()
+    return result
+
+
+def demo() -&gt; None:
+    conn = sqlite3.connect(&quot;:memory:&quot;)
+    setup(conn)
+    create_view(conn)
+    refresh_materialized(conn)  # snapshot taken now
+
+    # Both agree at first: 120 + 200 + 50 = 370
+    assert total(conn, &quot;paid_orders&quot;) == 370
+    assert total(conn, &quot;paid_orders_matview&quot;) == 370
+
+    # A new paid order arrives after the snapshot.
+    conn.execute(&quot;INSERT INTO orders (customer, amount, status) VALUES ('Eve', 90, 'paid')&quot;)
+
+    # The view recomputes and sees Eve immediately.
+    assert total(conn, &quot;paid_orders&quot;) == 460
+    # The materialized copy is stale until refreshed.
+    assert total(conn, &quot;paid_orders_matview&quot;) == 370
+
+    # Refresh reprints the report — now they line up again.
+    refresh_materialized(conn)
+    assert total(conn, &quot;paid_orders_matview&quot;) == 460
+
+    print(&quot;All assertions passed: view is fresh, matview is stale until refreshed.&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    demo()
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<ul>
+<li><strong><code>setup()</code></strong> builds the physical <code>orders</code> <strong>base table</strong> — the real data on disk — and seeds four rows. This is the ground truth everything else derives from.</li>
+<li><strong><code>create_view()</code></strong> runs <code>CREATE VIEW</code>. Critically, it stores <em>only the SELECT statement</em>. No rows are copied. Every future query against <code>paid_orders</code> re-executes this filter.</li>
+<li><strong><code>refresh_materialized()</code></strong> emulates a materialized view with <code>CREATE TABLE ... AS SELECT</code>. This physically <strong>copies</strong> the current result into <code>paid_orders_matview</code>. Because SQLite has no built-in refresh, we drop and rebuild — conceptually identical to <code>REFRESH MATERIALIZED VIEW</code>.</li>
+<li><strong><code>total()</code></strong> is a small helper that sums amounts from whichever source you name, so we can compare the two side by side. <code>COALESCE</code> guards against an empty result returning <code>NULL</code>.</li>
+<li><strong><code>demo()</code></strong> is where the lesson lands. After inserting <strong>Eve</strong>, the view instantly reports <code>460</code> because it recomputes; the materialized table still says <code>370</code> because it froze at snapshot time. Only after a second refresh do they agree.</li>
+</ul>
+<h2>16. Dry Run</h2>
+<p>Let's trace <code>demo()</code> step by step:</p>
+<ol>
+<li><strong>Seed:</strong> paid orders are Ann (120), Chen (200), Dana (50). Sum = <strong>370</strong>.</li>
+<li><strong>Create view + first refresh:</strong> both <code>paid_orders</code> and <code>paid_orders_matview</code> reflect 370. ✅ First two asserts pass.</li>
+<li><strong>Insert Eve (90, paid):</strong> base table now has four paid orders summing to <strong>460</strong>.</li>
+<li><strong>Query the view:</strong> it re-runs <code>WHERE status = 'paid'</code> against the <em>current</em> table → 120 + 200 + 50 + 90 = <strong>460</strong>. ✅ Matches.</li>
+<li><strong>Query the materialized copy:</strong> it reads the stored snapshot, which never saw Eve → still <strong>370</strong>. ✅ Demonstrates staleness.</li>
+<li><strong>Refresh:</strong> we rebuild the snapshot from current data → now <strong>460</strong>. ✅ Final assert passes.</li>
+</ol>
+<p>The program prints its success line, proving the exact behavioral difference between the two.</p>
+<h2>17. Complexity Analysis</h2>
+<p>Let <code>Q</code> be the cost of executing the underlying query and <code>R</code> the number of result rows.</p>
+<p><strong>Plain view:</strong>
+- <strong>Read time:</strong> <code>O(Q)</code> on <em>every</em> read — it recomputes. For <code>N</code> reads, <code>O(N · Q)</code>.
+- <strong>Storage:</strong> <code>O(1)</code> extra. Only the definition is stored.</p>
+<p><strong>Materialized view:</strong>
+- <strong>Read time:</strong> <code>O(R)</code> — you simply scan stored rows, independent of the original query's complexity. This is the win.
+- <strong>Refresh time:</strong> <code>O(Q)</code> each time you refresh.
+- <strong>Storage:</strong> <code>O(R)</code> — the result set lives on disk.</p>
+<p><strong>Why this is correct:</strong> A view has nothing cached, so the engine must re-derive the answer from base tables — you can't beat the query's own cost. A materialized view pre-pays that <code>O(Q)</code> cost at refresh time and amortizes it across many cheap <code>O(R)</code> reads. If you read far more often than you refresh, the average cost per read collapses. If you refresh as often as you read, you get the storage cost <em>and</em> the compute cost — the worst of both worlds.</p>
+<h2>18. Alternative Solutions</h2>
+<p><strong>Indexed / summary tables maintained by triggers.</strong> Instead of periodic refreshes, a trigger updates a summary table on every insert or update. This keeps the cache continuously fresh, but it slows down writes and adds complexity — you now maintain trigger logic. Compared to a materialized view, it trades batch staleness for per-write overhead. Choose it only when you need near-real-time aggregates <em>and</em> can afford slower writes.</p>
+<p><strong>Application-layer caching (e.g., Redis, <code>functools.lru_cache</code>).</strong> Cache the query result in your app rather than the database. Fast and flexible, but it moves invalidation logic into application code and can diverge across instances. A materialized view keeps the cache inside the database where the data lives — usually simpler to reason about.</p>
+<p><strong><code>REFRESH MATERIALIZED VIEW CONCURRENTLY</code> (PostgreSQL).</strong> Refreshes without locking readers, at the cost of requiring a unique index and doing more work. Ideal for dashboards that must stay queryable during refresh.</p>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong>Empty base table:</strong> A view returns zero rows (correct). A materialized view returns whatever it last stored — possibly rows that no longer exist. Refresh to reconcile.</li>
+<li><strong>All rows filtered out:</strong> <code>paid_orders</code> on a table with no paid orders returns nothing; <code>SUM</code> yields <code>NULL</code> — hence the <code>COALESCE</code> guard.</li>
+<li><strong>Duplicates:</strong> Views faithfully reflect duplicate base rows; they add no deduplication unless your query says <code>DISTINCT</code>.</li>
+<li><strong>Very large result sets:</strong> A materialized view storing millions of rows consumes real disk and takes real time to refresh — factor that in.</li>
+<li><strong>Minimum/boundary values:</strong> Negative or zero amounts pass straight through; a view applies no validation. Validate in the base table, not the view.</li>
+<li><strong>Never-refreshed materialized view:</strong> Silently serves ancient data forever. This is the classic production incident.</li>
+</ul>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Assuming a materialized view updates itself.</strong> Most databases will <em>not</em> refresh unless you tell them. Yesterday's numbers won't move because you never reprinted the report.</li>
+<li><strong>Refreshing too aggressively.</strong> Refreshing every minute on a heavy query burns the very compute you were trying to save — you've paid for storage and gained nothing.</li>
+<li><strong>Stacking views on views on views.</strong> A five-layer view tower means one innocent <code>SELECT</code> secretly triggers a monster query. A tiny call can take thirty seconds, and you'll spend an afternoon finding out why.</li>
+<li><strong>Reaching for materialized views prematurely.</strong> Optimizing a performance problem you don't actually have adds staleness bugs for no benefit. Measure first.</li>
+<li><strong>Forgetting security is not automatic.</strong> A view hides columns <em>only</em> if you grant access to the view and revoke it on the base table. Grant the table too, and the frosted glass is wide open.</li>
+<li><strong>Confusing a view with a stored copy.</strong> Editing base data and expecting a plain view to "remember" the old state — views never store anything.</li>
+</ol>
+<h2>21. Interview Questions</h2>
+<ul>
+<li>What is the difference between a view and a materialized view, and when would you choose each?</li>
+<li>Why does a plain view recompute on every query? What does the database actually store?</li>
+<li>How do you refresh a materialized view, and what is the freshness trade-off?</li>
+<li>How can views enforce column-level security? What must you also do to the base table?</li>
+<li>What are the risks of nesting views several layers deep?</li>
+<li>What does <code>REFRESH MATERIALIZED VIEW CONCURRENTLY</code> do, and what does it require?</li>
+<li>Can you <code>UPDATE</code> through a view? When is a view updatable versus read-only?</li>
+<li>How would you keep a materialized view nearly real-time without over-refreshing?</li>
+</ul>
+<h2>22. Similar Problems</h2>
+<ul>
+<li><strong>Design a caching layer (system design):</strong> Same fresh-vs-fast trade-off as materialized views, one abstraction level up.</li>
+<li><strong>LRU Cache (LeetCode 146):</strong> Teaches storing computed results to avoid recomputation — the core idea behind materialization.</li>
+<li><strong>Design In-Memory File System / Design a Leaderboard:</strong> Both force decisions about precomputing versus computing on read.</li>
+<li><strong>Range Sum Query – Immutable (LeetCode 303):</strong> Precomputing a prefix-sum array is materialization in miniature — pay once, read instantly.</li>
+<li><strong>Range Sum Query – Mutable (LeetCode 307):</strong> Adds the "data keeps changing" wrinkle, exactly the staleness problem refresh solves.</li>
+</ul>
+<h2>23. Key Takeaways</h2>
+<ul>
+<li>A <strong>view</strong> is a named query. It stores the <em>recipe</em>, runs fresh every time, and is perfect for hiding complexity and locking down columns.</li>
+<li>A <strong>materialized view</strong> stores the <em>results</em> for speed, but must be refreshed and can drift out of date.</li>
+<li>The whole decision is a freshness-versus-speed trade: <strong>plain view</strong> for live data and light queries, <strong>materialized view</strong> for heavy dashboards where slightly stale is fine.</li>
+<li><strong>Start with a plain view.</strong> Only materialize when a real, measured speed problem appears — and never stack views into deep towers.</li>
+</ul>
+<h2>24. Watch the Video</h2>
+<p>Want to see these concepts drawn out with the frosted-glass and printed-report analogies in motion? Watch the full walkthrough here: <strong>{LINK}</strong>. Seeing the refresh flow animated makes the staleness idea click in a way text alone can't.</p>
+<h2>25. About the Series</h2>
+<p>This lesson is part of <strong>Fun with Learning Technology</strong> — a series that turns intimidating engineering topics into friendly, intuition-first lessons. We skip the dense jargon and build understanding the way a good mentor would: one clear analogy at a time, always answering <em>why</em> before <em>how</em>. Whether you're preparing for interviews or leveling up on the job, each episode leaves you with a mental model you actually keep.</p>
+<h2>26. Call To Action</h2>
+<p>If this cleared up views and materialized views for you:</p>
+<ul>
+<li>👍 <strong>Like</strong> the video on YouTube — it genuinely helps more developers find it.</li>
+<li>🔔 <strong>Subscribe</strong> to the channel so you don't miss the next SQL lesson.</li>
+<li>📬 <strong>Subscribe on Substack</strong> for the written deep-dives like this one.</li>
+<li>💬 <strong>Comment</strong> with the trickiest view bug you've ever debugged — I read every one.</li>
+<li>🔁 <strong>Share</strong> this with a teammate who's still copy-pasting the same query everywhere.</li>
+</ul>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When do you reach for a SQL view?</summary><p>When you keep rewriting the same complex JOIN/filter, need a stable interface, or must hide columns for security — wrap the query as a named virtual table.</p></details><details class='card2'><summary>Query/read cost of a plain view?</summary><p>Same as running the underlying query every time — a view stores no data, so it recomputes on each access. No speedup, just abstraction.</p></details><details class='card2'><summary>Storage cost: view vs materialized view?</summary><p>Plain view = zero extra storage (just the query text). Materialized view = stores the full result set on disk, trading space for read speed.</p></details><details class='card2'><summary>Common bug with materialized views?</summary><p>Serving stale data — they don&#x27;t auto-update. You must REFRESH manually or on schedule, or reads return the snapshot from the last refresh.</p></details><details class='card2'><summary>View vs materialized view — pick which?</summary><p>View: always-fresh data, slow on complex queries. Materialized view: fast reads, but stale until refreshed. Choose by freshness-vs-speed tradeoff.</p></details><details class='card2'><summary>Interview: how do views enforce security?</summary><p>Grant users access to the view instead of base tables, exposing only permitted columns/rows while hiding the underlying schema and sensitive fields.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
