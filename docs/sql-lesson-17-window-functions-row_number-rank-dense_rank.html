@@ -1,0 +1,232 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 17: ROW_NUMBER vs RANK vs DENSE_RANK — Which One Breaks Your Logic? — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-17-window-functions-row_number-rank-dense_rank
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/mai">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/sql-lesson-17-window-functions-row_number-rank-dense_rank.html">
+<meta property="og:title" content="Lesson 17: ROW_NUMBER vs RANK vs DENSE_RANK — Which One Breaks Your Logic? — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-17-window-functions-row_number-rank-dense_rank
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/mai">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson 17: ROW_NUMBER vs RANK vs DENSE_RANK — Which One Breaks Your Logic?</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>8. Introduction: Why This Matters to Every Developer</h2>
+<p>Welcome back to <em>Fun with Learning Technology</em>. Today, we are tackling a topic that trips up even senior engineers when they first dive deep into database analytics: SQL Window Functions. Specifically, the holy trinity of ranking: <code>ROW_NUMBER</code>, <code>RANK</code>, and <code>DENSE_RANK</code>.</p>
+<p>If you have ever written a query where two employees tie for "first place," but your report shows them as 1st and 2nd when they should be 1st and 1st (with no one at 2nd), you have encountered the nuances of these functions. Interviewers love testing this because it reveals whether a candidate understands <em>data logic</em> versus just syntax memorization. They want to know if you understand that "ranking" implies grouping, while "numbering" implies sequencing.</p>
+<p>This lesson is designed for developers ready to move beyond basic aggregations (like simple <code>GROUP BY</code> sums) and into complex analytical reporting where context matters. We will not just show you the code; we will build the intuition behind why a gap in numbers matters, when to preserve raw data integrity, and how to choose the right tool for your specific analytical needs.</p>
+<h2>9. Problem Overview: The Lineup Analogy</h2>
+<p>Imagine you are organizing a line of people by height. You want to assign each person a "position" or a "score." However, what happens if two people are exactly the same height? Do they both get position 1? Or does one get 1 and the next get 2, pushing the rest down? Or do we skip the number 2 entirely so that after the tied pair of #1s, the next person is immediately #3?</p>
+<p>In SQL terms, we have three distinct ways to answer this question without deleting rows or collapsing data into a single group. These tools allow us to "look at neighbors" (the window) while staying on our specific plot of land (the current row).</p>
+<ul>
+<li><strong>Scenario A:</strong> We just need a unique ID for every line item, regardless of value equality. (Strict Sequencing).</li>
+<li><strong>Scenario B:</strong> We are running a competition. Ties share the spot, and subsequent spots are skipped to reflect the gap in performance. (Competition Ranking).</li>
+<li><strong>Scenario C:</strong> We want to track trends across distinct levels without worrying about the gaps created by ties. (Dense Packing).</li>
+</ul>
+<p>Our goal today is to master the syntax (<code>OVER</code>, <code>ORDER BY</code>) and the logic of each approach so you can handle complex queries like "Find the Top 3 Salespeople in Each Region" correctly, even when sales figures are identical.</p>
+<h2>10. Example: Setting the Stage</h2>
+<p>Let's create a concrete dataset to visualize these differences. Imagine a company with five employees sorted by their salary.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">Name</th>
+<th style="text-align: left;">Salary</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">101</td>
+<td style="text-align: left;">Alice</td>
+<td style="text-align: left;">90,000</td>
+</tr>
+<tr>
+<td style="text-align: left;">102</td>
+<td style="text-align: left;">Bob</td>
+<td style="text-align: left;">90,000</td>
+</tr>
+<tr>
+<td style="text-align: left;">103</td>
+<td style="text-align: left;">Charlie</td>
+<td style="text-align: left;">85,000</td>
+</tr>
+<tr>
+<td style="text-align: left;">104</td>
+<td style="text-align: left;">Diana</td>
+<td style="text-align: left;">80,000</td>
+</tr>
+<tr>
+<td style="text-align: left;">105</td>
+<td style="text-align: left;">Eve</td>
+<td style="text-align: left;">75,000</td>
+</tr>
+</tbody>
+</table>
+<p>Notice that Alice and Bob have identical salaries. This is our critical pivot point where the three functions will diverge.</p>
+<h2>11. Intuition: Discovering the Solution</h2>
+<p>Before writing a single line of code, an experienced engineer thinks about the <em>output shape</em> required for their report.</p>
+<p><strong>The Core Question:</strong> "If two items are equal in value, do I want them to have a unique sequential number (1, 2, 3...) or should they share a rank with a gap (1, 1, 3...), or do I want no gaps at all (1, 1, 2...)"</p>
+<ol>
+<li><strong>The Strict List (<code>ROW_NUMBER</code>):</strong> Think of this like handing out numbered tickets at a concert. Everyone gets a ticket from 1 to 5. It doesn't matter if two people have the same height; the line must move forward so that no two rows ever have the same <code>id</code>. This is purely for ordering and pagination.</li>
+<li><strong>The Tournament Leaderboard (<code>RANK</code>):</strong> Think of an Olympic medal table. If two athletes tie for first place with a time of 9.8 seconds, they both get Gold (Rank 1). The next athlete cannot be "Second"; they must be the third-best performer overall. The system honors the gap in performance.</li>
+<li><strong>The Trend Chart (<code>DENSE_RANK</code>):</strong> Think of plotting data points on a graph. If we have two data points at level 90k, the next distinct level should naturally be labeled "Level 2". We don't care about the empty space between level 1 and level 3; we just want adjacent numbers to calculate deltas or percentiles easily.</li>
+</ol>
+<p><strong>The Technical Hook:</strong> All three functions belong to the family of <strong>Window Functions</strong>. The magic happens in the <code>OVER</code> clause, specifically within the <code>PARTITION BY</code> (to group) and <code>ORDER BY</code> (to sort). Without these, SQL collapses rows into aggregate summaries, which destroys the row-level data we need for these rankings.</p>
+<h2>12. Brute Force Solution: The Naive Approach</h2>
+<p>If you have never used window functions, what would your first attempt look like? You might try to use a standard <code>SELECT COUNT(*)</code> subquery or self-join to manually count how many people are "better" than the current person.</p>
+<p><strong>The Algorithm:</strong>
+For every row in the table, iterate through all other rows. If Row B has a higher salary than Row A, increment a counter for Row A. Then order by that counter.</p>
+<p><strong>Why it fails as a primary solution:</strong>
+While this logic works conceptually (counting "better" neighbors), doing it via self-joins for every single row results in an $O(N^2)$ complexity. If your table has 1 million rows, the query explodes instantly.</p>
+<p>Furthermore, handling ties with manual counting requires complex <code>CASE</code> statements inside the count logic to decide whether to include a tied value in the "better than" set. It quickly becomes unreadable and error-prone.</p>
+<p><strong>Complexity:</strong>
+*   <strong>Time Complexity:</strong> $O(N^2)$ - Exponential degradation on large datasets.
+*   <strong>Space Complexity:</strong> $O(N)$ - Requires materializing intermediate result sets for joins.</p>
+<p>We will never write this in production, but understanding it helps us appreciate the elegance of Window Functions, which solve this in linear time $O(N)$.</p>
+<h2>13. Optimal Solution: The Window Function Approach</h2>
+<p>Here is how a senior engineer approaches this problem using standard SQL features introduced in SQL-99 and standardized across PostgreSQL, MySQL, SQL Server, and Snowflake.</p>
+<p>The optimal solution relies on the syntax structure of the <code>OVER</code> clause. We select our original columns (to preserve data) and add a new column calculated by one of our three functions.</p>
+<h3>Step-by-Step Logic:</h3>
+<ol>
+<li><strong>Select Original Data:</strong> Ensure we keep <code>ID</code>, <code>Name</code>, <code>Salary</code>. Window functions do not aggregate; they add columns to the existing rows.</li>
+<li><strong>Apply the Function:</strong> Choose <code>ROW_NUMBER()</code>, <code>RANK()</code>, or <code>DENSE_RANK()</code>.</li>
+<li><strong>Define the Scope (OVER):</strong> This is the most critical step. We must tell SQL: "Look at this window of rows."</li>
+<li><strong>Partition (Optional):</strong> If ranking per department, use <code>PARTITION BY department_id</code>. If ranking globally, omit this.</li>
+<li><strong>Order:</strong> Use <code>ORDER BY salary DESC</code> so the highest earner is at the top of the rank list.</li>
+</ol>
+<p>This approach runs in $O(N)$ time because the database engine can process the window frame in a single pass through the sorted data.</p>
+<h2>14. Python Code: Production-Ready Implementation</h2>
+<p>While the logic belongs in SQL, we often prototype or validate these concepts in Python using libraries like <code>pandas</code> before pushing to production databases. However, for this tutorial, we will focus on the raw SQL logic which is universal, and provide a Python script that simulates the result set for verification.</p>
+<p>Below is a complete solution demonstrating how these functions behave logically.</p>
+<pre><code class="language-sql">-- Scenario 1: ROW_NUMBER - Strict Sequencing
+SELECT 
+    id,
+    name,
+    salary,
+    ROW_NUMBER() OVER (ORDER BY salary DESC) AS rn_number
+FROM employees;
+
+-- Scenario 2: RANK - Competition Leaderboard (Skips Gaps)
+SELECT 
+    id,
+    name,
+    salary,
+    RANK() OVER (ORDER BY salary DESC) AS rk_rank
+FROM employees;
+
+-- Scenario 3: DENSE_RANK - Adjacent Trends (No Gaps)
+SELECT 
+    id,
+    name,
+    salary,
+    DENSE_RANK() OVER (ORDER BY salary DESC) AS dr_dense
+FROM employees;
+</code></pre>
+<p><em>Note: If you are using Python with Pandas to simulate this analysis before database deployment:</em></p>
+<pre><code class="language-python">import pandas as pd
+import numpy as np
+
+# Simulating the Employee DataFrame
+data = {
+    'id': [101, 102, 103, 104, 105],
+    'name': ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'],
+    'salary': [90000, 90000, 85000, 80000, 75000]
+}
+
+df = pd.DataFrame(data)
+
+# 1. ROW_NUMBER (Strict Order)
+# Even with ties, we assign a unique index
+df['row_number'] = df.groupby([pd.NA]).cumcount() + 1 
+
+# 2. Simulating RANK (Grouping ties, skipping subsequent numbers)
+# We calculate the cumulative count of strictly greater values
+df['rank'] = df['salary'].rank(method='min') # 'min' is equivalent to SQL RANK in Pandas
+
+# 3. Simulating DENSE_RANK (Grouping ties, no gaps)
+# Equivalent to rank method='dense' in Pandas
+df['dense_rank'] = df['salary'].rank(method='dense')
+</code></pre>
+<h2>15. Code Walkthrough: Understanding the Magic</h2>
+<p>Let's break down the SQL syntax used above.</p>
+<ul>
+<li><strong><code>ROW_NUMBER() OVER (...)</code></strong>: This function generates a unique integer for every row in the window. The parentheses are empty because <code>ROW_NUMBER</code> does not care about values; it just counts rows 1, 2, 3...</li>
+<li><strong><code>RANK() OVER (ORDER BY salary DESC)</code></strong>: This function calculates the rank based on value. If two rows have the same salary, they share the same rank number. Crucially, when the next row is processed, its rank will be $N + (\text{number of tied rows})$. In our example, if 2 people are Rank 1, the next person becomes Rank 3 (skipping 2).</li>
+<li><strong><code>DENSE_RANK() OVER (...)</code></strong>: Similar to <code>RANK</code>, it groups ties. However, unlike <code>RANK</code>, it does not skip integers. If 2 people are Rank 1, the next distinct value gets Rank 2 immediately.</li>
+<li><strong><code>ORDER BY salary DESC</code></strong>: This is mandatory inside the <code>OVER</code> clause. Window functions need to know how to traverse the data. Sorting descending puts the "best" values first. Without this, the ranking would be random or based on physical storage order (which is bad practice).</li>
+</ul>
+<h2>16. Dry Run: Tracing Execution Logic</h2>
+<p>Let's manually trace the execution for our dataset where Alice and Bob tie at $90,000.</p>
+<p><strong>The Input:</strong></p>
+<pre><code class="language-text">Row 1: Alice ($90k)
+Row 2: Bob   ($90k)
+Row 3: Charlie ($85k)
+...
+</code></pre>
+<h3>Trace for ROW_NUMBER:</h3>
+<ol>
+<li>Sort by salary: [Alice, Bob, Charlie...]</li>
+<li>Counter = 1 -&gt; Assign to Alice. Output: <code>rn = 1</code>.</li>
+<li>Counter = 2 -&gt; Assign to Bob. Output: <code>rn = 2</code>.</li>
+<li><strong>Observation:</strong> Even though salaries are equal, the numbers are unique. This is perfect for pagination (e.g., "Show me rows 1-10").</li>
+</ol>
+<h3>Trace for RANK:</h3>
+<ol>
+<li>Sort by salary: [Alice, Bob, Charlie...]</li>
+<li>Algorithm checks: "Is Alice better than anyone before her?" No. Rank = 1.</li>
+<li>Algorithm checks Bob: "Is Bob better than Alice?" No (Equal). Rank = 1.</li>
+<li>Algorithm checks Charlie ($85k): "How many people are better or equal to me?"<ul>
+<li>People better than Charlie: Alice, Bob (2 people).</li>
+<li>Current Index: 3.</li>
+<li>Formula: $3 - (\text{count of ties}) = 3 - 2 = 1$? No, simpler logic: Count strictly better + current position logic.</li>
+<li>Actually, standard Rank logic: The rank is the count of distinct values smaller than the current value plus one.</li>
+<li>Let's stick to the gap rule: Alice/Bob are Rank 1. The next slot must be Rank 3 because Rank 2 does not exist in the "better than" set.</li>
+</ul>
+</li>
+<li>Output: Alice=1, Bob=1, Charlie=3.</li>
+<li><strong>Observation:</strong> There is a "hole" at number 2.</li>
+</ol>
+<h3>Trace for DENSE_RANK:</h3>
+<ol>
+<li>Sort by salary: [Alice, Bob, Charlie...]</li>
+<li>Alice ($90k) is the first distinct value. Rank = 1.</li>
+<li>Bob ($90k) is tied. Rank = 1.</li>
+<li>Charlie ($85k) is the second distinct value. Since we count <em>distinct</em> values, his rank is 2 immediately.</li>
+<li>Output: Alice=1, Bob=1, Charlie=2.</li>
+<li><strong>Observation:</strong> No holes. The sequence is dense (1, 1, 2).</li>
+</ol>
+<h2>17. Complexity Analysis</h2>
+<p>Why are these functions efficient?</p>
+<ul>
+<li><strong>Time Complexity ($O(N \log N)$ or $O(N)$ depending on implementation):</strong>
+    Sorting the data takes $O(N \log N)$. Window functions generally perform a linear pass over the sorted partitioned data to calculate offsets, adding $O(N)$. Most database optimizers can sort and compute windows in a single optimized step.</li>
+<li><strong>Space Complexity ($O(N)$):</strong>
+    The database needs to hold the sorted state of the window frame in memory (or disk spill) for each partition. In high-concurrency scenarios, this can increase memory pressure if partitions are large, but it is standard practice and far cheaper than self-joins.</li>
+</ul>
+<h2>18. Alternative Solutions: The Self-Join Method</h2>
+<p>Before Window Functions existed, engineers used a "self-join" approach to rank rows.</p>
+<p><strong>The Logic:</strong>
+For each row <code>t</code>, count how many other rows <code>s</code> have <code>salary &gt; t.salary</code>.</p>
+<pre><code class="language-sql">SELECT 
+    t.id, 
+    t.name, 
+    (SELECT COUNT(*) FROM employees s WHERE s.salary &gt; t.salary) + 1 as manual_rank
+FROM employees t;
+</code></pre>
+<p><strong>Comparison:</strong>
+*   <strong>Readability:</strong> The Window Function is readable in one line. The self-join requires subqueries and can be hard to debug.
+*   <strong>Performance:</strong> The self-join approach executes a join for every single row. If the table has $N$ rows, it performs roughly $N^2$ comparisons. This causes queries to time out on datasets larger than a few thousand rows. Window functions are vastly superior for performance and scalability.</p>
+<h2>19. Edge Cases: Handling the Tricky Inputs</h2>
+<p>As a senior engineer, you must anticipate what breaks your logic. Here are the critical edge cases:</p>
+<ol>
+<li><strong>Empty Input:</strong> If the table is empty, all three functions return an empty set. No errors occur, but ensure your application handles NULL results gracefully.</li>
+<li><strong>All Ties (Equal Salaries):</strong><ul>
+<li><code>ROW_NUMBER</code>: Returns 1, 2, 3... (Unique IDs).</li>
+<li><code>RANK</code>: Returns 1, 1, 1... (Everyone is Rank 1). The next partition would be skipped if there was data.</li>
+<li><code>DENSE_RANK</code>: Returns 1, 1, 1... (Everyone is Rank 1).</li>
+<li><em>Implication:</em> If everyone earns the same, <code>RANK</code> and <code>DENSE_RANK</code> become identical.</li>
+</ul>
+</li>
+<li><strong>Null Values in Salary:</strong> SQL <code>ORDER BY</code> often places <code>NULL</code>s at the end. Unless you specify <code>ORDER BY salary DESC NULLS FIRST</code>, ties involving nulls might be ranked lower than expected depending on the DBMS (PostgreSQL vs MySQL</li>
+</ol></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When do I choose ROW_NUMBER() over other ranking functions?</summary><p>Use when you need unique sequential IDs for each row even if values are identical. It never skips numbers.</p></details><details class='card2'><summary>What is the time complexity of a typical Window Function query?</summary><p>O(N) where N is the number of rows, as window functions generally scan the partition once in linear time.</p></details><details class='card2'><summary>What is the space complexity for storing window frame data?</summary><p>Often O(N) because the database must hold state (like aggregates or offsets) across the current window frame.</p></details><details class='card2'><summary>What is the trickiest edge case when comparing RANK() and DENSE_RANK()?</summary><p>RANK() gaps numbers after ties (e.g., 1, 2, 4), while DENSE_RANK() does not gap them (e.g., 1, 2, 3).</p></details><details class='card2'><summary>How does ROW_NUMBER() differ fundamentally from RANK()?</summary><p>ROW_NUMBER() assigns unique sequential integers regardless of value similarity. RANK() assigns the same rank to ties.</p></details><details class='card2'><summary>Follow-up: How do you reset rankings after grouping by a new category?</summary><p>Wrap your window function in a subquery and apply ROW_NUMBER(), RANK, or DENSE_RANK again with PARTITION BY the new category.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
