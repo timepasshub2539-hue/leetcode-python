@@ -1,0 +1,294 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 19: The O(N) Way to Compare Row Context vs Group Totals — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-19-partition-by-with-window-functions
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-les">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/sql-lesson-19-partition-by-with-window-functions.html">
+<meta property="og:title" content="Lesson 19: The O(N) Way to Compare Row Context vs Group Totals — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-19-partition-by-with-window-functions
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-les">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson 19: The O(N) Way to Compare Row Context vs Group Totals</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>8. Introduction: Why This Matters</h2>
+<p>Welcome back, everyone. If you have been following along with our coding journey, you've likely hit a wall with SQL aggregation. It is one of the most common stumbling blocks for developers transitioning into data roles or backend engineering. You know how to use <code>SELECT *</code>, and you know that <code>SUM()</code> gives you a total. But what happens when you need a total for every single row?</p>
+<p>This is where the magic—and the confusion—happens. Imagine you are analyzing employee salaries. You want to know each person's salary, their department, and specifically what percentage of their <em>own</em> department's total salary they earn. If you simply use <code>SUM(salary) OVER ()</code>, you get a global average. That isn't useful if your goal is relative comparison within a group.</p>
+<p>Interviewers love testing this specific concept because it demonstrates an engineer's maturity. Junior developers often collapse data using <code>GROUP BY</code> when the requirement actually demands row-level detail preserved alongside aggregate context. By mastering the <code>PARTITION BY</code> clause, you unlock the ability to perform complex comparative analysis without losing the granularity of your original dataset. This isn't just about syntax; it's about understanding <em>context</em> in data processing. In this lesson, we will demystify how window functions act as a "reset button" for calculations, allowing us to compare an individual record against the properties of its group simultaneously.</p>
+<h2>9. Problem Overview</h2>
+<p>Let's rephrase the core challenge we are tackling today. We have a dataset containing information about employees (or students), including their <code>name</code>, <code>department</code> (or class), and <code>salary</code> (or test score).</p>
+<p>The goal is to enrich this dataset with new columns that represent aggregate statistics calculated <em>within</em> specific sub-groups, rather than globally across the entire table.</p>
+<p>Specifically, we need to solve two main requirements:
+1.  <strong>Department Total</strong>: For every single employee row, calculate the sum of salaries for their specific department.
+2.  <strong>Department Context Ratio</strong>: Determine how that employee's salary compares to that same department total (e.g., calculating a percentage).</p>
+<p>Crucially, we must <strong>not</strong> collapse the data. We cannot simply say "Department A has a total of $1M" and stop there. We need every row to appear, but each row needs to know about its peer group's aggregate. This is distinct from a standard <code>GROUP BY</code> query, which would merge all rows belonging to Department A into one summary line.</p>
+<h2>10. Examples</h2>
+<p>To make this concrete, let's look at a dataset of employees in two departments: Engineering and Marketing.</p>
+<h3>Input Data</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Name</th>
+<th style="text-align: left;">Department</th>
+<th style="text-align: left;">Salary</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Alice</td>
+<td style="text-align: left;">Engineering</td>
+<td style="text-align: left;">90,000</td>
+</tr>
+<tr>
+<td style="text-align: left;">Bob</td>
+<td style="text-align: left;">Engineering</td>
+<td style="text-align: left;">120,000</td>
+</tr>
+<tr>
+<td style="text-align: left;">Charlie</td>
+<td style="text-align: left;">Engineering</td>
+<td style="text-align: left;">80,000</td>
+</tr>
+<tr>
+<td style="text-align: left;">Diana</td>
+<td style="text-align: left;">Marketing</td>
+<td style="text-align: left;">60,000</td>
+</tr>
+<tr>
+<td style="text-align: left;">Eve</td>
+<td style="text-align: left;">Marketing</td>
+<td style="text-align: left;">45,000</td>
+</tr>
+</tbody>
+</table>
+<h3>Desired Output</h3>
+<p>We want a result set that keeps all five rows but adds a <code>Department Total</code> and an <code>Individual Ratio</code>.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Name</th>
+<th style="text-align: left;">Department</th>
+<th style="text-align: left;">Salary</th>
+<th style="text-align: left;">Department Total</th>
+<th style="text-align: left;">Individual Ratio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Alice</td>
+<td style="text-align: left;">Engineering</td>
+<td style="text-align: left;">90,000</td>
+<td style="text-align: left;"><strong>290,000</strong></td>
+<td style="text-align: left;">31.0%</td>
+</tr>
+<tr>
+<td style="text-align: left;">Bob</td>
+<td style="text-align: left;">Engineering</td>
+<td style="text-align: left;">120,000</td>
+<td style="text-align: left;"><strong>290,000</strong></td>
+<td style="text-align: left;">41.3%</td>
+</tr>
+<tr>
+<td style="text-align: left;">Charlie</td>
+<td style="text-align: left;">Engineering</td>
+<td style="text-align: left;">80,000</td>
+<td style="text-align: left;"><strong>290,000</strong></td>
+<td style="text-align: left;">27.5%</td>
+</tr>
+<tr>
+<td style="text-align: left;">Diana</td>
+<td style="text-align: left;">Marketing</td>
+<td style="text-align: left;">60,000</td>
+<td style="text-align: left;"><strong>105,000</strong></td>
+<td style="text-align: left;">57.1%</td>
+</tr>
+<tr>
+<td style="text-align: left;">Eve</td>
+<td style="text-align: left;">Marketing</td>
+<td style="text-align: left;">45,000</td>
+<td style="text-align: left;"><strong>105,000</strong></td>
+<td style="text-align: left;">42.8%</td>
+</tr>
+</tbody>
+</table>
+<p>Notice how the <code>Department Total</code> repeats for Alice and Bob because they belong to the same group. The calculation resets when it moves from Engineering to Marketing.</p>
+<h2>11. Intuition: The "Pocket Wallet" Analogy</h2>
+<p>How does an experienced engineer discover the solution? It starts with visualization. Imagine you have a wallet divided into distinct pockets, where each pocket represents a department.</p>
+<p>Inside each pocket are several bills (the salaries). If you ask, "What is the total money in my wallet?" that's a global sum. But if you ask, "How much money do I have in my <em>left</em> pocket?" you need to look only at that specific area.</p>
+<p>Now, imagine trying to tell this computer to count the bills in each pocket while keeping all the bills visible on the table. You cannot just "sum up" and move to the next line, because that would discard the individual bills. You need a mechanism that says: "Sum everything in Pocket A, write the result down, then immediately start summing from zero for Pocket B."</p>
+<p>This is exactly what <code>PARTITION BY</code> does. It acts as the mental boundary between groups. Without it, the SQL engine treats the entire table as one giant pocket. With <code>PARTITION BY Department</code>, you tell the engine: "Stop counting when the department name changes."</p>
+<p>Think of a classroom analogy mentioned in our video. If you calculate the class average without resetting for each section (e.g., Period 1 vs. Period 2), you mix apples and oranges. <code>PARTITION BY</code> is that moment where the teacher says, "Okay, we start fresh for this specific group." It allows us to compare an individual record against the properties of the group they belong to simultaneously.</p>
+<h2>12. Brute Force Solution</h2>
+<p>Before we use the elegant window functions, let's imagine the "naive" approach: using <code>JOIN</code> or subqueries to calculate totals first.</p>
+<h3>The Idea</h3>
+<ol>
+<li>Run a query to get the total salary for <em>every</em> department without grouping individuals:
+    <code>sql
+    SELECT department, SUM(salary) as dept_total
+    FROM employees
+    GROUP BY department;</code></li>
+<li>Join this result back to the original table on the <code>department</code> column.</li>
+</ol>
+<h3>Algorithm</h3>
+<pre><code class="language-python"># Pseudocode Logic for Brute Force
+total_table = GROUP_BY(employees, ['department']).sum('salary')
+result = JOIN(employees, total_table, 'on employees.department == total_table.department')
+</code></pre>
+<h3>Advantages</h3>
+<ul>
+<li><strong>Understandable</strong>: If you haven't learned window functions yet, this is logical.</li>
+<li><strong>Familiar</strong>: Uses standard <code>GROUP BY</code> and <code>JOIN</code>, which everyone knows.</li>
+</ul>
+<h3>Disadvantages</h3>
+<ul>
+<li><strong>Inefficient (O(N*M))</strong>: We iterate over the table twice. First to get totals, then to join. This can be slow on massive datasets.</li>
+<li><strong>Messy Syntax</strong>: Requires multiple steps or complex subqueries in a single statement (<code>SELECT ... FROM ... WHERE EXISTS...</code>).</li>
+<li><strong>Hard to Extend</strong>: Adding a third metric, like a running total within the department, becomes exponentially harder with joins.</li>
+</ul>
+<h3>Complexity</h3>
+<ul>
+<li><strong>Time</strong>: $O(N \times M)$ where N is rows and M is groups (though often optimized by DB engines, logically it's two passes).</li>
+<li><strong>Space</strong>: Requires storing intermediate results for the grouped totals.</li>
+</ul>
+<h2>13. Optimal Solution: Window Functions with <code>PARTITION BY</code></h2>
+<p>The optimal way to solve this is using a <strong>Window Function</strong>. A window function performs an aggregation over a set of rows (the window) related to the current row, without collapsing them.</p>
+<h3>The Core Syntax</h3>
+<pre><code class="language-sql">SELECT 
+    name,
+    department,
+    salary,
+    SUM(salary) OVER (PARTITION BY department) AS dept_total
+FROM employees;
+</code></pre>
+<h3>Step-by-Step Breakdown</h3>
+<ol>
+<li><strong><code>OVER (...)</code></strong>: This keyword tells SQL that we are using a window function, not an aggregate collapse.</li>
+<li><strong><code>SUM(salary)</code></strong>: The aggregation logic. We want the sum of salaries.</li>
+<li><strong><code>PARTITION BY department</code></strong>: This is the magic key. It defines the "window." The engine calculates the sum separately for every distinct value in the <code>department</code> column.<ul>
+<li>For rows where <code>department</code> = 'Engineering', the window includes Alice, Bob, and Charlie. <code>SUM</code> returns 290,000 for all three.</li>
+<li>When the row switches to <code>department</code> = 'Marketing', the window resets. It now only looks at Diana and Eve. <code>SUM</code> returns 105,000.</li>
+</ul>
+</li>
+</ol>
+<p>This allows us to see the forest (the department total) while standing in a specific tree (our individual salary row).</p>
+<h3>Diagram: How the Window Resets</h3>
+<pre><code class="language-text">Row Sequence | Current Dept | Window Frame (Rows Included for SUM) | Result
+---------------------------------------------------------
+1            | Engineering  | [Alice]                               | --
+2            | Engineering  | [Alice, Bob]                          | --
+3            | Engineering  | [Alice, Bob, Charlie]                 | 290,000 (for all 3)
+4            | Marketing    | [Diana, Eve]                          | 105,000 (for both)
+</code></pre>
+<p><em>(Note: In window functions, the frame includes the current row and all previous rows in the partition by default for cumulative calculations, but for a simple SUM of the whole group, it effectively sums everyone in that partition).</em></p>
+<h2>14. Python Code (SQL Logic in Python Context)</h2>
+<p>While we are discussing SQL, let's simulate this logic using Python and Pandas to ensure you understand the underlying mechanics before running it in a database. This is often helpful for data engineers who need to preprocess data locally.</p>
+<pre><code class="language-python">import pandas as pd
+
+# Create Sample DataFrame
+data = {
+    'name': ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'],
+    'department': ['Engineering', 'Engineering', 'Engineering', 
+                   'Marketing', 'Marketing'],
+    'salary': [90000, 120000, 80000, 60000, 45000]
+}
+df = pd.DataFrame(data)
+
+# The Python Equivalent of SQL PARTITION BY
+# groupby creates the partitions, apply performs the calculation per partition
+# transform broadcasts the result back to every row in that partition
+
+# Calculate Department Total and reset index for clarity
+dept_total = df.groupby('department')['salary'].transform('sum')
+
+# Calculate Ratio (Individual Salary / Department Total)
+df['individual_ratio'] = df['salary'] / dept_total
+
+# Display Result
+print(df[['name', 'department', 'salary', 'individual_ratio']].round(2))
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<p>Let's analyze the Python solution line by line to demystify what is happening under the hood, which mirrors the SQL logic perfectly.</p>
+<ul>
+<li><strong><code>df.groupby('department')</code></strong>: This creates a dictionary-like object where keys are departments and values are DataFrames containing rows for that department. Think of this as separating the "wallet" into pockets.</li>
+<li><strong><code>['salary']</code></strong>: We select the specific column to aggregate (the bills inside the pocket).</li>
+<li><strong><code>.transform('sum')</code></strong>: This is the critical method. Unlike <code>agg</code>, which returns a single number per group, <code>transform</code> applies the function (Sum) and then expands the result back to the original shape of the DataFrame. If there are 3 rows in Engineering, <code>transform</code> outputs the total sum 3 times.</li>
+<li><strong>Broadcasting</strong>: The resulting series (<code>dept_total</code>) has a length matching the original DataFrame. When we divide <code>df['salary']</code> by this new column, Pandas aligns them by index position. Since the values in <code>dept_total</code> are identical for rows within the same group, the division works perfectly to create the ratio for each individual.</li>
+</ul>
+<h2>16. Dry Run: Walking Through One Example</h2>
+<p>Let's manually trace the logic for Alice (Engineering) and Diana (Marketing).</p>
+<p><strong>Initial State:</strong>
+*   Row 1: Alice, Eng, $90k
+*   Row 4: Diana, Marketing, $60k</p>
+<p><strong>Step 1: Grouping</strong>
+The engine identifies partitions.
+*   Partition A: {Alice, Bob, Charlie} (Total = $290k)
+*   Partition B: {Diana, Eve} (Total = $105k)</p>
+<p><strong>Step 2: Calculation</strong>
+The <code>SUM</code> function runs within the partition boundaries defined by <code>PARTITION BY</code>.
+*   For Alice: The window looks at {Alice, Bob, Charlie}. Sum = 290k.
+*   For Diana: The window looks at {Diana, Eve}. Sum = 105k.</p>
+<p><strong>Step 3: Assignment</strong>
+The calculated total is assigned to every row in that partition.
+*   Alice gets $290k.
+*   Bob gets $290k.
+*   Diana gets $105k.
+*   Eve gets $105k.</p>
+<p><strong>Step 4: Final Output Generation</strong>
+The query returns the original columns plus the new <code>dept_total</code> column, maintaining the original row count. No rows are deleted or merged.</p>
+<h2>17. Complexity Analysis</h2>
+<p>Why is this solution optimal?</p>
+<ul>
+<li>
+<p><strong>Time Complexity</strong>: $O(N)$.</p>
+<ul>
+<li>The database engine scans the table once (or twice internally with an index, but logically one pass per partition). It processes each row exactly once to determine its group and adds the pre-calculated aggregate. This is linear time.</li>
+<li>Comparing this to the brute force join ($O(N \times M)$), window functions are significantly faster on large datasets because they avoid materializing intermediate joined tables.</li>
+</ul>
+</li>
+<li>
+<p><strong>Space Complexity</strong>: $O(N)$.</p>
+<ul>
+<li>The result set has the same number of rows as the input, plus one or two new columns for the aggregates. We do not create a separate massive temporary table to hold group summaries that are then joined back; we calculate on the fly.</li>
+</ul>
+</li>
+</ul>
+<h2>18. Alternative Solutions</h2>
+<p>You might ask: "Can I use <code>CROSS JOIN</code> with a subquery?"</p>
+<h3>The Subquery Approach</h3>
+<pre><code class="language-sql">SELECT 
+    e.name,
+    e.department,
+    e.salary,
+    s.total_salary
+FROM employees e
+CROSS JOIN (
+    SELECT department, SUM(salary) as total_salary
+    FROM employees
+    GROUP BY department
+) s
+WHERE e.department = s.department;
+</code></pre>
+<h3>Comparison</h3>
+<ul>
+<li><strong>Readability</strong>: Window functions are cleaner. The subquery requires a <code>WHERE</code> clause to filter the join result back down, which can get messy with multiple columns.</li>
+<li><strong>Performance</strong>: On modern databases (PostgreSQL, MySQL 8+, SQL Server), window functions utilize specific execution plans that are highly optimized and often faster than nested joins for this specific pattern.</li>
+<li><strong>Scalability</strong>: If you need a running total <em>within</em> the department (e.g., cumulative salary by hire date), window functions (<code>SUM() OVER (ORDER BY ... PARTITION BY ...)</code>) handle this natively. Using <code>GROUP BY</code> and <code>CROSS JOIN</code> becomes incredibly difficult to extend.</li>
+</ul>
+<h2>19. Edge Cases</h2>
+<p>Robust SQL code must handle edge cases gracefully. Here is what happens:</p>
+<ol>
+<li><strong>Empty Input</strong>: If the <code>employees</code> table is empty, the query returns zero rows. No errors occur because the window simply has no partitions to process.</li>
+<li><strong>Single Row in Department</strong>: If a department has only one employee (e.g., the CEO alone), <code>SUM(salary)</code> equals that employee's salary. The ratio becomes $1.0$ (or 100%). This is mathematically correct and expected.</li>
+<li><strong>NULL Values</strong>: If an employee's salary is <code>NULL</code>, <code>SUM</code> ignores it in the total calculation, but <code>NULL / Total</code> results in <code>NULL</code> for that row. You may need to handle this with <code>COALESCE</code> if you want to display 0 or a specific message.</li>
+<li><strong>Negative Numbers</strong>: If salaries (or test scores) can be negative, the sum still works correctly. The ratio remains valid as long as the total is not zero.</li>
+<li><strong>Zero Department Total</strong>: If every salary in a department is $0$, dividing by the total causes a division-by-zero error in some SQL dialects. Always check for <code>WHERE total &gt; 0</code> if calculating percentages.</li>
+</ol>
+<h2>20. Common Mistakes</h2>
+<p>Based on years of reviewing interview code, here are five specific pitfalls to avoid:</p>
+<ol>
+<li><strong>Forgetting <code>PARTITION BY</code></strong>: Writing <code>SUM(salary) OVER ()</code> calculates the global total for <em>everyone</em>. This destroys the context you need.</li>
+<li><strong>Using <code>GROUP BY</code> instead</strong>: This collapses rows into a summary line, losing the individual names and salaries entirely.</li>
+<li><strong>Missing <code>OVER</code> Clause</strong>: Simply writing <code>SUM(salary) FROM employees WHERE department = 'Eng'</code> returns a single scalar value, not a column you can join back to the original rows easily.
+4.</li>
+</ol></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When to use PARTITION BY with Window Functions?</summary><p>Use when comparing a row&#x27;s value to its group&#x27;s aggregate metrics without collapsing the result set.</p></details><details class='card2'><summary>What is the time complexity of standard window functions like SUM or AVG?</summary><p>O(n) per partition, as they must scan and aggregate all rows within that specific group once.</p></details><details class='card2'><summary>What is the space complexity for maintaining a running total across a partition?</summary><p>O(k) where k is the size of the current partition, needed to store intermediate cumulative values.</p></details><details class='card2'><summary>What is the most common bug when using PARTITION BY?</summary><p>Forgetting to include PARTITION BY, causing aggregates to calculate over the entire table instead of specific groups.</p></details><details class='card2'><summary>How does adding ORDER BY change a window function like SUM?</summary><p>It calculates a cumulative sum (running total) sequentially within each partition rather than a simple group total.</p></details><details class='card2'><summary>Follow-up: How do you exclude the current row from a &#x27;same group&#x27; comparison?</summary><p>Use LAG or LEAD to shift values, allowing comparison of the current row against its immediate neighbor in the partition.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
