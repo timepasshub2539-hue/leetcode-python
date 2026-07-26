@@ -1,0 +1,202 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 16: Stop Using Subqueries (Try This Pattern Instead) — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-16-ctes-common-table-expressions-with
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-les">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/sql-lesson-16-ctes-common-table-expressions-with.html">
+<meta property="og:title" content="Lesson 16: Stop Using Subqueries (Try This Pattern Instead) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-16-ctes-common-table-expressions-with
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-les">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson 16: Stop Using Subqueries (Try This Pattern Instead)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>1. Introduction: The Spaghetti Problem and the Modular Solution</h2>
+<p>There is a distinct smell that every senior software engineer recognizes instantly: the smell of unmanageable complexity. In the world of relational databases, this smell often manifests as "spaghetti queries." These are massive blocks of SQL code where subqueries nest inside subqueries, filtering criteria repeat endlessly, and the logic flows from left to right like a tangled mess of wires.</p>
+<p>When you find yourself rewriting the same join condition five times or trying to remember which filter applied in step three versus step four, you have hit a wall. Interviewers love these scenarios because they test not just your ability to retrieve data, but your ability to architect a solution that is maintainable and readable. They want to see if you can break a monolithic problem into smaller, manageable pieces.</p>
+<p>That specific pattern of decomposition? That is the power of <strong>Common Table Expressions (CTEs)</strong>.</p>
+<p>In this lesson, we aren't just learning syntax; we are adopting a philosophy of modular thinking. We will explore how CTEs act as temporary named tables that exist only for the duration of your query. By defining logic in a step-by-step fashion before joining them into a final result, you transform opaque logic into clear documentation. Whether you are preparing for a technical interview or optimizing production SQL pipelines, mastering CTEs is the single most impactful shift you can make to improve your code quality today.</p>
+<h2>2. Problem Overview</h2>
+<p>Imagine you are tasked with generating a report on employee performance. You need to calculate metrics based on departments, roll up sales figures from multiple tables, and then find employees who exceed a specific threshold in their hierarchy.</p>
+<p>If you tried to do this without a structured approach, you might end up with a query that looks like this (hypothetically):</p>
+<pre><code class="language-sql">SELECT e.name, d.dept_name,
+    SUM(s.amount) as total_sales
+FROM sales s
+JOIN employees e ON e.id = s.emp_id
+JOIN departments d ON e.dept_id = d.id
+WHERE s.amount &gt; 1000
+    AND e.manager_id IN (
+        SELECT emp2.id
+        FROM employees emp2
+        WHERE emp2.level &gt; 3
+    )
+GROUP BY e.name, d.dept_name;
+</code></pre>
+<p>This works, but notice the repetition of join conditions and the difficulty of debugging the logic flow. If you need to add another filter for "Year 2023", you have to hunt through multiple places.</p>
+<p>The challenge is to restructure this so that we can define intermediate results—like filtering high-level managers or pre-calculating sales totals—and treat them as distinct entities before combining them. This is exactly what a Common Table Expression allows us to do. It lets us say, "First, let's identify the elite managers," and then "Next, let's find the big sellers," and finally "Combine them."</p>
+<h2>3. Example</h2>
+<p>To visualize this, imagine we have three tables: <code>Employees</code>, <code>Departments</code>, and <code>Sales</code>.</p>
+<p><strong>Input Data Scenario:</strong>
+We want to list all employees who are either in the 'Engineering' department OR are managers of more than 5 direct reports.</p>
+<p><strong>Standard Approach (Messy):</strong>
+You might try using a massive <code>OR</code> clause with multiple joins or nested subqueries inside the <code>WHERE</code> condition, making it hard to read.</p>
+<p><strong>CTE Approach (Clean):</strong>
+1.  <strong>Step 1 (CTE A):</strong> Create a list of employees in Engineering.
+2.  <strong>Step 2 (CTE B):</strong> Create a list of employees who have more than 5 reports.
+3.  <strong>Step 3 (Main Query):</strong> Combine the results of Step 1 and Step 2 using <code>UNION</code> or <code>IN</code>.</p>
+<p>By defining these steps first, we separate the "what" from the "how."</p>
+<h2>4. Intuition: The Kitchen Analogy</h2>
+<p>The most effective way to understand a CTE is to imagine you are cooking a complex multi-course meal for a restaurant.</p>
+<p>Think of your SQL query as the final plating process.
+*   <strong>Without CTEs:</strong> You might try chopping onions, dicing carrots, and mincing garlic all at the same time while stirring a pot of soup boiling on the stove. If you make a mistake with the onions, you have to stop the whole process. It's chaotic.
+*   <strong>With CTEs:</strong> You use labeled bowls. You set aside your chopped onions in a bowl labeled <code>Prepped_Onions</code>. You set aside your cooked carrots in a bowl labeled <code>Cooked_Carrots</code>.</p>
+<p>When it's time to assemble the final dish, you don't go back to the raw vegetables or the knife block. You simply reach into your bowl of <code>Prepped_Onions</code> and use them. If you need more onions later, you look at that same bowl.</p>
+<p>In SQL terms:
+*   The <strong>Bowl</strong> is the CTE.
+*   The <strong>Recipe Step</strong> is the query definition inside the <code>WITH</code> clause.
+*   The <strong>Final Dish</strong> is your main <code>SELECT</code> statement that pulls from the bowls.</p>
+<p>This separation of concerns is why senior engineers love CTEs. It turns a complex, monolithic logic flow into a linear series of readable steps.</p>
+<h2>5. Brute Force Solution: Nested Subqueries</h2>
+<p>Before we dive into CTEs, let's look at how you might have solved this before knowing the trick. We call this the "Brute Force" approach because it relies on repeating logic or deeply nesting queries.</p>
+<p><strong>Idea:</strong> Calculate everything you need inside the final <code>SELECT</code> or <code>WHERE</code> clause using nested subqueries.
+<strong>Algorithm:</strong> Identify every unique filter or aggregation needed and embed it directly into the main query's conditions.
+<strong>Advantages:</strong> No special syntax required; standard SQL works everywhere.
+<strong>Disadvantages:</strong>
+1.  <strong>Readability:</strong> As you nest deeper (e.g., <code>SELECT ... WHERE ... IN (...) AND ... IN (...)</code>), the code becomes unreadable quickly.
+2.  <strong>Debugging:</strong> You cannot inspect the intermediate result of a subquery without executing it separately. If the logic is wrong, you don't know which part caused the failure until the very end.
+3.  <strong>Repetition:</strong> If two tables share the same join condition, you repeat yourself, violating the DRY (Don't Repeat Yourself) principle.</p>
+<p><strong>Complexity:</strong> The algorithmic complexity remains O(N), but the <em>cognitive</em> complexity skyrockets as nesting depth increases.</p>
+<h2>6. Optimal Solution: Structured Common Table Expressions (CTEs)</h2>
+<p>The optimal solution is to extract intermediate logic into named CTEs before the final selection.</p>
+<p><strong>Step-by-Step Approach:</strong>
+1.  <strong>Define with <code>WITH</code></strong>: Start your query with the <code>WITH</code> keyword. This signals the database that a temporary result set is coming up.
+2.  <strong>Name Your Logic</strong>: Create an alias (e.g., <code>Prepped_Onions</code>, or <code>High_Performers</code>).
+3.  <strong>Isolate Complexity</strong>: Write the logic for each distinct part of your business rule in its own block. You can filter, aggregate, and join as needed here.
+4.  <strong>Reference Clearly</strong>: In your final <code>SELECT</code> statement, reference these named temporary tables just like you would a standard database table.</p>
+<p><strong>Why this works:</strong> The database optimizer is generally smart enough to merge CTEs efficiently, but more importantly, <em>you</em> become smart enough to understand the data flow instantly. You are essentially writing pseudo-code that happens to be executable SQL.</p>
+<h2>7. Python Code (SQL Implementation)</h2>
+<p>While CTEs are a SQL feature, we will write them in standard ANSI-SQL syntax which works across PostgreSQL, MySQL (8.0+), Oracle, and Snowflake. We will assume a generic <code>employees</code> table structure for this example.</p>
+<pre><code class="language-python">import psycopg2
+
+# Connection setup (simulated for Python context)
+conn = psycopg2.connect(host=&quot;localhost&quot;, database=&quot;company_db&quot;)
+cur = conn.cursor()
+
+# SQL Query using Common Table Expressions
+query = &quot;&quot;&quot;
+WITH EngineeringTeam AS (
+    -- Step 1: Define the Engineering Team
+    SELECT e.emp_id, e.name, e.salary
+    FROM employees e
+    WHERE e.department = 'Engineering'
+),
+
+HighLevelManagers AS (
+    -- Step 2: Define Managers with many reports (Intermediate Logic)
+    SELECT e.emp_id, e.name, e.level
+    FROM employees e
+    JOIN employee_reports r ON e.emp_id = r.manager_id
+    GROUP BY e.emp_id, e.name, e.level
+    HAVING COUNT(r.report_id) &gt; 5
+),
+
+CombinedHighValue AS (
+    -- Step 3: Combine logic or prepare for final join
+    SELECT 'Engineering' as category, emp_id, name, salary FROM EngineeringTeam
+    UNION ALL
+    SELECT 'Manager' as category, emp_id, name, salary 
+        FROM HighLevelManagers
+)
+
+-- Final Selection
+SELECT * FROM CombinedHighValue
+ORDER BY category, salary DESC;
+&quot;&quot;&quot;
+
+# Execute and fetch results
+cur.execute(query)
+results = cur.fetchall()
+
+for row in results:
+    print(row)
+
+cur.close()
+conn.close()
+</code></pre>
+<h2>8. Code Walkthrough</h2>
+<p>Let's dissect the Python script and SQL logic line by line.</p>
+<ul>
+<li><strong><code>WITH EngineeringTeam AS (...)</code></strong>: We declare a CTE named <code>EngineeringTeam</code>. The <code>AS</code> keyword is optional but recommended for clarity. Inside the parentheses, we define the query that populates this "virtual table." Note that we select <code>emp_id</code>, <code>name</code>, and <code>salary</code>.</li>
+<li><strong><code>WHERE e.department = 'Engineering'</code></strong>: We filter strictly here. If a row doesn't match, it disappears from the <code>EngineeringTeam</code> CTE immediately.</li>
+<li><strong><code>HighLevelManagers AS (...)</code></strong>: This is our second named table. Here we perform a <code>JOIN</code> with <code>employee_reports</code>. Crucially, we use <code>GROUP BY</code> and <code>HAVING</code>. This aggregation happens inside the CTE definition, isolating the logic from the final output.</li>
+<li><strong><code>CombinedHighValue AS (...)</code></strong>: This CTE combines our previous two results. We use <code>UNION ALL</code> to merge them. Notice we added a <code>category</code> column here to distinguish them in the final output. This is a great place to normalize your data before the final step.</li>
+<li><strong>Final <code>SELECT * FROM CombinedHighValue</code></strong>: Now, this looks like any standard SQL query! You are selecting from a table you defined yourself. The complexity is hidden behind the modular names we chose earlier.</li>
+</ul>
+<h2>9. Dry Run: Walking Through an Example</h2>
+<p>Let's trace a dry run with simplified data to see how the logic flows.</p>
+<p><strong>Scenario:</strong>
+*   <strong>Employee A</strong>: Department='Engineering', Level=2, Reports=3.
+*   <strong>Employee B</strong>: Department='Sales', Level=5, Reports=8 (Manager).
+*   <strong>Employee C</strong>: Department='HR', Level=10, Reports=0.</p>
+<p><strong>Execution Flow:</strong>
+1.  <strong>CTE <code>EngineeringTeam</code> Runs First:</strong>
+    *   Scans <code>employees</code> table.
+    *   Filters for <code>Department = 'Engineering'</code>.
+    *   Finds Employee A.
+    *   Stores {A, Engineering, ...} in memory.
+2.  <strong>CTE <code>HighLevelManagers</code> Runs Second:</strong>
+    *   Joins <code>employees</code> and <code>employee_reports</code>.
+    *   Groups by manager.
+    *   Checks <code>HAVING COUNT &gt; 5</code>.
+    *   Finds Employee B (8 reports). Employee A is excluded (3 reports).
+    *   Stores {B, Manager, ...} in memory.
+3.  <strong>CTE <code>CombinedHighValue</code> Runs Third:</strong>
+    *   Takes the result of Step 1 (Employee A) and Step 2 (Employee B).
+    *   Labels them 'Engineering' and 'Manager'.
+4.  <strong>Final Query Executes:</strong>
+    *   Scans the temporary result set of Step 3.
+    *   Returns rows for A and B, sorted by category then salary.</p>
+<p><strong>Result:</strong> Employee A and Employee B are returned. Employee C is never seen by the final query because they failed the specific criteria in their respective CTEs early on.</p>
+<h2>10. Complexity Analysis</h2>
+<p>One of the biggest questions regarding CTEs is performance. Does this "virtual table" overhead slow us down?</p>
+<ul>
+<li><strong>Time Complexity:</strong> Theoretically, adding a CTE adds a linear factor to the parsing and planning phase (O(N) relative to the number of steps). However, modern SQL optimizers (like in PostgreSQL or Snowflake) are very smart. They often "flatten" the query plan, executing the necessary sub-queries without actually creating physical temporary tables unless forced. The execution time is usually comparable to a flattened nested query, but with the benefit of logical clarity.</li>
+<li><strong>Space Complexity:</strong> Since CTEs are temporary result sets, they hold data in memory (or disk buffers) during execution. If you create a massive CTE without limits, you increase memory pressure. This is why we must be careful not to materialize huge intermediate datasets unnecessarily.</li>
+</ul>
+<h2>11. Alternative Solutions: Recursion and Temporary Tables</h2>
+<p><strong>Alternative 1: Recursive CTEs</strong>
+Sometimes, your data is hierarchical (an org chart). You cannot solve this with standard CTEs easily. You need a <strong>Recursive CTE</strong>. This looks like our standard CTE but adds a recursive step that references the CTE name itself.</p>
+<ul>
+<li><em>Structure:</em> <code>WITH RECURSIVE cte AS (SELECT ... UNION ALL SELECT ... FROM cte)</code></li>
+<li><em>Use Case:</em> Finding all subordinates of a CEO, or traversing a graph structure.</li>
+<li><em>Warning:</em> Always ensure your recursive query has an <code>EXIT</code> condition (usually in the <code>WHERE</code> clause of the recursive part) to prevent infinite loops that crash the database server.</li>
+</ul>
+<p><strong>Alternative 2: Temporary Tables (<code>CREATE TEMP TABLE</code>)</strong>
+In some legacy systems or very complex reports, you might create a physical temporary table before the main query.
+*   <em>Pros:</em> Can be indexed explicitly; exists until you drop it.
+*   <em>Cons:</em> Requires extra steps (Create -&gt; Insert -&gt; Drop) which increases boilerplate code and transaction overhead. CTEs are generally preferred for single-query readability unless you need to persist the intermediate data across multiple distinct queries in the same transaction.</p>
+<h2>12. Edge Cases and Common Mistakes</h2>
+<p>Even senior engineers make mistakes with CTEs. Here is how to avoid them:</p>
+<ol>
+<li><strong>Missing Semicolons:</strong> In many tools (like SQL Server Management Studio or specific IDE configurations), you must end a <code>WITH</code> statement with a semicolon <code>;</code>. MySQL usually doesn't require this, but being explicit never hurts in cross-tool environments.</li>
+<li><strong>Reserved Keywords as Names:</strong> Never name your CTE <code>Order</code>, <code>Group</code>, or <code>Select</code> without quoting it (e.g., <code>"Order"</code>). This will crash the parser. Use unique names like <code>EmployeeData</code> or <code>SalesMetrics</code>.</li>
+<li><strong>Circular References:</strong> You cannot reference a table in your main query inside its own CTE definition if that dependency hasn't been established yet. The flow must be Definition -&gt; Usage.</li>
+<li><strong>Over-Engineering:</strong> Don't use a CTE for a simple join of three tables if it adds unnecessary boilerplate. If the query is clean as is, keep it simple. Clarity wins over complexity.</li>
+<li><strong>Assuming Performance Gains:</strong> A CTE doesn't always mean faster execution. Sometimes a flat query allows the optimizer to use an index scan more effectively. Always test your execution plan before defaulting to CTEs for massive datasets.</li>
+</ol>
+<h2>13. Interview Questions and Similar Problems</h2>
+<p>If you are preparing for a coding interview, here are the likely follow-ups:
+*   "Write a SQL query to find employees who earn more than their managers." (Classic Self-Join problem, solvable with CTEs or just direct joins).
+*   "Find all duplicate emails in a table." (Group By problem, excellent for testing <code>HAVING COUNT &gt; 1</code> logic inside a CTE).
+*   "Generate a report of monthly sales trends using window functions." (CTEs often used to pre-aggregate data before applying <code>LAG()</code> or <code>LEAD()</code> functions).</p>
+<p><strong>Similar Problems:</strong>
+*   <strong>LeetCode 570: Manage Employees:</strong> Uses self-joins, but a CTE can make the logic cleaner.
+*   <strong>LeetCode 2189: Constructing a Sentence:</strong> While wordy in SQL, demonstrates breaking complex string manipulation into steps (CTE style).</p>
+<h2>14. Key Takeaways</h2>
+<p>To summarize what we have built today:
+1.  <strong>Modular Logic:</strong> CTEs allow you to define temporary, named result sets that exist only for the duration of your query.
+2.  <strong>Readability First:</strong> They are essential for transforming complex queries into readable blocks of logic, effectively turning "spaghetti" into a structured flowchart.
+3.  <strong>Strategic Usage:</strong> Use CTEs to break down big problems into small pieces, but avoid them if the join is straightforward and involves only two or three tables.
+4.  <strong>Recursion Power:</strong> For hierarchical data (org charts), recursive CTEs are your go-to tool for traversing relationships safely.
+5.  **</p></article>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
