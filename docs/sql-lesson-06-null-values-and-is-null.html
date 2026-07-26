@@ -1,0 +1,580 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SQL Lesson 6: Why NULL = NULL Never Returns True — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-06-null-values-and-is-null
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson-06-null">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/sql-lesson-06-null-values-and-is-null.html">
+<meta property="og:title" content="SQL Lesson 6: Why NULL = NULL Never Returns True — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-06-null-values-and-is-null
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson-06-null">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>SQL Lesson 6: Why NULL = NULL Never Returns True</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h1>SEO PACKAGE</h1>
+<h2>1. SEO Title</h2>
+<p>Why <code>NULL = NULL</code> Never Returns TRUE in SQL (And How to Handle Missing Data Correctly)</p>
+<h2>2. SEO Subtitle</h2>
+<p>Understand three-valued logic, the <code>IS NULL</code> predicate, and <code>COALESCE</code> so missing values stop silently breaking your queries.</p>
+<h2>3. Featured Quote</h2>
+<blockquote>
+<p>NULL isn't zero and it isn't empty — it's the database honestly admitting, "I don't know." The moment you treat "unknown" like a value, your <code>WHERE</code> clause starts lying to you.</p>
+</blockquote>
+<h2>4. Meta Description</h2>
+<p>Learn why <code>NULL = NULL</code> returns UNKNOWN in SQL, how three-valued logic breaks WHERE clauses, and how to use IS NULL, IS NOT NULL, and COALESCE correctly.</p>
+<h2>5. URL Slug</h2>
+<p><code>sql-null-equals-null-is-null-coalesce</code></p>
+<h2>6. Keywords</h2>
+<p>SQL NULL, NULL = NULL, IS NULL, IS NOT NULL, three-valued logic, COALESCE SQL, SQL missing data, WHERE clause NULL, SQL unknown value, handling NULL in SQL, SQL for beginners, database null handling, SQL query filtering, SQL arithmetic NULL, SQL interview questions, learn SQL, relational databases, data cleaning SQL, SQL predicates, SQL operators</p>
+<h2>7. Tags</h2>
+<p>SQL, Database, NULL, Data Analytics, Coding Interview, Backend, Data Engineering, SQL Basics, Learn To Code, Relational Databases, Query Optimization, Data Cleaning, Software Engineering, Developer Tutorial</p>
+<hr />
+<h1>WHY <code>NULL = NULL</code> NEVER RETURNS TRUE IN SQL</h1>
+<h2>8. Introduction</h2>
+<p>Almost every developer meets <code>NULL</code> on their first day writing SQL, and almost every developer misunderstands it for a while after that. You write what looks like a perfectly reasonable query, run it, and get back an empty result set — no error, no warning, just silence. Nothing feels worse than a query that is <em>confidently wrong</em>.</p>
+<p><code>NULL</code> is worth mastering because it sits at the intersection of correctness and data quality. Interviewers love it precisely because it separates people who memorized syntax from people who understand how the relational model actually reasons about data. When someone asks you, "What does <code>WHERE phone = NULL</code> return?" they're really asking, "Do you understand three-valued logic?"</p>
+<p>Getting <code>NULL</code> right matters far beyond interviews. Real production databases are full of missing values — optional form fields, sensors that failed to report, joins that didn't match. If you treat those gaps as zeros or empty strings, your reports quietly drift away from the truth. This lesson gives you the small, exact vocabulary you need so missing data stops surprising you.</p>
+<h2>9. Problem Overview</h2>
+<p>In SQL, <code>NULL</code> is a marker that means <strong>the value is unknown or missing</strong>. That is the entire idea, but the consequences are large.</p>
+<p>The trap is that <code>NULL</code> is not a normal value, so it does not behave like one. It is:</p>
+<ul>
+<li><strong>not zero</strong> — zero is a number you <em>know</em></li>
+<li><strong>not an empty string</strong> <code>''</code> — an empty string is text you <em>know</em> is blank</li>
+<li><strong>not FALSE</strong> — FALSE is a definite answer</li>
+</ul>
+<p><code>NULL</code> is the absence of knowledge. Because you can't meaningfully compare "unknown" to anything using <code>=</code>, SQL refuses to give you a clean TRUE or FALSE. Instead it introduces a third truth value: <strong>UNKNOWN</strong>. Your job is to learn the two special predicates (<code>IS NULL</code>, <code>IS NOT NULL</code>) that test for missing data correctly, and the function (<code>COALESCE</code>) that substitutes a usable value when one is missing.</p>
+<p>Two quick definitions before we go further, because we'll lean on them:</p>
+<ul>
+<li>A <strong>predicate</strong> is a test that answers true or false — for example, "is this row rented out?"</li>
+<li>An <strong>operator</strong> is a symbol, like <code>=</code>, that compares two things.</li>
+</ul>
+<p>The core problem is this: the <code>=</code> operator cannot correctly test for <code>NULL</code>, and beginners keep trying to make it.</p>
+<h2>10. Example</h2>
+<p>Imagine a <code>customers</code> table where some people never entered a phone number:</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>name</th>
+<th>phone</th>
+<th>balance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Aisha</td>
+<td>555-0100</td>
+<td>120</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Ben</td>
+<td>NULL</td>
+<td>0</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Carmen</td>
+<td>555-0199</td>
+<td>NULL</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Dev</td>
+<td>NULL</td>
+<td>45</td>
+</tr>
+</tbody>
+</table>
+<p>Look closely at rows 2 and 3, because they encode <em>three different meanings</em>:</p>
+<ul>
+<li><strong>Ben's balance is <code>0</code></strong> — we know for certain he owes nothing.</li>
+<li><strong>Ben's phone is <code>NULL</code></strong> — we never captured a number; it's unknown.</li>
+<li><strong>Carmen's balance is <code>NULL</code></strong> — we don't actually know what she owes; the field was never filled in.</li>
+</ul>
+<p>If you collapse all of these into "0" or "blank," you lose information. A <code>0</code> balance is a fact. A <code>NULL</code> balance is a question mark. Reporting them the same way is how a finance dashboard ends up subtly wrong.</p>
+<p>Now the classic mistake:</p>
+<pre><code class="language-sql">SELECT name FROM customers WHERE phone = NULL;
+</code></pre>
+<p>You'd expect Ben and Dev. You get <strong>zero rows</strong> — even though two rows genuinely have a <code>NULL</code> phone. Let's understand why.</p>
+<h2>11. Intuition</h2>
+<p>Here's the mental shift that makes everything click.</p>
+<p>In everyday life, a yes/no question has two answers. SQL adds a third: <strong>UNKNOWN</strong>. And it adds it for a very honest reason.</p>
+<p>Ask yourself: <em>"Is an unknown phone number equal to an unknown phone number?"</em> You can't answer that. If you don't know either value, you can't claim they're equal, and you can't claim they're different. The only truthful answer is "I don't know" — UNKNOWN.</p>
+<p>So any comparison involving <code>NULL</code> — <code>phone = NULL</code>, <code>phone &lt;&gt; NULL</code>, even <code>NULL = NULL</code> — evaluates to UNKNOWN, not TRUE and not FALSE.</p>
+<p>Now layer on the second fact, and the mystery dissolves completely:</p>
+<blockquote>
+<p><strong>A <code>WHERE</code> clause keeps a row only when its condition is TRUE. UNKNOWN is not TRUE, so the row is dropped.</strong></p>
+</blockquote>
+<p>That single rule explains nearly every <code>NULL</code> surprise you'll ever hit. <code>WHERE phone = NULL</code> produces UNKNOWN for <em>every</em> row — including the ones that truly are <code>NULL</code> — so every row is filtered out. The rows you were hunting for slip past precisely because you asked the question the wrong way.</p>
+<p>An experienced engineer internalizes this as a reflex: <em>the second I compare against <code>NULL</code> with an operator, I've already lost.</em> That reflex is what pushes you toward the correct tools.</p>
+<h2>12. Brute Force Solution</h2>
+<p><strong>Idea:</strong> The naive approach is to reach for the equality operator, the same tool you use for every other comparison, and write <code>= NULL</code> or <code>&lt;&gt; NULL</code>.</p>
+<p><strong>Algorithm:</strong>
+1. Filter with <code>WHERE phone = NULL</code> to find missing phones.
+2. Filter with <code>WHERE phone &lt;&gt; NULL</code> to find present phones.</p>
+<pre><code class="language-sql">-- Both of these are WRONG
+SELECT name FROM customers WHERE phone = NULL;    -- returns nothing
+SELECT name FROM customers WHERE phone &lt;&gt; NULL;   -- also returns nothing
+</code></pre>
+<p><strong>Advantages:</strong>
+- It's the intuitive first guess — it reuses syntax you already know.
+- There's genuinely nothing else to learn to <em>write</em> it.</p>
+<p><strong>Disadvantages:</strong>
+- It is silently, dangerously wrong. No error is raised.
+- Both queries return an empty set, so you might wrongly conclude "no missing data exists."
+- It fails identically across every SQL dialect, so switching databases won't save you.</p>
+<p><strong>Time complexity:</strong> O(n) — a full scan.
+<strong>Space complexity:</strong> O(1).</p>
+<p>The complexity looks fine. The <em>correctness</em> is broken, which is the only thing that matters.</p>
+<h2>13. Optimal Solution</h2>
+<p>The fix is to stop using operators and start using <strong>predicates designed for missing data</strong>.</p>
+<p><strong><code>IS NULL</code></strong> tests whether a value is missing and returns a real TRUE or FALSE — never UNKNOWN.</p>
+<p><strong><code>IS NOT NULL</code></strong> is the exact inverse: TRUE when a value is present.</p>
+<p>Here's how the three truth values behave, so you can see why the predicates escape the trap:</p>
+<table>
+<thead>
+<tr>
+<th>Expression</th>
+<th>Result</th>
+<th>Kept by WHERE?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>phone = NULL</code></td>
+<td>UNKNOWN</td>
+<td>❌ No</td>
+</tr>
+<tr>
+<td><code>phone &lt;&gt; NULL</code></td>
+<td>UNKNOWN</td>
+<td>❌ No</td>
+</tr>
+<tr>
+<td><code>phone IS NULL</code></td>
+<td>TRUE/FALSE</td>
+<td>✅ When TRUE</td>
+</tr>
+<tr>
+<td><code>phone IS NOT NULL</code></td>
+<td>TRUE/FALSE</td>
+<td>✅ When TRUE</td>
+</tr>
+</tbody>
+</table>
+<p>There's a second front where <code>NULL</code> causes damage: <strong>arithmetic</strong>. Any calculation touching <code>NULL</code> produces <code>NULL</code>, because unknown plus anything is still unknown:</p>
+<pre><code>100 + NULL   -&gt;  NULL
+balance * 2  -&gt;  NULL   (when balance is NULL)
+SUM(balance) -&gt;  ignores NULLs, but a single NULL in a row-level formula poisons that row
+</code></pre>
+<p>One missing value can wipe out an entire computed column and quietly deflate a total.</p>
+<p>The rescue is <strong><code>COALESCE</code></strong>, which reads like: <em>"use this; if it's missing, use that instead."</em> It walks a list of expressions left to right and returns the first one that isn't <code>NULL</code>:</p>
+<pre><code>COALESCE(phone, 'No phone on file')
+COALESCE(balance, 0)
+</code></pre>
+<p>Now you can filter with <code>IS NULL</code> and patch with <code>COALESCE</code>. They are not competitors — one <em>finds</em> missing data, the other <em>fills</em> it.</p>
+<h2>14. Python Code</h2>
+<p><code>NULL</code>-style logic isn't unique to SQL — the same "unknown propagates" behavior shows up whenever you model missing data. Here's a small, clean Python simulation that mirrors SQL's three-valued logic and the <code>IS NULL</code> / <code>COALESCE</code> tools, so you can <em>feel</em> the semantics in code you can run.</p>
+<pre><code class="language-python">&quot;&quot;&quot;Simulate SQL's three-valued NULL logic in Python.&quot;&quot;&quot;
+
+from typing import Any, Optional
+
+UNKNOWN = &quot;UNKNOWN&quot;  # SQL's third truth value
+
+
+def sql_equals(a: Any, b: Any) -&gt; str:
+    &quot;&quot;&quot;Mimic SQL '=': any comparison touching NULL yields UNKNOWN.&quot;&quot;&quot;
+    if a is None or b is None:
+        return UNKNOWN
+    return str(a == b).upper()  # 'TRUE' or 'FALSE'
+
+
+def is_null(value: Any) -&gt; bool:
+    &quot;&quot;&quot;Mimic SQL 'IS NULL' — always a real True/False, never UNKNOWN.&quot;&quot;&quot;
+    return value is None
+
+
+def coalesce(*values: Any) -&gt; Optional[Any]:
+    &quot;&quot;&quot;Return the first non-NULL value, like SQL COALESCE.&quot;&quot;&quot;
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
+def where(rows: list[dict], predicate) -&gt; list[dict]:
+    &quot;&quot;&quot;A WHERE clause keeps a row only when the predicate is exactly True.&quot;&quot;&quot;
+    return [row for row in rows if predicate(row) is True]
+
+
+if __name__ == &quot;__main__&quot;:
+    customers = [
+        {&quot;name&quot;: &quot;Aisha&quot;,  &quot;phone&quot;: &quot;555-0100&quot;, &quot;balance&quot;: 120},
+        {&quot;name&quot;: &quot;Ben&quot;,    &quot;phone&quot;: None,       &quot;balance&quot;: 0},
+        {&quot;name&quot;: &quot;Carmen&quot;, &quot;phone&quot;: &quot;555-0199&quot;, &quot;balance&quot;: None},
+        {&quot;name&quot;: &quot;Dev&quot;,    &quot;phone&quot;: None,       &quot;balance&quot;: 45},
+    ]
+
+    # WRONG: '= NULL' evaluates to UNKNOWN for every row -&gt; nothing matches.
+    wrong = where(customers, lambda r: sql_equals(r[&quot;phone&quot;], None) == &quot;TRUE&quot;)
+    assert wrong == [], &quot;phone = NULL must silently return no rows&quot;
+
+    # RIGHT: IS NULL finds the truly missing phones.
+    missing = where(customers, lambda r: is_null(r[&quot;phone&quot;]))
+    assert [r[&quot;name&quot;] for r in missing] == [&quot;Ben&quot;, &quot;Dev&quot;]
+
+    # COALESCE patches missing balances with 0 for a safe total.
+    total = sum(coalesce(r[&quot;balance&quot;], 0) for r in customers)
+    assert total == 165  # 120 + 0 + 0 + 45
+
+    print(&quot;Missing phones :&quot;, [r[&quot;name&quot;] for r in missing])
+    print(&quot;Safe total     :&quot;, total)
+</code></pre>
+<p>Running it prints the two customers with missing phones and a correct total of <code>165</code>, and the <code>assert</code>s fail loudly if any of the <code>NULL</code> rules are broken.</p>
+<h2>15. Code Walkthrough</h2>
+<ul>
+<li><strong><code>sql_equals</code></strong> is the heart of the lesson. The very first thing it checks is whether either operand is <code>None</code> (Python's stand-in for <code>NULL</code>). If so, it returns <code>"UNKNOWN"</code> — never TRUE, never FALSE — exactly like SQL's <code>=</code> operator.</li>
+<li><strong><code>is_null</code></strong> always returns a genuine <code>bool</code>. This is why <code>IS NULL</code> works where <code>=</code> fails: it escapes the three-valued trap entirely.</li>
+<li><strong><code>coalesce</code></strong> loops through its arguments and returns the first that isn't <code>None</code>. If everything is missing, it returns <code>None</code>, matching SQL's behavior when every argument is <code>NULL</code>.</li>
+<li><strong><code>where</code></strong> encodes the rule that makes <code>NULL</code> confusing: <code>if predicate(row) is True</code>. The strict <code>is True</code> check means an <code>"UNKNOWN"</code> result (or anything that isn't literally <code>True</code>) causes the row to be dropped — mirroring how SQL's <code>WHERE</code> discards non-TRUE rows.</li>
+<li>The <strong><code>__main__</code> block</strong> is a self-check. The <code>assert wrong == []</code> line proves the classic bug: comparing with <code>NULL</code> silently returns nothing. The <code>assert missing == ["Ben", "Dev"]</code> line proves the fix.</li>
+</ul>
+<h2>16. Dry Run</h2>
+<p>Let's trace the "find missing phones" query against our four customers using <code>IS NULL</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Row</th>
+<th>phone</th>
+<th><code>is_null(phone)</code></th>
+<th>Kept?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Aisha</td>
+<td><code>555-0100</code></td>
+<td>FALSE</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>Ben</td>
+<td><code>None</code></td>
+<td>TRUE</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Carmen</td>
+<td><code>555-0199</code></td>
+<td>FALSE</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>Dev</td>
+<td><code>None</code></td>
+<td>TRUE</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table>
+<p>Result: <strong>Ben and Dev</strong> — correct.</p>
+<p>Now the same rows with the buggy <code>phone = NULL</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Row</th>
+<th><code>sql_equals(phone, None)</code></th>
+<th><code>== "TRUE"</code>?</th>
+<th>Kept?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Aisha</td>
+<td>UNKNOWN</td>
+<td>No</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>Ben</td>
+<td>UNKNOWN</td>
+<td>No</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>Carmen</td>
+<td>UNKNOWN</td>
+<td>No</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>Dev</td>
+<td>UNKNOWN</td>
+<td>No</td>
+<td>❌</td>
+</tr>
+</tbody>
+</table>
+<p>Result: <strong>nothing</strong>. Every comparison against <code>NULL</code> collapsed to UNKNOWN, so <code>WHERE</code> swept the whole table away — including the rows you wanted.</p>
+<h2>17. Complexity Analysis</h2>
+<p>For a straightforward filtered scan over <code>n</code> rows:</p>
+<ul>
+<li><strong>Time: O(n).</strong> Whether you use <code>= NULL</code> (wrong) or <code>IS NULL</code> (right), the database evaluates the predicate once per row. The predicate is O(1), so the scan dominates. An index on the column can reduce this in practice, but the worst case remains a full scan.</li>
+<li><strong>Space: O(1)</strong> for the evaluation itself (plus O(k) to hold the k matching rows you return).</li>
+</ul>
+<p>The key insight: <strong>correctness and performance are independent here.</strong> The wrong query isn't slow — it's fast and empty. That's what makes it dangerous.</p>
+<h2>18. Alternative Solutions</h2>
+<p>A few reasonable alternatives to <code>COALESCE</code>, and how they compare:</p>
+<ul>
+<li><strong><code>IFNULL(x, y)</code> / <code>ISNULL(x, y)</code></strong> — a two-argument shortcut in MySQL and SQL Server respectively. Fine for a single fallback, but not portable and limited to two values. Prefer <code>COALESCE</code> for cross-dialect code.</li>
+<li><strong><code>NULLIF(a, b)</code></strong> — the reverse tool: it <em>produces</em> <code>NULL</code> when <code>a = b</code>. Handy for turning a sentinel like <code>-1</code> or <code>''</code> back into a proper <code>NULL</code>.</li>
+<li><strong><code>CASE WHEN x IS NULL THEN y ELSE x END</code></strong> — the fully explicit form. <code>COALESCE</code> is essentially syntactic sugar for this; reach for <code>CASE</code> only when the fallback logic is more complex than "first non-null wins."</li>
+</ul>
+<p>For <strong>filtering</strong>, there is no real alternative to <code>IS NULL</code> / <code>IS NOT NULL</code>. They are the only correct predicates for the job.</p>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong>Empty table:</strong> <code>IS NULL</code> correctly returns zero rows — no missing data because there's no data.</li>
+<li><strong>All values NULL:</strong> <code>COALESCE(col, default)</code> returns the default for every row; <code>SUM(col)</code> returns <code>NULL</code> (or <code>0</code> only if you <code>COALESCE</code> it).</li>
+<li><strong>NULL inside <code>IN</code> lists:</strong> <code>x IN (1, 2, NULL)</code> can behave unexpectedly — a non-match becomes UNKNOWN rather than FALSE. Watch <code>NOT IN</code> especially: <code>x NOT IN (1, NULL)</code> returns <em>no rows</em>.</li>
+<li><strong>NULL in <code>JOIN</code> keys:</strong> <code>NULL</code> never equals <code>NULL</code>, so rows with <code>NULL</code> join keys won't match — a common source of "lost" rows.</li>
+<li><strong>NULL with aggregates:</strong> <code>COUNT(col)</code> skips <code>NULL</code>s, but <code>COUNT(*)</code> counts every row. Choose deliberately.</li>
+<li><strong>NULL in <code>ORDER BY</code>:</strong> sort placement (<code>NULLS FIRST</code> / <code>NULLS LAST</code>) varies by database.</li>
+</ul>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Using <code>= NULL</code> or <code>&lt;&gt; NULL</code>.</strong> Both yield UNKNOWN and silently return nothing. Always use <code>IS NULL</code> / <code>IS NOT NULL</code>.</li>
+<li><strong>Treating <code>NULL</code> as <code>0</code> or <code>''</code>.</strong> These are known values; <code>NULL</code> is the absence of one. Conflating them corrupts totals and logic.</li>
+<li><strong>Forgetting arithmetic propagation.</strong> <code>price + NULL</code> is <code>NULL</code>, and one <code>NULL</code> can void an entire computed column. Wrap risky operands in <code>COALESCE</code>.</li>
+<li><strong><code>NOT IN</code> with a <code>NULL</code> in the list.</strong> This can eliminate all rows unexpectedly. Filter <code>NULL</code>s out of the subquery or use <code>NOT EXISTS</code>.</li>
+<li><strong>Assuming <code>COUNT(column)</code> counts every row.</strong> It ignores <code>NULL</code>s; use <code>COUNT(*)</code> when you want the true row count.</li>
+<li><strong>Expecting <code>NULL</code> join keys to match.</strong> They never do — <code>NULL = NULL</code> is UNKNOWN even inside a <code>JOIN</code>.</li>
+</ol>
+<h2>21. Interview Questions</h2>
+<ul>
+<li>What does <code>SELECT * FROM t WHERE col = NULL</code> return, and why?</li>
+<li>Explain three-valued logic. What is the third value and where does it come from?</li>
+<li>What's the difference between <code>NULL</code>, <code>0</code>, and <code>''</code>?</li>
+<li>How does <code>COUNT(col)</code> differ from <code>COUNT(*)</code> when <code>NULL</code>s are present?</li>
+<li>Why can <code>NOT IN</code> with a <code>NULL</code> in the list return zero rows?</li>
+<li>When would you choose <code>COALESCE</code> over <code>CASE</code>? Over <code>IFNULL</code>?</li>
+<li>How does <code>NULL</code> affect an <code>INNER JOIN</code> vs. a <code>LEFT JOIN</code>?</li>
+</ul>
+<h2>22. Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 175 – Combine Two Tables:</strong> a <code>LEFT JOIN</code> where unmatched rows produce <code>NULL</code>s you must handle correctly.</li>
+<li><strong>LeetCode 577 – Employee Bonus:</strong> explicitly requires selecting employees whose bonus <code>IS NULL</code> or is below a threshold — the classic <code>NULL</code>-in-filter trap.</li>
+<li><strong>LeetCode 1148 – Article Views I</strong> and <strong>595 – Big Countries:</strong> filtering practice where careless <code>NULL</code> handling drops valid rows.</li>
+<li><strong>LeetCode 619 – Biggest Single Number:</strong> leans on <code>NULL</code> as the "no result" answer via aggregation.</li>
+</ul>
+<p>They're related because each one punishes the assumption that <code>NULL</code> behaves like an ordinary value in a <code>WHERE</code>, <code>JOIN</code>, or aggregate.</p>
+<h2>23. Key Takeaways</h2>
+<ul>
+<li><code>NULL</code> means <strong>unknown</strong>, not zero and not empty.</li>
+<li>Any comparison with <code>NULL</code> returns <strong>UNKNOWN</strong>, and <code>WHERE</code> keeps only TRUE rows — so <code>= NULL</code> silently returns nothing.</li>
+<li>Use <strong><code>IS NULL</code></strong> and <strong><code>IS NOT NULL</code></strong> to test for missing data. They're your only correct tools.</li>
+<li><code>NULL</code> <strong>propagates through arithmetic</strong> — one missing value voids the whole calculation.</li>
+<li>Use <strong><code>COALESCE</code></strong> to substitute a usable default. <code>IS NULL</code> filters; <code>COALESCE</code> fixes. Keep both.</li>
+</ul>
+<h2>24. Watch the Video</h2>
+<p>Reading the rules is one thing — <em>seeing</em> a query return an empty result set and then watching <code>IS NULL</code> rescue it makes the idea stick. Kai walks through every one of these traps live, with real queries, in Lesson 6 of the SQL series. Watch it here: {LINK}</p>
+<h2>25. About the Series</h2>
+<p>This is part of <strong>Fun with Learning Technology</strong>, a beginner-friendly series that takes one concept at a time and teaches the <em>intuition</em> first — never syntax for its own sake. Each lesson builds on the last, so by the end you're not memorizing SQL, you're reasoning in it. If you're learning databases, algorithms, or backend engineering, follow along from Lesson 1.</p>
+<h2>26. Call To Action</h2>
+<p>If this cleared up <code>NULL</code> for you:</p>
+<ul>
+<li>👍 <strong>Like</strong> the video on YouTube — it genuinely helps the channel grow.</li>
+<li>🔔 <strong>Subscribe</strong> so you catch the next lesson.</li>
+<li>✉️ <strong>Subscribe on Substack</strong> for the written companion to every video.</li>
+<li>💬 <strong>Comment</strong> with the <code>NULL</code> bug that once caught you — we've all got one.</li>
+<li>🔁 <strong>Share</strong> this with a teammate who's still writing <code>= NULL</code>.</li>
+</ul>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>Early in my career I stored a customer's balance as NULL, then spent an afternoon wondering why my totals looked wrong.</p>
+<p>Here's the lesson that fixed it — and it trips up seniors as often as beginners.</p>
+<p>In SQL, NULL doesn't mean zero. It doesn't mean an empty string. It means <em>unknown</em>. The database is honestly telling you: "I never found out what belongs here."</p>
+<p>That distinction matters more than it looks, because SQL uses three-valued logic. Normal life is yes or no. SQL adds a third answer: UNKNOWN. And the instant you compare anything to NULL — even NULL = NULL — you get UNKNOWN, not TRUE and not FALSE.</p>
+<p>Now combine that with one more rule: a WHERE clause keeps a row only when the condition is TRUE.</p>
+<p>So this query:</p>
+<pre><code>WHERE phone = NULL
+</code></pre>
+<p>returns <em>nothing</em> — even the rows that genuinely have a missing phone. No error. No warning. Just a silently empty result set. That's the dangerous part: the query isn't slow, it's confidently wrong.</p>
+<p>The fix is two purpose-built predicates:</p>
+<p>• IS NULL — find the missing values
+• IS NOT NULL — find the present ones</p>
+<p>And when NULL sneaks into arithmetic (100 + NULL = NULL, which can void an entire total), COALESCE steps in to supply a sensible default.</p>
+<p>The mental model that makes it all click: IS NULL is for <em>filtering</em>, COALESCE is for <em>fixing</em>. They're different tools — keep both.</p>
+<p>Master this and missing data stops surprising you.</p>
+<p>What's the NULL bug that once cost you an afternoon?</p>
+<h1>SQL #Database #DataAnalytics #SoftwareEngineering #LearnToCode</h1>
+<h2>Twitter/X Thread</h2>
+<p>1/ <code>NULL = NULL</code> never returns TRUE in SQL.</p>
+<p>This one line of trivia explains 90% of the "why is my query empty?" bugs beginners AND seniors hit.</p>
+<p>Let me fix it for you in 9 tweets. 🧵</p>
+<p>2/ First: what is NULL?</p>
+<p>It is NOT zero.
+It is NOT an empty string ''.
+It means UNKNOWN — the database saying "I never found out what belongs here."</p>
+<p>Zero is a value you know. NULL is the absence of one. Three different animals.</p>
+<p>3/ Normal logic has two answers: TRUE and FALSE.</p>
+<p>SQL adds a third: UNKNOWN.</p>
+<p>And here's the trap — ANY comparison with NULL returns UNKNOWN. Not true, not false. Just… unknown.</p>
+<p>4/ Now the rule that ruins your day:</p>
+<p>A WHERE clause keeps a row ONLY when the condition is TRUE.</p>
+<p>UNKNOWN ≠ TRUE. So UNKNOWN rows quietly vanish.</p>
+<p>5/ Put those together:</p>
+<pre><code>WHERE phone = NULL
+</code></pre>
+<p>returns NOTHING — even the rows that truly have a missing phone.</p>
+<p>No error. No warning. Just a silently empty result. That's the classic beginner trap.</p>
+<p>6/ The fix is a special predicate built for this exact job:</p>
+<pre><code>WHERE phone IS NULL
+</code></pre>
+<p>IS NULL returns a REAL true/false instead of UNKNOWN. Now the missing rows actually show up.</p>
+<p>7/ Need the opposite — only rows that HAVE a phone?</p>
+<pre><code>WHERE phone IS NOT NULL
+</code></pre>
+<p>And never reach for <code>&lt;&gt; NULL</code>. It falls into the same UNKNOWN hole. IS NULL / IS NOT NULL are your only two tools.</p>
+<p>8/ NULL also poisons math:</p>
+<pre><code>100 + NULL  -&gt;  NULL
+</code></pre>
+<p>One missing value can wipe out an entire total before you notice.</p>
+<p>Rescue: COALESCE(x, 0) → "use x, but if it's missing, use 0 instead."</p>
+<p>9/ The mental model:</p>
+<p>• IS NULL → for FILTERING missing rows
+• COALESCE → for FIXING missing values</p>
+<p>Different jobs. Keep both.</p>
+<p>Master NULL and missing data stops surprising you. Full lesson 👇 {LINK}</p>
+<h2>Facebook Post</h2>
+<p>Ever written a SQL query that returned zero rows — no error, just… nothing — and had no idea why? 😅</p>
+<p>There's a good chance NULL was the culprit.</p>
+<p>Here's the quick version: in SQL, NULL doesn't mean zero and it doesn't mean blank. It means <em>unknown</em>. And because you can't compare "unknown" to anything, writing <code>WHERE phone = NULL</code> returns NOTHING — even the rows that really do have a missing phone!</p>
+<p>The fix is simple once you know it: use <code>IS NULL</code> and <code>IS NOT NULL</code> to find missing data, and <code>COALESCE</code> to fill in a sensible default. That's the whole trick.</p>
+<p>I broke it all down step by step in Lesson 6 of the SQL series — real queries, real "aha" moments. If you're learning SQL (or you've ever been burned by NULL), this one's for you. 👇 {LINK}</p>
+<h2>Reddit Summary</h2>
+<p><strong>Why <code>NULL = NULL</code> never returns TRUE in SQL — a clean mental model</strong></p>
+<p>A lot of "my query returns no rows and I don't know why" questions come down to one thing: how NULL behaves. Sharing the model that finally made it click for me.</p>
+<ul>
+<li><strong>NULL means <em>unknown</em>.</strong> Not zero, not <code>''</code>. Those are values you <em>know</em>; NULL is the absence of one.</li>
+<li><strong>SQL uses three-valued logic:</strong> TRUE, FALSE, and UNKNOWN. Any comparison involving NULL — including <code>NULL = NULL</code> — evaluates to UNKNOWN.</li>
+<li><strong>WHERE keeps a row only when the condition is TRUE.</strong> So <code>WHERE col = NULL</code> returns nothing, because every comparison is UNKNOWN, not TRUE — even for rows that genuinely are NULL.</li>
+<li><strong>Correct predicates:</strong> <code>IS NULL</code> and <code>IS NOT NULL</code>. These return a real true/false and escape the trap. <code>&lt;&gt; NULL</code> does not — same UNKNOWN hole.</li>
+<li><strong>NULL propagates through arithmetic:</strong> <code>100 + NULL = NULL</code>, so one missing value can void a total.</li>
+<li><strong>COALESCE(col, default)</strong> returns the first non-NULL argument — good for defaults and for stopping NULL from poisoning sums.</li>
+</ul>
+<p>Rule of thumb: <code>IS NULL</code> is for <em>filtering</em> (find/exclude missing rows), <code>COALESCE</code> is for <em>fixing</em> (swap missing for usable). Different tools, keep both.</p>
+<p>Gotchas worth knowing: <code>NOT IN (…, NULL)</code> can return zero rows; <code>COUNT(col)</code> skips NULLs while <code>COUNT(*)</code> doesn't; NULL join keys never match.</p>
+<p>Curious how others explain three-valued logic to newer devs — what analogy worked for you?</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># SQL: Why `NULL = NULL` Never Returns TRUE
+
+Lesson 6 of the SQL series — understanding NULL, three-valued logic,
+`IS NULL` / `IS NOT NULL`, and `COALESCE`.
+
+## Problem
+
+In SQL, `NULL` marks a **missing or unknown** value. It is not `0` and not `''`.
+Because you can't meaningfully compare &quot;unknown&quot; to anything, comparisons using
+`=` or `&lt;&gt;` against `NULL` return **UNKNOWN** — never TRUE. Since a `WHERE`
+clause keeps only rows where the condition is TRUE, queries like
+`WHERE col = NULL` silently return **no rows** — even rows that truly are NULL.
+
+## Intuition
+
+- Everyday logic: TRUE / FALSE.
+- SQL logic: TRUE / FALSE / **UNKNOWN**.
+- Any comparison touching `NULL` → UNKNOWN.
+- `WHERE` drops non-TRUE rows → NULL rows vanish under `=`.
+
+The takeaway: the `=` operator can't test for NULL. You need dedicated predicates.
+
+## Approach
+
+| Goal                        | Use              |
+|-----------------------------|------------------|
+| Find missing values         | `col IS NULL`    |
+| Find present values         | `col IS NOT NULL`|
+| Replace a missing value     | `COALESCE(col, default)` |
+
+`IS NULL` / `IS NOT NULL` return real TRUE/FALSE and escape three-valued logic.
+`COALESCE` returns the first non-NULL argument, protecting arithmetic and reports
+from NULL propagation (e.g. `100 + NULL = NULL`).
+
+## SQL Examples
+
+```sql
+-- WRONG: returns nothing, no error
+SELECT name FROM customers WHERE phone = NULL;
+
+-- RIGHT: find customers with no phone
+SELECT name FROM customers WHERE phone IS NULL;
+
+-- RIGHT: find customers who have a phone
+SELECT name FROM customers WHERE phone IS NOT NULL;
+
+-- Protect a total from NULL poisoning
+SELECT SUM(COALESCE(balance, 0)) AS total_balance FROM customers;
+</code></pre>
+<h2>Python Simulation</h2>
+<pre><code class="language-python">UNKNOWN = &quot;UNKNOWN&quot;
+
+def sql_equals(a, b):
+    &quot;&quot;&quot;Any comparison with NULL yields UNKNOWN.&quot;&quot;&quot;
+    if a is None or b is None:
+        return UNKNOWN
+    return str(a == b).upper()
+
+def is_null(value):
+    &quot;&quot;&quot;IS NULL — always a real True/False.&quot;&quot;&quot;
+    return value is None
+
+def coalesce(*values):
+    &quot;&quot;&quot;First non-NULL value, like SQL COALESCE.&quot;&quot;&quot;
+    for v in values:
+        if v is not None:
+            return v
+    return None
+
+def where(rows, predicate):
+    &quot;&quot;&quot;WHERE keeps a row only when the predicate is exactly True.&quot;&quot;&quot;
+    return [r for r in rows if predicate(r) is True]
+
+if __name__ == &quot;__main__&quot;:
+    customers = [
+        {&quot;name&quot;: &quot;Aisha&quot;,  &quot;phone&quot;: &quot;555-0100&quot;, &quot;balance&quot;: 120},
+        {&quot;name&quot;: &quot;Ben&quot;,    &quot;phone&quot;: None,       &quot;balance&quot;: 0},
+        {&quot;name&quot;: &quot;Carmen&quot;, &quot;phone&quot;: &quot;555-0199&quot;, &quot;balance&quot;: None},
+        {&quot;name&quot;: &quot;Dev&quot;,    &quot;phone&quot;: None,       &quot;balance&quot;: 45},
+    ]
+    assert where(customers, lambda r: sql_equals(r[&quot;phone&quot;], None) == &quot;TRUE&quot;) == []
+    assert [r[&quot;name&quot;] for r in where(customers, lambda r: is_null(r[&quot;phone&quot;]))] == [&quot;Ben&quot;, &quot;Dev&quot;]
+    assert sum(coalesce(r[&quot;balance&quot;], 0) for r in customers) == 165
+    print(&quot;OK&quot;)
+</code></pre>
+<h2>Complexity</h2>
+<ul>
+<li><strong>Time:</strong> O(n) — one predicate evaluation per row (a full scan; an index can help).</li>
+<li><strong>Space:</strong> O(1) for evaluation, O(k) for the k returned rows.</li>
+<li>Note: the buggy <code>= NULL</code> query is just as fast — it's <em>correctness</em> that fails.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><code>= NULL</code> / <code>&lt;&gt; NULL</code> → always UNKNOWN, returns nothing.</li>
+<li>Treating NULL as <code>0</code> or <code>''</code>.</li>
+<li>Forgetting NULL propagates through arithmetic.</li>
+<li><code>NOT IN (…, NULL)</code> returning zero rows.</li>
+<li>Assuming <code>COUNT(col)</code> counts NULLs (it doesn't; <code>COUNT(*)</code> does).</li>
+</ol>
+<h2>Video</h2>
+<p>📺 Watch Lesson 6: {LINK}</p>
+<h2>Article</h2>
+<p>📖 Full written walkthrough: {LINK}</p>
+<h2>Series</h2>
+<p>Part of <strong>Fun with Learning Technology</strong> — beginner-friendly lessons in SQL,
+algorithms, and software engineering, taught intuition-first.
+```</p></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>SQL: when you must match rows with missing data, what predicate?</summary><p>Use IS NULL / IS NOT NULL. NULL means unknown, so it never equals anything — including itself.</p></details><details class='card2'><summary>Why does `column = NULL` never return rows?</summary><p>NULL is unknown, so any comparison yields UNKNOWN (not TRUE). WHERE keeps only TRUE rows, so nothing matches.</p></details><details class='card2'><summary>SQL three-valued logic: what results can a comparison give?</summary><p>TRUE, FALSE, or UNKNOWN. Comparing anything to NULL gives UNKNOWN, and WHERE filters out non-TRUE rows.</p></details><details class='card2'><summary>Trickiest bug: what does NULL do inside arithmetic like `price + tax`?</summary><p>It poisons the result — any math with NULL returns NULL, silently dropping or blanking values in aggregates and expressions.</p></details><details class='card2'><summary>IS NULL vs COALESCE — when to use each?</summary><p>IS NULL filters/detects missing rows in WHERE. COALESCE substitutes a fallback value, e.g. COALESCE(col, 0), so math and output stay clean.</p></details><details class='card2'><summary>Interview: how do you count rows where a column has no value?</summary><p>SELECT COUNT(*) ... WHERE col IS NULL. COUNT(col) alone ignores NULLs, so it wouldn&#x27;t count them.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
