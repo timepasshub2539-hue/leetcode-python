@@ -1,0 +1,671 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SQL Lesson 5: Why Does OFFSET 1000000 Crawl? — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-05-limiting-results-limit-and-offset
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-less">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/sql-lesson-05-limiting-results-limit-and-offset.html">
+<meta property="og:title" content="SQL Lesson 5: Why Does OFFSET 1000000 Crawl? — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-05-limiting-results-limit-and-offset
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-less">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>SQL Lesson 5: Why Does OFFSET 1000000 Crawl?</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h1>SEO PACKAGE</h1>
+<h2>1. SEO Title</h2>
+<p><strong>SQL LIMIT and OFFSET Explained: Pagination, the Deep-Page Slowdown, and Keyset Pagination</strong></p>
+<h2>2. SEO Subtitle</h2>
+<p>Learn how to page through millions of rows correctly with <code>LIMIT</code> and <code>OFFSET</code>, why deep offsets crawl, and when to switch to keyset (seek) pagination.</p>
+<h2>3. Featured Quote</h2>
+<blockquote>
+<p>"<code>OFFSET 1000000</code> isn't skipping a million rows for free — the database walks every one of them just to throw them away."</p>
+</blockquote>
+<h2>4. Meta Description</h2>
+<p>Master SQL LIMIT and OFFSET for pagination, understand why deep OFFSET is slow, and learn keyset pagination as the scalable alternative. (154 characters)</p>
+<h2>5. URL Slug</h2>
+<p><code>sql-limit-offset-pagination-keyset-explained</code></p>
+<h2>6. Keywords</h2>
+<p>SQL LIMIT, SQL OFFSET, SQL pagination, keyset pagination, seek pagination, cursor pagination, deep offset performance, ORDER BY pagination, page size formula, database pagination, LIMIT vs OFFSET, OFFSET FETCH, PostgreSQL pagination, MySQL pagination, SQL Server pagination, paginate large tables, off-by-one pagination bug, index scan pagination, backend pagination, SQL performance tuning</p>
+<h2>7. Tags</h2>
+<p><code>SQL</code>, <code>Databases</code>, <code>Pagination</code>, <code>Backend Development</code>, <code>PostgreSQL</code>, <code>MySQL</code>, <code>SQL Server</code>, <code>Performance</code>, <code>Software Engineering</code>, <code>Coding Interview</code>, <code>Data Structures</code>, <code>Query Optimization</code>, <code>Learn SQL</code>, <code>Web Development</code></p>
+<hr />
+<h1>8. Introduction</h1>
+<p>Every application that lists things eventually hits the same wall. You have a table with a million rows, a screen that shows ten, and a user who wants to scroll. You cannot dump a million records into a browser and hope for the best — you have to hand them out a page at a time.</p>
+<p>That is what <code>LIMIT</code> and <code>OFFSET</code> are for. They are two of the smallest clauses in SQL, but they quietly power almost every paginated list you have ever used: search results, feeds, order histories, admin dashboards. Learn them well and you can slice any result set into clean, predictable pages.</p>
+<p>Interviewers love this topic because it separates people who <em>memorized</em> syntax from people who <em>understand</em> what the database is actually doing. Anyone can type <code>LIMIT 10</code>. The real question is the follow-up: <em>"Your pagination works fine on page 2 but times out on page 50,000. Why, and how do you fix it?"</em> If you can answer that, you have demonstrated that you think about performance, indexes, and trade-offs — exactly the skills that matter in real backend work.</p>
+<p>By the end of this article you will know how to page through large datasets correctly, why deep pagination gets slow, and when <code>OFFSET</code> is the wrong tool entirely.</p>
+<hr />
+<h1>9. Problem Overview</h1>
+<p>Here is the problem stated plainly.</p>
+<p>A <code>SELECT</code> query hands you back <strong>rows</strong> — each row is one record, like one customer or one order. A single table can hold millions of them, but you almost never want the whole set at once. You want a <em>slice</em>: "give me ten results, starting from the right place."</p>
+<p>To carve out that slice you need two independent controls:</p>
+<ol>
+<li><strong>A ceiling on how many rows come back.</strong> No matter how many rows match, return at most <em>N</em>. This is <code>LIMIT</code>.</li>
+<li><strong>A starting point deeper into the result set.</strong> Skip past the rows you have already shown before you start collecting. This is <code>OFFSET</code>.</li>
+</ol>
+<p>Combine the two and you get <strong>pagination</strong>: skip some rows, then take a fixed number. That is the whole game.</p>
+<p>But there are three subtleties that trip up almost everyone:</p>
+<ul>
+<li>Without an explicit sort order, the "same" page can return different rows on every refresh.</li>
+<li><code>OFFSET N</code> means <em>skip N rows</em>, not <em>start at row N</em> — a classic off-by-one trap.</li>
+<li>The deeper the page, the slower the query, because the database still has to walk past every skipped row.</li>
+</ul>
+<p>We will handle all three.</p>
+<hr />
+<h1>10. Example</h1>
+<p>Imagine a <code>books</code> table:</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>title</th>
+<th>published</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>The Pragmatic Programmer</td>
+<td>1999</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Clean Code</td>
+<td>2008</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Designing Data-Intensive Applications</td>
+<td>2017</td>
+</tr>
+<tr>
+<td>4</td>
+<td>The Mythical Man-Month</td>
+<td>1975</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Refactoring</td>
+<td>1999</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Code Complete</td>
+<td>2004</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Working Effectively with Legacy Code</td>
+<td>2004</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>LIMIT</code> on its own — deal me the top three:</strong></p>
+<pre><code class="language-sql">SELECT id, title
+FROM books
+ORDER BY id
+LIMIT 3;
+</code></pre>
+<p>Returns rows <code>1, 2, 3</code>. The database keeps the first three and ignores the rest. It does not even look at the dropped rows — it just stops early once it has what you asked for.</p>
+<p><strong><code>OFFSET</code> with <code>LIMIT</code> — skip three, then take three:</strong></p>
+<pre><code class="language-sql">SELECT id, title
+FROM books
+ORDER BY id
+LIMIT 3 OFFSET 3;
+</code></pre>
+<p>Returns rows <code>4, 5, 6</code>. The <code>OFFSET 3</code> steps over the first three rows, then <code>LIMIT 3</code> collects the next three starting at row <code>4</code>.</p>
+<p>Notice the pattern: <code>OFFSET 3</code> did <strong>not</strong> start at row 3. It <em>skipped</em> three rows and started at the fourth. This skip-then-take combination is the heart of pagination.</p>
+<hr />
+<h1>11. Intuition</h1>
+<p>Think of a deck of cards.</p>
+<p><code>LIMIT</code> is you saying, <em>"Deal me the top three cards, then stop."</em> You do not care about the other forty-nine. The dealer stops the moment your hand is full. That is a ceiling on how many rows come back.</p>
+<p><code>OFFSET</code> is the opposite move. Picture a queue of people. <code>OFFSET 3</code> is you saying, <em>"Skip the first three people in line — I'll start with the fourth."</em> You are moving your starting point further down the list before you begin.</p>
+<p>Put them together and pagination falls out naturally. A page shows ten items, so <code>LIMIT</code> is <code>10</code>. To reach page three, you have to walk past the first two pages — that is twenty rows — so <code>OFFSET</code> is <code>20</code>. The formula practically writes itself:</p>
+<pre><code>OFFSET = page_size × (page_number − 1)
+</code></pre>
+<p>For page 3 with a page size of 10: <code>10 × (3 − 1) = 20</code>. Clean.</p>
+<p>The experienced-engineer move is to notice <em>what the database actually has to do</em> to honor an <code>OFFSET</code>. <code>LIMIT</code> is cheap — the engine stops early. But <code>OFFSET</code> is not free. To skip a hundred thousand rows, the engine still has to <strong>produce</strong> a hundred thousand rows in sorted order and then discard them. Once you internalize that asymmetry, the deep-page slowdown stops being a mystery and the alternative solution becomes obvious.</p>
+<hr />
+<h1>12. Brute Force Solution</h1>
+<p><strong>Idea:</strong> Use <code>LIMIT</code> and <code>OFFSET</code> directly with the page formula. This is the standard, textbook approach and it is genuinely the right choice for most tables.</p>
+<p><strong>Algorithm:</strong></p>
+<ol>
+<li>Fix your page size (say, 10).</li>
+<li>Compute <code>OFFSET = page_size × (page_number − 1)</code>.</li>
+<li>Always add an <code>ORDER BY</code> on a stable, unique column so pages don't shuffle.</li>
+<li>Run <code>SELECT ... ORDER BY id LIMIT page_size OFFSET offset</code>.</li>
+</ol>
+<pre><code class="language-sql">-- Page 3, 10 rows per page
+SELECT id, title, published
+FROM books
+ORDER BY id
+LIMIT 10 OFFSET 20;
+</code></pre>
+<p><strong>Advantages:</strong></p>
+<ul>
+<li>Dead simple to write and reason about.</li>
+<li>Lets you <strong>jump to any page</strong> — page 1, page 47, page 900 — with a single formula.</li>
+<li>Works the same way whether the user goes forward, backward, or teleports to page 50.</li>
+</ul>
+<p><strong>Disadvantages:</strong></p>
+<ul>
+<li><strong>It drags on deep pages.</strong> Reaching <code>OFFSET 100000</code> means the database walks through a hundred thousand rows just to throw them away.</li>
+<li>Rows can <strong>shift between pages</strong> if data is inserted or deleted while a user is paging (an item slides from page 2 onto page 1, and someone sees it twice or misses it).</li>
+</ul>
+<p><strong>Complexity:</strong></p>
+<ul>
+<li><strong>Time:</strong> <code>O(offset + limit)</code> — the cost grows linearly with how deep the page is. Page 1 is instant; page 10,000 is not.</li>
+<li><strong>Space:</strong> <code>O(limit)</code> for the returned rows.</li>
+</ul>
+<hr />
+<h1>13. Optimal Solution</h1>
+<p>For deep pagination, the fix is <strong>keyset pagination</strong> — also called <strong>seek</strong> or <strong>cursor</strong> pagination.</p>
+<p>The insight: instead of counting <em>how many rows to skip</em>, remember <em>where you left off</em>. Keep the sort key of the last row you saw, and ask the database for rows <strong>after</strong> that value. Because the sort column is indexed, the engine jumps straight to that position in the index and reads forward — no wasted scanning of rows you'll discard.</p>
+<p>Here is the difference visually.</p>
+<p><strong>Offset pagination — the deeper you go, the more you waste:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What the DB does</th>
+<th>Work</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Read rows 1–10</td>
+<td>10 rows touched</td>
+</tr>
+<tr>
+<td>100</td>
+<td>Produce rows 1–1000, discard 990, return 10</td>
+<td>1,000 rows touched</td>
+</tr>
+<tr>
+<td>10,000</td>
+<td>Produce rows 1–100,000, discard 99,990, return 10</td>
+<td>100,000 rows touched</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Keyset pagination — flat cost on every page:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What the DB does</th>
+<th>Work</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Any</td>
+<td>Seek index to <code>id &gt; last_seen_id</code>, read next 10</td>
+<td>10 rows touched</td>
+</tr>
+</tbody>
+</table>
+<p>The mechanics: your first query grabs the first page and you record the last <code>id</code> you saw. The next request passes that <code>id</code> back, and the query becomes "give me rows <em>after</em> this one."</p>
+<pre><code class="language-sql">-- First page
+SELECT id, title
+FROM books
+ORDER BY id
+LIMIT 10;
+
+-- Next page: last id from the previous page was 10
+SELECT id, title
+FROM books
+WHERE id &gt; 10          -- seek straight to the right spot via the index
+ORDER BY id
+LIMIT 10;
+</code></pre>
+<p>The database uses the index on <code>id</code> to jump directly to the first row greater than <code>10</code> and reads ten rows forward. It never touches the rows you already saw. That is why keyset stays fast on page 1 and page 1,000,000 alike.</p>
+<p>The trade-off: you can only move <strong>next</strong> and <strong>previous</strong>, because all you know is "the last row I saw." You cannot teleport to "page 4,782" — there is no offset to compute. For infinite-scroll feeds, that is exactly the interaction you want anyway.</p>
+<blockquote>
+<p><strong>Tie-breaker note:</strong> if your sort column isn't unique (say you sort by <code>created_at</code>), two rows can share a value and the seek becomes ambiguous. Fix it by sorting on the column <strong>plus</strong> a unique tiebreaker like the primary key, and comparing the pair: <code>WHERE (created_at, id) &gt; (:last_created_at, :last_id)</code>.</p>
+</blockquote>
+<hr />
+<h1>14. Python Code</h1>
+<p>Pagination usually lives half in SQL and half in your application layer, so here is a clean, PEP 8-compliant Python helper that builds both styles. It uses parameterized queries — never format user input into SQL strings.</p>
+<pre><code class="language-python">&quot;&quot;&quot;Pagination query builders for offset and keyset (seek) styles.&quot;&quot;&quot;
+
+from dataclasses import dataclass
+
+
+def offset_page_sql(page_number: int, page_size: int = 10) -&gt; tuple[str, dict]:
+    &quot;&quot;&quot;Build an OFFSET-based page query. Good for small/admin tables.
+
+    Lets you jump to any page, but slows down on deep pages.
+    &quot;&quot;&quot;
+    if page_number &lt; 1:
+        raise ValueError(&quot;page_number is 1-based and must be &gt;= 1&quot;)
+
+    offset = page_size * (page_number - 1)  # the page formula
+    sql = (
+        &quot;SELECT id, title, published &quot;
+        &quot;FROM books &quot;
+        &quot;ORDER BY id &quot;          # ORDER BY is mandatory for stable pages
+        &quot;LIMIT %(limit)s OFFSET %(offset)s&quot;
+    )
+    return sql, {&quot;limit&quot;: page_size, &quot;offset&quot;: offset}
+
+
+@dataclass
+class Cursor:
+    &quot;&quot;&quot;The 'where I left off' marker for keyset pagination.&quot;&quot;&quot;
+    last_id: int | None = None  # None means &quot;start from the beginning&quot;
+
+
+def keyset_page_sql(cursor: Cursor, page_size: int = 10) -&gt; tuple[str, dict]:
+    &quot;&quot;&quot;Build a keyset (seek) page query. Stays fast on any page.
+
+    Only supports next-page navigation, not arbitrary jumps.
+    &quot;&quot;&quot;
+    params = {&quot;limit&quot;: page_size}
+    where = &quot;&quot;
+    if cursor.last_id is not None:
+        where = &quot;WHERE id &gt; %(last_id)s &quot;  # seek past what we've seen
+        params[&quot;last_id&quot;] = cursor.last_id
+
+    sql = (
+        &quot;SELECT id, title, published &quot;
+        &quot;FROM books &quot;
+        f&quot;{where}&quot;
+        &quot;ORDER BY id &quot;
+        &quot;LIMIT %(limit)s&quot;
+    )
+    return sql, params
+
+
+if __name__ == &quot;__main__&quot;:
+    # Self-check: the page formula and cursor logic behave as expected.
+    _, p3 = offset_page_sql(page_number=3, page_size=10)
+    assert p3[&quot;offset&quot;] == 20, &quot;page 3 @ size 10 must skip 20 rows&quot;
+
+    _, p1 = offset_page_sql(page_number=1, page_size=10)
+    assert p1[&quot;offset&quot;] == 0, &quot;page 1 must skip nothing&quot;
+
+    first_sql, first_params = keyset_page_sql(Cursor(last_id=None))
+    assert &quot;WHERE&quot; not in first_sql, &quot;first keyset page has no cursor filter&quot;
+
+    next_sql, next_params = keyset_page_sql(Cursor(last_id=10))
+    assert &quot;id &gt; %(last_id)s&quot; in next_sql, &quot;later pages seek past last_id&quot;
+    assert next_params[&quot;last_id&quot;] == 10
+
+    try:
+        offset_page_sql(page_number=0)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError(&quot;page 0 should be rejected&quot;)
+
+    print(&quot;All pagination checks passed.&quot;)
+</code></pre>
+<hr />
+<h1>15. Code Walkthrough</h1>
+<ul>
+<li><strong><code>offset_page_sql</code></strong> turns a human page number into a database offset. The line <code>offset = page_size * (page_number - 1)</code> is the pagination formula from earlier — page 1 skips nothing, page 3 skips 20.</li>
+<li>The guard <code>if page_number &lt; 1</code> rejects nonsense input up front. Pages are 1-based; a page 0 or negative page is a caller bug, and failing loudly beats returning a silently wrong slice.</li>
+<li>The SQL string always includes <code>ORDER BY id</code>. This is not optional — it is the single most important line for correctness, which we'll see why in Edge Cases.</li>
+<li><strong><code>Cursor</code></strong> is a tiny dataclass holding <code>last_id</code>. A <code>None</code> value means "we haven't started yet," so the first page has no filter.</li>
+<li><strong><code>keyset_page_sql</code></strong> conditionally adds <code>WHERE id &gt; %(last_id)s</code>. On the first page there is no cursor, so the <code>WHERE</code> clause is empty and you simply get the first N rows. On every later page, that clause seeks past everything already seen.</li>
+<li>Both functions return <code>(sql, params)</code> and use <strong>placeholders</strong> (<code>%(name)s</code>), never string interpolation of values. This is how you avoid SQL injection — the driver binds parameters safely.</li>
+<li>The <code>__main__</code> block is a runnable self-check: it verifies the offset math, confirms the first keyset page has no filter, confirms later pages seek correctly, and confirms bad input is rejected.</li>
+</ul>
+<hr />
+<h1>16. Dry Run</h1>
+<p>Let's page through the <code>books</code> table with a page size of 3, using keyset pagination.</p>
+<p><strong>Request 1 — first page.</strong> <code>Cursor(last_id=None)</code>.</p>
+<p>The builder produces:</p>
+<pre><code class="language-sql">SELECT id, title, published FROM books ORDER BY id LIMIT 3;
+</code></pre>
+<p>The database returns rows <code>1, 2, 3</code>. Your application records the last id seen: <code>3</code>.</p>
+<p><strong>Request 2 — next page.</strong> <code>Cursor(last_id=3)</code>.</p>
+<p>The builder produces:</p>
+<pre><code class="language-sql">SELECT id, title, published FROM books WHERE id &gt; 3 ORDER BY id LIMIT 3;
+</code></pre>
+<p>The engine uses the index on <code>id</code> to jump straight to the first row greater than <code>3</code>, then reads three rows: <code>4, 5, 6</code>. It never re-reads rows <code>1–3</code>. New last id: <code>6</code>.</p>
+<p><strong>Request 3 — next page.</strong> <code>Cursor(last_id=6)</code>.</p>
+<pre><code class="language-sql">SELECT id, title, published FROM books WHERE id &gt; 6 ORDER BY id LIMIT 3;
+</code></pre>
+<p>Only row <code>7</code> remains, so you get a single row back. Fewer rows than the limit is your signal that you've reached the end.</p>
+<p>Notice that at no point did the database's work grow. Whether this was page 1 or page 1,000, each request touched at most three rows — the flat cost that makes keyset scale.</p>
+<hr />
+<h1>17. Complexity Analysis</h1>
+<p><strong>Offset pagination:</strong></p>
+<ul>
+<li><strong>Time:</strong> <code>O(offset + limit)</code>. To return your <code>limit</code> rows, the engine must first generate and discard <code>offset</code> rows in sorted order. On page 1 the offset is 0 and it's instant; on page 10,000 the offset is 100,000 and the cost grows right along with it. The slowness is <em>inherent to the operation</em>, not a missing index — even a perfectly indexed sort still has to walk past the skipped rows.</li>
+<li><strong>Space:</strong> <code>O(limit)</code> — only the returned page is materialized for the client.</li>
+</ul>
+<p><strong>Keyset pagination:</strong></p>
+<ul>
+<li><strong>Time:</strong> <code>O(log n + limit)</code> when the sort column is indexed. The <code>log n</code> is the index seek to find your starting position (a B-tree lookup); the <code>limit</code> is reading the page forward. Crucially, this is <strong>independent of how deep the page is</strong> — page 1 and page 1,000,000 cost the same.</li>
+<li><strong>Space:</strong> <code>O(limit)</code> for the page, plus a tiny constant for the cursor value you carry between requests.</li>
+</ul>
+<p>The takeaway: offset cost scales with <em>depth</em>, keyset cost is <em>flat</em>. That single difference is the entire reason keyset exists.</p>
+<hr />
+<h1>18. Alternative Solutions</h1>
+<p>Beyond the two main approaches, a couple of variations show up in real systems:</p>
+<ul>
+<li><strong>Cached total count + offset.</strong> If you need to show "Page 3 of 4,912," you need a total row count, which is itself expensive on large tables. A common trick is to cache an approximate count (Postgres exposes estimates via <code>pg_class.reltuples</code>) rather than running <code>COUNT(*)</code> on every page load.</li>
+<li><strong>Deferred join (offset optimization).</strong> You can soften offset's pain by paginating over just the indexed key first, then joining back for the full row: <code>SELECT * FROM books JOIN (SELECT id FROM books ORDER BY id LIMIT 10 OFFSET 100000) AS page USING (id);</code>. The engine skips rows in a narrow index instead of hauling full rows, which is cheaper — but the cost still grows with depth. It's a mitigation, not a cure.</li>
+</ul>
+<p><strong>How they compare:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Jump to any page?</th>
+<th>Deep-page speed</th>
+<th>Best for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LIMIT</code> / <code>OFFSET</code></td>
+<td>✅ Yes</td>
+<td>❌ Slows down</td>
+<td>Small datasets, admin tables</td>
+</tr>
+<tr>
+<td>Keyset (seek)</td>
+<td>❌ Next/prev only</td>
+<td>✅ Always fast</td>
+<td>Huge feeds, infinite scroll</td>
+</tr>
+<tr>
+<td>Deferred join</td>
+<td>✅ Yes</td>
+<td>⚠️ Better, still degrades</td>
+<td>Deep offset you can't avoid</td>
+</tr>
+</tbody>
+</table>
+<p>Rule of thumb: <strong>small dataset or admin table → use <code>OFFSET</code>. Huge feed that scrolls forever → use keyset.</strong></p>
+<hr />
+<h1>19. Edge Cases</h1>
+<ul>
+<li><strong>No <code>ORDER BY</code>.</strong> This is the big one. Without a sort, the database is free to return rows in <em>any</em> order it likes, and that order can change between queries. The same "page 2" shows different rows on each refresh — users see duplicates or miss records. Always paginate with an explicit <code>ORDER BY</code> on a stable column.</li>
+<li><strong>Non-unique sort column.</strong> Sorting by <code>created_at</code> alone breaks keyset when two rows share a timestamp. Add a unique tiebreaker: <code>ORDER BY created_at, id</code>.</li>
+<li><strong>Offset past the end.</strong> <code>OFFSET 1000</code> on a 50-row table returns zero rows — not an error, just an empty page. Your UI should handle "no results" gracefully.</li>
+<li><strong>Empty table.</strong> Both approaches return an empty result set cleanly. No special handling needed.</li>
+<li><strong>Data changing mid-page.</strong> With offset pagination, an insert or delete between page loads shifts every subsequent row, causing skipped or duplicated records. Keyset is more resilient because it anchors to a value, not a position.</li>
+<li><strong>Very deep offset (<code>OFFSET 1000000</code>).</strong> Technically valid, but this is where offset pagination crawls. If you're routinely hitting offsets this deep, that's the signal to switch to keyset.</li>
+</ul>
+<hr />
+<h1>20. Common Mistakes</h1>
+<ol>
+<li><strong>Paginating without <code>ORDER BY</code>.</strong> The number-one bug. Pages appear stable in testing (small data, consistent order) and then shuffle in production. If you use <code>LIMIT</code> and <code>OFFSET</code>, an <code>ORDER BY</code> on a unique column is mandatory.</li>
+<li><strong>Reading <code>OFFSET N</code> as "start at row N."</strong> <code>OFFSET 1</code> does not start at row one — it <em>skips</em> one row and starts at row two. Say it out loud: offset is <em>how many to skip</em>, not <em>where to begin</em>.</li>
+<li><strong>Getting the page formula backward.</strong> It's <code>page_size × (page_number − 1)</code>, not <code>page_size × page_number</code>. Forgetting the <code>− 1</code> skips an entire first page — the classic off-by-one that shows the wrong page to every user.</li>
+<li><strong>Sorting on a non-unique column without a tiebreaker.</strong> Ties make row order ambiguous, which quietly corrupts both offset and keyset paging. Always append a unique column to the sort.</li>
+<li><strong>Assuming every database uses the same syntax.</strong> Postgres and MySQL use <code>LIMIT ... OFFSET ...</code>. SQL Server and the SQL standard use <code>OFFSET ... ROWS FETCH NEXT ... ROWS ONLY</code>. Same idea, different words — check your dialect.</li>
+<li><strong>Using deep offset on a hot, huge table.</strong> It works in the demo and times out under load. If pages go deep, reach for keyset before it becomes a 3am incident.</li>
+</ol>
+<hr />
+<h1>21. Interview Questions</h1>
+<ul>
+<li>Why must you always pair <code>LIMIT</code>/<code>OFFSET</code> with <code>ORDER BY</code>?</li>
+<li>Your list endpoint is fast on page 2 but times out on page 50,000. What's happening and how do you fix it?</li>
+<li>Explain keyset pagination. What does it give up compared to offset pagination?</li>
+<li>How would you implement "next page" and "previous page" with keyset pagination?</li>
+<li>How do you paginate correctly when the sort column has duplicate values?</li>
+<li>How would you show a total page count (<code>Page 3 of 4,912</code>) without running an expensive <code>COUNT(*)</code> on every request?</li>
+<li>What's the difference between <code>LIMIT ... OFFSET</code> and <code>OFFSET ... FETCH</code>, and which databases use which?</li>
+<li>How does keyset pagination behave when rows are inserted or deleted while a user is paging?</li>
+</ul>
+<hr />
+<h1>22. Similar Problems</h1>
+<ul>
+<li><strong>[Design an API rate limiter / paginated API]</strong> — pagination is a core piece of any list endpoint; the cursor pattern here is exactly how "cursor-based pagination" works in GraphQL and REST APIs.</li>
+<li><strong>Top K elements</strong> — <code>ORDER BY ... LIMIT K</code> is SQL's version of the classic "find the top K" pattern, and the same intuition about not sorting more than you need applies.</li>
+<li><strong>Merge K sorted lists</strong> — keyset pagination across multiple partitioned tables is essentially a K-way merge over sorted streams.</li>
+<li><strong>Binary search on sorted data</strong> — the index seek that makes keyset fast (<code>WHERE id &gt; last_seen</code>) is a B-tree lookup, the database's cousin of binary search over a sorted structure.</li>
+</ul>
+<p>These are related because they all lean on the same core idea: when data is <em>ordered</em>, you can reach the part you want without scanning everything before it.</p>
+<hr />
+<h1>23. Key Takeaways</h1>
+<ul>
+<li><code>LIMIT</code> caps how many rows come back; <code>OFFSET</code> skips rows before you start collecting.</li>
+<li>Together they give you pagination: <code>OFFSET = page_size × (page_number − 1)</code>.</li>
+<li><strong>Always</strong> add <code>ORDER BY</code> on a unique column, or your pages will shuffle.</li>
+<li><code>OFFSET N</code> means <em>skip N rows</em>, not <em>start at row N</em>.</li>
+<li>Deep offset is slow because the database walks and discards every skipped row — cost grows with page depth.</li>
+<li>For huge, deep-scrolling datasets, use <strong>keyset (seek) pagination</strong>: remember the last row and ask for rows after it. It stays fast on any page but only does next/previous.</li>
+<li>Dialects differ: <code>LIMIT</code>/<code>OFFSET</code> (Postgres, MySQL) vs <code>OFFSET</code>/<code>FETCH</code> (SQL Server, standard SQL).</li>
+</ul>
+<hr />
+<h1>24. Watch the Video</h1>
+<p>Want to see <code>LIMIT</code>, <code>OFFSET</code>, and keyset pagination in action — with the row-by-row animations that make the "skip-then-take" idea click instantly? Watch the full lesson here: {LINK}</p>
+<p>Seeing the arrow step over skipped rows and land on the right page makes the whole concept stick in a way that reading alone can't.</p>
+<hr />
+<h1>25. About the Series</h1>
+<p>This is <strong>Lesson 5</strong> of the SQL course in the <strong>Fun with Learning Technology</strong> series — a growing set of short, practical lessons that take backend and database concepts from "I've heard of it" to "I can use it confidently in an interview and in production." Each lesson builds real intuition first, then shows the code, then covers the trade-offs and edge cases the way an experienced engineer actually thinks about them. No fluff, no memorization — just the <em>why</em> behind each idea.</p>
+<hr />
+<h1>26. Call To Action</h1>
+<p>If this made pagination click for you:</p>
+<ul>
+<li>👍 <strong>Like the video on YouTube</strong> — that's what tells the algorithm to show it to more developers.</li>
+<li>🔔 <strong>Subscribe</strong> so you don't miss the next SQL lesson.</li>
+<li>📩 <strong>Subscribe to the Substack</strong> for the written deep-dives that go beyond each video.</li>
+<li>💬 <strong>Comment</strong> with the topic you want covered next — or your worst pagination bug story.</li>
+<li>🔁 <strong>Share</strong> it with a teammate who's still using <code>OFFSET 1000000</code> and wondering why it's slow.</li>
+</ul>
+<h2>---</h2>
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>Most developers learn <code>LIMIT</code> and <code>OFFSET</code> in about five minutes, then get burned by them in production six months later. Here's what the five-minute version leaves out.</p>
+<p><code>LIMIT</code> caps how many rows a query returns. <code>OFFSET</code> skips rows before it starts collecting. Together they build pagination, using a simple formula:</p>
+<p><code>OFFSET = page_size × (page_number − 1)</code></p>
+<p>That's the easy part. The parts that actually matter in real systems:</p>
+<p>1️⃣ <strong>Always pair them with <code>ORDER BY</code>.</strong> Without an explicit sort, the database can return rows in any order it likes — so "page 2" shows different rows on every refresh. This bug hides perfectly in testing and only appears under real traffic.</p>
+<p>2️⃣ <strong><code>OFFSET N</code> means skip N rows, not start at row N.</strong> A small distinction that causes very real off-by-one bugs.</p>
+<p>3️⃣ <strong>Deep offset doesn't scale.</strong> To reach <code>OFFSET 100000</code>, the database walks through 100,000 rows just to throw them away. Page 1 is instant; page 10,000 crawls. The cost grows with page depth — it's inherent to the operation, not a missing index.</p>
+<p>The fix for deep pagination is <strong>keyset (seek) pagination</strong>: instead of counting rows to skip, you remember the last row you saw and ask for rows after it. The database seeks straight there via the index, so it stays fast on any page. The trade-off is you only get next/previous, not arbitrary page jumps.</p>
+<p>Rule of thumb: small or admin table → <code>OFFSET</code>. Huge feed that scrolls forever → keyset.</p>
+<p>Understanding <em>why</em> a query is slow is what separates engineers who write SQL from engineers who own it.</p>
+<p>What's the deepest offset you've seen in a production query? 👇</p>
+<h1>SQL #Databases #Backend #SoftwareEngineering #Performance</h1>
+<hr />
+<h2>Twitter/X Thread</h2>
+<p><strong>1/</strong>
+<code>LIMIT</code> and <code>OFFSET</code> are two of the smallest words in SQL — and two of the most misunderstood.</p>
+<p>Here's how to paginate a million rows correctly, and why <code>OFFSET 1000000</code> crawls. 🧵</p>
+<p><strong>2/</strong>
+Start simple. <code>LIMIT 3</code> = "deal me the top 3 rows, then stop."</p>
+<p>The database returns at most 3 rows and ignores the rest. It doesn't even look at the dropped rows — it just stops early.</p>
+<p><code>LIMIT</code> is a ceiling on how many rows come back.</p>
+<p><strong>3/</strong>
+<code>OFFSET</code> is the opposite move. <code>OFFSET 3</code> = "skip the first 3 rows, start at the 4th."</p>
+<p>So <code>LIMIT 3 OFFSET 3</code> skips 3 rows, then grabs the next 3.</p>
+<p>Skip-then-take. That's the heart of pagination.</p>
+<p><strong>4/</strong>
+Page size 10, want page 3? Skip the first 2 pages = 20 rows.</p>
+<p>The formula:
+<code>OFFSET = page_size × (page_number − 1)</code></p>
+<p>Page 3 → 10 × (3 − 1) = 20. Clean.</p>
+<p><strong>5/</strong>
+Trap #1: reading <code>OFFSET 1</code> as "start at row 1."</p>
+<p>It doesn't. <code>OFFSET 1</code> SKIPS one row and starts at row 2.</p>
+<p>Offset = how many to skip. Not where to begin. Say it out loud — it saves real bugs.</p>
+<p><strong>6/</strong>
+Trap #2: paginating without <code>ORDER BY</code>.</p>
+<p>Without a sort, the DB returns rows in ANY order it likes — and it can change between queries. Same "page 2" shows different rows on every refresh.</p>
+<p>Always add <code>ORDER BY</code> on a unique column.</p>
+<p><strong>7/</strong>
+Now the big one. <code>OFFSET</code> is overrated for deep pages.</p>
+<p>To reach <code>OFFSET 100000</code>, the DB walks through 100,000 rows just to throw them away.</p>
+<p>Page 1 = instant. Page 10,000 = crawl. Cost grows with depth.</p>
+<p><strong>8/</strong>
+The fix: keyset (seek) pagination.</p>
+<p>Instead of skipping rows, remember the id of the last row you saw and ask for rows AFTER it:</p>
+<p><code>WHERE id &gt; 10 ORDER BY id LIMIT 10</code></p>
+<p>The DB seeks straight there via the index. No wasted scanning.</p>
+<p><strong>9/</strong>
+Keyset stays fast on page 1 AND page 1,000,000.</p>
+<p>The trade-off: you only get next/previous. No jumping to "page 4,782" — there's no offset to compute.</p>
+<p>For infinite-scroll feeds, that's exactly the interaction you want.</p>
+<p><strong>10/</strong>
+Rule of thumb:</p>
+<p>• Small dataset or admin table → <code>OFFSET</code>
+• Huge feed that scrolls forever → keyset</p>
+<p>And a heads-up: Postgres/MySQL use <code>LIMIT</code>/<code>OFFSET</code>; SQL Server &amp; standard SQL use <code>OFFSET</code>/<code>FETCH</code>. Same idea, different words.</p>
+<p>That's pagination done right. ✅</p>
+<hr />
+<h2>Facebook Post</h2>
+<p>Ever wonder how apps show you "page 3" of search results without loading all million records at once? 🤔</p>
+<p>That's <code>LIMIT</code> and <code>OFFSET</code> — two tiny SQL clauses doing a huge amount of work. <code>LIMIT</code> says "give me at most 10 rows," <code>OFFSET</code> says "skip the first 20," and together they slice a giant table into neat little pages.</p>
+<p>But there's a catch most people learn the hard way: the deeper you page, the slower it gets — because to reach page 10,000, the database has to walk past every single row before it just to throw them away. 😅</p>
+<p>In the new lesson I break down exactly why that happens, and show the faster alternative (keyset pagination) that stays quick no matter how deep you scroll. Beginner-friendly, with visuals that make it click.</p>
+<p>Come learn it with me 👇</p>
+<hr />
+<h2>Reddit Summary</h2>
+<p><strong>LIMIT/OFFSET pagination: the parts that actually bite you in production</strong></p>
+<p>Sharing a breakdown of SQL pagination that goes past the syntax, since deep pagination is one of those things that works fine in dev and quietly falls over under load.</p>
+<p>The basics: <code>LIMIT</code> caps returned rows, <code>OFFSET</code> skips rows first. Page formula is <code>OFFSET = page_size × (page_number − 1)</code>.</p>
+<p>Three things worth knowing:</p>
+<ul>
+<li><strong>Always use <code>ORDER BY</code>.</strong> Without a defined sort, the engine can return rows in any order, and it can differ between runs. Pages shuffle on refresh — a bug that hides well in testing.</li>
+<li><strong><code>OFFSET N</code> skips N rows</strong>, it doesn't start <em>at</em> row N. Small distinction, real off-by-one bugs.</li>
+<li><strong>Deep offset doesn't scale.</strong> <code>OFFSET 100000</code> still forces the DB to produce and discard 100,000 rows in sorted order. Cost grows with depth — it's inherent to the operation, not just a missing index.</li>
+</ul>
+<p>The alternative for deep/infinite-scroll cases is <strong>keyset (seek) pagination</strong>: keep the sort key of the last row and query <code>WHERE id &gt; last_seen ORDER BY id LIMIT n</code>. With an index on the sort column it's a B-tree seek, so cost is flat regardless of page depth (<code>O(log n + limit)</code> vs offset's <code>O(offset + limit)</code>). Downside: next/prev only, no arbitrary page jumps. If your sort column isn't unique, add a tiebreaker and compare tuples: <code>WHERE (created_at, id) &gt; (:last_ts, :last_id)</code>.</p>
+<p>Rule of thumb: small/admin tables → offset (simple, jump anywhere). Huge feeds → keyset. Also note dialect differences: <code>LIMIT</code>/<code>OFFSET</code> (Postgres, MySQL) vs <code>OFFSET</code>/<code>FETCH</code> (SQL Server, ANSI SQL).</p>
+<p>Happy to answer questions on the deferred-join trick for cases where you're stuck with deep offset.</p>
+<h2>---</h2>
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># SQL Pagination: LIMIT, OFFSET &amp; Keyset (Seek) Pagination
+
+Lesson 5 of the SQL course — how to page through large datasets correctly,
+why deep `OFFSET` gets slow, and when to switch to keyset pagination.
+
+## Problem
+
+A `SELECT` can return millions of rows, but a screen shows ten. You need to
+hand out results one page at a time — a *slice* of the result set, starting at
+the right place. That's pagination.
+
+## Intuition
+
+- **`LIMIT`** — a ceiling on how many rows come back. Like &quot;deal me the top 3
+  cards, then stop.&quot; The database stops early and never looks at the rest.
+- **`OFFSET`** — a starting point further down the list. Like &quot;skip the first 3
+  people in line, start at the 4th.&quot; It's *how many rows to skip*, not the row
+  number to start at.
+- **Together** — skip, then take. That's pagination.
+
+Page formula:
+
+</code></pre>
+<p>OFFSET = page_size × (page_number − 1)</p>
+<pre><code>
+The catch: `OFFSET` isn't free. To skip N rows, the database still produces N
+rows in sorted order and discards them. The deeper the page, the slower it gets.
+
+## Approach
+
+### Offset pagination (simple, jump to any page)
+
+Best for small datasets and admin tables. Always pair with `ORDER BY` on a
+unique column, or pages shuffle between refreshes.
+
+```sql
+-- Page 3, 10 rows per page
+SELECT id, title, published
+FROM books
+ORDER BY id
+LIMIT 10 OFFSET 20;
+</code></pre>
+<h3>Keyset / seek pagination (fast on any page)</h3>
+<p>Best for huge, infinite-scroll feeds. Remember the last row seen and ask for
+rows after it — the index seeks straight there. Only supports next/previous.</p>
+<pre><code class="language-sql">-- Next page after last seen id = 10
+SELECT id, title, published
+FROM books
+WHERE id &gt; 10
+ORDER BY id
+LIMIT 10;
+</code></pre>
+<p>If the sort column isn't unique, add a tiebreaker:</p>
+<pre><code class="language-sql">WHERE (created_at, id) &gt; (:last_created_at, :last_id)
+ORDER BY created_at, id
+LIMIT 10;
+</code></pre>
+<h2>Python Solution</h2>
+<pre><code class="language-python">from dataclasses import dataclass
+
+
+def offset_page_sql(page_number: int, page_size: int = 10) -&gt; tuple[str, dict]:
+    &quot;&quot;&quot;OFFSET-based page. Jump anywhere, but slows on deep pages.&quot;&quot;&quot;
+    if page_number &lt; 1:
+        raise ValueError(&quot;page_number is 1-based and must be &gt;= 1&quot;)
+    offset = page_size * (page_number - 1)
+    sql = (
+        &quot;SELECT id, title, published FROM books &quot;
+        &quot;ORDER BY id LIMIT %(limit)s OFFSET %(offset)s&quot;
+    )
+    return sql, {&quot;limit&quot;: page_size, &quot;offset&quot;: offset}
+
+
+@dataclass
+class Cursor:
+    last_id: int | None = None
+
+
+def keyset_page_sql(cursor: Cursor, page_size: int = 10) -&gt; tuple[str, dict]:
+    &quot;&quot;&quot;Keyset (seek) page. Fast on any page; next-only.&quot;&quot;&quot;
+    params = {&quot;limit&quot;: page_size}
+    where = &quot;&quot;
+    if cursor.last_id is not None:
+        where = &quot;WHERE id &gt; %(last_id)s &quot;
+        params[&quot;last_id&quot;] = cursor.last_id
+    sql = (
+        f&quot;SELECT id, title, published FROM books {where}&quot;
+        &quot;ORDER BY id LIMIT %(limit)s&quot;
+    )
+    return sql, params
+</code></pre>
+<h2>Complexity</h2>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Time</th>
+<th>Jump to any page?</th>
+<th>Best for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LIMIT</code> / <code>OFFSET</code></td>
+<td><code>O(offset + limit)</code></td>
+<td>✅ Yes</td>
+<td>Small / admin tables</td>
+</tr>
+<tr>
+<td>Keyset (seek)</td>
+<td><code>O(log n + limit)</code></td>
+<td>❌ Next/prev only</td>
+<td>Huge scrolling feeds</td>
+</tr>
+</tbody>
+</table>
+<p>Space is <code>O(limit)</code> for both. Offset cost scales with page depth; keyset cost is
+flat.</p>
+<h2>Gotchas</h2>
+<ul>
+<li>Always paginate with <code>ORDER BY</code> on a unique column.</li>
+<li><code>OFFSET N</code> skips N rows — it does not start <em>at</em> row N.</li>
+<li>Dialects differ: <code>LIMIT</code>/<code>OFFSET</code> (Postgres, MySQL) vs <code>OFFSET</code>/<code>FETCH</code>
+  (SQL Server, standard SQL).</li>
+</ul>
+<h2>Video</h2>
+<p>📺 Watch the full lesson: {LINK}</p>
+<h2>Article</h2>
+<p>📖 Full written deep-dive with diagrams, dry run, edge cases, and interview
+questions in the accompanying article.</p>
+<hr />
+<p>Part of the <strong>Fun with Learning Technology</strong> series.
+```</p></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When do you reach for LIMIT and OFFSET?</summary><p>When you need pagination, top-N results, or a bounded slice of a large result set. See LIMIT n OFFSET m → think &#x27;skip m rows, take n&#x27;.</p></details><details class='card2'><summary>Time cost of LIMIT n OFFSET m?</summary><p>Roughly O(m + n): the database still scans and discards the first m rows before returning n. Large offsets get progressively slower.</p></details><details class='card2'><summary>Space complexity of LIMIT/OFFSET?</summary><p>O(n) for the returned rows (plus sort buffers if ORDER BY isn&#x27;t index-backed). OFFSET itself adds no extra storage — it just skips.</p></details><details class='card2'><summary>Most common LIMIT/OFFSET bug?</summary><p>Using LIMIT/OFFSET without ORDER BY. Row order is undefined, so pages overlap or drop rows. Always pair with a stable ORDER BY.</p></details><details class='card2'><summary>OFFSET pagination vs keyset pagination?</summary><p>OFFSET scans and throws away skipped rows (slow deep in). Keyset filters WHERE id &gt; last_seen ORDER BY id — index-seekable and fast at any depth.</p></details><details class='card2'><summary>Page 3 with page size 10 — what OFFSET?</summary><p>OFFSET = (page − 1) × size = 20, LIMIT 10. Off-by-one trap: pages are 1-indexed but offset is 0-indexed.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
