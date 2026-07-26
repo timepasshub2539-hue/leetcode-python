@@ -1,0 +1,382 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SQL Lesson 24: One Typo Broke 20 Rows (Here&#x27;s Why) — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-24-normalization-1nf-2nf-3nf
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson-24-no">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/sql-lesson-24-normalization-1nf-2nf-3nf.html">
+<meta property="og:title" content="SQL Lesson 24: One Typo Broke 20 Rows (Here&#x27;s Why) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-24-normalization-1nf-2nf-3nf
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson-24-no">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>SQL Lesson 24: One Typo Broke 20 Rows (Here&#x27;s Why)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>8. Introduction</h2>
+<p>Change one phone number and suddenly your database disagrees with itself. Half your records say the new number, half still show the old one, and no one can tell which is correct. That mess isn't a bug in your code — it's a flaw in your schema.</p>
+<p>Database normalization is the discipline that prevents it. If you're preparing for a <strong>coding interview</strong>, working as a backend or <strong>data engineering</strong> developer, or just trying to design tables you won't regret in six months, normalization is one of those foundational <strong>algorithms and data structures</strong>–adjacent skills that separates people who <em>use</em> databases from people who <em>design</em> them.</p>
+<p>Interviewers love this topic because it reveals how you think. Anyone can write a <code>SELECT</code> query. But can you explain <em>why</em> a table is badly designed? Can you spot the redundancy, name the anomaly it causes, and refactor the schema on a whiteboard? That's the real test — and it comes up constantly in <strong>software engineering</strong> system-design rounds.</p>
+<p>By the end of this article you'll be able to walk any messy table through First, Second, and Third Normal Form, explain every decision out loud, and know when to <em>stop</em> normalizing on purpose.</p>
+<h2>9. Problem Overview</h2>
+<p>Picture a spreadsheet. Each row is one thing — say, one student. Each column describes that thing — name, age, department. A relational database is just a collection of these tables that can point at one another using keys.</p>
+<p>The problem starts when a single table tries to describe <em>many</em> kinds of things at once. Imagine a table that stores students, their enrolled courses, and their department details all in one place. The department name "Computer Science" gets copied next to every single CS student. A student's list of courses gets crammed into one cell as <code>"SQL, Python"</code>.</p>
+<p>That repeated information is <strong>redundancy</strong>, and redundancy is the enemy. The same fact — one department name, one course title — physically exists in dozens of rows. When that fact changes, you must update every copy perfectly, or your data becomes inconsistent.</p>
+<p>Normalization is the set of rules that eliminates this. Its entire job is simple: <strong>make sure every fact is written down in exactly one place.</strong> One table should describe one kind of thing, and nothing else.</p>
+<h2>10. Example</h2>
+<p>Here is our messy "before" table — one table trying to be three:</p>
+<table>
+<thead>
+<tr>
+<th>student_id</th>
+<th>student_name</th>
+<th>courses</th>
+<th>dept_id</th>
+<th>dept_name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Anya</td>
+<td>SQL, Python</td>
+<td>D1</td>
+<td>Computer Science</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Ravi</td>
+<td>SQL</td>
+<td>D1</td>
+<td>Computer Science</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Meera</td>
+<td>Math</td>
+<td>D2</td>
+<td>Mathematics</td>
+</tr>
+</tbody>
+</table>
+<p>Look at everything wrong here:</p>
+<ul>
+<li><strong>The <code>courses</code> cell holds a list.</strong> Anya's row stuffs two courses into one cell.</li>
+<li><strong><code>dept_name</code> repeats.</strong> "Computer Science" is written twice, once per CS student. Add 1,000 CS students and you've written it 1,000 times.</li>
+<li><strong>Facts are entangled.</strong> A student, a course, and a department are three different ideas sharing one row.</li>
+</ul>
+<p>Now watch the three anomalies this causes:</p>
+<ul>
+<li><strong>Update anomaly:</strong> The CS department is renamed. You update Anya's row but forget Ravi's. Now the database says CS is called two different things.</li>
+<li><strong>Insert anomaly:</strong> You want to add a brand-new course, "Rust", but no student has enrolled yet. You <em>can't</em> — there's no student row to attach it to.</li>
+<li><strong>Delete anomaly:</strong> Meera drops out and you delete her row. You've just erased the only record that the "Mathematics" department ever existed.</li>
+</ul>
+<p>These three pains are exactly what normalization cures.</p>
+<h2>11. Intuition</h2>
+<p>Here's how an experienced engineer actually thinks about this — not by memorizing definitions, but by asking one question repeatedly:</p>
+<blockquote>
+<p>"Is this fact allowed to live here?"</p>
+</blockquote>
+<p>When you see the same value typed over and over, your instinct should fire: <em>this fact wants its own home.</em> The department name doesn't describe a student — it describes a department. So it belongs in a department table, written once, and <em>referenced</em> by everyone who needs it.</p>
+<p>That's the whole mental model. Normalization isn't three scary textbook rules. It's a ladder of three questions about <strong>where each fact is allowed to live</strong>:</p>
+<ol>
+<li>Is every cell a single value? (atomic)</li>
+<li>Does every column depend on the <em>whole</em> key? (whole key)</li>
+<li>Does every column depend <em>only</em> on the key, not on another column? (nothing but the key)</li>
+</ol>
+<p>Say it like a chant: <strong>atomic, whole key, nothing but the key.</strong> Once that rhythm is in your head, you'll spot violations instantly — long before you remember what "2NF" technically stands for.</p>
+<h2>12. Brute Force Solution</h2>
+<p><strong>The idea:</strong> Just keep everything in one big table and handle consistency in your application code. Every time a department name changes, write code that finds and updates all matching rows.</p>
+<p><strong>The algorithm:</strong>
+1. Store all data in a single flat table.
+2. When a shared fact changes, run an <code>UPDATE ... WHERE</code> across every affected row.
+3. Add validation logic in the app to keep duplicate values in sync.</p>
+<p><strong>Advantages:</strong>
+- Dead simple to start. One table, no joins.
+- Reads are fast — everything is in one place, no joining required.</p>
+<p><strong>Disadvantages:</strong>
+- Every write is a landmine. Miss one row and your data is silently wrong.
+- Insert and delete anomalies are unavoidable — you can't store a course without a student.
+- The app carries logic the database should enforce for you.</p>
+<p><strong>Time complexity:</strong> A single "change one fact" operation becomes <strong>O(n)</strong> — you must touch every row containing the duplicated value.
+<strong>Space complexity:</strong> <strong>O(n × d)</strong> where <em>d</em> is the duplicated data per row — you pay for every copy.</p>
+<p>This "solution" works until it doesn't, and it fails in the worst way: quietly.</p>
+<h2>13. Optimal Solution</h2>
+<p>The optimal approach is to normalize through 1NF → 2NF → 3NF, peeling one layer of mess off at a time.</p>
+<h3>Step 1 — First Normal Form (1NF): One value per cell</h3>
+<p><strong>Rule:</strong> No cell may hold a list. Every value is atomic.</p>
+<p>Anya's <code>"SQL, Python"</code> becomes two separate rows. It's like putting each item on its own line of a receipt instead of scribbling them all in one box.</p>
+<table>
+<thead>
+<tr>
+<th>student_id</th>
+<th>student_name</th>
+<th>course</th>
+<th>dept_id</th>
+<th>dept_name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Anya</td>
+<td>SQL</td>
+<td>D1</td>
+<td>Computer Science</td>
+</tr>
+<tr>
+<td>1</td>
+<td>Anya</td>
+<td>Python</td>
+<td>D1</td>
+<td>Computer Science</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Ravi</td>
+<td>SQL</td>
+<td>D1</td>
+<td>Computer Science</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Meera</td>
+<td>Math</td>
+<td>D2</td>
+<td>Mathematics</td>
+</tr>
+</tbody>
+</table>
+<h3>Keys — the ID cards of your rows</h3>
+<p>Before the next two rules, you need keys:</p>
+<ul>
+<li><strong>Primary key:</strong> one column that uniquely names a row (like <code>student_id</code>).</li>
+<li><strong>Composite key:</strong> when it takes <em>two</em> columns together to be unique — like <code>seat + flight_number</code>. Here, <code>(student_id, course)</code> together identify one enrollment.</li>
+<li><strong>Non-key column:</strong> plain data riding along, like <code>student_name</code>.</li>
+</ul>
+<p>The next two forms are <em>entirely</em> about keys.</p>
+<h3>Step 2 — Second Normal Form (2NF): Depend on the whole key</h3>
+<p><strong>Rule:</strong> When your key is composite, every non-key column must depend on the <em>entire</em> key — not just part of it.</p>
+<p>Our key is <code>(student_id, course)</code>. But <code>student_name</code> depends only on <code>student_id</code> — it has nothing to do with which course. That's a <strong>partial dependency</strong>. Fix it by pulling <code>student_name</code> into its own <strong>Student</strong> table.</p>
+<p><strong>Enrollment table:</strong></p>
+<table>
+<thead>
+<tr>
+<th>student_id</th>
+<th>course</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>SQL</td>
+</tr>
+<tr>
+<td>1</td>
+<td>Python</td>
+</tr>
+<tr>
+<td>2</td>
+<td>SQL</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Math</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Student table:</strong></p>
+<table>
+<thead>
+<tr>
+<th>student_id</th>
+<th>student_name</th>
+<th>dept_id</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Anya</td>
+<td>D1</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Ravi</td>
+<td>D1</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Meera</td>
+<td>D2</td>
+</tr>
+</tbody>
+</table>
+<h3>Step 3 — Third Normal Form (3NF): Nothing but the key</h3>
+<p><strong>Rule:</strong> No non-key column may depend on <em>another</em> non-key column. That hidden chain is a <strong>transitive dependency</strong>.</p>
+<p>In the Student table, <code>dept_name</code> depends on <code>dept_id</code>, which depends on <code>student_id</code>. The department name is riding on a middleman. Split departments into their own table.</p>
+<p><strong>Department table:</strong></p>
+<table>
+<thead>
+<tr>
+<th>dept_id</th>
+<th>dept_name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D1</td>
+<td>Computer Science</td>
+</tr>
+<tr>
+<td>D2</td>
+<td>Mathematics</td>
+</tr>
+</tbody>
+</table>
+<p>Now "Computer Science" is written <strong>once</strong>. Change it there, and every student sees the update instantly — because they were only ever pointing at it.</p>
+<h3>The whole journey</h3>
+<pre><code>ONE crowded table  →  THREE focused tables
+                       ├── Student     (who they are)
+                       ├── Enrollment  (what they take)
+                       └── Department   (where they belong)
+</code></pre>
+<p>Each table owns exactly one idea. The keys stitch them back together whenever you need the full picture.</p>
+<h2>14. SQL Code</h2>
+<p>Here's the clean, production-quality schema that results:</p>
+<pre><code class="language-sql">-- Department: each department's name lives here exactly once
+CREATE TABLE department (
+    dept_id   VARCHAR(10) PRIMARY KEY,
+    dept_name VARCHAR(100) NOT NULL
+);
+
+-- Student: describes a student, references their department
+CREATE TABLE student (
+    student_id   INT PRIMARY KEY,
+    student_name VARCHAR(100) NOT NULL,
+    dept_id      VARCHAR(10) NOT NULL,
+    FOREIGN KEY (dept_id) REFERENCES department(dept_id)
+);
+
+-- Enrollment: one row = one student taking one course
+CREATE TABLE enrollment (
+    student_id INT,
+    course     VARCHAR(100),
+    PRIMARY KEY (student_id, course),          -- composite key
+    FOREIGN KEY (student_id) REFERENCES student(student_id)
+);
+</code></pre>
+<p>Reassembling the full picture is a simple join:</p>
+<pre><code class="language-sql">SELECT s.student_name,
+       e.course,
+       d.dept_name
+FROM   enrollment e
+JOIN   student s    ON s.student_id = e.student_id
+JOIN   department d ON d.dept_id    = s.dept_id;
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<ul>
+<li><strong><code>department</code></strong> is created first because other tables reference it — you can't point at a table that doesn't exist yet. <code>dept_id</code> is the primary key; <code>dept_name</code> is stored a single time.</li>
+<li><strong><code>student</code></strong> holds facts that describe a student and <em>only</em> a student. The <code>FOREIGN KEY (dept_id)</code> enforces that every student points to a real department — the database itself now guarantees consistency you used to hope for in app code.</li>
+<li><strong><code>enrollment</code></strong> uses <code>PRIMARY KEY (student_id, course)</code> — a <strong>composite key</strong>. This says a student can take many courses and a course can have many students, but the same pairing can't be entered twice.</li>
+<li>The <strong><code>JOIN</code></strong> query proves nothing was lost. Normalization split the data for <em>storage</em>, but you rebuild any view you want on demand.</li>
+</ul>
+<h2>16. Dry Run</h2>
+<p>Let's rename "Computer Science" to "CS &amp; Engineering".</p>
+<p><strong>Before normalization</strong>, that fact lived in every CS student's row:</p>
+<pre><code class="language-sql">UPDATE big_table SET dept_name = 'CS &amp; Engineering' WHERE dept_id = 'D1';
+-- touches Anya's rows AND Ravi's rows — miss one and data is inconsistent
+</code></pre>
+<p><strong>After normalization</strong>, it lives in exactly one row:</p>
+<pre><code class="language-sql">UPDATE department SET dept_name = 'CS &amp; Engineering' WHERE dept_id = 'D1';
+</code></pre>
+<p>One row updated. Anya and Ravi both instantly see the new name, because they never stored it — they only stored <code>dept_id = 'D1'</code> and <em>point</em> at the department. Zero chance of disagreement. That's the entire payoff of normalization in a single query.</p>
+<h2>17. Complexity Analysis</h2>
+<p><strong>Storage:</strong> Normalization reduces duplicated data from <strong>O(n × d)</strong> down to storing each shared fact once — <strong>O(unique facts)</strong>. A department name shared by 10,000 students is stored one time, not 10,000 times.</p>
+<p><strong>Write cost:</strong> Changing a shared fact drops from <strong>O(n)</strong> (update every copy) to <strong>O(1)</strong> (update the single source row).</p>
+<p><strong>Read cost:</strong> This is the trade-off. Reassembling data now requires <strong>joins</strong>, and each join has a cost. A query that was a single-table scan may now join three tables. For most applications this is negligible thanks to indexed keys — but it's real, and it's why the next section matters.</p>
+<h2>18. Alternative Solutions — When to Denormalize</h2>
+<p>Here's an honest opinion from the field: <strong>3NF is the sweet spot for almost every application.</strong> The higher normal forms (BCNF, 4NF, 5NF) exist, but for everyday apps they're mostly overkill.</p>
+<p>And sometimes you should go the <em>other</em> direction. If you split everything into a hundred tiny tables, every query joins ten of them, and reads get slow. For <strong>read-heavy dashboards and analytics</strong>, engineers deliberately <strong>denormalize</strong> — keeping a little redundancy <em>on purpose</em> for speed.</p>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Best for</th>
+<th>Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fully normalized</td>
+<td>Transactional apps, writes</td>
+<td>Slower, join-heavy reads</td>
+</tr>
+<tr>
+<td>Denormalized</td>
+<td>Dashboards, analytics, reads</td>
+<td>Redundancy you must manage</td>
+</tr>
+</tbody>
+</table>
+<p>The rule: <strong>normalize by default, then relax it only where the numbers force you to.</strong></p>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong>Empty tables:</strong> An enrollment with no students should still allow the course to exist somewhere — normalization already fixes this by separating courses/departments from students.</li>
+<li><strong>Duplicates:</strong> The composite primary key on <code>enrollment</code> blocks the same student–course pair from being inserted twice.</li>
+<li><strong>Orphaned references:</strong> Foreign keys prevent a student from pointing to a department that doesn't exist.</li>
+<li><strong>Single-value lists:</strong> Even a cell with <em>one</em> comma-separated value is a 1NF violation waiting to grow.</li>
+<li><strong>Null keys:</strong> A key column should never be null — a row with no identity can't be reliably referenced.</li>
+</ul>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>The comma-separated cell.</strong> Storing <code>tags = "red, blue, green"</code> or five phone numbers in one column. The moment one value changes, you're parsing strings by hand. This is the #1 beginner trap.</li>
+<li><strong>Bolting on more columns instead of a new table.</strong> When you feel yourself adding <code>phone1</code>, <code>phone2</code>, <code>phone3</code>, stop — a hidden table is asking to be born.</li>
+<li><strong>Ignoring partial dependencies.</strong> Leaving a column that depends on only half a composite key inside the wrong table (a 2NF miss).</li>
+<li><strong>Missing the transitive middleman.</strong> Letting a non-key column depend on another non-key column (a 3NF miss) — the sneakiest one to spot.</li>
+<li><strong>Over-normalizing everything.</strong> Shredding data into so many tables that every read becomes a ten-way join. Normalization is a tool, not a religion.</li>
+<li><strong>Forgetting foreign keys.</strong> Splitting tables but never enforcing the relationships, so orphaned data creeps back in.</li>
+</ol>
+<h2>21. Interview Questions</h2>
+<p>Be ready for these follow-ups:</p>
+<ul>
+<li>"What's the difference between 2NF and 3NF in one sentence?"</li>
+<li>"Give a real example of an update anomaly."</li>
+<li>"What is a composite key, and when do you need one?"</li>
+<li>"What is a transitive dependency?"</li>
+<li>"When would you <em>deliberately</em> denormalize a schema?"</li>
+<li>"Is a table in 3NF always in 2NF? Why?"</li>
+<li>"What does BCNF add beyond 3NF?"</li>
+</ul>
+<h2>22. Similar Problems</h2>
+<p>While normalization isn't a LeetCode-style algorithm problem, it connects directly to these interview and practice areas:</p>
+<ul>
+<li><strong>LeetCode Database problems</strong> (e.g. <em>Duplicate Emails</em>, <em>Employees Earning More Than Their Managers</em>) — these test the joins and relationships that normalized schemas depend on.</li>
+<li><strong>System Design: Design a URL shortener / social feed</strong> — normalization vs. denormalization trade-offs are central.</li>
+<li><strong>Functional dependency and closure problems</strong> — the formal theory underneath 2NF and 3NF.</li>
+</ul>
+<p>They're related because they all test the same core skill: reasoning about <em>where a fact belongs</em> and how tables relate.</p>
+<h2>23. Key Takeaways</h2>
+<ul>
+<li><strong>Redundancy is the root cause;</strong> anomalies (update, insert, delete) are the symptoms.</li>
+<li><strong>1NF:</strong> one value per cell — atomic.</li>
+<li><strong>2NF:</strong> every non-key column depends on the <em>whole</em> key.</li>
+<li><strong>3NF:</strong> no non-key column depends on another non-key column.</li>
+<li>Chant it: <strong>atomic, whole key, nothing but the key.</strong></li>
+<li>Normalize by default; denormalize only when performance data demands it.</li>
+</ul>
+<h2>24. Watch the Video</h2>
+<p>Reading the rules is one thing — <em>watching</em> a messy table split into clean tables in real time makes it click. In the video, we walk this exact table through 1NF, 2NF, and 3NF live, decode the keys as we go, and show why over-normalizing can hurt.</p>
+<p>▶️ <strong>Watch Lesson 24 here:</strong> {LINK}</p>
+<h2>25. About the Series</h2>
+<p>This article is part of the <strong>Fun with Learning Technology</strong> series — a hands-on journey through SQL, databases, and the practical software engineering skills developers actually use on the job. Each lesson takes one real concept, strips away the textbook jargon, and teaches the intuition first, so the rules finally make sense. If you're building your <strong>SQL</strong> and backend foundations one lesson at a time, you're in the right place.</p>
+<h2>26. Call To Action</h2>
+<p>If this helped normalization finally click:</p>
+<ul>
+<li>👍 <strong>Like</strong> the video on YouTube — it genuinely helps the channel grow.</li>
+<li>🔔 <strong>Subscribe</strong> so you never miss a lesson in the series.</li>
+<li>📩 <strong>Subscribe to the Substack</strong> for the written deep-dives like this one.</li>
+<li>💬 <strong>Comment</strong> with the schema mistake that once cost <em>you</em> an afternoon.</li>
+<li>🔁 <strong>Share</strong> it with a developer who's still storing lists in one cell.</li>
+</ul>
+<p><em>This bug took three hours to untangle. Subscribing takes three seconds.</em></p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Data has update/insert/delete anomalies and repeated values everywhere. What design discipline?</summary><p>Normalization — decompose tables so each fact lives in exactly one place, killing redundancy and the anomalies it causes.</p></details><details class='card2'><summary>What defines First Normal Form (1NF)?</summary><p>Every column holds a single atomic value (no lists/repeating groups) and each row is unique via a key. No multi-valued cells.</p></details><details class='card2'><summary>What must hold for 2NF, and its prerequisite?</summary><p>Must be 1NF, and every non-key column depends on the whole composite key — no partial dependency on just part of it.</p></details><details class='card2'><summary>What does 3NF eliminate that 2NF allows?</summary><p>Transitive dependencies: non-key columns depending on other non-key columns. Every non-key attribute depends only on the key.</p></details><details class='card2'><summary>2NF vs 3NF — the quick distinction?</summary><p>2NF removes partial dependencies on a composite key; 3NF removes transitive dependencies between non-key columns. 2NF is prerequisite for 3NF.</p></details><details class='card2'><summary>Follow-up: is more normalization always better?</summary><p>No. Over-normalizing forces many joins, hurting read performance. Sometimes denormalize deliberately for speed, trading redundancy for fewer joins.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
