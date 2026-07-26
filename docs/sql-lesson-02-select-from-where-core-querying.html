@@ -1,0 +1,573 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SQL Lesson 2: Pull 3 Rows From 1,000,000 in One Line — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-02-select-from-where-core-querying
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/sql-lesson-02-select-from-where-core-querying.html">
+<meta property="og:title" content="SQL Lesson 2: Pull 3 Rows From 1,000,000 in One Line — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-02-select-from-where-core-querying
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>SQL Lesson 2: Pull 3 Rows From 1,000,000 in One Line</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h1>SEO PACKAGE</h1>
+<p><strong>1. SEO Title:</strong>
+SQL SELECT, FROM, and WHERE Explained: Pull 3 Rows From a Million in One Line</p>
+<p><strong>2. SEO Subtitle:</strong>
+Master the three clauses behind almost every SQL query — and the execution order that finally makes filtering click.</p>
+<p><strong>3. Featured Quote:</strong></p>
+<blockquote>
+<p>"You write <code>SELECT</code> first, but the database runs it last. Once you see that order, SQL stops being magic and starts being logic."</p>
+</blockquote>
+<p><strong>4. Meta Description:</strong>
+Learn SQL's SELECT, FROM, and WHERE clauses step by step. Understand the real execution order and write your first filtered query with confidence. (154 characters)</p>
+<p><strong>5. URL Slug:</strong>
+<code>sql-select-from-where-explained</code></p>
+<p><strong>6. Keywords:</strong>
+SQL, SELECT statement, FROM clause, WHERE clause, SQL for beginners, learn SQL, SQL query, filtering rows in SQL, SQL execution order, relational database, SQL tutorial, database queries, SQL basics, SQL WHERE condition, data analysis SQL, SQL AND operator, coding interview SQL, SQL best practices, SELECT star, structured query language</p>
+<p><strong>7. Tags:</strong>
+SQL, Databases, SQL for Beginners, Data Analysis, Backend Development, Coding Interview, Software Engineering, SQL Query, Relational Databases, Learn to Code, Data Engineering, SQL Tutorial, Programming Basics</p>
+<hr />
+<h1>SQL SELECT, FROM, and WHERE Explained: Pull 3 Rows From a Million in One Line</h1>
+<h2>8. Introduction</h2>
+<p>Imagine a spreadsheet a million rows tall. Somewhere inside it are three rows you actually need. You don't want to scroll. You don't want to write a loop. You want to walk up to that mountain of data and calmly ask for the exact slice you care about — and get it back in milliseconds.</p>
+<p>That is what SQL is for, and you get almost all of its power from just three words: <code>SELECT</code>, <code>FROM</code>, and <code>WHERE</code>. These three clauses run nearly every data question asked on Earth, from a startup's first analytics dashboard to the query behind your bank statement.</p>
+<p>If you're moving from "what is a table?" toward confident, filtered queries, this is the lesson that flips the switch. Interviewers lean on these fundamentals constantly — not because they're hard, but because they reveal whether you actually understand how a database <em>thinks</em>. A candidate who knows why <code>SELECT</code> runs last, or why <code>SELECT *</code> is a lazy habit, signals real fluency. In software engineering, data structures and algorithms get the spotlight, but the ability to ask a database for precisely what you need is a skill you'll use every single working day.</p>
+<p>Let's build that intuition from the ground up.</p>
+<h2>9. Problem Overview</h2>
+<p>Here's the challenge in plain terms: <strong>given a table full of records, return only the specific columns and only the specific rows that answer your question.</strong></p>
+<p>Before the vocabulary scares anyone off, let's name the furniture:</p>
+<ul>
+<li>A <strong>table</strong> is just a spreadsheet. Every <strong>row</strong> is one thing — one customer, one order, one user. Every <strong>column</strong> is one detail about that thing — a name, a city, an age.</li>
+<li>A <strong>relational database</strong> is nothing more than a collection of these neat tables sitting side by side.</li>
+</ul>
+<p>So the whole job of a basic query is this: scan down the rows of a table, keep the rows that pass a test, and show back only the columns you asked for. Three clauses do this work:</p>
+<table>
+<thead>
+<tr>
+<th>Clause</th>
+<th>Job</th>
+<th>Restaurant analogy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SELECT</code></td>
+<td>Which <strong>columns</strong> come back</td>
+<td>Ordering specific dishes off the menu</td>
+</tr>
+<tr>
+<td><code>FROM</code></td>
+<td>Which <strong>table</strong> to read</td>
+<td>Naming the restaurant</td>
+</tr>
+<tr>
+<td><code>WHERE</code></td>
+<td>Which <strong>rows</strong> survive</td>
+<td>The bouncer at the door</td>
+</tr>
+</tbody>
+</table>
+<h2>10. Example</h2>
+<p>Let's build a tiny world we can check in our heads. Here is a <code>users</code> table with four rows:</p>
+<table>
+<thead>
+<tr>
+<th>name</th>
+<th>city</th>
+<th>age</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ana</td>
+<td>Delhi</td>
+<td>25</td>
+</tr>
+<tr>
+<td>Ben</td>
+<td>Mumbai</td>
+<td>30</td>
+</tr>
+<tr>
+<td>Cara</td>
+<td>Delhi</td>
+<td>22</td>
+</tr>
+<tr>
+<td>Dev</td>
+<td>Pune</td>
+<td>40</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Query:</strong></p>
+<pre><code class="language-sql">SELECT name, age
+FROM users
+WHERE city = 'Delhi';
+</code></pre>
+<p><strong>Result:</strong></p>
+<table>
+<thead>
+<tr>
+<th>name</th>
+<th>age</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ana</td>
+<td>25</td>
+</tr>
+<tr>
+<td>Cara</td>
+<td>22</td>
+</tr>
+</tbody>
+</table>
+<p>Read it out loud: <em>"Give me the name and age, from users, where the city is Delhi."</em> It's almost a plain English sentence.</p>
+<p>Why this output? <code>WHERE city = 'Delhi'</code> kept only Ana and Cara. Then <code>SELECT name, age</code> dropped the <code>city</code> column, because we never asked for it. Ben and Dev never made it past the door.</p>
+<h2>11. Intuition</h2>
+<p>Here's the mental model an experienced engineer carries around, and it's the single most useful thing in this article.</p>
+<p><strong>The database does not run your query top to bottom.</strong></p>
+<p>You <em>write</em> <code>SELECT</code> first, but the engine doesn't touch it until the very end. Instead, it works in this order:</p>
+<ol>
+<li><strong><code>FROM</code></strong> — grab the whole table. Now you're holding a million rows.</li>
+<li><strong><code>WHERE</code></strong> — walk down those rows and throw out every one that fails the test. Now you're holding three.</li>
+<li><strong><code>SELECT</code></strong> — from the survivors, keep only the columns you named.</li>
+</ol>
+<p>The shape is simple: <strong>rows in → rows filtered → columns chosen.</strong></p>
+<p>Picture <code>WHERE</code> as a bouncer checking IDs one row at a time. The question is <code>city = 'Delhi'</code>:</p>
+<pre><code>Ana  → Delhi? YES → let in
+Ben  → Delhi? no  → turned away
+Cara → Delhi? YES → let in
+Dev  → Delhi? no  → turned away
+</code></pre>
+<p>That is <em>genuinely all a filter does</em> — one row, one yes-or-no question, and the survivors become your result. Once you internalize "FROM, then WHERE, then SELECT," every confusing query you'll ever meet untangles itself.</p>
+<h2>12. Brute Force Solution</h2>
+<p>Before we appreciate <code>WHERE</code>, let's see life without it — the approach many programmers reach for first.</p>
+<p><strong>The idea:</strong> Skip filtering in SQL entirely. Pull <em>every</em> row into your application, then filter with a loop in Python (or whatever language you know).</p>
+<p><strong>The algorithm:</strong></p>
+<pre><code class="language-python"># Brute force: drag everything out, filter in the app
+rows = db.execute(&quot;SELECT name, age, city FROM users&quot;)
+
+result = []
+for row in rows:
+    if row[&quot;city&quot;] == &quot;Delhi&quot;:   # do the filtering ourselves
+        result.append((row[&quot;name&quot;], row[&quot;age&quot;]))
+</code></pre>
+<p><strong>Advantages:</strong>
+- Feels familiar if you already know a programming language.
+- No new SQL syntax to learn — the logic lives in code you control.</p>
+<p><strong>Disadvantages:</strong>
+- You just shipped <strong>a million rows across the network to keep three.</strong> That's wasted bandwidth, memory, and time.
+- The database engine — which is <em>built</em> to filter data efficiently, often using indexes — sits idle while your app does slow work it was never meant to do.
+- It doesn't scale. On a real table this melts your application.</p>
+<p><strong>Time complexity:</strong> <code>O(n)</code> in your application, where <code>n</code> is every row in the table.
+<strong>Space complexity:</strong> <code>O(n)</code> — you're holding the entire table in memory.</p>
+<p>The lesson: <strong>filter where the data lives, not after you've dragged it out.</strong></p>
+<h2>13. Optimal Solution</h2>
+<p>The optimal approach lets <code>WHERE</code> do the heavy lifting, right next to the data.</p>
+<pre><code class="language-sql">SELECT name, age
+FROM users
+WHERE city = 'Delhi';
+</code></pre>
+<p>Step by step, here's what the engine does:</p>
+<p><strong>Step 1 — <code>FROM users</code>:</strong> Identify the source. The engine now knows which table to scan.</p>
+<p><strong>Step 2 — <code>WHERE city = 'Delhi'</code>:</strong> Evaluate the condition against each row. On a real database with an index on <code>city</code>, the engine may not even scan all million rows — it can jump straight to the matches. This is the superpower your application loop can never match.</p>
+<p><strong>Step 3 — <code>SELECT name, age</code>:</strong> Project only the requested columns from the surviving rows.</p>
+<p><code>WHERE</code> isn't limited to equality. You can compare, and you can combine conditions with <code>AND</code> so both must be true:</p>
+<pre><code class="language-sql">SELECT name, age
+FROM users
+WHERE city = 'Delhi' AND age &gt; 20;
+</code></pre>
+<p>Walking our table:</p>
+<table>
+<thead>
+<tr>
+<th>name</th>
+<th style="text-align: center;">city = 'Delhi'?</th>
+<th style="text-align: center;">age &gt; 20?</th>
+<th style="text-align: center;">Both true?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ana</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅ (25)</td>
+<td style="text-align: center;"><strong>Kept</strong></td>
+</tr>
+<tr>
+<td>Ben</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">Dropped</td>
+</tr>
+<tr>
+<td>Cara</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅ (22)</td>
+<td style="text-align: center;"><strong>Kept</strong></td>
+</tr>
+<tr>
+<td>Dev</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">Dropped</td>
+</tr>
+</tbody>
+</table>
+<p>One rule to tattoo on your brain: <strong>text values go in single quotes, numbers stay bare.</strong> <code>'Delhi'</code> needs quotes; <code>20</code> does not.</p>
+<h2>14. Python Code</h2>
+<p>Here's how you'd run this cleanly from Python using the standard <code>sqlite3</code> module — production-shaped, with a parameterized query to stay safe from SQL injection.</p>
+<pre><code class="language-python">import sqlite3
+
+
+def find_users(db_path: str, city: str, min_age: int) -&gt; list[tuple[str, int]]:
+    &quot;&quot;&quot;Return (name, age) for users in a city above a minimum age.&quot;&quot;&quot;
+    query = &quot;&quot;&quot;
+        SELECT name, age
+        FROM users
+        WHERE city = ? AND age &gt; ?
+    &quot;&quot;&quot;
+    with sqlite3.connect(db_path) as conn:
+        # Parameters passed separately — never format them into the string.
+        rows = conn.execute(query, (city, min_age)).fetchall()
+    return rows
+
+
+if __name__ == &quot;__main__&quot;:
+    # Self-check on an in-memory table.
+    conn = sqlite3.connect(&quot;:memory:&quot;)
+    conn.execute(&quot;CREATE TABLE users (name TEXT, city TEXT, age INTEGER)&quot;)
+    conn.executemany(
+        &quot;INSERT INTO users VALUES (?, ?, ?)&quot;,
+        [(&quot;Ana&quot;, &quot;Delhi&quot;, 25), (&quot;Ben&quot;, &quot;Mumbai&quot;, 30),
+         (&quot;Cara&quot;, &quot;Delhi&quot;, 22), (&quot;Dev&quot;, &quot;Pune&quot;, 40)],
+    )
+    conn.commit()
+
+    result = conn.execute(
+        &quot;SELECT name, age FROM users WHERE city = ? AND age &gt; ?&quot;,
+        (&quot;Delhi&quot;, 20),
+    ).fetchall()
+
+    assert result == [(&quot;Ana&quot;, 25), (&quot;Cara&quot;, 22)], result
+    print(&quot;OK:&quot;, result)
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<ul>
+<li><strong><code>query = """ ... """</code></strong> — The SQL lives in a triple-quoted string so the three clauses read like the sentence they are. The <code>?</code> placeholders are gaps the driver fills in safely.</li>
+<li><strong><code>conn.execute(query, (city, min_age))</code></strong> — The values are passed as a <em>separate tuple</em>, not glued into the string. This is the parameterized-query habit that closes the door on SQL injection. Notice <code>city</code> maps to the first <code>?</code> and <code>min_age</code> to the second.</li>
+<li><strong><code>.fetchall()</code></strong> — Pulls back the surviving rows as a list of tuples.</li>
+<li><strong><code>with sqlite3.connect(...)</code></strong> — The context manager commits and closes cleanly, even if something throws.</li>
+<li><strong>The <code>__main__</code> block</strong> — Builds a four-row table in memory and asserts the exact result. If the filtering logic ever breaks, this check fails loudly.</li>
+</ul>
+<h2>16. Dry Run</h2>
+<p>Let's trace <code>WHERE city = 'Delhi' AND age &gt; 20</code> against the table, exactly as the engine would.</p>
+<ol>
+<li><strong><code>FROM users</code></strong> → engine loads all four rows.</li>
+<li><strong><code>WHERE</code></strong> evaluates each row:
+   - <strong>Ana</strong> — city is Delhi ✅, age 25 &gt; 20 ✅ → <strong>survives</strong>
+   - <strong>Ben</strong> — city is Mumbai ❌ → short-circuits, dropped
+   - <strong>Cara</strong> — city is Delhi ✅, age 22 &gt; 20 ✅ → <strong>survives</strong>
+   - <strong>Dev</strong> — city is Pune ❌ → dropped</li>
+<li><strong><code>SELECT name, age</code></strong> → from survivors Ana and Cara, keep only <code>name</code> and <code>age</code>.</li>
+</ol>
+<p><strong>Final result:</strong> <code>[("Ana", 25), ("Cara", 22)]</code> — which matches our assertion. </p>
+<h2>17. Complexity Analysis</h2>
+<p><strong>Time complexity:</strong>
+- Without an index: <code>O(n)</code> — the engine checks each of <code>n</code> rows once against the <code>WHERE</code> condition. This is optimal in the worst case, because any row <em>could</em> match, so every row must be examined.
+- With an index on the filtered column: closer to <code>O(log n + k)</code>, where <code>k</code> is the number of matches. The index lets the engine skip straight to relevant rows instead of scanning all of them — this is why filtering in SQL crushes the application-loop approach.</p>
+<p><strong>Space complexity:</strong> <code>O(k)</code> — you only hold the <code>k</code> matching rows in the result, not the whole table. Contrast this with the brute-force <code>O(n)</code>, which drags everything into memory.</p>
+<p>The correctness of these bounds comes from the execution order: <code>WHERE</code> reduces the working set <em>before</em> <code>SELECT</code> and <em>before</em> the data ever leaves the database.</p>
+<h2>18. Alternative Solutions</h2>
+<p>A common variation is filtering with <code>IN</code> instead of chained <code>OR</code>s:</p>
+<pre><code class="language-sql">-- Instead of: WHERE city = 'Delhi' OR city = 'Mumbai'
+SELECT name, age
+FROM users
+WHERE city IN ('Delhi', 'Mumbai');
+</code></pre>
+<p><code>IN</code> is cleaner and easier to extend to many values. Functionally it's equivalent to a series of <code>OR</code> comparisons, and most engines optimize it identically. For ranges, <code>BETWEEN</code> reads better than two comparisons:</p>
+<pre><code class="language-sql">WHERE age BETWEEN 20 AND 30   -- same as age &gt;= 20 AND age &lt;= 30
+</code></pre>
+<p>Compared to the application-loop brute force, all of these are strictly better because they filter inside the database. Prefer whichever reads most clearly for your condition.</p>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong>Empty table:</strong> No rows to scan, so <code>WHERE</code> returns nothing — you get an empty result, not an error.</li>
+<li><strong>No matching rows:</strong> A valid query that returns zero rows. Empty is a legitimate answer, not a failure.</li>
+<li><strong>Duplicates:</strong> SQL does not remove duplicate rows unless you ask with <code>DISTINCT</code>. If two users share a name and city, both come back.</li>
+<li><strong><code>NULL</code> values:</strong> <code>WHERE age &gt; 20</code> silently skips rows where <code>age</code> is <code>NULL</code>, because comparisons with <code>NULL</code> are neither true nor false. Use <code>WHERE age IS NULL</code> to catch them.</li>
+<li><strong>Minimum / maximum values:</strong> Boundary conditions matter. <code>age &gt; 20</code> excludes exactly-20; <code>age &gt;= 20</code> includes it. Off-by-one at the boundary is the classic bug.</li>
+</ul>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Quoting a number.</strong> Writing <code>WHERE age = '25'</code> can trigger surprising type coercion and slow, index-defeating comparisons. Numbers stay bare: <code>WHERE age = 25</code>.</li>
+<li><strong>Forgetting quotes around text.</strong> <code>WHERE city = Delhi</code> makes SQL think <code>Delhi</code> is a <em>column name</em> — and it throws an error. (This one costs everybody twenty confused minutes at least once.) Text needs single quotes: <code>WHERE city = 'Delhi'</code>.</li>
+<li><strong>Reaching for <code>SELECT *</code> by default.</strong> It's fine while poking around, but in real code it drags back columns nobody asked for, slows the query, and makes intent unreadable six months later. Name your columns.</li>
+<li><strong>Filtering in application code instead of <code>WHERE</code>.</strong> Pulling a million rows to keep three wastes everything. Let the database filter close to the data.</li>
+<li><strong>Using <code>=</code> with <code>NULL</code>.</strong> <code>WHERE age = NULL</code> never matches anything. You must write <code>WHERE age IS NULL</code>.</li>
+<li><strong>Confusing <code>AND</code> / <code>OR</code> precedence.</strong> <code>WHERE a AND b OR c</code> doesn't mean what beginners expect. Use parentheses to make intent explicit.</li>
+</ol>
+<h2>21. Interview Questions</h2>
+<ul>
+<li>What's the actual execution order of <code>SELECT</code>, <code>FROM</code>, and <code>WHERE</code>? (Answer: FROM → WHERE → SELECT.)</li>
+<li>Why is <code>SELECT *</code> discouraged in production code?</li>
+<li>How does <code>WHERE</code> behave with <code>NULL</code> values, and how do you filter for them?</li>
+<li>What's the difference between filtering in the database versus filtering in the application, and why does it matter at scale?</li>
+<li>When would you use <code>IN</code> versus multiple <code>OR</code> conditions?</li>
+<li>Why do text literals need quotes but numbers don't?</li>
+</ul>
+<h2>22. Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 595 – Big Countries:</strong> Pure <code>SELECT</code> + <code>WHERE</code> filtering with an <code>OR</code> condition — the direct sequel to this lesson.</li>
+<li><strong>LeetCode 584 – Find Customer Referee:</strong> Practices <code>WHERE</code> with a <code>NULL</code>-aware condition, reinforcing the <code>IS NULL</code> edge case.</li>
+<li><strong>LeetCode 183 – Customers Who Never Order:</strong> Filtering that leads naturally into <code>NOT IN</code> and joins.</li>
+<li><strong>LeetCode 1757 – Recyclable and Low Fat Products:</strong> Combining two conditions with <code>AND</code>, exactly like our Delhi-and-over-20 query.</li>
+</ul>
+<p>Each one reinforces the same muscle: pick the rows, pick the columns, trust the execution order.</p>
+<h2>23. Key Takeaways</h2>
+<ul>
+<li><code>SELECT</code> chooses <strong>columns</strong>, <code>FROM</code> chooses the <strong>table</strong>, <code>WHERE</code> chooses the <strong>rows</strong>.</li>
+<li>The engine runs <strong><code>FROM</code> → <code>WHERE</code> → <code>SELECT</code></strong>, even though you write <code>SELECT</code> first.</li>
+<li><strong>Quote text, leave numbers bare.</strong></li>
+<li><strong>Filter where the data lives.</strong> Never drag a million rows out to keep three.</li>
+<li>Name your columns instead of defaulting to <code>SELECT *</code>.</li>
+</ul>
+<p>Read any query out loud. If it sounds like an English sentence, you're writing SQL the right way.</p>
+<h2>24. Watch the Video</h2>
+<p>Seeing the bouncer filter rows one at a time makes this click far faster than reading about it. Watch the full walkthrough here — {LINK} — where we run <code>WHERE</code> row-by-row through the <code>users</code> table and reveal the execution order live.</p>
+<h2>25. About the Series</h2>
+<p>This is part of <strong>Fun with Learning Technology</strong>, a series that turns intimidating engineering topics into calm, intuitive lessons. We build every concept from the ground up — plain language first, real intuition second, code last — so you leave understanding <em>why</em> things work, not just memorizing <em>how</em>. From SQL fundamentals to algorithms and data structures, each episode is a small, confident step forward.</p>
+<h2>26. Call To Action</h2>
+<p>If this made SQL click for you, here's how to help the series grow:</p>
+<ul>
+<li>👍 <strong>Like</strong> the video on YouTube — it genuinely helps more learners find it.</li>
+<li>🔔 <strong>Subscribe</strong> on YouTube so you don't miss the next lesson.</li>
+<li>📩 <strong>Subscribe on Substack</strong> for the written deep-dives like this one.</li>
+<li>💬 <strong>Comment</strong> with the SQL topic you want covered next.</li>
+<li>🔁 <strong>Share</strong> this with someone who's just starting their database journey.</li>
+</ul>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>Most people think SQL is hard. It isn't. Almost every data question on Earth runs on just three words: SELECT, FROM, and WHERE.</p>
+<p>Here's the one idea that makes it all click — and it's the thing most beginners never get told:</p>
+<p>You write SELECT first, but the database doesn't run it first.</p>
+<p>The real execution order is:
+→ FROM grabs the table
+→ WHERE throws out the rows that fail its test
+→ SELECT keeps only the columns you asked for</p>
+<p>Rows in, rows filtered, columns chosen. That's the whole shape.</p>
+<p>Think of WHERE as a bouncer checking every row one at a time, asking a single yes-or-no question. Only the rows that pass get through. Once you see it that way, filtering a million-row table down to three stops feeling like magic and starts feeling like logic.</p>
+<p>Two habits worth building early:</p>
+<ol>
+<li>
+<p>Quote your text, leave your numbers bare. Writing WHERE city = Delhi (no quotes) makes SQL think Delhi is a column name — and it fails.</p>
+</li>
+<li>
+<p>Filter where the data lives. Pulling a million rows into your app to keep three wastes memory, bandwidth, and time. Let WHERE do the heavy lifting next to the data.</p>
+</li>
+</ol>
+<p>And one honest opinion: SELECT * is overrated. Fine for exploring, painful in production. Naming your columns is a little more typing that saves real debugging pain six months later.</p>
+<p>If you're moving from "what is a table?" to writing confident, filtered queries, this is the lesson that flips the switch.</p>
+<p>What's the SQL habit you wish someone had taught you on day one?</p>
+<h1>SQL #Database #SoftwareEngineering #DataAnalysis #LearnToCode</h1>
+<h2>Twitter/X Thread</h2>
+<p><strong>1/</strong>
+One line of SQL can pull 3 rows out of a million.
+Those three words — SELECT, FROM, WHERE — run almost every data question on Earth.
+Here's how they actually work 🧵</p>
+<p><strong>2/</strong>
+First, the furniture.
+A table is just a spreadsheet.
+Every row = one thing (one user).
+Every column = one detail (their city).
+A "relational database" is just a bunch of these tables side by side. That's it.</p>
+<p><strong>3/</strong>
+SELECT = which columns you want.
+Like telling a waiter the two dishes you want, not the whole menu.
+SELECT name, age → the city column simply won't show up.</p>
+<p><strong>4/</strong>
+FROM = which table to pull from.
+If SELECT orders the dishes, FROM names the restaurant.
+You almost never write one without the other.</p>
+<p><strong>5/</strong>
+WHERE = the bouncer at the door.
+It checks every row and asks one yes-or-no question.
+Only the rows that answer YES get through.</p>
+<p><strong>6/</strong>
+WHERE city = 'Delhi', row by row:
+Ana → yes ✅
+Ben → no ❌
+Cara → yes ✅
+Dev → no ❌
+That's genuinely all a filter does. One row at a time.</p>
+<p><strong>7/</strong>
+Here's the trick that makes it all click:
+You WRITE SELECT first.
+But the database RUNS it last.
+Order: FROM → WHERE → SELECT.
+Rows in, rows filtered, columns chosen.</p>
+<p><strong>8/</strong>
+Beginner trap #1: quotes.
+Text goes in single quotes. Numbers don't.
+WHERE city = Delhi → SQL thinks Delhi is a column name → error.
+WHERE city = 'Delhi' → works.</p>
+<p><strong>9/</strong>
+Beginner trap #2: SELECT *.
+Fine while exploring. Painful in production — it drags back columns nobody asked for and gets unreadable in 6 months.
+Name your columns. Tiny bit more typing, real pain saved.</p>
+<p><strong>10/</strong>
+And never do this: pull a million rows into your app, then filter with a loop.
+You just shipped a million rows to keep three.
+Filter where the data lives. Let WHERE do the heavy lifting.
+That's the whole toolkit. 🎯</p>
+<h2>Facebook Post</h2>
+<p>Ever looked at a giant table of data and thought "I only need a few of these rows — how do I just grab those?"</p>
+<p>That's exactly what SQL is for, and you only need three words to do it: SELECT (which columns), FROM (which table), and WHERE (which rows).</p>
+<p>The coolest part? You write SELECT first, but the database actually runs it LAST. It grabs the table, filters the rows, and only then picks your columns. Once that clicks, SQL suddenly feels like plain English: "Give me name and age, from users, where the city is Delhi."</p>
+<p>I broke the whole thing down step by step — including the two tiny mistakes that trip up almost every beginner. If you're just starting with databases, this one's for you. 👇</p>
+<h2>Reddit Summary</h2>
+<p><strong>The mental model that finally made SQL's SELECT/FROM/WHERE click for me</strong></p>
+<p>Sharing this because it's the thing I wish someone had said on day one.</p>
+<p>You write <code>SELECT</code> first, but the database doesn't execute it first. The real order is:</p>
+<ol>
+<li><code>FROM</code> — load the table</li>
+<li><code>WHERE</code> — drop every row that fails the condition</li>
+<li><code>SELECT</code> — keep only the columns you named</li>
+</ol>
+<p>So the flow is: rows in → rows filtered → columns chosen. Once you internalize that order, confusing queries untangle themselves.</p>
+<p>A couple of things worth knowing early:</p>
+<ul>
+<li>Text literals go in single quotes, numbers don't. <code>WHERE city = Delhi</code> (no quotes) makes SQL treat <code>Delhi</code> as a column name and errors out. <code>WHERE city = 'Delhi'</code> works.</li>
+<li>Filter in the database, not in your app. Pulling a million rows into your program to keep three wastes memory and bandwidth — the DB is built to filter close to the data, often with an index, so let <code>WHERE</code> do it.</li>
+<li><code>SELECT *</code> is fine for exploring but a bad default in real code: it returns columns nobody needs and hurts readability later.</li>
+</ul>
+<p>Nothing revolutionary, just the fundamentals explained in the order that actually makes them stick. Curious what mental model helped the rest of you when SQL first clicked.</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># SQL Basics: SELECT, FROM, and WHERE
+
+Pull exactly the rows and columns you need out of a table — even one a million rows tall — in a single line of SQL.
+
+## Problem
+
+Given a table of records, return only the specific **columns** and only the
+specific **rows** that answer your question. Three clauses do the work:
+
+- `SELECT` → which columns come back
+- `FROM`   → which table to read from
+- `WHERE`  → which rows survive the filter
+
+## Intuition
+
+The key insight most beginners miss: **you write `SELECT` first, but the
+database runs it last.** The real execution order is:
+
+</code></pre>
+<p>FROM  →  WHERE  →  SELECT
+(load) → (filter rows) → (pick columns)</p>
+<pre><code>
+`WHERE` acts like a bouncer, checking each row against a yes/no condition.
+Only rows that pass get through. Then `SELECT` keeps only the columns you named.
+
+## Approach
+
+Filter **inside the database**, not in application code. The engine is built to
+filter close to the data — often using an index — so a million-row table is
+reduced to a handful of matches before anything leaves the database.
+
+Rule of thumb: **text in single quotes, numbers bare.**
+
+## Example
+
+Table `users`:
+
+| name | city  | age |
+|------|-------|-----|
+| Ana  | Delhi | 25  |
+| Ben  | Mumbai| 30  |
+| Cara | Delhi | 22  |
+| Dev  | Pune  | 40  |
+
+```sql
+SELECT name, age
+FROM users
+WHERE city = 'Delhi' AND age &gt; 20;
+</code></pre>
+<p>Result:</p>
+<table>
+<thead>
+<tr>
+<th>name</th>
+<th>age</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ana</td>
+<td>25</td>
+</tr>
+<tr>
+<td>Cara</td>
+<td>22</td>
+</tr>
+</tbody>
+</table>
+<h2>Python Solution</h2>
+<pre><code class="language-python">import sqlite3
+
+
+def find_users(db_path: str, city: str, min_age: int) -&gt; list[tuple[str, int]]:
+    &quot;&quot;&quot;Return (name, age) for users in a city above a minimum age.&quot;&quot;&quot;
+    query = &quot;&quot;&quot;
+        SELECT name, age
+        FROM users
+        WHERE city = ? AND age &gt; ?
+    &quot;&quot;&quot;
+    with sqlite3.connect(db_path) as conn:
+        return conn.execute(query, (city, min_age)).fetchall()
+</code></pre>
+<p>Use <code>?</code> placeholders and pass parameters separately to stay safe from SQL injection.</p>
+<h2>Complexity</h2>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Time</th>
+<th>Space</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No index on filter</td>
+<td>O(n)</td>
+<td>O(k)</td>
+</tr>
+<tr>
+<td>Indexed filter col</td>
+<td>~O(log n + k)</td>
+<td>O(k)</td>
+</tr>
+</tbody>
+</table>
+<p><code>n</code> = rows in the table, <code>k</code> = matching rows. Filtering in the database keeps
+space at O(k) instead of the O(n) you'd pay dragging every row into your app.</p>
+<h2>Common Mistakes</h2>
+<ul>
+<li>Quoting numbers (<code>age = '25'</code>) → slow, index-defeating comparisons</li>
+<li>Forgetting quotes on text (<code>city = Delhi</code>) → SQL treats <code>Delhi</code> as a column → error</li>
+<li>Defaulting to <code>SELECT *</code> → returns unneeded columns, hurts readability and speed</li>
+<li>Filtering in app code instead of <code>WHERE</code> → wastes memory and bandwidth</li>
+<li><code>= NULL</code> instead of <code>IS NULL</code> → never matches</li>
+</ul>
+<h2>Video</h2>
+<p>📺 Watch the full walkthrough: {LINK}</p>
+<h2>Article</h2>
+<p>📖 Read the complete written lesson with diagrams, dry runs, and edge cases in
+the <strong>Fun with Learning Technology</strong> series.
+```</p></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>SQL retrieval pattern: when you need specific rows/columns from a table, what three clauses?</summary><p>SELECT (columns) FROM (table) WHERE (row condition). The core read pattern: project columns, pick the source, filter rows.</p></details><details class='card2'><summary>Time complexity of a WHERE filter with no index?</summary><p>O(n) — SQL scans every row in the table once, testing the condition. An index on the filtered column can drop it toward O(log n).</p></details><details class='card2'><summary>Space complexity of a basic SELECT...WHERE query?</summary><p>O(k) for the k matching rows returned (result set); O(1) extra working space for the scan itself, no index.</p></details><details class='card2'><summary>Common bug: filtering a text column in WHERE.</summary><p>Use single quotes and = for comparison: WHERE name = &#x27;Alice&#x27;. Double quotes mean an identifier; == is not SQL equality.</p></details><details class='card2'><summary>Logical clause order vs. execution order in a query?</summary><p>Written SELECT→FROM→WHERE, but SQL runs FROM first (load table), then WHERE (filter rows), then SELECT (pick columns) last.</p></details><details class='card2'><summary>Follow-up: why avoid SELECT * in production queries?</summary><p>It pulls every column—wasting I/O and bandwidth, breaking on schema changes, and blocking index-only scans. Name only the columns you need.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
