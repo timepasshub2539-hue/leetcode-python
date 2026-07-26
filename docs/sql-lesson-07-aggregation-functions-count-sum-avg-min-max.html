@@ -1,0 +1,511 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SQL Lesson 7: COUNT, SUM, AVG, MIN, MAX — 5 Power Tools — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-07-aggregation-functions-count-sum-avg-min-max
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/mai">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/sql-lesson-07-aggregation-functions-count-sum-avg-min-max.html">
+<meta property="og:title" content="SQL Lesson 7: COUNT, SUM, AVG, MIN, MAX — 5 Power Tools — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-07-aggregation-functions-count-sum-avg-min-max
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/mai">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>SQL Lesson 7: COUNT, SUM, AVG, MIN, MAX — 5 Power Tools</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h1>SEO PACKAGE</h1>
+<h2>1. SEO Title</h2>
+<p><strong>SQL Aggregate Functions Explained: COUNT, SUM, AVG, MIN, and MAX for Beginners</strong></p>
+<h2>2. SEO Subtitle</h2>
+<p>Learn how the five core SQL aggregate functions collapse entire tables into single, meaningful answers — and how to avoid the NULL traps that quietly break your results.</p>
+<h2>3. Featured Quote</h2>
+<blockquote>
+<p>"Aggregate functions share one habit: many rows go in, one answer comes out — and every one of them quietly skips NULL, except <code>COUNT(*)</code>."</p>
+</blockquote>
+<h2>4. Meta Description</h2>
+<p>Master SQL COUNT, SUM, AVG, MIN, and MAX. Learn when to use each, why NULL isn't zero, and the difference between COUNT(*) and COUNT(column). (154 chars)</p>
+<h2>5. URL Slug</h2>
+<p><code>sql-aggregate-functions-count-sum-avg-min-max</code></p>
+<h2>6. Keywords</h2>
+<p>SQL aggregate functions, COUNT in SQL, SUM in SQL, AVG in SQL, MIN and MAX SQL, COUNT(*) vs COUNT(column), SQL NULL handling, COALESCE SQL, SQL for beginners, learn SQL, SQL tutorial, database aggregation, SQL data analysis, GROUP BY SQL, SQL interview questions, SQL functions explained, aggregate query SQL, SQL summary statistics, SQL null vs zero, relational database basics</p>
+<h2>7. Tags</h2>
+<p>SQL, Database, Aggregate Functions, COUNT, SUM, AVG, MIN, MAX, Data Analysis, SQL Tutorial, Learn SQL, NULL Handling, Coding Interview, Backend Development, Data Engineering</p>
+<hr />
+<h1>SQL Aggregate Functions: How COUNT, SUM, AVG, MIN, and MAX Turn Whole Tables Into a Single Answer</h1>
+<h2>8. Introduction</h2>
+<p>Picture a shoebox stuffed with a year of receipts. You do not want to read each one. You want one number: <em>how much did I spend?</em> That single question — collapsing a mountain of rows into one meaningful value — is the entire job of <strong>SQL aggregate functions</strong>.</p>
+<p>If you are learning SQL, or preparing for a <strong>coding interview</strong> that touches databases, this is one of the most practical topics you will ever study. Almost every dashboard, analytics report, billing summary, and "total users" badge you have ever seen is powered by <code>COUNT</code>, <code>SUM</code>, <code>AVG</code>, <code>MIN</code>, or <code>MAX</code>. These five functions are the difference between shipping a million rows across the network to your application and asking the database for one tidy answer.</p>
+<p>Interviewers love this area because it quietly tests whether you actually understand your data. Do you know that <code>NULL</code> is not the same as zero? Can you explain why <code>COUNT(*)</code> and <code>COUNT(phone)</code> return different numbers? Do you know why mixing a raw column with an aggregate makes the database refuse to run your query? These are not trivia questions — they are the exact places where real production reports go silently wrong.</p>
+<p>By the end of this article, you will reach for the right function without thinking, and — just as importantly — you will know the traps that catch nearly every beginner.</p>
+<h2>9. Problem Overview</h2>
+<p>An <strong>aggregate function</strong> takes a whole column of values and returns a single value. The word <em>aggregate</em> simply means "gather into one." Many rows go in; one answer comes out.</p>
+<p>That is the mental model to lock in. Every function we cover follows the same shape — it scans a column and funnels every value down into one result. What differs is the <em>math</em> applied on the way down:</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Question it answers</th>
+<th>Works on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>COUNT</code></td>
+<td>How many?</td>
+<td>Any type</td>
+</tr>
+<tr>
+<td><code>SUM</code></td>
+<td>How much in total?</td>
+<td>Numbers only</td>
+</tr>
+<tr>
+<td><code>AVG</code></td>
+<td>What's the typical value?</td>
+<td>Numbers only</td>
+</tr>
+<tr>
+<td><code>MIN</code></td>
+<td>What's the smallest / earliest?</td>
+<td>Numbers, dates, text</td>
+</tr>
+<tr>
+<td><code>MAX</code></td>
+<td>What's the largest / latest?</td>
+<td>Numbers, dates, text</td>
+</tr>
+</tbody>
+</table>
+<p>There is one shared behavior that will save you hours of debugging: <strong>every aggregate function ignores <code>NULL</code> values</strong>, with a single famous exception — <code>COUNT(*)</code>, which counts every row no matter what.</p>
+<h2>10. Example</h2>
+<p>Let's build a small <code>orders</code> table to work with throughout the article.</p>
+<pre><code class="language-sql">CREATE TABLE orders (
+    id       INTEGER,
+    customer TEXT,
+    amount   INTEGER,
+    phone    TEXT,
+    ordered_on DATE
+);
+
+INSERT INTO orders VALUES
+    (1, 'Ava',  10, '555-0100', '2026-01-05'),
+    (2, 'Ben',  20, NULL,       '2026-02-14'),
+    (3, 'Ava',  30, '555-0199', '2026-03-01');
+</code></pre>
+<p>Now run each function:</p>
+<pre><code class="language-sql">SELECT
+    COUNT(*)        AS total_rows,     -- 3
+    COUNT(phone)    AS phones_on_file, -- 2  (Ben's is NULL)
+    SUM(amount)     AS revenue,        -- 60
+    AVG(amount)     AS typical_order,  -- 20
+    MIN(amount)     AS smallest,       -- 10
+    MAX(amount)     AS largest,        -- 30
+    MIN(ordered_on) AS first_order,    -- 2026-01-05
+    MAX(ordered_on) AS last_order      -- 2026-03-01
+FROM orders;
+</code></pre>
+<p>Walk through the outputs:</p>
+<ul>
+<li><strong><code>total_rows = 3</code></strong> — there are three rows, full stop. <code>COUNT(*)</code> never skips anything.</li>
+<li><strong><code>phones_on_file = 2</code></strong> — Ben left his phone blank, so <code>COUNT(phone)</code> ignores that row. This is the single most important distinction in the whole lesson.</li>
+<li><strong><code>revenue = 60</code></strong> — <code>10 + 20 + 30</code>.</li>
+<li><strong><code>typical_order = 20</code></strong> — <code>60 / 3</code>.</li>
+<li><strong><code>smallest / largest</code></strong> — the extremes of the <code>amount</code> column.</li>
+<li><strong><code>first_order / last_order</code></strong> — notice <code>MIN</code> and <code>MAX</code> work beautifully on <strong>dates</strong>. The earliest date is the "smallest," the latest is the "largest." This is an underrated way to find a customer's first or last order.</li>
+</ul>
+<h2>11. Intuition</h2>
+<p>Here is how an experienced engineer thinks about this, before writing a single line of SQL.</p>
+<p>Whenever you have a column and want to describe it with <strong>one number</strong>, you are aggregating. So the first question is never "which function?" — it is <em>"what single thing do I want to know about this column?"</em></p>
+<p>Say the sentence out loud:</p>
+<ul>
+<li>"How <strong>many</strong>?" → <code>COUNT</code></li>
+<li>"How <strong>much</strong> altogether?" → <code>SUM</code></li>
+<li>"What's the <strong>typical</strong> value?" → <code>AVG</code></li>
+<li>"What's the <strong>smallest</strong> / <strong>largest</strong>?" → <code>MIN</code> / <code>MAX</code></li>
+</ul>
+<p><code>COUNT</code> and <code>SUM</code> feel similar to beginners, but they answer opposite questions. <em>How many orders?</em> is three. <em>How much money?</em> is sixty. When you're stuck, the plain-English sentence picks the function for you.</p>
+<p>The second instinct an experienced engineer has is suspicion about <strong>empty cells</strong>. Real data is messy — phone numbers are blank, ratings are missing, timestamps never got filled in. So before trusting any aggregate, they ask: <em>what does this function do with the blanks?</em> The answer, for four of the five, is "pretend they don't exist." That single fact prevents the most common category of quietly-wrong reports.</p>
+<h2>12. Brute Force Solution</h2>
+<p><strong>The idea:</strong> don't use SQL aggregation at all. Pull every row into your application and compute the summary in Python (or whatever language you use).</p>
+<pre><code class="language-python">import sqlite3
+
+conn = sqlite3.connect(&quot;shop.db&quot;)
+rows = conn.execute(&quot;SELECT amount FROM orders&quot;).fetchall()
+
+amounts = [r[0] for r in rows if r[0] is not None]  # skip NULLs by hand
+total   = sum(amounts)
+count   = len(amounts)
+average = total / count if count else 0
+</code></pre>
+<p><strong>Algorithm:</strong> fetch all rows → filter out <code>None</code> → loop and compute totals in application code.</p>
+<p><strong>Advantages:</strong>
+- Full flexibility — you have a real programming language, so any weird custom logic is possible.
+- Easy to unit test with familiar tools.</p>
+<p><strong>Disadvantages:</strong>
+- You ship potentially <strong>millions of rows across the network</strong> just to produce one small number.
+- Your application does work the database is optimized to do faster.
+- You have to remember to handle <code>NULL</code> yourself — forget the <code>is not None</code> filter and your average is wrong.</p>
+<p><strong>Complexity:</strong> Time is O(n) in your app <em>plus</em> the network transfer of all n rows. Space is O(n) because you materialize every row in memory.</p>
+<p>This is fine for a handful of rows. It becomes painful the moment your table grows.</p>
+<h2>13. Optimal Solution</h2>
+<p>Let the database do the counting. It sits right next to the data, computes the answer in a single pass, and returns <strong>one tiny value</strong> instead of the entire table.</p>
+<pre><code class="language-sql">SELECT AVG(amount) FROM orders;
+</code></pre>
+<p>The engine scans the <code>amount</code> column once, sums the non-NULL values, divides by how many there were, and hands back a single row. No network flood, no manual loop, no forgotten <code>NULL</code> filter.</p>
+<p>Here is the "collapse" visualized:</p>
+<pre><code>amount column        aggregate
+   10  ┐
+   20  ├──  SUM  ──►  60
+   30  ┘
+
+   10  ┐
+   20  ├──  AVG  ──►  20   (NULLs are skipped, not counted as 0)
+   30  ┘
+ (null)
+</code></pre>
+<p>Notice the last diagram: even with a <code>NULL</code> in the mix, <code>AVG</code> divides by <strong>3</strong>, not 4. The blank row is invisible to it.</p>
+<p><strong>When SQL wins:</strong> almost always for summarizing data. It's faster, closer to the data, and less code.</p>
+<p><strong>When application code wins:</strong> genuinely custom logic that SQL's math can't express cleanly. That's the honest trade-off — SQL math is less flexible than a full programming language.</p>
+<h2>14. Python Code</h2>
+<p>Here is a clean, production-style helper that runs each aggregate and prints a small report. It uses Python's built-in <code>sqlite3</code>, so it runs anywhere with no dependencies.</p>
+<pre><code class="language-python">import sqlite3
+
+
+def build_demo_db() -&gt; sqlite3.Connection:
+    &quot;&quot;&quot;Create an in-memory orders table with one intentional NULL phone.&quot;&quot;&quot;
+    conn = sqlite3.connect(&quot;:memory:&quot;)
+    conn.execute(
+        &quot;&quot;&quot;
+        CREATE TABLE orders (
+            id         INTEGER PRIMARY KEY,
+            customer   TEXT,
+            amount     INTEGER,
+            phone      TEXT,
+            ordered_on TEXT
+        )
+        &quot;&quot;&quot;
+    )
+    conn.executemany(
+        &quot;INSERT INTO orders VALUES (?, ?, ?, ?, ?)&quot;,
+        [
+            (1, &quot;Ava&quot;, 10, &quot;555-0100&quot;, &quot;2026-01-05&quot;),
+            (2, &quot;Ben&quot;, 20, None, &quot;2026-02-14&quot;),  # phone is NULL
+            (3, &quot;Ava&quot;, 30, &quot;555-0199&quot;, &quot;2026-03-01&quot;),
+        ],
+    )
+    return conn
+
+
+def summarize(conn: sqlite3.Connection) -&gt; dict:
+    &quot;&quot;&quot;Return the five core aggregates in a single database round trip.&quot;&quot;&quot;
+    row = conn.execute(
+        &quot;&quot;&quot;
+        SELECT
+            COUNT(*)              AS total_rows,
+            COUNT(phone)          AS phones_on_file,
+            SUM(amount)           AS revenue,
+            AVG(amount)           AS typical_order,
+            MIN(amount)           AS smallest,
+            MAX(amount)           AS largest,
+            MIN(ordered_on)       AS first_order,
+            MAX(ordered_on)       AS last_order,
+            -- Treat missing amounts as zero on purpose using COALESCE:
+            AVG(COALESCE(amount, 0)) AS avg_with_blanks_as_zero
+        FROM orders
+        &quot;&quot;&quot;
+    ).fetchone()
+
+    keys = [
+        &quot;total_rows&quot;, &quot;phones_on_file&quot;, &quot;revenue&quot;, &quot;typical_order&quot;,
+        &quot;smallest&quot;, &quot;largest&quot;, &quot;first_order&quot;, &quot;last_order&quot;,
+        &quot;avg_with_blanks_as_zero&quot;,
+    ]
+    return dict(zip(keys, row))
+
+
+if __name__ == &quot;__main__&quot;:
+    conn = build_demo_db()
+    report = summarize(conn)
+
+    # Self-check: the numbers the article promised.
+    assert report[&quot;total_rows&quot;] == 3
+    assert report[&quot;phones_on_file&quot;] == 2      # NULL phone is skipped
+    assert report[&quot;revenue&quot;] == 60
+    assert report[&quot;typical_order&quot;] == 20      # NULL never enters AVG
+    assert report[&quot;first_order&quot;] == &quot;2026-01-05&quot;
+    assert report[&quot;last_order&quot;] == &quot;2026-03-01&quot;
+
+    for name, value in report.items():
+        print(f&quot;{name:24} = {value}&quot;)
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<ul>
+<li><strong><code>build_demo_db</code></strong> creates an in-memory SQLite database, so the example is fully reproducible with zero setup. Ben's <code>phone</code> is deliberately <code>None</code> — that's what becomes SQL <code>NULL</code>.</li>
+<li><strong><code>summarize</code></strong> runs all five functions in <strong>one</strong> query. This matters: one round trip to the database is far cheaper than nine separate ones.</li>
+<li><strong><code>COUNT(*)</code> vs <code>COUNT(phone)</code></strong> sit side by side so the difference is impossible to miss — 3 versus 2.</li>
+<li><strong><code>AVG(amount)</code></strong> returns <code>20</code>, proving the <code>NULL</code> row is skipped, not treated as zero.</li>
+<li><strong><code>AVG(COALESCE(amount, 0))</code></strong> shows the fix for when you <em>do</em> want blanks counted as zero — <code>COALESCE</code> swaps every <code>NULL</code> for <code>0</code> <em>before</em> the average runs.</li>
+<li><strong>The <code>assert</code> block</strong> is a runnable self-check. If any aggregate ever behaves differently, the script fails loudly instead of printing wrong numbers.</li>
+</ul>
+<h2>16. Dry Run</h2>
+<p>Let's trace <code>AVG(amount)</code> by hand on our three rows plus an imagined blank.</p>
+<p>Suppose the column holds: <code>10, 20, 30, NULL</code>.</p>
+<ol>
+<li>The engine scans the column.</li>
+<li>It <strong>discards the <code>NULL</code></strong> — it is invisible to <code>AVG</code>.</li>
+<li>Remaining values: <code>10, 20, 30</code>.</li>
+<li>Sum = <code>10 + 20 + 30 = 60</code>.</li>
+<li>Count of <em>non-null</em> values = <code>3</code>.</li>
+<li>Average = <code>60 / 3 = 20</code>.</li>
+</ol>
+<p>The intuitive-but-wrong answer is <code>60 / 4 = 15</code>, treating the blank as a zero. SQL does <strong>not</strong> do that. If you genuinely want <code>15</code>, you must convert the blank first: <code>AVG(COALESCE(amount, 0))</code> gives <code>(10 + 20 + 30 + 0) / 4 = 15</code>.</p>
+<h2>17. Complexity Analysis</h2>
+<p>For a single aggregate over a table of <code>n</code> rows:</p>
+<ul>
+<li><strong>Time: O(n).</strong> The engine makes one linear pass over the column, applying its running operation (add for <code>SUM</code>, compare for <code>MIN</code>/<code>MAX</code>, tally for <code>COUNT</code>). There is no way to summarize every value without at least looking at every value once — unless an index lets <code>MIN</code>/<code>MAX</code> jump straight to an end, which some databases optimize.</li>
+<li><strong>Space: O(1).</strong> Each function keeps a tiny amount of running state — a running total, a running count, a current min. It does <strong>not</strong> hold all <code>n</code> rows in memory. That's precisely why aggregating in SQL beats pulling everything into your app, which costs O(n) space and O(n) network transfer.</li>
+</ul>
+<h2>18. Alternative Solutions</h2>
+<p><strong>Aggregating per group with <code>GROUP BY</code>.</strong> So far every query produced <em>one</em> row for the whole table. But what if you want a total <em>per customer</em>? You can't select <code>customer</code> alongside <code>SUM(amount)</code> without telling the database how to group — that's the next lesson:</p>
+<pre><code class="language-sql">SELECT customer, SUM(amount) AS spent
+FROM orders
+GROUP BY customer;
+</code></pre>
+<p>This returns one row per customer instead of one row overall. <code>GROUP BY</code> is the natural extension of everything here.</p>
+<p><strong><code>COUNT(DISTINCT col)</code>.</strong> A close cousin of plain <code>COUNT</code>, it counts unique values only:</p>
+<pre><code class="language-sql">SELECT COUNT(DISTINCT customer) FROM orders;  -- 2 (Ava, Ben), not 3
+</code></pre>
+<p>Compared to application-side aggregation (our brute force), SQL aggregation wins on performance and simplicity in nearly all reporting scenarios; app code only wins when the logic outgrows SQL's math.</p>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong>Empty table.</strong> <code>COUNT(*)</code> returns <code>0</code>. But <code>SUM</code>, <code>AVG</code>, <code>MIN</code>, and <code>MAX</code> return <code>NULL</code>, not zero — there is nothing to compute. Guard for this: <code>COALESCE(SUM(amount), 0)</code>.</li>
+<li><strong>All values NULL.</strong> <code>COUNT(col)</code> returns <code>0</code>; <code>SUM</code>/<code>AVG</code>/<code>MIN</code>/<code>MAX</code> return <code>NULL</code>.</li>
+<li><strong>Duplicates.</strong> Plain <code>COUNT</code> counts them; use <code>COUNT(DISTINCT col)</code> if you want uniques.</li>
+<li><strong>Single row.</strong> Every function still works: <code>MIN</code> and <code>MAX</code> both return that one value.</li>
+<li><strong>Mixed / extreme values.</strong> <code>MIN</code> and <code>MAX</code> correctly handle negatives, very large numbers, dates, and even text (lexicographic order for strings).</li>
+</ul>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Assuming <code>NULL</code> equals zero.</strong> <code>AVG</code> skips blanks entirely. <code>10, 20, 30, NULL</code> averages to <code>20</code>, not <code>15</code>. Use <code>COALESCE(col, 0)</code> when you truly want blanks counted.</li>
+<li><strong>Confusing <code>COUNT(*)</code> with <code>COUNT(column)</code>.</strong> <code>COUNT(*)</code> counts rows; <code>COUNT(column)</code> counts non-NULL values. They answer different questions — neither is "wrong."</li>
+<li><strong>Mixing a raw column with an aggregate.</strong> <code>SELECT customer, SUM(amount) FROM orders;</code> fails (or returns nonsense) because one total can't sit beside fifty names. You need <code>GROUP BY</code>.</li>
+<li><strong>Feeding text to <code>SUM</code> or <code>AVG</code>.</strong> These are numeric-only. Running them on a text column is an error or a silent zero, depending on the database.</li>
+<li><strong>Forgetting the empty-table <code>NULL</code>.</strong> <code>SUM</code> over zero rows is <code>NULL</code>, not <code>0</code>. Reports that display it raw will show a blank instead of a friendly <code>0</code>.</li>
+</ol>
+<h2>21. Interview Questions</h2>
+<ul>
+<li>What is the difference between <code>COUNT(*)</code>, <code>COUNT(column)</code>, and <code>COUNT(DISTINCT column)</code>?</li>
+<li>If a column has NULLs, what does <code>AVG</code> return, and how would you make it treat NULLs as zero?</li>
+<li>Why does <code>SELECT name, SUM(amount) FROM orders;</code> fail? How do you fix it?</li>
+<li>What does <code>SUM</code> return over an empty table, and why?</li>
+<li>When would you aggregate in SQL versus in application code?</li>
+<li>How can you find a customer's first and last order date using aggregate functions?</li>
+</ul>
+<h2>22. Similar Problems</h2>
+<ul>
+<li><strong><a href="https://leetcode.com/problems/not-boring-movies/">LeetCode 620 — Not Boring Movies</a></strong> — filtering plus ordering, a natural companion to summarizing.</li>
+<li><strong><a href="https://leetcode.com/problems/find-total-time-spent-by-each-employee-by-day/">LeetCode 1741 — Find Total Time Spent by Each Employee</a></strong> — <code>SUM</code> combined with <code>GROUP BY</code>, the exact next step after this lesson.</li>
+<li><strong><a href="https://leetcode.com/problems/actors-and-directors-who-cooperated-at-least-three-times/">LeetCode 1050 — Actors and Directors Who Cooperated At Least Three Times</a></strong> — <code>COUNT</code> with <code>HAVING</code>, aggregation used as a filter.</li>
+<li><strong><a href="https://leetcode.com/problems/project-employees-i/">LeetCode 1075 — Project Employees I</a></strong> — <code>AVG</code> with grouping and rounding.</li>
+</ul>
+<p>They're related because each one moves aggregation from "whole table" to "per group," which is where this topic goes next.</p>
+<h2>23. Key Takeaways</h2>
+<ul>
+<li>Aggregate functions collapse a column into a single answer: <strong>many in, one out</strong>.</li>
+<li><code>COUNT</code> = how many, <code>SUM</code> = how much, <code>AVG</code> = the typical value, <code>MIN</code>/<code>MAX</code> = the extremes.</li>
+<li><strong>Every function ignores <code>NULL</code></strong> except <code>COUNT(*)</code>.</li>
+<li><code>NULL</code> is <strong>not</strong> zero — use <code>COALESCE</code> when you need it to be.</li>
+<li>Don't mix raw columns with aggregates without <code>GROUP BY</code>.</li>
+<li>Aggregate in SQL by default; it's faster and closer to the data.</li>
+</ul>
+<h2>24. Watch the Video</h2>
+<p>Seeing the values <em>funnel down</em> into a single result makes this click far faster than reading about it. Watch the full walkthrough — including the live <code>NULL</code>-versus-zero demo that trips up almost everyone — here: <strong>{LINK}</strong></p>
+<h2>25. About the Series</h2>
+<p>This is <strong>Lesson 7</strong> of <em>Fun with Learning Technology</em> — a hands-on SQL series that teaches databases the way a senior engineer actually thinks about them. No memorization, no jargon dumps: just clear intuition, real examples, and the little traps that separate working queries from quietly-broken ones. Next up: <strong><code>GROUP BY</code></strong>, where these five functions go from summarizing the whole table to summarizing <em>each group</em> — one total per customer, per day, per anything.</p>
+<h2>26. Call To Action</h2>
+<p>If this made SQL aggregation click, here's how to help the series grow:</p>
+<ul>
+<li>👍 <strong>Like</strong> the video on YouTube — it genuinely helps more developers find it.</li>
+<li>🔔 <strong>Subscribe</strong> so you catch the <code>GROUP BY</code> lesson the moment it drops.</li>
+<li>📩 <strong>Subscribe on Substack</strong> for the written deep-dives that go beyond each video.</li>
+<li>💬 <strong>Comment</strong> with the aggregate-function bug that bit <em>you</em> — we've all had one.</li>
+<li>🔁 <strong>Share</strong> this with someone learning SQL or prepping for a coding interview.</li>
+</ul>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>Most developers learn SQL's aggregate functions in about thirty seconds — and then spend months quietly shipping wrong numbers.</p>
+<p>The functions themselves are simple. COUNT tells you how many. SUM tells you how much. AVG gives the typical value. MIN and MAX give the extremes. Every one of them takes a whole column and hands back a single answer.</p>
+<p>The part that catches people isn't the syntax — it's NULL.</p>
+<p>Here's the trap I fell into early: I had a column with some blanks, and I assumed AVG would treat them as zero. It doesn't. It pretends those rows don't exist. So 10, 20, 30, and a blank averages to 20 — not 15. If you actually want blanks counted as zero, you convert them first with COALESCE.</p>
+<p>Two more distinctions worth internalizing:</p>
+<p>• COUNT(<em>) counts every row. COUNT(column) skips the NULLs. If 100 customers exist but 20 left their phone blank, COUNT(</em>) says 100 and COUNT(phone) says 80. Neither is wrong — they answer different questions.</p>
+<p>• You can't put a raw column next to an aggregate without GROUP BY. One grand total can't sit beside fifty customer names.</p>
+<p>And the strategic call: aggregate in the database, not in your app. The database sits right next to the data and returns one tiny number instead of shipping a million rows across the network. Application code only wins when your logic outgrows SQL's math.</p>
+<p>Master these five and you can summarize almost any table with confidence.</p>
+<p>Full breakdown — with examples, complexity analysis, and the common mistakes — in the article. Link in comments.</p>
+<h1>SQL #Database #DataAnalysis #SoftwareEngineering #LearnSQL</h1>
+<h2>Twitter/X Thread</h2>
+<p><strong>1/</strong>
+SQL aggregate functions look trivial. COUNT, SUM, AVG, MIN, MAX.</p>
+<p>But they hide one behavior that quietly corrupts real reports. Here's the whole toolkit in 10 tweets 🧵</p>
+<p><strong>2/</strong>
+The core idea: many rows go in, ONE answer comes out.</p>
+<p>An aggregate takes a whole column and collapses it to a single value. That's it. They just differ in the math on the way down.</p>
+<p><strong>3/</strong>
+COUNT = "how many?"
+It's the headcount at the door.</p>
+<p>COUNT(*) counts every row, no exceptions.</p>
+<p><strong>4/</strong>
+But COUNT(phone) quietly SKIPS the blanks (NULLs).</p>
+<p>100 customers exist → COUNT(*) = 100.
+20 left phone blank → COUNT(phone) = 80.</p>
+<p>Neither is wrong. They answer different questions.</p>
+<p><strong>5/</strong>
+SUM = "how much altogether?"
+The cash register tape. 10 + 20 + 30 → 60.</p>
+<p>Numbers only. Feed it text and it breaks.</p>
+<p><strong>6/</strong>
+AVG = "what's the typical value?"
+Adds the column, divides by how many.</p>
+<p>Here's the one that bit me: it SKIPS nulls. It does NOT treat a blank as zero.</p>
+<p>10, 20, 30, blank → averages to 20. Not 15.</p>
+<p><strong>7/</strong>
+Want blanks counted as zero? Convert them first:</p>
+<p>AVG(COALESCE(amount, 0))</p>
+<p>Now (10+20+30+0)/4 = 15.</p>
+<p><strong>8/</strong>
+MIN and MAX = smallest and largest.</p>
+<p>Underrated trick: they work on DATES too.
+MIN(date) = earliest order.
+MAX(date) = latest order.</p>
+<p>Instant first/last lookup.</p>
+<p><strong>9/</strong>
+Can't mix a raw column with an aggregate:</p>
+<p>SELECT name, SUM(amount) ...  ❌</p>
+<p>One total can't sit next to 50 names. You need GROUP BY (that's the next level).</p>
+<p><strong>10/</strong>
+The toolkit:
+• COUNT → how many
+• SUM → total
+• AVG → typical
+• MIN/MAX → extremes</p>
+<p>All ignore NULL except COUNT(*).</p>
+<p>Say "how many vs how much" out loud and the right function picks itself. Full article + video 👇</p>
+<h2>Facebook Post</h2>
+<p>Ever stared at a table of numbers and just wanted ONE answer — the total, the average, the biggest? That's exactly what SQL's aggregate functions do. 🧮</p>
+<p>In Lesson 7 we break down the five power tools: COUNT (how many), SUM (how much), AVG (the typical value), and MIN/MAX (smallest and largest). They all do the same magic trick — take a whole column, hand you back a single number.</p>
+<p>The sneaky part? NULL is not zero. Averaging 10, 20, 30, and a blank gives you 20, not 15 — because SQL just pretends the blank isn't there. That one detail trips up almost every beginner, and we show you exactly how to handle it.</p>
+<p>Clear examples, no jargon, beginner friendly. Come learn it with us! 👇</p>
+<h2>Reddit Summary</h2>
+<p><strong>A clean mental model for SQL's five aggregate functions (and the NULL trap that breaks reports)</strong></p>
+<p>Sharing a breakdown I put together for folks learning SQL. The functions are COUNT, SUM, AVG, MIN, MAX, and the useful framing is: <em>many rows in, one value out.</em></p>
+<p>A few things that are worth knowing early because they cause real, silent bugs:</p>
+<ul>
+<li><strong>COUNT(*) vs COUNT(column):</strong> <code>COUNT(*)</code> counts rows; <code>COUNT(column)</code> counts only non-NULL values. If you have 100 customers but 20 have no phone on file, those return 100 and 80 respectively. Both correct, different questions.</li>
+<li><strong>NULL is not zero:</strong> <code>AVG</code> skips NULLs entirely rather than treating them as 0. <code>10, 20, 30, NULL</code> averages to 20, not 15. If you want blanks as zero, wrap with <code>COALESCE(col, 0)</code> first.</li>
+<li><strong>MIN/MAX work on dates:</strong> handy for finding a first or last order without sorting.</li>
+<li><strong>You can't select a raw column beside an aggregate</strong> without <code>GROUP BY</code> — one total can't line up with many distinct names.</li>
+<li><strong>Empty table gotcha:</strong> <code>SUM</code> over zero rows returns NULL, not 0.</li>
+</ul>
+<p>General guidance: aggregate in the database rather than pulling every row into your app — it's one pass, close to the data, and returns a tiny result. App-side only wins when the logic outgrows SQL's math.</p>
+<p>Happy to answer questions on any of these in the comments.</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># SQL Aggregate Functions — COUNT, SUM, AVG, MIN, MAX
+
+Lesson 7 of the *Fun with Learning Technology* SQL series. Learn how to
+collapse an entire table into a single, meaningful answer — and how to
+avoid the NULL traps that quietly corrupt results.
+
+## Problem
+
+You have a column full of rows and you want **one** number: a total, an
+average, a count, or an extreme. That's aggregation — many values in,
+one value out.
+
+## Intuition
+
+Say the question out loud and the function picks itself:
+
+| Question              | Function |
+|-----------------------|----------|
+| How many?             | `COUNT`  |
+| How much altogether?  | `SUM`    |
+| What's typical?       | `AVG`    |
+| Smallest / largest?   | `MIN` / `MAX` |
+
+Every one of these **ignores NULL** — except `COUNT(*)`, which counts
+every row unconditionally.
+
+## Approach
+
+- `COUNT(*)` counts rows; `COUNT(col)` counts non-NULL values.
+- `SUM` and `AVG` are numeric only.
+- `AVG` skips NULLs — it does **not** treat them as zero. Use
+  `COALESCE(col, 0)` if you want blanks counted as zero.
+- `MIN`/`MAX` work on numbers, dates, and text.
+- You cannot select a raw column beside an aggregate without `GROUP BY`.
+- Prefer aggregating in SQL over pulling all rows into application code.
+
+## Python Solution
+
+```python
+import sqlite3
+
+
+def summarize(conn: sqlite3.Connection) -&gt; dict:
+    &quot;&quot;&quot;Run the five core aggregates in a single database round trip.&quot;&quot;&quot;
+    row = conn.execute(
+        &quot;&quot;&quot;
+        SELECT
+            COUNT(*)              AS total_rows,
+            COUNT(phone)          AS phones_on_file,   -- skips NULLs
+            SUM(amount)           AS revenue,
+            AVG(amount)           AS typical_order,     -- NULLs ignored
+            MIN(amount)           AS smallest,
+            MAX(amount)           AS largest,
+            MIN(ordered_on)       AS first_order,       -- works on dates
+            MAX(ordered_on)       AS last_order,
+            AVG(COALESCE(amount, 0)) AS avg_blanks_as_zero
+        FROM orders
+        &quot;&quot;&quot;
+    ).fetchone()
+    keys = [
+        &quot;total_rows&quot;, &quot;phones_on_file&quot;, &quot;revenue&quot;, &quot;typical_order&quot;,
+        &quot;smallest&quot;, &quot;largest&quot;, &quot;first_order&quot;, &quot;last_order&quot;,
+        &quot;avg_blanks_as_zero&quot;,
+    ]
+    return dict(zip(keys, row))
+</code></pre>
+<p>Run <code>python solution.py</code> to see the report and the built-in assert checks.</p>
+<h2>Complexity</h2>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Time</td>
+<td>O(n)</td>
+<td>One linear pass over the column</td>
+</tr>
+<tr>
+<td>Space</td>
+<td>O(1)</td>
+<td>Only running state (total/count/min) is kept</td>
+</tr>
+</tbody>
+</table>
+<h2>Video</h2>
+<p>▶️ Watch the lesson: {LINK}</p>
+<h2>Article</h2>
+<p>📖 Full write-up with examples, dry run, edge cases, and common mistakes:
+<code>sql-aggregate-functions-count-sum-avg-min-max</code></p>
+<hr />
+<p>Part of the <strong>Fun with Learning Technology</strong> SQL series.
+Next lesson: <code>GROUP BY</code> — one total <em>per group</em>.
+```</p></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>SQL: when you need a single summary value from many rows, what do you reach for?</summary><p>Aggregation functions (COUNT, SUM, AVG, MIN, MAX). Tell: the question is about the &#x27;whole&#x27; — totals, averages, extremes — not individual rows.</p></details><details class='card2'><summary>Time complexity of a single aggregate over N rows?</summary><p>O(N) — the engine scans each row once to fold it into the running result. An index can cut it, but the base scan is linear.</p></details><details class='card2'><summary>Space complexity of COUNT/SUM/AVG/MIN/MAX?</summary><p>O(1) — one accumulator held while scanning. With GROUP BY it becomes O(g), one accumulator per distinct group key.</p></details><details class='card2'><summary>Common bug: how do NULLs affect COUNT and SUM?</summary><p>Aggregates skip NULLs — they aren&#x27;t treated as zero. AVG divides by non-NULL count only, so NULLs quietly change the result versus what you&#x27;d expect.</p></details><details class='card2'><summary>COUNT(*) vs COUNT(col): what&#x27;s the difference?</summary><p>COUNT(*) counts all rows. COUNT(col) counts only rows where col is non-NULL. They diverge whenever the column has NULLs.</p></details><details class='card2'><summary>Bug: SELECT name, COUNT(*) FROM t; — why does this break?</summary><p>Mixing a raw column with an aggregate needs GROUP BY name. Without it, the row-level column has no single value to pair with the collapsed aggregate.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
