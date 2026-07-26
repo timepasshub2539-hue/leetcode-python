@@ -1,0 +1,565 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 23: The 4 SQL Constraints That Kill Bad Data at the Source — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-23-constraints-primary-key-foreign-key-unique-not-null
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/sql-lesson-23-constraints-primary-key-foreign-key-unique-not-null.html">
+<meta property="og:title" content="Lesson 23: The 4 SQL Constraints That Kill Bad Data at the Source — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-23-constraints-primary-key-foreign-key-unique-not-null
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson 23: The 4 SQL Constraints That Kill Bad Data at the Source</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h1>SEO PACKAGE</h1>
+<h2>1. SEO Title</h2>
+<p><strong>SQL Constraints Explained: NOT NULL, UNIQUE, PRIMARY KEY, and FOREIGN KEY (Beginner's Guide)</strong></p>
+<h2>2. SEO Subtitle</h2>
+<p>Learn the four SQL constraints that stop bad data before it ever reaches your database, with plain-English analogies and working examples.</p>
+<h2>3. Featured Quote</h2>
+<blockquote>
+<p>"A constraint is a rule the database refuses to break — the last line of defense that no forgetful app code can ever sneak past."</p>
+</blockquote>
+<h2>4. Meta Description</h2>
+<p>Master the 4 essential SQL constraints — NOT NULL, UNIQUE, PRIMARY KEY, FOREIGN KEY — to enforce data integrity at the source. Clear examples for beginners.</p>
+<h2>5. URL Slug</h2>
+<p><code>sql-constraints-not-null-unique-primary-foreign-key</code></p>
+<h2>6. Keywords</h2>
+<p>SQL constraints, NOT NULL constraint, UNIQUE constraint, PRIMARY KEY, FOREIGN KEY, data integrity, referential integrity, database schema design, relational database, SQL for beginners, database validation, orphan rows, ON DELETE CASCADE, SQL tutorial, table relationships, database normalization, SQL best practices, backend engineering, data modeling, schema constraints</p>
+<h2>7. Tags</h2>
+<p><code>SQL</code>, <code>Database</code>, <code>Data Integrity</code>, <code>Primary Key</code>, <code>Foreign Key</code>, <code>Schema Design</code>, <code>Backend Development</code>, <code>SQL Tutorial</code>, <code>Relational Databases</code>, <code>Software Engineering</code>, <code>LearnToCode</code>, <code>Data Modeling</code>, <code>Coding Interview</code></p>
+<hr />
+<h1>The 4 SQL Constraints That Kill Bad Data at the Source</h1>
+<h2>8. Introduction</h2>
+<p>Every backend engineer eventually learns the same hard lesson: your application code is not the only thing that talks to your database. A migration script, a colleague running a manual <code>UPDATE</code> at midnight, a forgotten cron job, a second microservice — any of them can write straight to your tables. If the only place you validate data is inside your app, then every one of those paths is a hole in the fence.</p>
+<p>This is exactly why <strong>SQL constraints</strong> matter, and why they show up so often in coding interviews and system design discussions. Interviewers ask about <code>PRIMARY KEY</code> and <code>FOREIGN KEY</code> not because they want trivia, but because they reveal whether you understand <em>where</em> data integrity should live. A candidate who says "I'll validate it in the API layer" and a candidate who says "I'll enforce it in the schema and validate in the API for nicer error messages" are two very different engineers.</p>
+<p>In this lesson we'll cover the four constraints you actually reach for every single day: <strong>NOT NULL</strong>, <strong>UNIQUE</strong>, <strong>PRIMARY KEY</strong>, and <strong>FOREIGN KEY</strong>. You'll learn what each one guarantees, how primary and foreign keys wire tables together, the classic "orphan row" trap that breaks relationships, and why enforcing rules in the database beats checking them in application code. By the end, you'll know exactly which constraint to reach for when you're designing a schema.</p>
+<h2>9. Problem Overview</h2>
+<p>Picture a table as a nightclub and each row as a person trying to get in. Without any rules, anyone walks through the door — including rows with missing names, duplicate emails, and references to users who don't exist. Chaos.</p>
+<p>A <strong>constraint</strong> is a bouncer at that door. It's a rule you attach to a column (or a group of columns) that the database checks on <em>every</em> insert and update. If a row breaks the rule, the database rejects it — no exceptions, no "we'll fix it later." In plain terms:</p>
+<blockquote>
+<p>A constraint is a promise your table makes about its own data, and the database enforces that promise automatically.</p>
+</blockquote>
+<p>The four core constraints each guard a different kind of promise:</p>
+<table>
+<thead>
+<tr>
+<th>Constraint</th>
+<th>The promise it enforces</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NOT NULL</code></td>
+<td>This column can never be empty.</td>
+</tr>
+<tr>
+<td><code>UNIQUE</code></td>
+<td>No two rows share the same value in this column.</td>
+</tr>
+<tr>
+<td><code>PRIMARY KEY</code></td>
+<td>This column uniquely and permanently identifies each row.</td>
+</tr>
+<tr>
+<td><code>FOREIGN KEY</code></td>
+<td>This value must point to a real row in another table.</td>
+</tr>
+</tbody>
+</table>
+<p>The problem we're solving is <strong>data integrity</strong>: how do we guarantee that invalid data never gets stored in the first place, rather than discovering the mess weeks later in a broken report?</p>
+<h2>10. Example</h2>
+<p>Let's design two related tables — <code>users</code> and <code>orders</code> — and watch the constraints do their job.</p>
+<pre><code class="language-sql">CREATE TABLE users (
+    id    INTEGER PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    name  TEXT NOT NULL
+);
+
+CREATE TABLE orders (
+    id      INTEGER PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    total   REAL NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+</code></pre>
+<p>Now watch what the database accepts and rejects:</p>
+<pre><code class="language-sql">-- ✅ Accepted: complete, unique, valid.
+INSERT INTO users (id, email, name) VALUES (1, 'kai@example.com', 'Kai');
+
+-- ❌ Rejected: name is NOT NULL, but it's missing.
+INSERT INTO users (id, email, name) VALUES (2, 'sam@example.com', NULL);
+
+-- ❌ Rejected: email must be UNIQUE, and 'kai@example.com' is taken.
+INSERT INTO users (id, email, name) VALUES (3, 'kai@example.com', 'Kayla');
+
+-- ✅ Accepted: user_id 1 points to a real user.
+INSERT INTO orders (id, user_id, total) VALUES (100, 1, 49.99);
+
+-- ❌ Rejected: user 99 does not exist — FOREIGN KEY violation.
+INSERT INTO orders (id, user_id, total) VALUES (101, 99, 20.00);
+</code></pre>
+<p><strong>Explaining every outcome:</strong></p>
+<ul>
+<li>User 1 is inserted cleanly — every promise is kept.</li>
+<li>User 2 is rejected because <code>name</code> is declared <code>NOT NULL</code>, and we handed it a <code>NULL</code>.</li>
+<li>User 3 is rejected because the email already belongs to user 1, and <code>UNIQUE</code> forbids duplicates.</li>
+<li>Order 100 succeeds because <code>user_id = 1</code> traces back to a real user.</li>
+<li>Order 101 fails because there is no user 99 — the <code>FOREIGN KEY</code> refuses to let an order reference a ghost.</li>
+</ul>
+<h2>11. Intuition</h2>
+<p>Here's how an experienced engineer <em>discovers</em> these rules rather than memorizing them.</p>
+<p>Start by asking a single question about each column: <strong>"What does this data promise to always be true?"</strong> The answer maps directly onto a constraint.</p>
+<ul>
+<li><em>"Every user must have an email."</em> → the value must always exist → <strong>NOT NULL</strong>.</li>
+<li><em>"No two users can share an email."</em> → the value must be one-of-a-kind → <strong>UNIQUE</strong>.</li>
+<li><em>"Each user needs one permanent, unmistakable identity."</em> → always present <strong>and</strong> always unique → <strong>PRIMARY KEY</strong> (which is literally <code>NOT NULL</code> + <code>UNIQUE</code> fused together).</li>
+<li><em>"An order only makes sense if it belongs to a real user."</em> → the value must reference something real → <strong>FOREIGN KEY</strong>.</li>
+</ul>
+<p>That last one is the intuition worth internalizing. A foreign key is like writing a friend's phone number into your contacts — it only <em>means</em> something if that person actually exists. The <code>orders.user_id</code> column stores a pointer back to <code>users.id</code>. Follow the arrow: <strong>orders depend on users, never the other way around.</strong> One user can have many orders, but every order must trace back to exactly one real user. That single arrow <em>is</em> the relationship.</p>
+<p>Once you train yourself to translate "what this data promises" into a constraint, schema design stops being guesswork.</p>
+<h2>12. "Brute Force" Solution — Validate Only in Application Code</h2>
+<p><strong>The idea:</strong> Skip database constraints entirely and check everything in your application before writing.</p>
+<pre><code class="language-python">def create_user(db, email, name):
+    if not email:
+        raise ValueError(&quot;Email is required&quot;)
+    if not name:
+        raise ValueError(&quot;Name is required&quot;)
+    if db.email_exists(email):
+        raise ValueError(&quot;Email already taken&quot;)
+    db.insert_user(email, name)
+</code></pre>
+<p><strong>Algorithm:</strong>
+1. Receive the incoming data.
+2. Manually run every rule in code.
+3. If all checks pass, write to the database.</p>
+<p><strong>Advantages:</strong>
+- You can produce friendly, human-readable error messages ("That email is already registered").
+- Rules live in one language your team already knows.</p>
+<p><strong>Disadvantages:</strong>
+- The checks only run <em>if the code remembers to run them</em>. A second script, a manual query, or another service can waltz straight past them.
+- Logic gets duplicated across every write path, and the copies drift out of sync.
+- There's a race condition: two requests can both pass the <code>email_exists</code> check before either inserts.</p>
+<p><strong>Time complexity:</strong> O(1) per rule, but the real cost is O(number of code paths) — you must repeat these checks everywhere, forever.
+<strong>Space complexity:</strong> O(1), but reliability approaches zero as your system grows.</p>
+<h2>13. Optimal Solution — Enforce in the Database with Constraints</h2>
+<p>The optimal approach pushes the rules down into the schema, so the database itself becomes the last line of defense. Then — optionally — you <em>add</em> app-side validation on top purely for nicer messages.</p>
+<p><strong>Step by step:</strong></p>
+<ol>
+<li><strong>Mark required columns <code>NOT NULL</code>.</strong> The column can never be blank, no matter who writes to it.</li>
+<li><strong>Mark one-of-a-kind columns <code>UNIQUE</code>.</strong> Duplicates are rejected at the door. <em>(Heads up: <code>UNIQUE</code> usually still allows multiple <code>NULL</code>s — so pair it with <code>NOT NULL</code> when a value is truly required.)</em></li>
+<li><strong>Give every table a <code>PRIMARY KEY</code>.</strong> This is the row's permanent, one-of-a-kind name tag — <code>UNIQUE</code> and <code>NOT NULL</code> combined. You get exactly one per table.</li>
+<li><strong>Wire relationships with <code>FOREIGN KEY</code>.</strong> A child column must point to an existing row in the parent table.</li>
+</ol>
+<p>Here's the relationship in one picture:</p>
+<pre><code>   users                      orders
+ ┌────────────┐            ┌──────────────┐
+ │ id (PK) ◄──┼────────────┤ user_id (FK) │
+ │ email      │   1     ∞  │ id (PK)      │
+ │ name       │            │ total        │
+ └────────────┘            └──────────────┘
+      parent                     child
+</code></pre>
+<p>Follow the arrow: <code>orders.user_id</code> points back to <code>users.id</code>. Delete direction matters — you can't remove a parent while children still cling to it.</p>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th style="text-align: center;">Runs on every write?</th>
+<th style="text-align: center;">Skippable?</th>
+<th style="text-align: center;">Best-message UX</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>App-code checks</td>
+<td style="text-align: center;">Only if code runs</td>
+<td style="text-align: center;">✅ Yes</td>
+<td style="text-align: center;">✅ Great</td>
+</tr>
+<tr>
+<td>Database constraints</td>
+<td style="text-align: center;">✅ Always</td>
+<td style="text-align: center;">❌ No</td>
+<td style="text-align: center;">⚠️ Terse</td>
+</tr>
+</tbody>
+</table>
+<p>The winning move: <strong>constraints for guarantees, app checks for friendliness.</strong></p>
+<h2>14. Python Code</h2>
+<p>Here's a clean, runnable example using Python's built-in <code>sqlite3</code> — no external dependencies. It builds the schema, enforces the constraints, and demonstrates the orphan-deletion trap.</p>
+<pre><code class="language-python">import sqlite3
+
+
+def build_schema(conn: sqlite3.Connection) -&gt; None:
+    &quot;&quot;&quot;Create users and orders with the four core constraints.&quot;&quot;&quot;
+    # SQLite needs foreign key enforcement switched on per connection.
+    conn.execute(&quot;PRAGMA foreign_keys = ON&quot;)
+    conn.executescript(
+        &quot;&quot;&quot;
+        CREATE TABLE users (
+            id    INTEGER PRIMARY KEY,     -- UNIQUE + NOT NULL identity
+            email TEXT NOT NULL UNIQUE,    -- required and one-of-a-kind
+            name  TEXT NOT NULL            -- required
+        );
+
+        CREATE TABLE orders (
+            id      INTEGER PRIMARY KEY,
+            user_id INTEGER NOT NULL,      -- must reference a real user
+            total   REAL NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
+        &quot;&quot;&quot;
+    )
+
+
+def try_insert(conn: sqlite3.Connection, sql: str, params: tuple) -&gt; None:
+    &quot;&quot;&quot;Attempt a write and report whether the database allowed it.&quot;&quot;&quot;
+    try:
+        conn.execute(sql, params)
+        print(f&quot;OK      -&gt; {params}&quot;)
+    except sqlite3.IntegrityError as err:
+        print(f&quot;BLOCKED -&gt; {params}: {err}&quot;)
+
+
+def demo() -&gt; None:
+    conn = sqlite3.connect(&quot;:memory:&quot;)
+    build_schema(conn)
+
+    try_insert(conn, &quot;INSERT INTO users VALUES (?, ?, ?)&quot;, (1, &quot;kai@example.com&quot;, &quot;Kai&quot;))
+    try_insert(conn, &quot;INSERT INTO users VALUES (?, ?, ?)&quot;, (2, &quot;sam@example.com&quot;, None))       # NOT NULL
+    try_insert(conn, &quot;INSERT INTO users VALUES (?, ?, ?)&quot;, (3, &quot;kai@example.com&quot;, &quot;Kayla&quot;))    # UNIQUE
+    try_insert(conn, &quot;INSERT INTO orders VALUES (?, ?, ?)&quot;, (100, 1, 49.99))
+    try_insert(conn, &quot;INSERT INTO orders VALUES (?, ?, ?)&quot;, (101, 99, 20.00))                  # FOREIGN KEY
+
+    # The orphan-row trap: user 1 still has order 100 attached.
+    try_insert(conn, &quot;DELETE FROM users WHERE id = ?&quot;, (1,))  # blocked by FK
+
+    # Assertions turn the demo into a self-check.
+    assert conn.execute(&quot;SELECT COUNT(*) FROM users&quot;).fetchone()[0] == 1
+    assert conn.execute(&quot;SELECT COUNT(*) FROM orders&quot;).fetchone()[0] == 1
+    print(&quot;All constraints behaved as expected.&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    demo()
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<ul>
+<li><strong><code>PRAGMA foreign_keys = ON</code></strong> — SQLite ships with foreign key enforcement <em>off</em> by default for legacy reasons. This line is essential; without it, order 101 and the orphan delete would slip through. (PostgreSQL and MySQL/InnoDB enforce them out of the box.)</li>
+<li><strong><code>id INTEGER PRIMARY KEY</code></strong> — declares the row's identity. It's automatically <code>UNIQUE</code> and <code>NOT NULL</code>.</li>
+<li><strong><code>email TEXT NOT NULL UNIQUE</code></strong> — this is the "stacking" idea in action: two constraints on one column, so email is both required <em>and</em> duplicate-free.</li>
+<li><strong><code>FOREIGN KEY (user_id) REFERENCES users(id)</code></strong> — ties <code>orders</code> to <code>users</code>. Any <code>user_id</code> that doesn't exist in <code>users.id</code> is rejected.</li>
+<li><strong><code>try_insert</code></strong> — a thin wrapper that catches <code>sqlite3.IntegrityError</code>, the exception raised whenever a constraint is violated, so we can print <code>OK</code> or <code>BLOCKED</code> instead of crashing.</li>
+<li><strong>The <code>DELETE</code></strong> — attempts to remove user 1 while order 100 still references it. The foreign key protects us and refuses, preventing an orphan.</li>
+<li><strong>The <code>assert</code>s</strong> — confirm exactly one user and one order survived, turning the example into a runnable regression check.</li>
+</ul>
+<h2>16. Dry Run</h2>
+<p>Let's trace the full script:</p>
+<ol>
+<li><code>build_schema</code> runs — two empty tables now exist with constraints armed.</li>
+<li>Insert <code>(1, kai@example.com, Kai)</code> → all promises kept → <strong>OK</strong>. <code>users</code> has 1 row.</li>
+<li>Insert <code>(2, sam@example.com, None)</code> → <code>name</code> is <code>NULL</code> but declared <code>NOT NULL</code> → <strong>BLOCKED</strong>.</li>
+<li>Insert <code>(3, kai@example.com, Kayla)</code> → email duplicates user 1's → <strong>BLOCKED</strong> by <code>UNIQUE</code>.</li>
+<li>Insert order <code>(100, 1, 49.99)</code> → <code>user_id = 1</code> exists → <strong>OK</strong>. <code>orders</code> has 1 row.</li>
+<li>Insert order <code>(101, 99, 20.00)</code> → no user 99 → <strong>BLOCKED</strong> by <code>FOREIGN KEY</code>.</li>
+<li><code>DELETE FROM users WHERE id = 1</code> → order 100 still points at user 1 → <strong>BLOCKED</strong>. No orphan created.</li>
+<li>Assertions confirm <code>users</code> = 1 row, <code>orders</code> = 1 row → <strong>"All constraints behaved as expected."</strong></li>
+</ol>
+<p>Every rejection is the database doing its job.</p>
+<h2>17. Complexity Analysis</h2>
+<p>Constraints aren't free, but they're cheap and predictable.</p>
+<ul>
+<li><strong><code>NOT NULL</code></strong> — O(1) per row. It's a single presence check.</li>
+<li><strong><code>UNIQUE</code> and <code>PRIMARY KEY</code></strong> — backed by an index, so each insert/update costs roughly <strong>O(log n)</strong> to confirm no duplicate exists, where <em>n</em> is the number of rows. The index also costs storage: <strong>O(n)</strong> extra space.</li>
+<li><strong><code>FOREIGN KEY</code></strong> — each write does a lookup against the parent table's key, typically <strong>O(log n)</strong> thanks to the parent's index.</li>
+</ul>
+<p><strong>Why these are correct:</strong> uniqueness and referential checks rely on B-tree indexes, and a balanced B-tree lookup is logarithmic in the row count. The space overhead is the index itself — one entry per row, hence linear. In exchange for that modest cost, you get a guarantee your application layer can never fully match.</p>
+<h2>18. Alternative Solutions</h2>
+<p>Beyond the four core constraints, two related tools deserve a mention:</p>
+<ul>
+<li><strong><code>CHECK</code> constraints</strong> — enforce a custom condition, e.g. <code>total REAL NOT NULL CHECK (total &gt;= 0)</code> forbids negative order totals. Use this when a column has a <em>range</em> rule, not just a presence or uniqueness rule.</li>
+<li><strong><code>ON DELETE CASCADE</code></strong> — attaches to a foreign key so that deleting a parent automatically deletes its children:</li>
+</ul>
+<pre><code class="language-sql">FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+</code></pre>
+<p><strong>Comparison:</strong> The default foreign key <em>blocks</em> a parent delete (safe, explicit — you decide what happens to children). <code>ON DELETE CASCADE</code> <em>cleans up</em> children automatically (convenient, but dangerous if you didn't mean it). Choose blocking when child data is precious; choose cascade when children are meaningless without their parent.</p>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong>Empty / NULL values with UNIQUE:</strong> <code>UNIQUE</code> alone often permits several <code>NULL</code>s, since <code>NULL</code> isn't considered "equal" to another <code>NULL</code>. If a column must be both present and unique, always combine <code>NOT NULL UNIQUE</code>.</li>
+<li><strong>Adding a constraint to a table full of dirty data:</strong> the database will <em>refuse</em> to add the constraint if existing rows already violate it. Clean the data first, then constrain.</li>
+<li><strong>Duplicates already in the column:</strong> you cannot add <code>UNIQUE</code> until you dedupe.</li>
+<li><strong>Minimum / maximum values:</strong> pair <code>CHECK</code> with numeric bounds to guard against negatives or overflow-prone values.</li>
+<li><strong>Deleting a parent with children:</strong> blocked by default — delete children first, or use <code>ON DELETE CASCADE</code>.</li>
+</ul>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Assuming <code>UNIQUE</code> blocks blanks.</strong> It usually allows multiple <code>NULL</code>s. Add <code>NOT NULL</code> when the field is truly required.</li>
+<li><strong>Bolting constraints on after the mess.</strong> Constraints belong in the schema <em>during design</em>, not after the table is full of invalid rows the database will reject.</li>
+<li><strong>Forgetting to enable foreign keys in SQLite.</strong> Without <code>PRAGMA foreign_keys = ON</code>, referential rules silently do nothing.</li>
+<li><strong>Trying to delete a parent while children exist</strong>, then being confused by the "wall of errors." That error is the foreign key protecting you from orphan rows.</li>
+<li><strong>Validating only in application code.</strong> App checks are skippable; a second script or manual query bypasses them entirely.</li>
+<li><strong>Using more than one primary key per table.</strong> You get exactly one. For multi-column identity, use a <em>composite</em> primary key — still one <code>PRIMARY KEY</code>, just spanning several columns.</li>
+</ol>
+<h2>21. Interview Questions</h2>
+<p>Likely follow-ups an interviewer will throw at you:</p>
+<ul>
+<li>What's the difference between a <code>PRIMARY KEY</code> and a <code>UNIQUE</code> constraint? <em>(Hint: a table has one primary key; it can have many unique columns, and unique columns may allow NULLs.)</em></li>
+<li>What is an orphan row, and how do foreign keys prevent it?</li>
+<li>Explain <code>ON DELETE CASCADE</code> vs <code>ON DELETE RESTRICT</code>. When would you use each?</li>
+<li>Why enforce integrity in the database instead of the application layer?</li>
+<li>What is a composite primary key, and when is it appropriate?</li>
+<li>Can a foreign key reference a column that isn't unique? <em>(No — it must reference a primary key or unique column.)</em></li>
+<li>What happens when you try to add a <code>NOT NULL</code> column to a table that already has rows?</li>
+</ul>
+<h2>22. Similar Problems</h2>
+<p>While constraints aren't a LeetCode algorithm problem, these SQL exercises drill the same relational thinking:</p>
+<ul>
+<li><strong>LeetCode 175 — Combine Two Tables:</strong> practices joining a parent and child table across a foreign-key-style relationship.</li>
+<li><strong>LeetCode 181 — Employees Earning More Than Their Managers:</strong> a self-referencing foreign key (<code>manager_id</code> → <code>id</code>), the exact "orphan" relationship in one table.</li>
+<li><strong>LeetCode 183 — Customers Who Never Order:</strong> reasoning about which rows in one table have (or lack) references in another — the flip side of foreign keys.</li>
+<li><strong>LeetCode 196 — Delete Duplicate Emails:</strong> the real-world cleanup you must do <em>before</em> you can add a <code>UNIQUE</code> constraint.</li>
+</ul>
+<p>They're related because each one forces you to think in terms of keys, relationships, and integrity — the same muscles constraints build.</p>
+<h2>23. Key Takeaways</h2>
+<ul>
+<li>A <strong>constraint</strong> is a rule the database enforces automatically, so bad data never makes it in.</li>
+<li><strong><code>NOT NULL</code></strong> = no blanks. <strong><code>UNIQUE</code></strong> = no duplicates. <strong><code>PRIMARY KEY</code></strong> = the two combined into a permanent identity. <strong><code>FOREIGN KEY</code></strong> = one table pointing at a real row in another.</li>
+<li>You can <strong>stack</strong> constraints on a single column (e.g. <code>NOT NULL UNIQUE</code>).</li>
+<li>Foreign keys prevent <strong>orphan rows</strong>; parents can't be deleted while children reference them (unless you use <code>ON DELETE CASCADE</code>).</li>
+<li><strong>Database enforcement beats app-code validation</strong> because constraints can never be skipped. Use app checks on top only for friendlier messages.</li>
+<li>Bake constraints into your schema <strong>during design</strong>, not after the mess.</li>
+</ul>
+<h2>24. Watch the Video</h2>
+<p>Reading the rules is one thing — watching them reject bad rows in real time makes them click. In the video, Kai walks through each constraint with live inserts, the orphan-delete trap, and a side-by-side comparison table. <strong>▶️ Watch it here: {LINK}</strong> and follow along with your own schema.</p>
+<h2>25. About the Series</h2>
+<p>This lesson is part of <strong>Fun with Learning Technology</strong> — a beginner-friendly series that turns intimidating engineering topics into plain-English lessons you can actually apply. We move step by step through SQL, databases, Python, algorithms, and the day-to-day craft of software engineering, always favoring intuition over memorization. If you're building your foundations as a developer, this series is designed to grow with you, one lesson at a time.</p>
+<h2>26. Call To Action</h2>
+<p>If this made SQL constraints click, here's how to help the series grow:</p>
+<ul>
+<li>👍 <strong>Like</strong> the video on YouTube so more developers find it.</li>
+<li>🔔 <strong>Subscribe</strong> and hit the bell for the next lesson.</li>
+<li>📩 <strong>Subscribe on Substack</strong> to get each written deep-dive in your inbox.</li>
+<li>💬 <strong>Comment</strong> with the constraint that's tripped you up before — Kai reads and replies.</li>
+<li>🔁 <strong>Share</strong> this with a teammate who's designing a schema right now.</li>
+</ul>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>Most data-integrity bugs I've debugged had the same root cause: the only place the rules lived was inside the application code.</p>
+<p>Here's the problem with that. Your app is never the only thing writing to your database. A migration script, a second service, a colleague running a manual UPDATE at 2am — every one of them can bypass validation that lives only in your API layer.</p>
+<p>SQL constraints fix this by pushing the rules down into the schema itself, where nothing can skip them. There are four you'll use constantly:</p>
+<p>• NOT NULL — the column can never be blank.
+• UNIQUE — no two rows share the same value.
+• PRIMARY KEY — NOT NULL and UNIQUE combined, giving each row a permanent identity.
+• FOREIGN KEY — a value must point to a real row in another table.</p>
+<p>That last one is the one juniors underestimate. A foreign key is how <code>orders.user_id</code> guarantees every order belongs to a real user. It's also what prevents "orphan rows" — try to delete a user who still has orders, and the database stops you, because those orders would be left pointing at someone who no longer exists.</p>
+<p>Should you still validate in application code? Yes — for friendlier error messages. But treat it as a convenience layer, not your safety net. App checks run only if your code remembers to run them. Constraints run always.</p>
+<p>Design your integrity rules into the schema from day one. Don't bolt them on after the data is already a mess.</p>
+<p>What's a constraint that's saved you from a nasty bug? 👇</p>
+<h1>SQL #DatabaseDesign #SoftwareEngineering #DataIntegrity #BackendDevelopment</h1>
+<h2>Twitter/X Thread</h2>
+<p><strong>1/</strong>
+Your app code is NOT the last line of defense for your data.</p>
+<p>A migration, a second service, a manual query at 2am — all of them can bypass validation that lives only in your API.</p>
+<p>SQL constraints fix this. The 4 you'll use every day 🧵</p>
+<p><strong>2/</strong>
+First, what even is a constraint?</p>
+<p>It's a rule you attach to a column that the database checks on every insert.</p>
+<p>Break the rule → the row gets rejected. No exceptions.</p>
+<p>Think of it as a bouncer that never forgets to check IDs.</p>
+<p><strong>3/</strong>
+NOT NULL</p>
+<p>The simplest one: this column can never be empty.</p>
+<p>Like a form field marked with a red star — you literally can't submit it blank.</p>
+<p>Try to insert a row with no name? Door slammed.</p>
+<p><strong>4/</strong>
+UNIQUE</p>
+<p>Assigned seats at a theater. Once someone's in 4B, nobody else can claim it.</p>
+<p>No two rows share the same value in that column.</p>
+<p>⚠️ Gotcha: UNIQUE often still allows multiple NULLs. Pair it with NOT NULL when the field is truly required.</p>
+<p><strong>5/</strong>
+PRIMARY KEY</p>
+<p>An employee ID badge. Everyone gets exactly one, no two people share a number.</p>
+<p>The trick: a PRIMARY KEY is just UNIQUE + NOT NULL fused together.</p>
+<p>One per table. It's how the database tells your rows apart.</p>
+<p><strong>6/</strong>
+FOREIGN KEY (the important one)</p>
+<p>Like saving a friend's number in your contacts — it only makes sense if that person exists.</p>
+<p><code>orders.user_id</code> must point to a real <code>users.id</code>.</p>
+<p>Order for user 99 when there's no user 99? Rejected.</p>
+<p><strong>7/</strong>
+Follow the arrow:</p>
+<p>orders → users</p>
+<p>One user can have many orders, but every order must trace back to exactly ONE real user.</p>
+<p>That arrow IS the relationship.</p>
+<p><strong>8/</strong>
+The classic trap: the orphan row.</p>
+<p>Try to delete a user who still has orders and you'll hit a wall of errors.</p>
+<p>That's the foreign key protecting you — those orders would've been left pointing at a ghost.</p>
+<p>Fix: delete the orders first, or use ON DELETE CASCADE.</p>
+<p><strong>9/</strong>
+"Why not just validate in my app code?"</p>
+<p>You can — it gives nicer error messages.</p>
+<p>But app checks only run IF your code remembers to run them. Constraints run ALWAYS.</p>
+<p>App checks = friendly but skippable.
+Constraints = the guarantee nothing gets around.</p>
+<p><strong>10/</strong>
+Recap:</p>
+<p>• NOT NULL → no blanks
+• UNIQUE → no duplicates
+• PRIMARY KEY → the two combined = row identity
+• FOREIGN KEY → tables holding hands</p>
+<p>Bake them into your schema during design, not after the mess.</p>
+<p>Full written walkthrough + code 👇 {LINK}</p>
+<h2>Facebook Post</h2>
+<p>Ever had "bad data" sneak into your database and had no idea how it got there? 🕵️</p>
+<p>Usually the answer is simple: the rules only lived in the app code, and something wrote around them.</p>
+<p>SQL constraints solve this by putting the rules inside the database itself, where nothing can skip them. There are four you'll use all the time:</p>
+<p>✅ NOT NULL — a field can't be left blank
+✅ UNIQUE — no duplicate values
+✅ PRIMARY KEY — a permanent, one-of-a-kind ID for each row
+✅ FOREIGN KEY — links tables so an order always belongs to a real user</p>
+<p>The foreign key is the one people underestimate — it's also what stops "orphan rows" when you try to delete something that other data still depends on.</p>
+<p>I broke it all down with plain-English analogies and live examples. Perfect if you're just starting with databases. Watch here 👉 {LINK}</p>
+<h2>Reddit Summary</h2>
+<p><strong>The four SQL constraints that enforce data integrity at the schema level (and why app-code validation isn't enough)</strong></p>
+<p>A common pattern I see in beginner backends: all data validation lives in the application layer. The issue is that your app is rarely the only writer — migrations, secondary services, and manual queries all bypass it. Constraints move the rules into the database, where they can't be skipped.</p>
+<p>The four core ones:</p>
+<ul>
+<li><strong>NOT NULL</strong> — column must always have a value.</li>
+<li><strong>UNIQUE</strong> — no duplicate values in the column. Note: it typically still permits multiple NULLs, so combine with NOT NULL for truly required fields.</li>
+<li><strong>PRIMARY KEY</strong> — effectively <code>UNIQUE + NOT NULL</code>, one per table, defines row identity.</li>
+<li><strong>FOREIGN KEY</strong> — a value must reference an existing row in another table (e.g. <code>orders.user_id → users.id</code>).</li>
+</ul>
+<p>Worth knowing: foreign keys prevent orphan rows. Deleting a parent that still has children is blocked by default; you either delete children first or declare <code>ON DELETE CASCADE</code>. Also, in SQLite specifically you must run <code>PRAGMA foreign_keys = ON</code> per connection or FK enforcement silently does nothing.</p>
+<p>App-side validation still has value — mainly for friendly error messages — but it's a convenience layer, not the safety net. The database constraint is the guarantee.</p>
+<p>Happy to answer questions on composite keys or CHECK constraints if useful.</p>
+<hr />
+<h1>GitHub README</h1>
+<pre><code class="language-markdown"># SQL Constraints: NOT NULL, UNIQUE, PRIMARY KEY &amp; FOREIGN KEY
+
+A beginner-friendly walkthrough of the four SQL constraints that enforce data
+integrity **at the database level** — before bad data can ever be stored.
+
+## Problem
+
+Application-layer validation is skippable. Migrations, secondary services, and
+manual queries can all write around it. To truly guarantee data integrity, the
+rules must live in the schema, where the database enforces them on every write.
+
+## Intuition
+
+Ask one question of every column: *&quot;What does this data promise to always be
+true?&quot;* The answer maps directly onto a constraint:
+
+- &quot;Must always exist&quot; → **NOT NULL**
+- &quot;Must be one-of-a-kind&quot; → **UNIQUE**
+- &quot;Needs a permanent identity&quot; → **PRIMARY KEY** (NOT NULL + UNIQUE)
+- &quot;Must reference something real&quot; → **FOREIGN KEY**
+
+## Approach
+
+| Constraint    | Guarantees                                        |
+|---------------|---------------------------------------------------|
+| `NOT NULL`    | The column can never be empty.                    |
+| `UNIQUE`      | No two rows share the same value.                 |
+| `PRIMARY KEY` | UNIQUE + NOT NULL — a permanent row identity.      |
+| `FOREIGN KEY` | The value must point to a real row in another table. |
+
+**Relationship:** `orders.user_id` → `users.id`. Orders depend on users, never
+the reverse. Deleting a parent with existing children is blocked (orphan-row
+protection) unless `ON DELETE CASCADE` is set.
+
+&gt; ⚠️ In SQLite you must run `PRAGMA foreign_keys = ON` per connection, or foreign
+&gt; key enforcement silently does nothing.
+
+## Python Solution
+
+```python
+import sqlite3
+
+
+def build_schema(conn: sqlite3.Connection) -&gt; None:
+    conn.execute(&quot;PRAGMA foreign_keys = ON&quot;)
+    conn.executescript(
+        &quot;&quot;&quot;
+        CREATE TABLE users (
+            id    INTEGER PRIMARY KEY,
+            email TEXT NOT NULL UNIQUE,
+            name  TEXT NOT NULL
+        );
+        CREATE TABLE orders (
+            id      INTEGER PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            total   REAL NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
+        &quot;&quot;&quot;
+    )
+
+
+def try_insert(conn, sql, params):
+    try:
+        conn.execute(sql, params)
+        print(f&quot;OK      -&gt; {params}&quot;)
+    except sqlite3.IntegrityError as err:
+        print(f&quot;BLOCKED -&gt; {params}: {err}&quot;)
+
+
+def demo():
+    conn = sqlite3.connect(&quot;:memory:&quot;)
+    build_schema(conn)
+    try_insert(conn, &quot;INSERT INTO users VALUES (?, ?, ?)&quot;, (1, &quot;kai@example.com&quot;, &quot;Kai&quot;))
+    try_insert(conn, &quot;INSERT INTO users VALUES (?, ?, ?)&quot;, (2, &quot;sam@example.com&quot;, None))
+    try_insert(conn, &quot;INSERT INTO users VALUES (?, ?, ?)&quot;, (3, &quot;kai@example.com&quot;, &quot;Kayla&quot;))
+    try_insert(conn, &quot;INSERT INTO orders VALUES (?, ?, ?)&quot;, (100, 1, 49.99))
+    try_insert(conn, &quot;INSERT INTO orders VALUES (?, ?, ?)&quot;, (101, 99, 20.00))
+    try_insert(conn, &quot;DELETE FROM users WHERE id = ?&quot;, (1,))
+    assert conn.execute(&quot;SELECT COUNT(*) FROM users&quot;).fetchone()[0] == 1
+    assert conn.execute(&quot;SELECT COUNT(*) FROM orders&quot;).fetchone()[0] == 1
+    print(&quot;All constraints behaved as expected.&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    demo()
+</code></pre>
+<p>Run it:</p>
+<pre><code class="language-bash">python constraints_demo.py
+</code></pre>
+<h2>Complexity</h2>
+<table>
+<thead>
+<tr>
+<th>Constraint</th>
+<th>Time per write</th>
+<th>Extra space</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NOT NULL</code></td>
+<td>O(1)</td>
+<td>O(1)</td>
+</tr>
+<tr>
+<td><code>UNIQUE</code> / <code>PRIMARY KEY</code></td>
+<td>O(log n)</td>
+<td>O(n) index</td>
+</tr>
+<tr>
+<td><code>FOREIGN KEY</code></td>
+<td>O(log n)</td>
+<td>O(1)*</td>
+</tr>
+</tbody>
+</table>
+<p>*Relies on the parent table's existing key index.</p>
+<h2>Video</h2>
+<p>📺 Watch the full lesson: {LINK}</p>
+<h2>Article</h2>
+<p>📖 Read the complete written deep-dive: {LINK}</p>
+<hr />
+<p>Part of the <strong>Fun with Learning Technology</strong> series.
+```</p></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Constraint type that forbids empty values in a column?</summary><p>NOT NULL — rejects any INSERT/UPDATE leaving that column empty, guaranteeing every row has a real value there.</p></details><details class='card2'><summary>Difference between PRIMARY KEY and UNIQUE?</summary><p>Both enforce uniqueness. PRIMARY KEY is the one row identifier (unique + NOT NULL, one per table); UNIQUE allows many per table and permits NULLs.</p></details><details class='card2'><summary>What does a FOREIGN KEY enforce?</summary><p>A child column&#x27;s value must match an existing key in the parent table (or be NULL), linking tables and blocking references to rows that don&#x27;t exist.</p></details><details class='card2'><summary>The &#x27;orphan&#x27; bug with foreign keys?</summary><p>Deleting a parent row while children still reference it. Prevent via the FK, or use ON DELETE CASCADE/SET NULL to handle dependents.</p></details><details class='card2'><summary>Why constraints over app-side validation checks?</summary><p>The DB enforces them on every write from any client, always. App checks are bypassable and duplicated per app; constraints are one reliable source of truth.</p></details><details class='card2'><summary>Can a UNIQUE column hold multiple NULLs?</summary><p>In most databases yes — NULL isn&#x27;t &#x27;equal&#x27; to NULL, so several NULLs pass UNIQUE. PRIMARY KEY forbids NULL entirely.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
