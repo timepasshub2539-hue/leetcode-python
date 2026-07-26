@@ -1,0 +1,598 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SQL Lesson 9: Why Are There Duplicate Rows in My Results? — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-09-distinct-removing-duplicates
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson-09">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/sql-lesson-09-distinct-removing-duplicates.html">
+<meta property="og:title" content="SQL Lesson 9: Why Are There Duplicate Rows in My Results? — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-09-distinct-removing-duplicates
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson-09">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>SQL Lesson 9: Why Are There Duplicate Rows in My Results?</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h1>SEO PACKAGE</h1>
+<h2>1. SEO Title</h2>
+<p>SQL DISTINCT Explained: How to Remove Duplicate Rows and Count Unique Values Correctly</p>
+<h2>2. SEO Subtitle</h2>
+<p>Learn what a duplicate row really is, why DISTINCT judges the whole row, and when it's secretly hiding a broken join.</p>
+<h2>3. Featured Quote</h2>
+<blockquote>
+<p>"DISTINCT should clean data that is genuinely repeated — not silence a query that is quietly broken."</p>
+</blockquote>
+<h2>4. Meta Description</h2>
+<p>Master SQL DISTINCT: remove duplicate rows, count unique values with COUNT(DISTINCT), and learn when DISTINCT hides a join bug. A clear, beginner-friendly guide.</p>
+<h2>5. URL Slug</h2>
+<p><code>sql-distinct-remove-duplicate-rows</code></p>
+<h2>6. Keywords</h2>
+<p>SQL DISTINCT, remove duplicate rows SQL, COUNT DISTINCT, SQL unique values, DISTINCT vs GROUP BY, SQL duplicate rows, database duplicates, SQL SELECT DISTINCT, count unique rows SQL, SQL query optimization, SQL for beginners, SQL interview questions, deduplicate SQL, multiple columns DISTINCT, SQL join duplicates, learn SQL, SQL tutorial, database fundamentals, SQL aggregate functions, SQL performance</p>
+<h2>7. Tags</h2>
+<p>SQL, DISTINCT, GROUP BY, Databases, SQL Tutorial, Coding Interview, Data Analysis, Backend Development, Software Engineering, SQL Basics, Query Optimization, Learn SQL, Data Structures</p>
+<hr />
+<h1>8. Introduction</h1>
+<p>Your data is often lying to you about how much you actually have. A report that shows five customer rows might really represent just two countries wearing disguises — and if you count the raw rows, you'll hand your boss a number that is simply wrong.</p>
+<p>This is one of the most common early mistakes in SQL, and it shows up everywhere: analytics dashboards, admin panels, billing exports, and especially coding interviews. Interviewers love questions about duplicate rows because they reveal whether you actually understand how a database <em>thinks</em>, or whether you're just memorizing keywords. Do you know what a "row" is? Do you know what "unique" means when more than one column is involved? Do you know the difference between counting rows and counting distinct values?</p>
+<p><code>DISTINCT</code> is the keyword that rips off the mask and shows you each real thing exactly once. It looks like the easy button — but it hides two traps that quietly break real queries. By the end of this guide you'll know exactly when to reach for <code>DISTINCT</code>, how to count unique values correctly, how it differs from <code>GROUP BY</code>, and — most importantly — when <code>DISTINCT</code> is secretly covering up a bug instead of fixing one.</p>
+<p>This is a fundamental skill for anyone learning SQL, working with data structures at the database level, or preparing for a technical interview in software engineering.</p>
+<h1>9. Problem Overview</h1>
+<p>Here's the problem in plain terms.</p>
+<p>A <strong>row</strong> is a single line of data in a table — one record, like one entry on a guest list. A <strong>duplicate row</strong> is a row whose values repeat one or more other rows. Picture a guest list where the name <em>Priya</em> got written down three times. Those two extra Priyas are duplicates: the same answer showing up more than once.</p>
+<p>Duplicates cause three practical headaches:</p>
+<ol>
+<li><strong>Wrong counts.</strong> If you count rows to answer "how many <em>different</em> things do we have?", duplicates inflate your number.</li>
+<li><strong>Noisy output.</strong> A list meant to show unique options is buried under repeats.</li>
+<li><strong>Hidden bugs.</strong> Sometimes duplicates aren't real data at all — they're the symptom of a join that matched too many rows.</li>
+</ol>
+<p>The task: given a table that may contain repeated values, return each unique value <strong>once</strong>, and be able to count how many unique values exist. Sounds trivial. The trap is in the details of <em>what counts as unique</em>.</p>
+<h1>10. Example</h1>
+<p>Imagine a <code>customers</code> table:</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>name</th>
+<th>city</th>
+<th>country</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Priya</td>
+<td>Mumbai</td>
+<td>India</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Arjun</td>
+<td>Delhi</td>
+<td>India</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Meera</td>
+<td>Pune</td>
+<td>India</td>
+</tr>
+<tr>
+<td>4</td>
+<td>John</td>
+<td>London</td>
+<td>UK</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Sarah</td>
+<td>Leeds</td>
+<td>UK</td>
+</tr>
+</tbody>
+</table>
+<p>Ask a simple question: <strong>"How many countries do we sell to?"</strong></p>
+<p>If you run:</p>
+<pre><code class="language-sql">SELECT country FROM customers;
+</code></pre>
+<p>You get <strong>five rows</strong> — <code>India, India, India, UK, UK</code>. Staring at that raw list, you might report "five." But there are really only <strong>two</strong> countries hiding in there. The repeats bury the real answer.</p>
+<p>The correct answer to "how many countries" is <strong>2</strong>. Everything below is about getting to that 2 reliably — and understanding what happens when you ask the question slightly differently.</p>
+<h1>11. Intuition</h1>
+<p>An experienced engineer doesn't jump to a keyword. They first ask: <em>what does "the same" mean here?</em></p>
+<p>Two rows are duplicates only if <strong>every value you're looking at</strong> matches. That single idea unlocks everything. If you're only looking at <code>country</code>, then <code>India</code> and <code>India</code> are the same. But the moment you also look at <code>city</code>, the rows <code>Mumbai, India</code> and <code>Delhi, India</code> become <em>different</em> — because as <strong>pairs</strong>, they don't match, even though <code>India</code> repeats.</p>
+<p>So the mental model is: <strong>collapse identical things down to one copy.</strong> Take the triple Priya and squash it into a single Priya. Take five country rows and, if you only care about country, squash them into two.</p>
+<p>Once you hold that picture — <em>"keep one of each unique combination, drop the rest"</em> — the SQL almost writes itself. The keyword <code>DISTINCT</code> is just the database doing that collapsing for you. The skill isn't memorizing the word; it's knowing <strong>which columns to point it at</strong>, because that decides what "unique" means.</p>
+<h1>12. Brute Force Solution</h1>
+<p><strong>Idea:</strong> Before you know about <code>DISTINCT</code>, how would you remove duplicates by hand? You'd pull every row, then walk through them one by one, keeping a running list of values you've already seen. If a value is new, keep it. If you've seen it before, skip it.</p>
+<p>In pseudocode over the fetched rows:</p>
+<pre><code class="language-python">seen = set()
+unique = []
+for row in all_rows:
+    if row not in seen:
+        seen.add(row)
+        unique.append(row)
+</code></pre>
+<p><strong>Algorithm:</strong>
+1. Fetch all rows from the database into your application.
+2. Loop through each row.
+3. Track seen values in a set.
+4. Emit a row only the first time you see it.</p>
+<p><strong>Advantages:</strong>
+- Easy to understand; no SQL knowledge beyond <code>SELECT</code>.
+- Full control in application code.</p>
+<p><strong>Disadvantages:</strong>
+- You transfer <strong>every</strong> row over the network, including all the duplicates — wasteful.
+- The database is far better optimized for this than your app loop.
+- More code, more places for bugs, harder to maintain.</p>
+<p><strong>Time complexity:</strong> O(n) to scan the rows, where <code>n</code> is the number of rows.
+<strong>Space complexity:</strong> O(k) for the <code>seen</code> set, where <code>k</code> is the number of unique values.</p>
+<p>It works, but it's the wrong layer. The database can do this for you — often faster and without shipping the noise across the wire.</p>
+<h1>13. Optimal Solution</h1>
+<p>Drop the word <code>DISTINCT</code> right after <code>SELECT</code>, and the database does the sweeping for you:</p>
+<pre><code class="language-sql">SELECT DISTINCT country FROM customers;
+</code></pre>
+<p>Five noisy rows become two clean ones:</p>
+<table>
+<thead>
+<tr>
+<th>country</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>India</td>
+</tr>
+<tr>
+<td>UK</td>
+</tr>
+</tbody>
+</table>
+<p>That's the whole spell — one keyword.</p>
+<p><strong>The multi-column rule.</strong> When you list more than one column, <code>DISTINCT</code> looks at the <strong>combination</strong>, not each column alone:</p>
+<pre><code class="language-sql">SELECT DISTINCT city, country FROM customers;
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>city</th>
+<th>country</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mumbai</td>
+<td>India</td>
+</tr>
+<tr>
+<td>Delhi</td>
+<td>India</td>
+</tr>
+<tr>
+<td>Pune</td>
+<td>India</td>
+</tr>
+<tr>
+<td>London</td>
+<td>UK</td>
+</tr>
+<tr>
+<td>Leeds</td>
+<td>UK</td>
+</tr>
+</tbody>
+</table>
+<p>Notice <code>India</code> appears three times here — and that's correct. As <strong>pairs</strong>, <code>(Mumbai, India)</code> and <code>(Delhi, India)</code> are different. <code>DISTINCT</code> dedupes the whole combo you selected, not one column.</p>
+<p><strong>Counting unique values.</strong> To answer "how many different countries?", put <code>DISTINCT</code> <em>inside</em> <code>COUNT</code>:</p>
+<pre><code class="language-sql">SELECT COUNT(DISTINCT country) FROM customers;   -- returns 2
+</code></pre>
+<p>Compare that with the plain version:</p>
+<pre><code class="language-sql">SELECT COUNT(country) FROM customers;            -- returns 5
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Query</th>
+<th>Meaning</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>COUNT(country)</code></td>
+<td>How many rows have a country?</td>
+<td>5</td>
+</tr>
+<tr>
+<td><code>COUNT(DISTINCT country)</code></td>
+<td>How many <em>different</em> countries?</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+<p><code>COUNT</code> answers <em>how many total.</em> <code>COUNT(DISTINCT ...)</code> answers <em>how many different.</em> That single difference is the one that saves you from reporting the wrong number.</p>
+<h1>14. Python Code</h1>
+<p>Here's how you'd use these queries from clean, production-quality Python with the standard <code>sqlite3</code> module:</p>
+<pre><code class="language-python">import sqlite3
+
+
+def count_unique_countries(db_path: str) -&gt; int:
+    &quot;&quot;&quot;Return the number of distinct countries in the customers table.&quot;&quot;&quot;
+    with sqlite3.connect(db_path) as conn:
+        cursor = conn.execute(
+            &quot;SELECT COUNT(DISTINCT country) FROM customers&quot;
+        )
+        return cursor.fetchone()[0]
+
+
+def list_unique_countries(db_path: str) -&gt; list[str]:
+    &quot;&quot;&quot;Return each country exactly once, in sorted order.&quot;&quot;&quot;
+    with sqlite3.connect(db_path) as conn:
+        cursor = conn.execute(
+            &quot;SELECT DISTINCT country FROM customers ORDER BY country&quot;
+        )
+        return [row[0] for row in cursor.fetchall()]
+</code></pre>
+<p>Let the database deduplicate; let Python just carry the clean result.</p>
+<h1>15. Code Walkthrough</h1>
+<ul>
+<li><strong><code>with sqlite3.connect(db_path) as conn:</code></strong> — Opens the database and guarantees the connection is committed and closed even if an error occurs. The <code>with</code> block is the lazy, correct way to manage resources.</li>
+<li><strong><code>conn.execute("SELECT COUNT(DISTINCT country) ...")</code></strong> — Pushes the deduplication <em>into the database</em>. Only the final number crosses back into Python — not five rows, not a million.</li>
+<li><strong><code>return cursor.fetchone()[0]</code></strong> — <code>COUNT</code> returns a single row with a single column, so <code>fetchone()[0]</code> grabs the scalar directly.</li>
+<li><strong><code>SELECT DISTINCT country ... ORDER BY country</code></strong> — Returns each country once. <code>ORDER BY</code> makes the output stable and predictable, which matters for tests and readable reports.</li>
+<li><strong><code>[row[0] for row in cursor.fetchall()]</code></strong> — Unpacks each single-column row into a flat list of strings.</li>
+</ul>
+<p>The key architectural decision: deduplication happens in SQL, not in a Python loop. Less data moves, less code exists, fewer bugs hide.</p>
+<h1>16. Dry Run</h1>
+<p>Let's trace <code>SELECT COUNT(DISTINCT country) FROM customers</code> against our table.</p>
+<p>Rows scanned, in order, with a running set of seen countries:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Row country</th>
+<th>Seen set before</th>
+<th>New?</th>
+<th>Seen set after</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>India</td>
+<td>{}</td>
+<td>yes</td>
+<td>{India}</td>
+</tr>
+<tr>
+<td>2</td>
+<td>India</td>
+<td>{India}</td>
+<td>no</td>
+<td>{India}</td>
+</tr>
+<tr>
+<td>3</td>
+<td>India</td>
+<td>{India}</td>
+<td>no</td>
+<td>{India}</td>
+</tr>
+<tr>
+<td>4</td>
+<td>UK</td>
+<td>{India}</td>
+<td>yes</td>
+<td>{India, UK}</td>
+</tr>
+<tr>
+<td>5</td>
+<td>UK</td>
+<td>{India, UK}</td>
+<td>no</td>
+<td>{India, UK}</td>
+</tr>
+</tbody>
+</table>
+<p>Final distinct set: <code>{India, UK}</code> → size <strong>2</strong>. The query returns <code>2</code>.</p>
+<p>Now trace <code>SELECT COUNT(country)</code> — no <code>DISTINCT</code>. It never checks the set; it just increments a counter for every non-null row: 1, 2, 3, 4, 5 → <strong>5</strong>. Same table, different question, different answer. That gap is the whole lesson.</p>
+<h1>17. Complexity Analysis</h1>
+<p>To remove duplicates, the database must compare values, and there are two common strategies under the hood:</p>
+<ul>
+<li><strong>Sorting:</strong> Order all the rows so identical copies sit next to each other, then keep the first of each run. This costs roughly <strong>O(n log n)</strong> time.</li>
+<li><strong>Hashing:</strong> Drop each value into labeled buckets (a hash table) and ignore any value already present. This is closer to <strong>O(n)</strong> time but uses <strong>O(k)</strong> extra memory for the buckets, where <code>k</code> is the number of unique values.</li>
+</ul>
+<p><strong>Space:</strong> O(k) for the set of distinct values (plus temporary sort space if sorting is used).</p>
+<p>Why does this matter? On a few thousand rows you'll never feel it. On a hundred million rows, that sorting or hashing is <strong>real work</strong> — CPU, memory, and sometimes disk. So use <code>DISTINCT</code> with intent, not by reflex. It is not free; it's just cheap enough to be invisible on small tables.</p>
+<h1>18. Alternative Solutions</h1>
+<p>The natural alternative is <strong><code>GROUP BY</code></strong>:</p>
+<pre><code class="language-sql">SELECT country FROM customers GROUP BY country;
+</code></pre>
+<p>For a plain unique list, <code>DISTINCT</code> and <code>GROUP BY</code> return the <strong>same answer</strong>. So which do you use?</p>
+<table>
+<thead>
+<tr>
+<th>You want...</th>
+<th>Use</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Just the unique values</td>
+<td><code>DISTINCT</code></td>
+<td>Less typing, clearer intent, reads cleaner</td>
+</tr>
+<tr>
+<td>Uniques <strong>plus a number per group</strong></td>
+<td><code>GROUP BY</code></td>
+<td>Only <code>GROUP BY</code> can also aggregate</td>
+</tr>
+</tbody>
+</table>
+<p><code>GROUP BY</code>'s superpower is that it can <em>crunch numbers per group</em>:</p>
+<pre><code class="language-sql">SELECT country, COUNT(*) AS customer_count
+FROM customers
+GROUP BY country;
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>country</th>
+<th>customer_count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>India</td>
+<td>3</td>
+</tr>
+<tr>
+<td>UK</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+<p>Freeze this frame — it settles the question forever. Same rows in, two exits. Asking <em>"what different things exist?"</em> → <code>DISTINCT</code>. Asking <em>"how many, or how much, for each thing?"</em> → <code>GROUP BY</code>. That number-per-group only comes from <code>GROUP BY</code>.</p>
+<h1>19. Edge Cases</h1>
+<ul>
+<li><strong>Empty table:</strong> <code>SELECT DISTINCT country</code> returns zero rows; <code>COUNT(DISTINCT country)</code> returns <code>0</code>. Safe, no error.</li>
+<li><strong>All rows identical:</strong> <code>DISTINCT</code> collapses them to a single row. <code>COUNT(DISTINCT ...)</code> returns <code>1</code>.</li>
+<li><strong>All rows unique:</strong> <code>DISTINCT</code> changes nothing; the output equals the input — and you paid the deduplication cost for no benefit.</li>
+<li><strong>NULL values:</strong> <code>DISTINCT</code> treats all <code>NULL</code>s as <em>one</em> value and keeps a single <code>NULL</code>. But <code>COUNT(DISTINCT country)</code> <strong>ignores NULLs entirely</strong> — so a column of <code>India, NULL, UK</code> gives <code>COUNT(DISTINCT country) = 2</code>, not 3. This trips people constantly.</li>
+<li><strong>Extra column sneaks in:</strong> Add one more column and your "unique" list can suddenly explode, because uniqueness now spans that column too.</li>
+</ul>
+<h1>20. Common Mistakes</h1>
+<ol>
+<li><strong>Counting raw rows instead of distinct values.</strong> Using <code>COUNT(country)</code> when you meant <code>COUNT(DISTINCT country)</code> — reporting 5 countries when there are 2.</li>
+<li><strong>Adding a helpful extra column.</strong> "I wanted a clean list of countries, so I wrote <code>SELECT DISTINCT country</code>, then added <code>city</code> to be helpful — and suddenly India was back three times." <code>DISTINCT</code> <strong>always spans every column you select.</strong> Only ask for the columns you actually want deduped.</li>
+<li><strong>Thinking <code>DISTINCT</code> applies to one column.</strong> <code>SELECT DISTINCT a, b</code> dedupes the <strong>pair</strong>, not just <code>a</code>. It is not <code>DISTINCT(a), b</code>.</li>
+<li><strong>Using <code>DISTINCT</code> to hide a broken join.</strong> Duplicates are often screaming that a join matched too many rows. Slapping <code>DISTINCT</code> on top just paints over the bug. Ask <em>why</em> the duplicates appeared first.</li>
+<li><strong>Reaching for <code>DISTINCT</code> by reflex on huge tables.</strong> On a hundred million rows, the sort or hash is real, measurable work. Don't pay it unless you need it.</li>
+<li><strong>Forgetting NULL handling.</strong> <code>COUNT(DISTINCT col)</code> skips <code>NULL</code>, which can quietly under-count.</li>
+</ol>
+<h1>21. Interview Questions</h1>
+<p>Expect follow-ups like these:</p>
+<ul>
+<li>What exactly makes two rows duplicates? <em>(Every selected value matches.)</em></li>
+<li>What's the difference between <code>COUNT(*)</code>, <code>COUNT(col)</code>, and <code>COUNT(DISTINCT col)</code>?</li>
+<li>Does <code>SELECT DISTINCT a, b</code> dedupe on <code>a</code>, on <code>b</code>, or on the pair?</li>
+<li>When would <code>DISTINCT</code> and <code>GROUP BY</code> give the same result, and when would they differ?</li>
+<li>How does the database <em>implement</em> <code>DISTINCT</code> under the hood, and what's the performance cost?</li>
+<li>You see duplicate rows after a <code>JOIN</code>. Would you add <code>DISTINCT</code>? Why or why not?</li>
+<li>How does <code>DISTINCT</code> handle <code>NULL</code> values?</li>
+</ul>
+<h1>22. Similar Problems</h1>
+<ul>
+<li><strong>LeetCode 196 — Delete Duplicate Emails.</strong> Directly about identifying and removing duplicate rows; same "what makes a row unique" reasoning.</li>
+<li><strong>LeetCode 182 — Duplicate Emails.</strong> Find values that appear more than once — the inverse of <code>DISTINCT</code>, and a natural <code>GROUP BY ... HAVING COUNT(*) &gt; 1</code>.</li>
+<li><strong>LeetCode 1050 — Actors and Directors Who Cooperated At Least Three Times.</strong> Reinforces <code>GROUP BY</code> with aggregation, the exact tool <code>DISTINCT</code> <em>can't</em> replace.</li>
+<li><strong>LeetCode 595 — Big Countries.</strong> Practices filtering and selecting the right columns, where over-selecting changes your result set.</li>
+</ul>
+<p>All four sharpen the same instinct: knowing precisely which columns define "unique," and whether you need a list or a count-per-group.</p>
+<h1>23. Key Takeaways</h1>
+<ul>
+<li>A <strong>duplicate row</strong> is the same combination of values appearing more than once.</li>
+<li><code>DISTINCT</code> keeps one of each unique combination and sweeps the repeats.</li>
+<li>It judges the <strong>whole set of selected columns together</strong> — add a column, and "unique" changes.</li>
+<li><code>COUNT(DISTINCT col)</code> answers <em>how many different</em>; plain <code>COUNT</code> answers <em>how many total</em>.</li>
+<li><code>DISTINCT</code> for uniques; <code>GROUP BY</code> when you also need a number per group.</li>
+<li><code>DISTINCT</code> costs real work on big tables — use it with intent, not reflex.</li>
+<li>Never let <code>DISTINCT</code> become the tape over a leaky join. Fix the duplicate at its source.</li>
+</ul>
+<h1>24. Watch the Video</h1>
+<p>Seeing the rows collapse in real time makes this click faster than any paragraph can. Watch the full walkthrough here — <strong>{LINK}</strong> — where we sweep five noisy rows down to two clean ones, live, and settle the <code>DISTINCT</code> vs <code>GROUP BY</code> question with a single frame worth screenshotting.</p>
+<h1>25. About the Series</h1>
+<p>This is <strong>SQL Lesson 9</strong> from <strong>Fun with Learning Technology</strong> — a series that teaches real backend and database skills in short, focused lessons built on intuition, not memorization. Each lesson takes one concept most tutorials rush past, slows it down, and shows you the trap <em>before</em> you fall into it. Follow along from the start to build a genuinely solid SQL foundation, one clear idea at a time.</p>
+<h1>26. Call To Action</h1>
+<p>If this cleared up duplicates for you, <strong>like the video on YouTube</strong> — it genuinely helps the channel reach more developers. <strong>Subscribe</strong> so you don't miss the next lesson, and <strong>subscribe to the Substack</strong> for the written deep-dives like this one. Got a question or a case where <code>DISTINCT</code> burned you? <strong>Drop a comment</strong> — I read them. And if a teammate keeps counting raw rows, <strong>share this</strong> with them.</p>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>Your data is often lying about how much you actually have.</p>
+<p>A query that returns five customer rows might really represent just two countries. Count the raw rows and you'll report the wrong number — to a dashboard, a stakeholder, or an interviewer.</p>
+<p>The fix is one SQL keyword: DISTINCT. But it hides two traps worth knowing before you rely on it.</p>
+<p>Trap 1: DISTINCT judges the WHOLE row, not one column.
+<code>SELECT DISTINCT country</code> gives you clean, unique countries. Add <code>city</code> "to be helpful" and duplicates come flooding back — because uniqueness now spans both columns. DISTINCT always dedupes every column you select, together. Only ask for the columns you actually want deduped.</p>
+<p>Trap 2: DISTINCT is often a band-aid over a broken join.
+Duplicate rows are frequently a symptom of a join that matched too broadly. Slapping DISTINCT on top silences the symptom and hides the bug. Before reaching for it, ask <em>why</em> the duplicates appeared.</p>
+<p>A few things worth remembering:
+• COUNT(col) answers "how many total." COUNT(DISTINCT col) answers "how many different." Those are not the same question.
+• Want just unique values? DISTINCT. Want a number per group (count, sum)? GROUP BY.
+• On a hundred million rows, DISTINCT does real work (sorting or hashing). Use it with intent, not reflex.</p>
+<p>Small keyword, big consequences. Getting it right is the difference between a correct report and a confident wrong one.</p>
+<p>What's a case where DISTINCT quietly burned you? I'd love to hear it.</p>
+<h1>SQL #Databases #SoftwareEngineering #CodingInterview #LearnSQL</h1>
+<h2>Twitter/X Thread</h2>
+<p><strong>1/</strong>
+Your SQL data is lying to you.</p>
+<p>Five rows might really be two things wearing disguises. Count the raw rows and you'll report the wrong number.</p>
+<p>One keyword fixes it — but it hides two traps. 🧵</p>
+<p><strong>2/</strong>
+First, what's a duplicate?</p>
+<p>A row is one line of data. A duplicate is the same combination of values showing up more than once.</p>
+<p>Think of a guest list where "Priya" got written 3 times. Two of those are duplicates.</p>
+<p><strong>3/</strong>
+Enter DISTINCT.</p>
+<p><code>SELECT DISTINCT country FROM customers</code></p>
+<p>It keeps one of each unique value and sweeps the repeats. Five noisy rows → two clean ones. One keyword.</p>
+<p><strong>4/</strong>
+Trap #1: DISTINCT looks at the WHOLE row you selected.</p>
+<p><code>SELECT DISTINCT city, country</code></p>
+<p>Mumbai/India and Delhi/India BOTH survive — as pairs they're different, even though India repeats. DISTINCT dedupes the combo, not one column.</p>
+<p><strong>5/</strong>
+This bit me early:</p>
+<p>I wanted unique countries, wrote <code>DISTINCT country</code>, then added <code>city</code> to be helpful.</p>
+<p>Suddenly India was back 3 times. Adding a column changed what "unique" means. Only select the columns you actually want deduped.</p>
+<p><strong>6/</strong>
+Counting? Two different questions:</p>
+<p><code>COUNT(country)</code> → 5 (how many rows)
+<code>COUNT(DISTINCT country)</code> → 2 (how many different)</p>
+<p>Reporting 5 when the answer is 2 is how wrong numbers reach your boss.</p>
+<p><strong>7/</strong>
+Trap #2 (the big one): DISTINCT is overused as a band-aid.</p>
+<p>Duplicate rows are often screaming that a JOIN is too broad. DISTINCT on top just paints over the bug.</p>
+<p>Ask WHY the duplicates showed up before you sweep them.</p>
+<p><strong>8/</strong>
+DISTINCT vs GROUP BY?</p>
+<p>For a plain unique list → same answer, DISTINCT reads cleaner.</p>
+<p>But GROUP BY can also crunch numbers per group (count, sum per country). DISTINCT can't.</p>
+<p><strong>9/</strong>
+The rule that settles it forever:</p>
+<p>"What different things exist?" → DISTINCT
+"How many / how much for each thing?" → GROUP BY</p>
+<p>Screenshot that.</p>
+<p><strong>10/</strong>
+And it's not free. Under the hood DISTINCT sorts or hashes every row. Invisible on 1,000 rows, real work on 100 million.</p>
+<p>Use it with intent — not as tape over a leaky join.</p>
+<p>Full lesson 👉 {LINK}</p>
+<h2>Facebook Post</h2>
+<p>Ever run a SQL query, get five rows back, and confidently report "five"... when the real answer was two?</p>
+<p>That's the duplicate-row trap, and almost everyone hits it early. In this lesson I break down DISTINCT — the one keyword that shows you each real value exactly once — in plain, beginner-friendly language.</p>
+<p>You'll learn what a duplicate row actually is, why DISTINCT looks at the whole row (not just one column), how to count unique values correctly with COUNT(DISTINCT), and the sneaky case where DISTINCT is quietly hiding a broken join instead of fixing it. We also finally settle DISTINCT vs GROUP BY with a rule you can screenshot.</p>
+<p>No jargon, no fluff — just the intuition that makes it stick. Watch it here 👉 {LINK}</p>
+<h2>Reddit Summary</h2>
+<p><strong>What DISTINCT actually does (and two ways it quietly bites you)</strong></p>
+<p>Sharing a breakdown I put together on <code>DISTINCT</code>, since I see the same confusion come up a lot.</p>
+<p>The core idea: a duplicate row is the same <em>combination of selected values</em> repeated. <code>DISTINCT</code> keeps one of each and drops the rest.</p>
+<p>Two things that trip people up:</p>
+<ol>
+<li>
+<p><strong>DISTINCT spans every column you select — not one.</strong> <code>SELECT DISTINCT city, country</code> dedupes on the <em>pair</em>, so <code>(Mumbai, India)</code> and <code>(Delhi, India)</code> both survive. If you add a column to a <code>DISTINCT</code> query and duplicates "come back," that's why. It's not a bug.</p>
+</li>
+<li>
+<p><strong>DISTINCT is often a band-aid over a bad join.</strong> If a query returns duplicates you didn't expect, the honest move is to ask why — usually a join matched too many rows. <code>DISTINCT</code> will hide that symptom while leaving the actual bug in place.</p>
+</li>
+</ol>
+<p>Also worth internalizing:
+- <code>COUNT(col)</code> = how many rows. <code>COUNT(DISTINCT col)</code> = how many different values. <code>COUNT(DISTINCT ...)</code> also ignores NULLs.
+- DISTINCT and GROUP BY give the same result for a plain unique list; GROUP BY is the one that can also aggregate per group.
+- It's not free — it sorts or hashes under the hood. Fine on small tables, real cost on huge ones.</p>
+<p>Curious what edge cases others have hit with it — NULL handling and join-induced duplicates are the two that got me.</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># SQL DISTINCT — Removing Duplicate Rows &amp; Counting Unique Values
+
+&gt; SQL Lesson 9 · Fun with Learning Technology
+
+## Problem
+
+Given a table that may contain repeated values, return each unique value
+exactly once, and count how many unique values exist. Raw row counts lie:
+five rows can represent just two real values.
+
+Example `customers` table:
+
+| id | name  | city   | country |
+|----|-------|--------|---------|
+| 1  | Priya | Mumbai | India   |
+| 2  | Arjun | Delhi  | India   |
+| 3  | Meera | Pune   | India   |
+| 4  | John  | London | UK      |
+| 5  | Sarah | Leeds  | UK      |
+
+Question: &quot;How many countries do we sell to?&quot; → **2**, not 5.
+
+## Intuition
+
+Two rows are duplicates only if **every selected value** matches. If you
+select just `country`, the three India rows collapse to one. Add `city` and
+they're distinct again, because uniqueness now spans the pair. The whole skill
+is choosing which columns define &quot;unique.&quot;
+
+## Approach
+
+- `SELECT DISTINCT country` → each country once.
+- `SELECT DISTINCT city, country` → dedupes the **combination**, not one column.
+- `COUNT(DISTINCT country)` → how many *different* values (2).
+- `COUNT(country)` → how many rows (5).
+- Use `GROUP BY` instead when you also need a number per group (count, sum).
+- DISTINCT deduplicates via sorting or hashing under the hood — real cost on
+  large tables. Don't use it to mask a join that matched too many rows.
+
+## SQL
+
+```sql
+-- unique values
+SELECT DISTINCT country FROM customers;
+
+-- count unique values (ignores NULLs)
+SELECT COUNT(DISTINCT country) FROM customers;
+
+-- uniques PLUS a number per group
+SELECT country, COUNT(*) AS customer_count
+FROM customers
+GROUP BY country;
+</code></pre>
+<h2>Python Solution</h2>
+<pre><code class="language-python">import sqlite3
+
+
+def count_unique_countries(db_path: str) -&gt; int:
+    &quot;&quot;&quot;Return the number of distinct countries in the customers table.&quot;&quot;&quot;
+    with sqlite3.connect(db_path) as conn:
+        cursor = conn.execute(&quot;SELECT COUNT(DISTINCT country) FROM customers&quot;)
+        return cursor.fetchone()[0]
+
+
+def list_unique_countries(db_path: str) -&gt; list[str]:
+    &quot;&quot;&quot;Return each country exactly once, sorted.&quot;&quot;&quot;
+    with sqlite3.connect(db_path) as conn:
+        cursor = conn.execute(
+            &quot;SELECT DISTINCT country FROM customers ORDER BY country&quot;
+        )
+        return [row[0] for row in cursor.fetchall()]
+</code></pre>
+<h2>Complexity</h2>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Time</th>
+<th>Space</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sorting</td>
+<td>O(n log n)</td>
+<td>O(n) temp</td>
+</tr>
+<tr>
+<td>Hashing</td>
+<td>O(n)</td>
+<td>O(k) buckets</td>
+</tr>
+</tbody>
+</table>
+<p><code>n</code> = number of rows, <code>k</code> = number of unique values. Negligible on small
+tables; real work on very large ones.</p>
+<h2>Gotchas</h2>
+<ul>
+<li>DISTINCT spans <strong>every</strong> selected column, not one.</li>
+<li><code>COUNT(DISTINCT col)</code> ignores <code>NULL</code>.</li>
+<li>Unexpected duplicates often mean a broken/broad JOIN — fix the cause, don't
+  mask it with DISTINCT.</li>
+</ul>
+<h2>Video</h2>
+<p>📺 Watch the full walkthrough: {LINK}</p>
+<h2>Article</h2>
+<p>📖 Full written deep-dive: {LINK}
+```</p></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>SQL tell: query returns repeated rows hiding true variety. What do you reach for?</summary><p>DISTINCT. When repeated entries obscure how many unique entities exist, add DISTINCT to collapse identical rows into one.</p></details><details class='card2'><summary>What granularity does DISTINCT compare — a column or the row?</summary><p>The entire selected row. Uniqueness is judged across all columns in the SELECT list combined, not per individual column.</p></details><details class='card2'><summary>Time complexity of DISTINCT deduplication?</summary><p>O(n log n) if sorted, or ~O(n) with hashing, over n rows. The engine must sort or hash to detect duplicates.</p></details><details class='card2'><summary>Space complexity of DISTINCT?</summary><p>O(k) for k distinct rows kept (hash set), up to O(n) worst case, plus sort buffers if using a sort-based plan.</p></details><details class='card2'><summary>Common bug: SELECT DISTINCT col1, col2 — what do people wrongly expect?</summary><p>They think each column is deduped separately. It isn&#x27;t — DISTINCT dedupes the whole combined row, so unique pairs still produce repeats.</p></details><details class='card2'><summary>Follow-up: DISTINCT vs GROUP BY for getting unique values?</summary><p>Both dedupe. GROUP BY is needed when aggregating (COUNT, SUM) per group; DISTINCT is simpler when you only want unique rows, no aggregates.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
