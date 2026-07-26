@@ -1,0 +1,596 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SQL Lesson 3: Why Does WHERE age &gt; 21 OR 25 Silently Return Everyone? — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-03-filtering-and-or-not-in-between-like
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-l">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/sql-lesson-03-filtering-and-or-not-in-between-like.html">
+<meta property="og:title" content="SQL Lesson 3: Why Does WHERE age &gt; 21 OR 25 Silently Return Everyone? — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-03-filtering-and-or-not-in-between-like
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-l">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>SQL Lesson 3: Why Does WHERE age &gt; 21 OR 25 Silently Return Everyone?</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h1>SEO PACKAGE</h1>
+<h2>1. SEO Title</h2>
+<p><strong>SQL WHERE Clause Explained: AND, OR, IN, BETWEEN, LIKE &amp; the NULL Trap (Beginner to Confident)</strong></p>
+<h2>2. SEO Subtitle</h2>
+<p>Master every filtering operator in SQL — and learn why <code>WHERE age &gt; 21 OR 25</code> silently returns every row in your table.</p>
+<h2>3. Featured Quote</h2>
+<blockquote>
+<p>"The cheapest row to process is the one you filtered out at the door."</p>
+</blockquote>
+<h2>4. Meta Description</h2>
+<p>Learn the SQL WHERE clause the right way: AND, OR, NOT, IN, BETWEEN, LIKE, and the NULL trap. Avoid silent bugs and write faster, correct queries. (156 chars)</p>
+<h2>5. URL Slug</h2>
+<p><code>sql-where-clause-and-or-in-between-like-null-explained</code></p>
+<h2>6. Keywords</h2>
+<p>SQL WHERE clause, SQL filtering, AND OR NOT SQL, SQL IN operator, SQL BETWEEN, SQL LIKE wildcard, IS NULL SQL, SQL operator precedence, SQL query optimization, SQL for beginners, SQL tutorial, database filtering, SQL best practices, learn SQL, SQL interview questions, WHERE clause examples, SQL NULL trap, SQL predicate, relational databases, data analytics SQL</p>
+<h2>7. Tags</h2>
+<p>SQL, Databases, WHERE Clause, SQL Tutorial, Data Analytics, Coding Interview, SQL Operators, Learn To Code, Query Optimization, NULL Handling, SQL Beginners, Software Engineering, Data Structures, Backend Development, SQL Best Practices</p>
+<hr />
+<h1>8. Introduction</h1>
+<p>Every meaningful question you ask a database is really a filtering question. <em>Which</em> users signed up last month? <em>Which</em> orders are still unpaid? <em>Which</em> products are both cheap and in stock? The tables hold millions of rows, but you almost never want all of them. You want a slice — and the <code>WHERE</code> clause is the tool that carves out that slice.</p>
+<p>This is Lesson 3 in the SQL series, and it's the one that separates people who "know some SQL" from people who can trust their own queries. That distinction matters because filtering bugs are the quiet kind. Your query runs. It returns rows. Nothing errors. But the rows are <em>wrong</em> — and in a report that decides budget, headcount, or who gets an email, silently wrong is far more dangerous than loudly broken.</p>
+<p>Interviewers know this, which is why filtering questions show up constantly in SQL and data-analytics screens. They're rarely testing whether you can spell <code>SELECT</code>. They're testing whether you understand <strong>operator precedence</strong> (does <code>AND</code> bind tighter than <code>OR</code>?), whether you know that <code>NULL</code> breaks equality, and whether you can pick <code>IN</code> over five stacked <code>OR</code>s. These are the details that reveal whether you've actually shipped queries against real data.</p>
+<p>By the end of this article you'll have a complete filtering toolkit — <code>AND</code>, <code>OR</code>, <code>NOT</code>, <code>IN</code>, <code>BETWEEN</code>, <code>LIKE</code> — plus a clear mental model for the two traps that catch almost everyone: precedence and <code>NULL</code>. You'll also understand <em>why</em> filtering early makes your queries faster, which is one of the most practical performance lessons in all of SQL.</p>
+<h1>9. Problem Overview</h1>
+<p>Picture a warehouse with a million boxes. You want only the red ones from last March. You do not want to walk every aisle yourself — you want to hand the warehouse a description and have it bring back exactly the matching boxes.</p>
+<p>That is precisely what the <code>WHERE</code> clause does. <code>WHERE</code> is a <strong>filter</strong>: it evaluates a condition against every row and keeps only the rows where that condition is <em>true</em>.</p>
+<p>Here's the mental model that makes everything click: <strong><code>WHERE</code> is a bouncer at the door.</strong> Each row walks up. The bouncer checks it against a rule. If the row's answer is <code>true</code>, it's let into the result set. If it's <code>false</code>, it's turned away. That's the whole job.</p>
+<p>The condition you hand the bouncer is built from operators:</p>
+<table>
+<thead>
+<tr>
+<th>Operator</th>
+<th>What it does</th>
+<th>Effect on result size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AND</code></td>
+<td>Both conditions must be true</td>
+<td>Narrows (fewer rows)</td>
+</tr>
+<tr>
+<td><code>OR</code></td>
+<td>At least one must be true</td>
+<td>Widens (more rows)</td>
+</tr>
+<tr>
+<td><code>NOT</code></td>
+<td>Inverts a condition</td>
+<td>Excludes what you name</td>
+</tr>
+<tr>
+<td><code>IN</code></td>
+<td>Matches any value in a list</td>
+<td>Shorthand for many <code>OR</code>s</td>
+</tr>
+<tr>
+<td><code>BETWEEN</code></td>
+<td>Matches a range, ends included</td>
+<td>Continuous ranges</td>
+</tr>
+<tr>
+<td><code>LIKE</code></td>
+<td>Matches text patterns with wildcards</td>
+<td>Fuzzy text search</td>
+</tr>
+</tbody>
+</table>
+<p>The problem this lesson solves: <strong>how do you describe exactly the rows you want — correctly and efficiently — without accidentally letting the wrong ones through?</strong></p>
+<h1>10. Example</h1>
+<p>Let's ground everything in one small table. Imagine a <code>users</code> table:</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>name</th>
+<th>age</th>
+<th>city</th>
+<th>status</th>
+<th>phone</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Asha</td>
+<td>17</td>
+<td>Delhi</td>
+<td>active</td>
+<td>98xxxxxx01</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Ravi</td>
+<td>24</td>
+<td>Mumbai</td>
+<td>cancelled</td>
+<td>NULL</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Meena</td>
+<td>30</td>
+<td>Delhi</td>
+<td>active</td>
+<td>98xxxxxx03</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Jason</td>
+<td>19</td>
+<td>Pune</td>
+<td>active</td>
+<td>NULL</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Sara</td>
+<td>45</td>
+<td>Mumbai</td>
+<td>active</td>
+<td>98xxxxxx05</td>
+</tr>
+</tbody>
+</table>
+<p>A simple filter:</p>
+<pre><code class="language-sql">SELECT name, age
+FROM users
+WHERE age &gt; 18;
+</code></pre>
+<p><strong>Output:</strong></p>
+<table>
+<thead>
+<tr>
+<th>name</th>
+<th>age</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ravi</td>
+<td>24</td>
+</tr>
+<tr>
+<td>Meena</td>
+<td>30</td>
+</tr>
+<tr>
+<td>Jason</td>
+<td>19</td>
+</tr>
+<tr>
+<td>Sara</td>
+<td>45</td>
+</tr>
+</tbody>
+</table>
+<p>Asha (17) is turned away at the door — her row answered <code>false</code> to <code>age &gt; 18</code>. Everyone else is an adult, so they walk in. That's <code>WHERE</code> doing exactly one job: keep the <code>true</code> rows, drop the rest. We'll reuse this table throughout.</p>
+<h1>11. Intuition</h1>
+<p>Before touching more operators, sit with one idea: <strong>a <code>WHERE</code> condition is a yes/no question asked of a single row at a time.</strong> The database doesn't think about the whole table at once. It walks up to row 1 and asks, "Is your age greater than 18?" Then row 2. Then row 3. Every operator you're about to learn is just a richer way of phrasing that yes/no question.</p>
+<p>Once you internalize "one row, one question, true or false," the combining operators stop being intimidating:</p>
+<ul>
+<li><strong><code>AND</code> is two demands at once.</strong> You're shopping and you insist the item be <em>cheap</em> <strong>and</strong> <em>in stock</em>. A $50 sold-out item fails — it only passed one test. <code>AND</code> makes you pickier, so results shrink.</li>
+<li><strong><code>OR</code> is the friendly opposite.</strong> "I'll take coffee <strong>or</strong> tea, whichever you have." A row needs to satisfy only one side. <code>OR</code> opens the door wider.</li>
+<li><strong><code>NOT</code> flips the question.</strong> Instead of listing what you want, you point at what you don't and say "everything else."</li>
+</ul>
+<p>Now the title's trap. Consider this broken query:</p>
+<pre><code class="language-sql">-- BROKEN: does not mean what it looks like
+WHERE age &gt; 21 OR 25
+</code></pre>
+<p>A newcomer reads this as "age greater than 21 or 25." But SQL doesn't read English. <code>OR</code> expects a full condition on both sides. <code>25</code> on its own isn't a comparison — most databases treat a nonzero number as <strong>truthy</strong>, so <code>age &gt; 21 OR 25</code> collapses to <code>... OR true</code>, and <code>OR true</code> is always true. <strong>Every row passes. The filter silently returns everyone.</strong> What you meant was <code>age &gt; 21 OR age &gt; 25</code> (which is just <code>age &gt; 21</code> anyway) or, more likely, <code>age IN (21, 25)</code>.</p>
+<p>The experienced-engineer instinct here is: <em>when a filter returns way more rows than expected, suspect an operator that accidentally evaluates to always-true.</em> That instinct is what the rest of this article builds.</p>
+<h1>12. Brute Force Solution</h1>
+<p><strong>Idea.</strong> Suppose you want users from Delhi, Mumbai, or Pune. The most literal, no-cleverness approach is to spell out every possibility with <code>OR</code>:</p>
+<pre><code class="language-sql">SELECT name, city
+FROM users
+WHERE city = 'Delhi'
+   OR city = 'Mumbai'
+   OR city = 'Pune';
+</code></pre>
+<p><strong>Algorithm.</strong>
+1. For each row, test <code>city = 'Delhi'</code>.
+2. If false, test <code>city = 'Mumbai'</code>.
+3. If still false, test <code>city = 'Pune'</code>.
+4. If any is true, keep the row.</p>
+<p><strong>Advantages.</strong>
+- Completely explicit — a beginner can read it top to bottom.
+- Works everywhere, no special syntax to remember.</p>
+<p><strong>Disadvantages.</strong>
+- Grows into a wall of text. Ten cities means nine <code>OR</code>s and lots of repetition.
+- Repeating the column name <code>city</code> invites typos (<code>ciyt = 'Pune'</code>).
+- The real danger: the moment you combine these <code>OR</code>s with an <code>AND</code>, precedence bites you (see the next section).</p>
+<p><strong>Complexity.</strong> Time is <strong>O(n)</strong> — the database still examines each of the <code>n</code> rows once. Space is <strong>O(1)</strong> beyond the output. The brute force here isn't slower asymptotically; it's slower to <em>read</em>, <em>write</em>, and <em>maintain</em>, and it's a bug magnet.</p>
+<h1>13. Optimal Solution</h1>
+<p>The optimal filter is the same logic expressed clearly, using the right operator for each shape of question, and guarding precedence with parentheses.</p>
+<h3>Use <code>IN</code> for a shortlist</h3>
+<p>When you're checking membership in a fixed list of separate values, <code>IN</code> is the clean answer:</p>
+<pre><code class="language-sql">SELECT name, city
+FROM users
+WHERE city IN ('Delhi', 'Mumbai', 'Pune');
+</code></pre>
+<p>This is <strong>exactly equivalent</strong> to the three-<code>OR</code> version — it just reads like plain English and names the column once. <code>IN</code> is genuinely underrated; people write five <code>OR</code>s where one <code>IN</code> would do.</p>
+<h3>Use <code>BETWEEN</code> for continuous ranges</h3>
+<p>When your values form a range — ages, prices, dates — <code>BETWEEN</code> says it best. <strong>Both ends are inclusive</strong>, a detail people forget:</p>
+<pre><code class="language-sql">SELECT name, age
+FROM users
+WHERE age BETWEEN 18 AND 30;   -- 18 and 30 both count
+</code></pre>
+<p>That's identical to <code>age &gt;= 18 AND age &lt;= 30</code>. Choose <code>IN</code> for a <em>scattered list</em>, <code>BETWEEN</code> for a <em>continuous range</em> — <code>BETWEEN</code> cannot express a scattered set, and <code>IN</code> cannot express "everything from 100 to 500."</p>
+<h3>Use <code>LIKE</code> for pattern matching</h3>
+<p>When you know only part of the text, <code>LIKE</code> fills the blanks:</p>
+<ul>
+<li><code>%</code> — any run of characters (zero or more)</li>
+<li><code>_</code> — exactly one character</li>
+</ul>
+<pre><code class="language-sql">SELECT name FROM users WHERE name LIKE 'A%';    -- starts with A
+SELECT name FROM users WHERE name LIKE '%son';  -- ends with 'son' (Jason, Mason)
+</code></pre>
+<h3>Guard precedence with parentheses</h3>
+<p>This is the fix for the bug that put minors in a Delhi report. Because <strong><code>AND</code> is evaluated before <code>OR</code></strong> (just like <code>×</code> before <code>+</code> in math), this query:</p>
+<pre><code class="language-sql">-- means: (age &gt;= 18 AND city = 'Delhi') OR city = 'Mumbai'
+WHERE age &gt;= 18 AND city = 'Delhi' OR city = 'Mumbai';
+</code></pre>
+<p>quietly lets in <em>every</em> Mumbai row regardless of age. Wrap the <code>OR</code> group to say what you mean:</p>
+<pre><code class="language-sql">WHERE age &gt;= 18
+  AND (city = 'Delhi' OR city = 'Mumbai');
+</code></pre>
+<p>Now the age rule applies to both cities. <strong>Rule of thumb: whenever <code>AND</code> and <code>OR</code> share a <code>WHERE</code> clause, parenthesize the <code>OR</code> part.</strong></p>
+<h3>Handle <code>NULL</code> with <code>IS NULL</code></h3>
+<p><code>NULL</code> means <em>unknown</em>, not zero and not empty. Unknown can never equal anything — not even another unknown. So <code>phone = NULL</code> matches <strong>nothing</strong>, silently:</p>
+<pre><code class="language-sql">-- WRONG: returns zero rows, always
+WHERE phone = NULL
+
+-- RIGHT
+WHERE phone IS NULL       -- users with no phone
+WHERE phone IS NOT NULL   -- users with a phone
+</code></pre>
+<h1>14. Python Code</h1>
+<p>SQL is the star, but here's a small, clean Python model that mirrors exactly how the <code>WHERE</code> bouncer thinks — one row, one predicate, true or false — so you can see the semantics (including the <code>NULL</code> trap) in code you can run.</p>
+<pre><code class="language-python">&quot;&quot;&quot;A tiny WHERE-clause simulator: filter rows by a predicate, SQL-style.&quot;&quot;&quot;
+from typing import Callable, Optional
+
+
+# One row = one dict. `phone=None` models SQL NULL (unknown).
+Row = dict
+
+
+def where(rows: list[Row], predicate: Callable[[Row], bool]) -&gt; list[Row]:
+    &quot;&quot;&quot;Keep only rows for which the predicate returns True (the bouncer).&quot;&quot;&quot;
+    return [row for row in rows if predicate(row)]
+
+
+def is_null(value: Optional[object]) -&gt; bool:
+    &quot;&quot;&quot;SQL IS NULL: the only correct way to test for an unknown value.&quot;&quot;&quot;
+    return value is None
+
+
+users = [
+    {&quot;name&quot;: &quot;Asha&quot;,  &quot;age&quot;: 17, &quot;city&quot;: &quot;Delhi&quot;,  &quot;phone&quot;: &quot;01&quot;},
+    {&quot;name&quot;: &quot;Ravi&quot;,  &quot;age&quot;: 24, &quot;city&quot;: &quot;Mumbai&quot;, &quot;phone&quot;: None},
+    {&quot;name&quot;: &quot;Meena&quot;, &quot;age&quot;: 30, &quot;city&quot;: &quot;Delhi&quot;,  &quot;phone&quot;: &quot;03&quot;},
+    {&quot;name&quot;: &quot;Jason&quot;, &quot;age&quot;: 19, &quot;city&quot;: &quot;Pune&quot;,   &quot;phone&quot;: None},
+    {&quot;name&quot;: &quot;Sara&quot;,  &quot;age&quot;: 45, &quot;city&quot;: &quot;Mumbai&quot;, &quot;phone&quot;: &quot;05&quot;},
+]
+
+# WHERE age &gt;= 18 AND (city = 'Delhi' OR city = 'Mumbai')
+adults_in_two_cities = where(
+    users,
+    lambda r: r[&quot;age&quot;] &gt;= 18 and r[&quot;city&quot;] in (&quot;Delhi&quot;, &quot;Mumbai&quot;),
+)
+
+# WHERE phone IS NULL  — NOT  phone = None-as-equality
+no_phone = where(users, lambda r: is_null(r[&quot;phone&quot;]))
+
+
+if __name__ == &quot;__main__&quot;:
+    assert [r[&quot;name&quot;] for r in adults_in_two_cities] == [&quot;Ravi&quot;, &quot;Meena&quot;, &quot;Sara&quot;]
+    assert [r[&quot;name&quot;] for r in no_phone] == [&quot;Ravi&quot;, &quot;Jason&quot;]
+    # The NULL trap: equality against None-as-unknown finds nobody in SQL.
+    # Here we prove why you must special-case it with is_null().
+    print(&quot;All filters behaved correctly.&quot;)
+</code></pre>
+<h1>15. Code Walkthrough</h1>
+<ul>
+<li><strong><code>where(rows, predicate)</code></strong> is the entire <code>WHERE</code> clause in one line. It walks each row, applies the predicate (the bouncer's rule), and keeps the <code>true</code> ones. This is the O(n) scan a real database performs.</li>
+<li><strong><code>is_null(value)</code></strong> exists to make the point explicit: testing for a missing value is <em>not</em> an equality check. In SQL, <code>phone = NULL</code> is wrong; <code>phone IS NULL</code> is right. Our helper uses <code>value is None</code> — Python's own "unknown" sentinel — to model that.</li>
+<li><strong><code>adults_in_two_cities</code></strong> encodes the corrected, parenthesized filter. Note the Python <code>and</code> binds tighter than <code>or</code> too, but because we used <code>in ("Delhi", "Mumbai")</code> there's no ambiguity — which is exactly why <code>IN</code> prevents precedence bugs.</li>
+<li><strong>The <code>assert</code>s</strong> are the self-check. If someone "fixes" the predicate incorrectly (say, drops the parentheses meaning), the asserts fail loudly instead of returning quietly wrong data — the same lesson the SQL bug teaches.</li>
+</ul>
+<h1>16. Dry Run</h1>
+<p>Let's trace <code>age &gt;= 18 AND (city = 'Delhi' OR city = 'Mumbai')</code> against every row:</p>
+<table>
+<thead>
+<tr>
+<th>Row</th>
+<th>age ≥ 18?</th>
+<th>Delhi or Mumbai?</th>
+<th>Both true?</th>
+<th>Kept?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Asha (17, Delhi)</td>
+<td>❌</td>
+<td>✅</td>
+<td>❌</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Ravi (24, Mumbai)</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td><strong>Yes</strong></td>
+</tr>
+<tr>
+<td>Meena (30, Delhi)</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td><strong>Yes</strong></td>
+</tr>
+<tr>
+<td>Jason (19, Pune)</td>
+<td>✅</td>
+<td>❌</td>
+<td>❌</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Sara (45, Mumbai)</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td><strong>Yes</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Result: <strong>Ravi, Meena, Sara.</strong> Asha is dropped for being under 18 (the parentheses ensured the age rule applies even to Delhi/Mumbai rows), and Jason is dropped because Pune isn't in the list. Compare this to the <em>buggy</em> unparenthesized version, which would have kept Ravi, Meena, Sara <strong>and</strong> any under-18 Mumbai user — the silent bug.</p>
+<h1>17. Complexity Analysis</h1>
+<ul>
+<li><strong>Time: O(n).</strong> A <code>WHERE</code> clause without an index examines each of the <code>n</code> rows once and tests the predicate. <code>IN</code>, <code>BETWEEN</code>, and <code>LIKE</code> don't change that ceiling by themselves — they're different ways to phrase the per-row test, each roughly constant work per row.</li>
+<li><strong>Space: O(1)</strong> for the evaluation itself (beyond the output rows you return). The database evaluates row by row and doesn't need to hold the whole table's booleans in memory.</li>
+<li><strong>Why this is correct:</strong> filtering is inherently a single pass — you must look at a row to decide whether to keep it, and you never need to look twice. The important nuance is that a good <code>WHERE</code> clause plus an <strong>index</strong> can push this below O(n) in practice, because the index lets the engine skip rows it knows can't match. That's the deeper reason filtering early is fast.</li>
+</ul>
+<h1>18. Alternative Solutions</h1>
+<p><strong><code>OR</code> vs <code>IN</code> vs <code>BETWEEN</code> — same result, different fit:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Best when</th>
+<th>Weakness</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Stacked <code>OR</code></td>
+<td>You truly need mixed conditions on <em>different</em> columns</td>
+<td>Verbose, error-prone, precedence traps</td>
+</tr>
+<tr>
+<td><code>IN (list)</code></td>
+<td>A specific shortlist of separate values (three cities)</td>
+<td>Awkward for continuous ranges</td>
+</tr>
+<tr>
+<td><code>BETWEEN a AND b</code></td>
+<td>A continuous range (prices, dates, ages)</td>
+<td>Can't express a scattered set</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>NOT IN</code> vs <code>NOT EXISTS</code>:</strong> for exclusion, <code>WHERE city NOT IN (...)</code> reads cleanly — but beware: if the list contains a <code>NULL</code>, <code>NOT IN</code> can return zero rows unexpectedly (another <code>NULL</code> trap). <code>NOT EXISTS</code> sidesteps that. Reach for it when your exclusion list might contain unknowns.</p>
+<p><strong><code>LIKE</code> vs full-text search:</strong> <code>LIKE '%term%'</code> can't use a normal index (the leading <code>%</code> defeats it), so on large tables a dedicated full-text index outperforms it. <code>LIKE</code> is perfect for small tables and simple prefix matches like <code>'A%'</code>.</p>
+<h1>19. Edge Cases</h1>
+<ul>
+<li><strong>Empty input:</strong> filtering an empty table returns an empty result — no errors, the bouncer just has no one to check.</li>
+<li><strong><code>NULL</code> values:</strong> <code>= NULL</code> matches nothing; you must use <code>IS NULL</code> / <code>IS NOT NULL</code>. This is the single most common silent bug.</li>
+<li><strong>Duplicates:</strong> <code>WHERE</code> doesn't deduplicate. Two identical qualifying rows both pass; use <code>DISTINCT</code> if you need uniqueness.</li>
+<li><strong>Boundary values in <code>BETWEEN</code>:</strong> both endpoints are <em>included</em>. <code>BETWEEN 100 AND 500</code> keeps 100 and 500. If you meant to exclude them, use <code>&gt;</code> and <code>&lt;</code>.</li>
+<li><strong>Case sensitivity in <code>LIKE</code>:</strong> behavior varies by database and collation. <code>'a%'</code> may or may not match <code>Asha</code>. Don't assume — check your engine.</li>
+<li><strong>Truthy literals:</strong> <code>WHERE col &gt; 21 OR 25</code> (a bare number) can evaluate to always-true and return everything.</li>
+</ul>
+<h1>20. Common Mistakes</h1>
+<ol>
+<li><strong>Using <code>= NULL</code> instead of <code>IS NULL</code>.</strong> Returns zero rows, silently, every time. Always test unknowns with <code>IS NULL</code> / <code>IS NOT NULL</code>.</li>
+<li><strong>Mixing <code>AND</code> and <code>OR</code> without parentheses.</strong> <code>AND</code> binds tighter, so <code>a AND b OR c</code> means <code>(a AND b) OR c</code>. Wrap the <code>OR</code> group.</li>
+<li><strong>Writing a bare value after <code>OR</code>.</strong> <code>age &gt; 21 OR 25</code> isn't <code>age IN (21, 25)</code>; the loose <code>25</code> can make the whole filter always-true.</li>
+<li><strong>Forgetting <code>BETWEEN</code> is inclusive.</strong> Off-by-one on both ends when you assumed the boundaries were excluded.</li>
+<li><strong>Stacking five <code>OR</code>s where one <code>IN</code> belongs.</strong> Not wrong, but harder to read and easier to typo — and it hides precedence risk.</li>
+<li><strong>Leading-wildcard <code>LIKE '%x%'</code> on a huge table.</strong> It can't use the index and scans everything; slow at scale.</li>
+</ol>
+<h1>21. Interview Questions</h1>
+<ul>
+<li>What does <code>WHERE salary &gt; 5000 OR 6000</code> return, and why is that dangerous?</li>
+<li>Explain operator precedence between <code>AND</code> and <code>OR</code>. Rewrite an ambiguous filter with parentheses.</li>
+<li>Why does <code>WHERE phone = NULL</code> return no rows? How do you correctly find rows with missing phones?</li>
+<li>When would you choose <code>IN</code> over <code>BETWEEN</code>, and vice versa?</li>
+<li>Is <code>BETWEEN 10 AND 20</code> inclusive or exclusive of the endpoints?</li>
+<li>Why might <code>col NOT IN (subquery)</code> return zero rows unexpectedly?</li>
+<li>How does filtering early in a <code>WHERE</code> clause improve query performance?</li>
+<li>Can <code>LIKE '%abc'</code> use an index? Explain.</li>
+</ul>
+<h1>22. Similar Problems</h1>
+<ul>
+<li><strong>LeetCode 595 — Big Countries:</strong> pure <code>WHERE</code> with <code>OR</code>/<code>AND</code> on two conditions; ideal precedence practice.</li>
+<li><strong>LeetCode 584 — Find Customer Referee:</strong> the <code>NULL</code> trap in the wild — you must handle <code>referee_id IS NULL</code> alongside a value check.</li>
+<li><strong>LeetCode 183 — Customers Who Never Order:</strong> exclusion logic (<code>NOT IN</code> / <code>NOT EXISTS</code>), directly related to <code>NOT</code> and the <code>NULL</code>-in-list gotcha.</li>
+<li><strong>LeetCode 1148 — Article Views I:</strong> filtering with equality plus <code>DISTINCT</code>, reinforcing that <code>WHERE</code> doesn't dedupe.</li>
+</ul>
+<p>Each one drills a specific muscle from this lesson: combining conditions, handling <code>NULL</code>, and excluding rows correctly.</p>
+<h1>23. Key Takeaways</h1>
+<ul>
+<li><code>WHERE</code> is a bouncer: one row, one yes/no question, keep the <code>true</code> ones.</li>
+<li><code>AND</code> narrows, <code>OR</code> widens, <code>NOT</code> excludes.</li>
+<li><code>IN</code> is a clean shortlist; <code>BETWEEN</code> is an inclusive range; <code>LIKE</code> is text search with <code>%</code> (many) and <code>_</code> (one).</li>
+<li><strong><code>AND</code> beats <code>OR</code> in precedence — always parenthesize the <code>OR</code> group.</strong></li>
+<li><code>NULL</code> means <em>unknown</em>; use <code>IS NULL</code>, never <code>= NULL</code>.</li>
+<li>Filtering early is a performance win: the cheapest row to process is the one you threw out at the door.</li>
+</ul>
+<h1>24. Watch the Video</h1>
+<p>Reading the logic is one thing — <em>seeing</em> the bouncer turn rows away makes it stick. The full walkthrough, with live queries and the exact bug that put minors in a Delhi report, is right here: <strong>{LINK}</strong>. Watch it once before your next SQL interview and the precedence and <code>NULL</code> traps will never catch you off guard.</p>
+<h1>25. About the Series</h1>
+<p>This is part of <strong>Fun with Learning Technology</strong> — a series that takes the topics developers are quietly unsure about and makes them obvious. We build intuition first, code second, always explaining <em>why</em> an approach works rather than asking you to memorize syntax. Whether you're prepping for a coding interview, leveling up your data-analytics skills, or just tired of queries that "run but lie," the series meets you where you are and takes you one confident step further.</p>
+<h1>26. Call To Action</h1>
+<p>If this cleared up the <code>WHERE</code> clause for you, here's how to help the series grow:
+- 👍 <strong>Like</strong> the video on YouTube — it genuinely helps more developers find it.
+- 🔔 <strong>Subscribe</strong> so you don't miss the next SQL lesson.
+- 📬 <strong>Subscribe to the Substack</strong> for the written deep-dives like this one.
+- 💬 <strong>Comment</strong> with the filtering bug that once bit you.
+- 🔁 <strong>Share</strong> it with a teammate who still writes <code>= NULL</code>.</p>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>Here's a SQL bug that runs perfectly, returns rows, and is completely wrong:</p>
+<p><code>WHERE age &gt; 21 OR 25</code></p>
+<p>A newcomer reads that as "age is 21 or 25." SQL doesn't read English. <code>OR</code> needs a full condition on both sides — a bare <code>25</code> is treated as truthy, so the whole filter collapses to "always true." Every row passes. Your report silently returns everyone.</p>
+<p>This is the real skill in SQL filtering: not memorizing operators, but understanding the two traps that catch almost everyone.</p>
+<p><strong>Trap 1 — precedence.</strong> <code>AND</code> is evaluated before <code>OR</code>, just like × before + in math. So <code>age &gt;= 18 AND city = 'Delhi' OR city = 'Mumbai'</code> quietly lets in every Mumbai row regardless of age. The fix is one habit: whenever <code>AND</code> and <code>OR</code> share a WHERE clause, wrap the OR group in parentheses.</p>
+<p><strong>Trap 2 — NULL.</strong> <code>NULL</code> means <em>unknown</em>, not zero and not empty. Unknown can never equal anything, so <code>phone = NULL</code> matches nothing — silently. To find missing values you must write <code>IS NULL</code>.</p>
+<p>The rest of the toolkit is friendlier: AND narrows, OR widens, NOT excludes, IN checks a shortlist, BETWEEN covers an inclusive range, and LIKE searches text with wildcards.</p>
+<p>And there's a performance payoff. A good WHERE clause tells the database to throw out rows before the heavy sorting and grouping. The cheapest row to process is the one you filtered out at the door.</p>
+<p>If you write SQL for reports or dashboards, these two traps are worth 10 minutes of your attention. Which one has bitten you? 👇</p>
+<h1>SQL #DataAnalytics #SoftwareEngineering #Databases #CodingInterview</h1>
+<h2>Twitter/X Thread</h2>
+<p><strong>1/</strong> This SQL query runs, returns rows, and is 100% wrong:</p>
+<p><code>WHERE age &gt; 21 OR 25</code></p>
+<p>It silently returns your ENTIRE table. Here's why — and the filtering traps every developer should know. 🧵</p>
+<p><strong>2/</strong> Think of WHERE as a bouncer. Each row walks up, the bouncer checks it against a rule. True → walk in. False → turned away. Every operator is just a different way to phrase that yes/no question.</p>
+<p><strong>3/</strong> The basics:
+• AND = two demands at once → narrows results
+• OR = either one works → widens results
+• NOT = everything EXCEPT what you name</p>
+<p><strong>4/</strong> So why does <code>age &gt; 21 OR 25</code> break? <code>OR</code> needs a full condition on both sides. A bare <code>25</code> is treated as truthy → <code>... OR true</code> → always true. Every row passes. Silently.</p>
+<p><strong>5/</strong> The bigger trap: precedence. <code>AND</code> is evaluated BEFORE <code>OR</code> — just like × before + in math.</p>
+<p><strong>6/</strong> So this: <code>age &gt;= 18 AND city = 'Delhi' OR city = 'Mumbai'</code> actually means <code>(age &gt;= 18 AND Delhi) OR Mumbai</code>. It lets in under-18 Mumbai users you never wanted.</p>
+<p><strong>7/</strong> The fix is one habit: when AND and OR share a WHERE clause, wrap the OR group in parentheses. <code>age &gt;= 18 AND (city = 'Delhi' OR city = 'Mumbai')</code> ✅</p>
+<p><strong>8/</strong> Cleaner operators worth knowing:
+• IN → a shortlist: <code>city IN ('Delhi','Mumbai')</code>
+• BETWEEN → an inclusive range (both ends count!)
+• LIKE → text search: <code>%</code> = any chars, <code>_</code> = one char</p>
+<p><strong>9/</strong> The sneakiest bug of all: NULL. It means <em>unknown</em>, not zero. Unknown can't equal anything — so <code>phone = NULL</code> matches NOTHING. To find missing values you MUST write <code>IS NULL</code>.</p>
+<p><strong>10/</strong> And filtering isn't just correctness — it's speed. A good WHERE throws out rows before the heavy sorting begins. The cheapest row to process is the one you filtered out at the door. Full lesson → {LINK}</p>
+<h2>Facebook Post</h2>
+<p>Ever written a SQL query that ran fine but gave you way too many rows — and you couldn't figure out why? 🤔</p>
+<p>There's a classic culprit: mixing AND and OR without parentheses. SQL evaluates AND before OR (just like times before plus in math), so your filter can quietly mean something totally different from what you typed — like sneaking under-18 users into an "adults only" report.</p>
+<p>In this lesson we walk through the whole filtering toolkit — AND, OR, NOT, IN, BETWEEN, LIKE — plus the famous NULL trap (spoiler: <code>= NULL</code> matches nothing, ever). Clear examples, no jargon, and the <em>why</em> behind every rule. Perfect if you're learning SQL or brushing up for an interview. Come check it out! 👇 {LINK}</p>
+<h2>Reddit Summary</h2>
+<p><strong>The WHERE clause traps that cause silently-wrong SQL (a beginner-friendly writeup)</strong></p>
+<p>Sharing a breakdown of SQL filtering aimed at people who "know some SQL" but occasionally get results they can't explain. The focus is on the two things that cause <em>silent</em> bugs — queries that run and return rows but are wrong.</p>
+<p>Main points:</p>
+<ul>
+<li><strong>Operator precedence.</strong> <code>AND</code> is evaluated before <code>OR</code>. So <code>age &gt;= 18 AND city = 'Delhi' OR city = 'Mumbai'</code> parses as <code>(age &gt;= 18 AND Delhi) OR Mumbai</code>, which includes every Mumbai row regardless of age. Fix: parenthesize the OR group whenever AND and OR mix.</li>
+<li><strong>The <code>OR &lt;bare value&gt;</code> gotcha.</strong> <code>WHERE age &gt; 21 OR 25</code> doesn't mean <code>IN (21, 25)</code>; the loose <code>25</code> is truthy and can make the whole filter always-true.</li>
+<li><strong>NULL is "unknown," not zero.</strong> <code>col = NULL</code> matches nothing. You need <code>IS NULL</code> / <code>IS NOT NULL</code>. <code>NOT IN (subquery-with-nulls)</code> has a related failure mode worth knowing.</li>
+<li><strong>Operator fit:</strong> <code>IN</code> for scattered shortlists, <code>BETWEEN</code> for continuous inclusive ranges, <code>LIKE</code> for patterns (<code>%</code> = many chars, <code>_</code> = one). Also a note that leading-wildcard <code>LIKE '%x%'</code> can't use an index.</li>
+</ul>
+<p>Includes a table dry-run showing exactly which rows survive each filter, and the performance angle: filtering early lets the engine discard rows before sorting/grouping. Happy to discuss edge cases in the comments — especially the NULL-in-<code>NOT IN</code> one, which trips up a lot of people.</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># SQL Lesson 3 — The WHERE Clause &amp; Filtering Operators
+
+&gt; Master `AND`, `OR`, `NOT`, `IN`, `BETWEEN`, `LIKE`, and the `NULL` trap — and
+&gt; learn why `WHERE age &gt; 21 OR 25` silently returns every row.
+
+## Problem
+
+Databases hold millions of rows, but you almost never want all of them. The
+`WHERE` clause filters a table down to exactly the rows you care about. The
+challenge isn't the syntax — it's avoiding **silently wrong** filters: queries
+that run without error but return the wrong rows.
+
+## Intuition
+
+`WHERE` is a bouncer at the door. Each row is checked against a condition. If
+the condition is `true`, the row is kept; if `false`, it's dropped. Every
+operator is just a different way to phrase that yes/no question:
+
+| Operator  | Meaning                              | Effect     |
+|-----------|--------------------------------------|------------|
+| `AND`     | Both conditions true                 | Narrows    |
+| `OR`      | At least one true                    | Widens     |
+| `NOT`     | Invert a condition                   | Excludes   |
+| `IN`      | Value is in a list                   | Shortlist  |
+| `BETWEEN` | Value in a range (**ends included**) | Range      |
+| `LIKE`    | Text pattern (`%` many, `_` one)     | Fuzzy text |
+
+## Approach
+
+Two rules prevent the most common bugs:
+
+1. **Precedence:** `AND` is evaluated before `OR`. Always parenthesize the `OR`
+   group when mixing them.
+   ```sql
+   -- Wrong: (age &gt;= 18 AND Delhi) OR Mumbai  -&gt; lets in under-18 Mumbai rows
+   WHERE age &gt;= 18 AND city = 'Delhi' OR city = 'Mumbai';
+
+   -- Right
+   WHERE age &gt;= 18 AND (city = 'Delhi' OR city = 'Mumbai');
+   ```
+2. **NULL is unknown:** `= NULL` matches nothing. Use `IS NULL` / `IS NOT NULL`.
+
+## Python Solution (WHERE simulator)
+
+```python
+from typing import Callable, Optional
+
+Row = dict
+
+def where(rows: list[Row], predicate: Callable[[Row], bool]) -&gt; list[Row]:
+    &quot;&quot;&quot;Keep rows where the predicate is True — the WHERE bouncer.&quot;&quot;&quot;
+    return [row for row in rows if predicate(row)]
+
+def is_null(value: Optional[object]) -&gt; bool:
+    &quot;&quot;&quot;SQL IS NULL: the correct test for an unknown value.&quot;&quot;&quot;
+    return value is None
+
+users = [
+    {&quot;name&quot;: &quot;Asha&quot;,  &quot;age&quot;: 17, &quot;city&quot;: &quot;Delhi&quot;,  &quot;phone&quot;: &quot;01&quot;},
+    {&quot;name&quot;: &quot;Ravi&quot;,  &quot;age&quot;: 24, &quot;city&quot;: &quot;Mumbai&quot;, &quot;phone&quot;: None},
+    {&quot;name&quot;: &quot;Meena&quot;, &quot;age&quot;: 30, &quot;city&quot;: &quot;Delhi&quot;,  &quot;phone&quot;: &quot;03&quot;},
+    {&quot;name&quot;: &quot;Jason&quot;, &quot;age&quot;: 19, &quot;city&quot;: &quot;Pune&quot;,   &quot;phone&quot;: None},
+    {&quot;name&quot;: &quot;Sara&quot;,  &quot;age&quot;: 45, &quot;city&quot;: &quot;Mumbai&quot;, &quot;phone&quot;: &quot;05&quot;},
+]
+
+adults = where(users, lambda r: r[&quot;age&quot;] &gt;= 18 and r[&quot;city&quot;] in (&quot;Delhi&quot;, &quot;Mumbai&quot;))
+no_phone = where(users, lambda r: is_null(r[&quot;phone&quot;]))
+
+assert [r[&quot;name&quot;] for r in adults] == [&quot;Ravi&quot;, &quot;Meena&quot;, &quot;Sara&quot;]
+assert [r[&quot;name&quot;] for r in no_phone] == [&quot;Ravi&quot;, &quot;Jason&quot;]
+</code></pre>
+<h2>Complexity</h2>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Value</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Time</td>
+<td>O(n)</td>
+<td>Each row is tested once (indexes can push below O(n))</td>
+</tr>
+<tr>
+<td>Space</td>
+<td>O(1)</td>
+<td>Row-by-row evaluation, no full-table buffering</td>
+</tr>
+</tbody>
+</table>
+<h2>Video</h2>
+<p>▶️ Watch the full lesson: <strong>{LINK}</strong></p>
+<h2>Article</h2>
+<p>📖 Full written deep-dive with dry runs, edge cases, and interview questions:
+part of the <strong>Fun with Learning Technology</strong> series.
+```</p></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>SQL filtering: when do you reach for IN vs a range vs a pattern?</summary><p>IN for a fixed shortlist of values, BETWEEN for a continuous low-to-high range (inclusive), LIKE for fuzzy text with % or _ wildcards.</p></details><details class='card2'><summary>Time cost of a WHERE filter on an unindexed column?</summary><p>O(n) — a full table scan checks every row. An index on the filtered column drops lookups toward O(log n).</p></details><details class='card2'><summary>Extra space used by a WHERE clause?</summary><p>O(1) for the predicate itself; the engine tests row by row. Output storage is O(k) for the k matching rows returned.</p></details><details class='card2'><summary>Trickiest filtering bug with NULL?</summary><p>NULL fails =, &lt;&gt;, IN, and NOT IN comparisons (returns unknown, not true). Use IS NULL / IS NOT NULL; NOT IN with any NULL yields no rows.</p></details><details class='card2'><summary>AND vs OR mixed in one WHERE — the gotcha?</summary><p>AND binds tighter than OR, so it evaluates first. Wrap OR groups in parentheses, e.g. WHERE a AND (b OR c), or you get wrong rows.</p></details><details class='card2'><summary>Interview: why filter in WHERE instead of after fetching?</summary><p>WHERE cuts rows at the server before transfer and aggregation, shrinking data processed and moved — faster, cheaper, and enables index use.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
