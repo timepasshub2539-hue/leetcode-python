@@ -1,0 +1,306 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maximum Product of Three Numbers — 🔴 Advanced (3/3) — LeetCode Daily Python Solution (the two-negative trap) — Python LeetCode Solution</title><meta name="description" content="📍 Jump to your level:
+🔴 Advanced: 0:15–4:16
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/maximum-product-of-three-numbers-advanced
+💻 Code on GitHub: https://github.com/timepasshub2539">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/maximum-product-of-three-numbers-advanced.html">
+<meta property="og:title" content="Maximum Product of Three Numbers — 🔴 Advanced (3/3) — LeetCode Daily Python Solution (the two-negative trap) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📍 Jump to your level:
+🔴 Advanced: 0:15–4:16
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/maximum-product-of-three-numbers-advanced
+💻 Code on GitHub: https://github.com/timepasshub2539">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Maximum Product of Three Numbers — 🔴 Advanced (3/3) — LeetCode Daily Python Solution (the two-negative trap)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>8. Introduction</h2>
+<p>Some LeetCode problems look trivial until they quietly punish you for trusting your intuition. <strong>Maximum Product of Three Numbers</strong> (LeetCode 628) is one of them. On the surface it reads like a warm-up: grab the three biggest numbers, multiply them, done. That instinct is exactly what interviewers are waiting for you to say — because it is wrong the moment negative numbers enter the array.</p>
+<p>This problem is a favorite in coding interviews precisely because it tests something deeper than array manipulation. It checks whether you can spot a hidden assumption in your own reasoning, articulate an <strong>invariant</strong>, and defend why your solution is <em>provably</em> correct rather than "correct on the examples I tried." Those are the exact skills that separate a candidate who memorized solutions from a software engineer who understands them.</p>
+<p>If you learn this problem properly, you walk away with a reusable mental model — <em>the extremes live at the corners</em> — that reappears in dozens of array problems. Let's build that intuition from the ground up, in Python, the way an experienced engineer actually discovers it.</p>
+<h2>9. Problem Overview</h2>
+<p>You are given a list of integers. Your task is to choose <strong>exactly three</strong> of them whose product is the largest possible, and return that product.</p>
+<p>A few things worth pinning down before writing any code — the same questions you should ask an interviewer:</p>
+<ul>
+<li><strong>How many elements do we pick?</strong> Exactly three.</li>
+<li><strong>Is the array guaranteed to have at least three elements?</strong> Yes, <code>n &gt;= 3</code>.</li>
+<li><strong>What are the value bounds?</strong> Elements can be negative, zero, or positive. In the classic constraints, values sit within roughly <code>-1000</code> to <code>1000</code> and <code>n</code> up to <code>10^4</code>.</li>
+<li><strong>Do we need to worry about overflow?</strong> In <strong>Python</strong>, no — integers grow arbitrarily large. But you should <em>flag it out loud</em> for C++ or Java, where three values near <code>1000</code> can approach the 32-bit ceiling. Naming that shows maturity.</li>
+</ul>
+<p>The trap is that "largest product" and "three largest numbers" are <strong>not</strong> the same thing when negatives are involved.</p>
+<h2>10. Example</h2>
+<p>Let's make the danger concrete.</p>
+<p><strong>Example 1</strong></p>
+<pre><code>Input:  [-10, -9, 1, 2, 3]
+Output: 270
+</code></pre>
+<p>The three biggest numbers are <code>1, 2, 3</code>, giving a product of <code>6</code>. But <code>-10 * -9 * 3 = 270</code>. Two negatives multiply into a large positive, and pairing them with the single largest positive crushes the "top three" answer. <strong>270 wins.</strong></p>
+<p><strong>Example 2</strong></p>
+<pre><code>Input:  [1, 2, 3, 4]
+Output: 24
+</code></pre>
+<p>All positive. Here the naive instinct is correct — <code>2 * 3 * 4 = 24</code>.</p>
+<p><strong>Example 3</strong></p>
+<pre><code>Input:  [-5, -4, 1, 2, 3]
+Output: 60
+</code></pre>
+<p>Top three gives <code>6</code>. The two smallest (most negative) times the largest gives <code>-5 * -4 * 3 = 60</code>. <strong>60 wins by a mile.</strong></p>
+<p>Three examples, two different winning shapes. That tension is the whole problem.</p>
+<h2>11. Intuition</h2>
+<p>Here is how an experienced engineer reasons toward the answer — <em>without</em> writing code first.</p>
+<p>Start by asking: <strong>what sign must a winning product have?</strong> We want the maximum, and as long as the array contains any positive numbers or any pair of negatives, the maximum product is positive. A product of three numbers is positive only when it has an <strong>even number of negative factors</strong> — meaning <strong>zero negatives</strong> or <strong>exactly two negatives</strong>.</p>
+<p>That single observation collapses the entire search space:</p>
+<ul>
+<li><strong>Zero negatives</strong> → all three factors are positive → we want the <strong>three largest</strong> numbers.</li>
+<li><strong>Two negatives</strong> → we want the <strong>two most negative</strong> numbers (largest magnitude, so their product is a large positive) multiplied by the <strong>single largest</strong> positive number.</li>
+</ul>
+<p>There is no third configuration. A triple with one negative or three negatives can never beat these two when a better option exists — and the all-negative case is quietly handled by "three largest" anyway (the three largest of all-negatives are the three closest to zero, i.e. the <em>least</em> negative triple).</p>
+<p>Now, how do we cheaply grab "the three largest" and "the two smallest"? <strong>Sort the array.</strong> After sorting, the largest values sit at the right tail and the smallest at the left tail — both addressable by fixed index. The answer is simply:</p>
+<pre><code>max( nums[-1] * nums[-2] * nums[-3],   # three largest
+     nums[0]  * nums[1]  * nums[-1] )  # two smallest × largest
+</code></pre>
+<p><strong>The invariant, stated cleanly:</strong> after sorting, no interior element can beat a tail element in either candidate, because swapping a middle factor toward a tail only increases magnitude while keeping sign fixed. So the search space is exactly <strong>two triples</strong>, no matter how large <code>n</code> grows.</p>
+<h2>12. Brute Force Solution</h2>
+<p><strong>Idea:</strong> If we don't trust any cleverness, just try every possible triple and keep the maximum product.</p>
+<p><strong>Algorithm:</strong>
+1. Loop over all combinations of three distinct indices <code>(i, j, k)</code>.
+2. Compute each product.
+3. Track and return the maximum.</p>
+<pre><code class="language-python">from itertools import combinations
+
+def maximum_product_brute(nums):
+    return max(a * b * c for a, b, c in combinations(nums, 3))
+</code></pre>
+<p><strong>Advantages:</strong>
+- Impossible to get wrong — it literally checks everything.
+- Great as a reference to verify a faster solution during testing.</p>
+<p><strong>Disadvantages:</strong>
+- Catastrophically slow. For <code>n = 10^4</code>, the number of triples is on the order of <code>10^12</code> — it will never finish in an interview.</p>
+<p><strong>Complexity:</strong>
+- <strong>Time:</strong> <code>O(n^3)</code> — three nested choices over <code>n</code> elements.
+- <strong>Space:</strong> <code>O(1)</code> (the generator streams; no extra storage).</p>
+<h2>13. Optimal Solution</h2>
+<p>We proved only two candidates matter, so we never need <code>O(n^3)</code>. The clean, interview-ready approach is <strong>sort, then compare two products.</strong></p>
+<p><strong>Step by step:</strong></p>
+<ol>
+<li><strong>Sort</strong> the array ascending. This exposes both tails: smallest values on the left, largest on the right.</li>
+<li><strong>Candidate A</strong> — the three largest: <code>nums[-1] * nums[-2] * nums[-3]</code>.</li>
+<li><strong>Candidate B</strong> — the two smallest (most negative) times the largest: <code>nums[0] * nums[1] * nums[-1]</code>.</li>
+<li><strong>Return</strong> the larger of the two.</li>
+</ol>
+<p>Here's a table showing why both candidates are necessary, across sign patterns:</p>
+<table>
+<thead>
+<tr>
+<th>Input</th>
+<th>3 Largest (A)</th>
+<th>2 Smallest × Largest (B)</th>
+<th>Winner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[1, 2, 3, 4]</code></td>
+<td><code>24</code></td>
+<td><code>1*2*4 = 8</code></td>
+<td>A</td>
+</tr>
+<tr>
+<td><code>[-10, -9, 1, 2, 3]</code></td>
+<td><code>6</code></td>
+<td><code>-10*-9*3 = 270</code></td>
+<td><strong>B</strong></td>
+</tr>
+<tr>
+<td><code>[-5, -4, 1, 2, 3]</code></td>
+<td><code>6</code></td>
+<td><code>-5*-4*3 = 60</code></td>
+<td><strong>B</strong></td>
+</tr>
+<tr>
+<td><code>[-4, -3, -2, -1]</code></td>
+<td><code>-6</code></td>
+<td><code>-4*-3*-1 = -12</code></td>
+<td>A</td>
+</tr>
+</tbody>
+</table>
+<p>Notice the last row: with <strong>all negatives</strong>, Candidate A correctly returns the least-negative triple (<code>-1 * -2 * -3 = -6</code>), and it beats B. This is why keeping <em>both</em> corner checks makes the solution robust across every sign combination.</p>
+<p>The sort is only there to make the two tails cheap to read. If an interviewer forbids sorting, we replace it with a single linear scan tracking five running extremes — same two candidates, <code>O(n)</code> time.</p>
+<h2>14. Python Code</h2>
+<p><strong>The clean, sort-based solution (recommended for a graded submission):</strong></p>
+<pre><code class="language-python">from typing import List
+
+
+def maximum_product(nums: List[int]) -&gt; int:
+    &quot;&quot;&quot;Return the largest product of any three numbers in nums.&quot;&quot;&quot;
+    nums.sort()  # ascending: smallest on the left, largest on the right
+
+    # Candidate A: the three largest numbers.
+    top_three = nums[-1] * nums[-2] * nums[-3]
+
+    # Candidate B: the two most negative numbers times the largest.
+    two_neg_one_pos = nums[0] * nums[1] * nums[-1]
+
+    return max(top_three, two_neg_one_pos)
+</code></pre>
+<p><strong>The O(n) one-pass (the expected follow-up):</strong></p>
+<pre><code class="language-python">from typing import List
+
+
+def maximum_product_one_pass(nums: List[int]) -&gt; int:
+    &quot;&quot;&quot;O(n) time, O(1) space — no sorting, streams in a single pass.&quot;&quot;&quot;
+    max1 = max2 = max3 = float(&quot;-inf&quot;)  # three largest
+    min1 = min2 = float(&quot;inf&quot;)          # two smallest
+
+    for x in nums:
+        # Update the three largest.
+        if x &gt;= max1:
+            max1, max2, max3 = x, max1, max2
+        elif x &gt;= max2:
+            max2, max3 = x, max2
+        elif x &gt;= max3:
+            max3 = x
+
+        # Update the two smallest.
+        if x &lt;= min1:
+            min1, min2 = x, min1
+        elif x &lt;= min2:
+            min2 = x
+
+    return int(max(max1 * max2 * max3, min1 * min2 * max1))
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<p><strong>Sort-based version:</strong></p>
+<ul>
+<li><code>nums.sort()</code> mutates the list in place into ascending order. After this, <code>nums[0]</code> and <code>nums[1]</code> are the two smallest, and <code>nums[-1]</code>, <code>nums[-2]</code>, <code>nums[-3]</code> are the three largest. Everything downstream depends on this ordering.</li>
+<li><code>top_three</code> is Candidate A — the all-positive (or least-negative) case.</li>
+<li><code>two_neg_one_pos</code> is Candidate B — the two-negative trap answer.</li>
+<li><code>max(...)</code> picks the winner. Two multiplications, one comparison, branch-free.</li>
+</ul>
+<blockquote>
+<p><strong>Note on space:</strong> <code>sort()</code> mutates the caller's input. If that's unacceptable, use <code>nums = sorted(nums)</code> to work on a copy — at the cost of <code>O(n)</code> extra space.</p>
+</blockquote>
+<p><strong>One-pass version:</strong></p>
+<ul>
+<li>We seed <code>max1/max2/max3</code> to negative infinity and <code>min1/min2</code> to positive infinity. <strong>This seeding is the single most important line.</strong> If you seed the mins to <code>0</code> instead of <code>+inf</code>, an all-negative input silently corrupts the minimums and produces a wrong answer.</li>
+<li>The <code>max</code> cascade shifts values down like a tiny podium: a new champion pushes the old first place into second, and so on.</li>
+<li>The <code>min</code> cascade tracks the two most negative values the same way.</li>
+<li>Finally we compare the same two candidates as before: three largest vs. two smallest times the largest.</li>
+</ul>
+<h2>16. Dry Run</h2>
+<p>Let's trace the sort-based solution on <code>[-10, -9, 1, 2, 3]</code>.</p>
+<p><strong>Step 1 — Sort:</strong> already ascending → <code>[-10, -9, 1, 2, 3]</code>.</p>
+<p><strong>Step 2 — Candidate A (three largest):</strong></p>
+<pre><code>nums[-1] * nums[-2] * nums[-3] = 3 * 2 * 1 = 6
+</code></pre>
+<p><strong>Step 3 — Candidate B (two smallest × largest):</strong></p>
+<pre><code>nums[0] * nums[1] * nums[-1] = (-10) * (-9) * 3 = 90 * 3 = 270
+</code></pre>
+<p><strong>Step 4 — Compare:</strong></p>
+<pre><code>max(6, 270) = 270
+</code></pre>
+<p><strong>Output: 270.</strong> The two negatives <code>-10</code> and <code>-9</code> combined into <code>+90</code>, and pairing that with the largest positive <code>3</code> produced the winning product. This is exactly the two-negative trap that defeats the naive "top three" one-liner.</p>
+<h2>17. Complexity Analysis</h2>
+<p><strong>Sort-based solution:</strong>
+- <strong>Time:</strong> <code>O(n log n)</code> — dominated by the sort. The two product computations and the comparison are <code>O(1)</code>.
+- <strong>Space:</strong> <code>O(1)</code> if you use in-place <code>sort()</code> (technically <code>O(log n)</code> for Timsort's internal stack), or <code>O(n)</code> if you use <code>sorted()</code> to avoid mutating the input.</p>
+<p><strong>One-pass solution:</strong>
+- <strong>Time:</strong> <code>O(n)</code> — a single sweep, constant work per element.
+- <strong>Space:</strong> <code>O(1)</code> — just five running variables, regardless of input size.</p>
+<p>At <code>n = 10^4</code>, both run in microseconds; the difference between <code>n log n</code> and <code>n</code> is academic here. The one-pass earns its keep only when the input is a <strong>stream you can't fully hold in memory</strong>, or <code>n</code> is enormous and you're memory-bound.</p>
+<h2>18. Alternative Solutions</h2>
+<p>The main alternative is the <strong>one-pass with running extremes</strong>, already shown above. It trades the elegant readability of sorting for <code>O(n)</code> time and streaming capability.</p>
+<p>A quick comparison:</p>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Time</th>
+<th>Space</th>
+<th>Best for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Brute force</td>
+<td><code>O(n^3)</code></td>
+<td><code>O(1)</code></td>
+<td>Verifying correctness only</td>
+</tr>
+<tr>
+<td>Sort + two candidates</td>
+<td><code>O(n log n)</code></td>
+<td><code>O(1)</code>–<code>O(n)</code></td>
+<td>Interview submissions, readability</td>
+</tr>
+<tr>
+<td>One-pass extremes</td>
+<td><code>O(n)</code></td>
+<td><code>O(1)</code></td>
+<td>Streams, huge <code>n</code>, follow-up questions</td>
+</tr>
+</tbody>
+</table>
+<p>For a graded submission, sort and move on. Cite the one-pass only when explicitly asked to optimize — reaching for it unprompted signals premature optimization.</p>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong>Exactly three elements:</strong> <code>[a, b, c]</code> must return <code>a * b * c</code> regardless of sign. Verify your indices don't secretly assume <code>n &gt; 3</code>.</li>
+<li><strong>All negatives:</strong> <code>[-4, -3, -2, -1]</code> → the answer is the least-negative triple <code>-6</code>. Candidate A handles this; the two-corner check keeps you safe.</li>
+<li><strong>Contains zeros:</strong> <code>[-2, 0, 3, 4]</code> → zeros need no special case. They simply lose to any positive product (or correctly produce <code>0</code> when that's genuinely the max).</li>
+<li><strong>Two large negatives + small positives:</strong> the canonical <code>[-10, -9, 1, 2, 3]</code> trap.</li>
+<li><strong>Duplicates:</strong> <code>[3, 3, 3]</code> → <code>27</code>. Repeated values are fine; nothing assumes distinctness.</li>
+<li><strong>Min/max value bounds:</strong> at the extremes of the value range, flag overflow risk for C++/Java (a non-issue in Python).</li>
+</ul>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Returning the product of the three largest only.</strong> The classic failure — it ignores the two-negative trap entirely.</li>
+<li><strong>Seeding running mins to <code>0</code> in the one-pass.</strong> All-negative inputs then silently corrupt the extremes. Seed mins to <code>+inf</code>, maxes to <code>-inf</code>.</li>
+<li><strong>Adding a phantom third candidate</strong> like "two negatives times the <em>second</em> largest." A second-largest positive never beats the largest, so this branch is dead weight.</li>
+<li><strong>Assuming <code>n &gt; 3</code></strong> and indexing out of bounds on a three-element array.</li>
+<li><strong>Using <code>abs()</code> to find "the biggest magnitude" and losing sign information.</strong> Sign is the entire crux of this problem — never discard it.</li>
+<li><strong>Forgetting that mutating the input with <code>sort()</code> may surprise the caller</strong> when they expected their list untouched.</li>
+</ol>
+<h2>21. Interview Questions</h2>
+<ul>
+<li>Why are there exactly two candidate configurations, and why is a third impossible?</li>
+<li>Prove that a winning triple must have an even number of negative factors.</li>
+<li>Can you solve it without sorting? Walk me through the <code>O(n)</code> one-pass.</li>
+<li>What breaks if you seed the running minimums incorrectly?</li>
+<li>How would you generalize this to the <strong>maximum product of <code>k</code> elements</strong>?</li>
+<li>Does the sort mutate the input? How would you avoid that?</li>
+<li>In C++/Java, when could this overflow, and how would you guard against it?</li>
+</ul>
+<h2>22. Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 152 — Maximum Product Subarray:</strong> Extends the sign-flipping idea to contiguous subarrays; you track running max <em>and</em> min because a negative can flip a minimum into the new maximum. Same "signs matter" reasoning, harder because the window is dynamic.</li>
+<li><strong>LeetCode 628 — Maximum Product of Three Numbers:</strong> This problem itself.</li>
+<li><strong>LeetCode 414 — Third Maximum Number:</strong> Reinforces tracking multiple running extremes in a single pass.</li>
+<li><strong>LeetCode 53 — Maximum Subarray:</strong> The additive cousin — Kadane's algorithm — teaching the same "one linear pass with running state" muscle.</li>
+<li><strong>LeetCode 1509 — Minimum Difference by Three Moves:</strong> Another "the answer lives at the sorted tails" problem where corners dominate.</li>
+</ul>
+<h2>23. Key Takeaways</h2>
+<ul>
+<li>The maximum product of three numbers is <strong>always one of two candidates</strong>: the three largest, or the two smallest (most negative) times the largest.</li>
+<li>The reason is a sign argument: a maximum positive product needs an <strong>even number of negative factors</strong>.</li>
+<li><strong>Sort + two products</strong> is the clean <code>O(n log n)</code> interview answer; the <strong>one-pass with five running extremes</strong> is the <code>O(n)</code> follow-up.</li>
+<li>The transferable insight — <em>the extremes live at the corners</em> — reappears across array problems. Internalize the invariant, not the code.</li>
+</ul>
+<h2>24. Watch the Video</h2>
+<p>Want to see the full trace, predict which branch wins before it's revealed, and check your answer against <strong>270</strong>? Watch the complete walkthrough here: <strong>{LINK}</strong>. The video runs both quiz rounds and traces the two-candidate logic step by step — pause and call the branch before each reveal to test whether you've truly internalized the invariant.</p>
+<h2>25. About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong> — a series that turns one coding problem at a time into deep, intuition-first understanding. Instead of memorizing solutions, you learn <em>why</em> each approach works, how an engineer discovers it, and how to defend it under interview pressure. Every episode covers a LeetCode problem end to end: intuition, brute force, optimal solution, dry runs, edge cases, and follow-ups.</p>
+<h2>26. Call To Action</h2>
+<p>If this made the two-negative trap click, here's how to help the series grow and keep leveling up:</p>
+<ul>
+<li>👍 <strong>Like</strong> the video on YouTube — it genuinely helps more developers find it.</li>
+<li>🔔 <strong>Subscribe</strong> so you never miss a daily problem breakdown.</li>
+<li>📬 <strong>Subscribe on Substack</strong> for the written deep-dives delivered to your inbox.</li>
+<li>💬 <strong>Comment</strong> with which branch you predicted — did you catch the trap?</li>
+<li>🔁 <strong>Share</strong> it with a friend who's grinding LeetCode.</li>
+</ul>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Trigger: array, want max product of exactly 3 numbers?</summary><p>Pattern: sort or track extremes. Tell — negatives can flip sign, so the answer is either top-3 or two-smallest × top-1.</p></details><details class='card2'><summary>Time complexity of the two-primitive (min/max tracking) solution?</summary><p>O(n) — one linear pass tracking three largest and two smallest values. Sorting instead gives O(n log n).</p></details><details class='card2'><summary>Space complexity?</summary><p>O(1) — you only hold five running scalars (top-3 max, bottom-2 min), no extra structures regardless of input size.</p></details><details class='card2'><summary>Trickiest bug / edge case here?</summary><p>Two large negatives multiply to a big positive. Forgetting min1×min2×max1 loses to cases like [-10,-9,1,2,3].</p></details><details class='card2'><summary>Sorting vs. linear-scan approach — trade-off?</summary><p>Sort: O(n log n), 3 lines, trivially correct. Scan: O(n), faster but more state to track. Both compare the same two candidates.</p></details><details class='card2'><summary>Follow-up: why exactly two candidates, not more?</summary><p>A product of 3 needs an even count of negatives (0 or 2). Max comes from either 3 largest or 2 smallest × largest.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
