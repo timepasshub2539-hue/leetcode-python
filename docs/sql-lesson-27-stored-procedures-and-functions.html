@@ -1,0 +1,314 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SQL Lesson 27: One SQL Fix, Live in Five Apps at Once — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-27-stored-procedures-and-functions
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/sql-lesson-27-stored-procedures-and-functions.html">
+<meta property="og:title" content="SQL Lesson 27: One SQL Fix, Live in Five Apps at Once — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-27-stored-procedures-and-functions
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>SQL Lesson 27: One SQL Fix, Live in Five Apps at Once</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h1>Stored Procedures and Functions in SQL: One Fix, Live Everywhere</h1>
+<h2>8. Introduction</h2>
+<p>Every backend engineer eventually hits the same wall: the <em>same</em> piece of SQL logic scattered across five different applications. A reporting service has it. The mobile API has a copy. That old cron job has a slightly-wrong version of it. Then a business rule changes, and now you are hunting through five codebases to make one fix.</p>
+<p>Stored procedures and functions exist to end that pain. They let you write a piece of database logic <strong>once</strong>, save it <em>inside</em> the database, and call it by name from anywhere. Fix the procedure, and every app that calls it is instantly corrected. No redeploys of five services. No copy-paste sprawl.</p>
+<p>This topic shows up constantly in <strong>coding interviews</strong> and backend system-design discussions because it sits at the intersection of three things interviewers care about: <strong>code reuse</strong>, <strong>database security</strong>, and <strong>performance</strong>. Knowing when to reach for a procedure, when to reach for a function, and when to reach for neither is a genuine mark of an experienced <strong>software engineer</strong>. Understanding parameter direction (IN, OUT, INOUT) and the classic row-by-row performance trap separates people who <em>use</em> databases from people who <em>understand</em> them.</p>
+<p>By the end of this article, you will know exactly which tool to pick, how to write both cleanly, and which traps quietly wreck performance in production.</p>
+<h2>9. Problem Overview (In Plain Words)</h2>
+<p>Let's frame the real problem these features solve.</p>
+<p>You have SQL logic — maybe an <code>INSERT</code> that adds a user, or a calculation that applies a 10% tax — and you need to run it repeatedly, from multiple places, safely, and fast.</p>
+<p>Naively, you copy that SQL into every application that needs it. This creates four problems:</p>
+<ol>
+<li><strong>Duplication</strong> — the same logic lives in many places.</li>
+<li><strong>Drift</strong> — copies fall out of sync as some get updated and others don't.</li>
+<li><strong>Network chatter</strong> — ten separate statements mean ten round-trips to the database.</li>
+<li><strong>Security exposure</strong> — every app needs direct access to the underlying tables.</li>
+</ol>
+<p>A <strong>stored procedure</strong> is a named block of SQL statements saved in the database. You call it by name, hand it some values, and it runs its saved job — inserting, updating, deleting, or several of those in one shot.</p>
+<p>A <strong>function</strong> is a named block that takes input and <strong>returns a single value</strong> you can use directly inside a query — in a <code>SELECT</code> list, a <code>WHERE</code> clause, anywhere an expression is allowed.</p>
+<p>The mental model:
+- <strong>Procedure = a worker</strong> who goes and <em>does tasks</em>.
+- <strong>Function = a calculator</strong> that <em>answers one question</em>.</p>
+<h2>10. Examples</h2>
+<p><strong>Example A — A stored procedure that adds a user</strong></p>
+<pre><code class="language-sql">CALL AddUser('Ada', 36);
+</code></pre>
+<p><strong>Output:</strong> A new row <code>('Ada', 36)</code> is inserted into the <code>users</code> table. Nothing is returned to you — the procedure <em>did an action</em>. You never retyped the <code>INSERT</code>; you just handed over two values.</p>
+<p><strong>Example B — A function that computes tax</strong></p>
+<pre><code class="language-sql">SELECT price, TaxOn(price) AS tax FROM products;
+</code></pre>
+<p>If a product's <code>price</code> is <code>200</code>, then <code>TaxOn(200)</code> returns <code>20</code>.</p>
+<p><strong>Output:</strong></p>
+<table>
+<thead>
+<tr>
+<th>price</th>
+<th>tax</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>20</td>
+</tr>
+<tr>
+<td>50</td>
+<td>5</td>
+</tr>
+<tr>
+<td>999</td>
+<td>99.9</td>
+</tr>
+</tbody>
+</table>
+<p>The function slots into the <code>SELECT</code> as if it were built into SQL, returning one number per row.</p>
+<p><strong>Example C — An OUT parameter returning a value</strong></p>
+<pre><code class="language-sql">CALL Doubler(5, @result);
+SELECT @result;   -- 10
+</code></pre>
+<p><strong>Output:</strong> <code>10</code>. We pushed <code>5</code> <strong>in</strong>, and the <code>OUT</code> slot came back holding <code>10</code>.</p>
+<h2>11. Intuition</h2>
+<p>Here is how an experienced engineer arrives at these tools — without jumping straight to syntax.</p>
+<p>Start with a frustration: <em>"I keep writing the same SQL."</em> When you write anything twice, your instinct should be to name it and reuse it. That instinct, applied to database logic, is exactly what a stored procedure is. Think of a <strong>saved recipe</strong> instead of shouting every ingredient each time you cook, or a <strong>vending machine button</strong> that triggers a whole chain of steps inside.</p>
+<p>Now split that instinct in two, based on <em>what the reused logic does</em>:</p>
+<ul>
+<li>If the logic <strong>performs actions</strong> — insert, update, delete, maybe several — you want a <strong>procedure</strong>. It's a worker you dispatch.</li>
+<li>If the logic <strong>computes and returns one answer</strong> you want to use mid-query — you want a <strong>function</strong>. It's the <code>+</code> sign on a calculator: feed it numbers, get one back.</li>
+</ul>
+<p>That single distinction — <em>does something</em> vs. <em>returns something you can plug into a query</em> — is the whole decision. Once you internalize it, parameters and security fall into place naturally.</p>
+<p>Then layer on the three payoffs an experienced engineer immediately recognizes:</p>
+<ol>
+<li><strong>Edit the master, not the photocopies.</strong> Change one procedure instead of ten copies across five apps.</li>
+<li><strong>One trip, not ten.</strong> A single <code>CALL</code> crosses the network once instead of ten separate round-trips — turning a slow report from seconds into milliseconds.</li>
+<li><strong>A controlled door, not an open vault.</strong> Like a bank teller who fetches only what you're allowed to have, a procedure lets people run logic <em>without</em> direct access to the tables underneath.</li>
+</ol>
+<h2>12. Brute Force Solution (Inline SQL Everywhere)</h2>
+<p><strong>Idea:</strong> Skip procedures and functions entirely. Write the raw SQL directly in each application, every time you need it.</p>
+<p><strong>Algorithm:</strong>
+1. In each app, hardcode the SQL statement (e.g., the <code>INSERT</code>).
+2. Send it over the network on every operation.
+3. Grant each app direct table access.</p>
+<p><strong>Advantages:</strong>
+- Zero database-side setup.
+- Everything lives in application code, which many teams find easier to test and version.</p>
+<p><strong>Disadvantages:</strong>
+- Logic is duplicated across every app — copy-paste sprawl.
+- A rule change means editing and redeploying <em>every</em> app.
+- Chatty: many separate round-trips to the database.
+- Every app needs broad table permissions, widening your attack surface.</p>
+<p><strong>Time Complexity:</strong> Per operation the SQL is the same, but <strong>maintenance cost scales with the number of apps</strong> — O(apps) for every logic change.
+<strong>Space Complexity:</strong> O(apps) duplicated logic across codebases.</p>
+<p>This "works," but it's the version that pages you at 3am when copy #4 drifts out of sync.</p>
+<h2>13. Optimal Solution (Procedures + Functions)</h2>
+<p>Centralize the logic <strong>once</strong> inside the database.</p>
+<p><strong>Step 1 — Wrap the action in a procedure.</strong>
+Write the <code>INSERT</code> a single time, name it <code>AddUser</code>, and give it two IN parameters.</p>
+<p><strong>Step 2 — Wrap the computation in a function.</strong>
+Write the tax math once, name it <code>TaxOn</code>, and return one value.</p>
+<p><strong>Step 3 — Understand parameter direction.</strong>
+Parameters are labeled slots for passing values:</p>
+<table>
+<thead>
+<tr>
+<th>Direction</th>
+<th>Meaning</th>
+<th>Analogy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>IN</code></td>
+<td>Value goes <strong>into</strong> the procedure</td>
+<td>A gift you give</td>
+</tr>
+<tr>
+<td><code>OUT</code></td>
+<td>Procedure sends a value <strong>back out</strong></td>
+<td>A gift you get</td>
+</tr>
+<tr>
+<td><code>INOUT</code></td>
+<td>Both — goes in, comes back changed</td>
+<td>A gift you swap</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Step 4 — Call by name from every app.</strong>
+Now all five apps just <code>CALL AddUser(...)</code> or use <code>TaxOn(...)</code>. One fix updates them all.</p>
+<p><strong>Step 5 — Lock the door.</strong>
+Grant apps permission to <em>run the procedure</em> without granting direct table access. Controlled access, smaller attack surface.</p>
+<h2>14. SQL Code</h2>
+<pre><code class="language-sql">-- A stored procedure: performs an action, returns nothing directly.
+DELIMITER //
+CREATE PROCEDURE AddUser(IN user_name VARCHAR(100), IN user_age INT)
+BEGIN
+    INSERT INTO users (name, age)
+    VALUES (user_name, user_age);
+END //
+DELIMITER ;
+
+-- A function: computes and returns exactly one value.
+DELIMITER //
+CREATE FUNCTION TaxOn(price DECIMAL(10, 2))
+RETURNS DECIMAL(10, 2)
+DETERMINISTIC
+BEGIN
+    RETURN price * 0.10;   -- 10% tax
+END //
+DELIMITER ;
+
+-- An OUT parameter: sends a value back out.
+DELIMITER //
+CREATE PROCEDURE Doubler(IN n INT, OUT result INT)
+BEGIN
+    SET result = n * 2;
+END //
+DELIMITER ;
+</code></pre>
+<p>Calling them:</p>
+<pre><code class="language-sql">CALL AddUser('Ada', 36);                     -- action
+SELECT price, TaxOn(price) FROM products;    -- computation inside a query
+CALL Doubler(5, @out);  SELECT @out;         -- 10 comes back
+</code></pre>
+<h3>Python-friendly usage</h3>
+<p>Backend engineers rarely call SQL by hand — they invoke it from application code. Here's the same logic driven cleanly from <strong>Python</strong>:</p>
+<pre><code class="language-python">import mysql.connector
+
+conn = mysql.connector.connect(
+    host=&quot;localhost&quot;, user=&quot;app&quot;, password=&quot;secret&quot;, database=&quot;shop&quot;
+)
+cursor = conn.cursor()
+
+# Call the stored procedure by name — no raw INSERT in the app.
+cursor.callproc(&quot;AddUser&quot;, [&quot;Ada&quot;, 36])
+conn.commit()
+
+# Use the OUT parameter.
+result_args = cursor.callproc(&quot;Doubler&quot;, [5, 0])
+print(result_args[1])   # -&gt; 10
+
+# Use the function inside a normal query.
+cursor.execute(&quot;SELECT price, TaxOn(price) FROM products&quot;)
+for price, tax in cursor.fetchall():
+    print(price, tax)
+
+cursor.close()
+conn.close()
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<ul>
+<li><code>DELIMITER //</code> temporarily changes the statement terminator so the semicolons <em>inside</em> the procedure body don't end the definition early. We reset it with <code>DELIMITER ;</code> afterward.</li>
+<li><code>CREATE PROCEDURE AddUser(IN user_name ..., IN user_age ...)</code> — both parameters are <code>IN</code>: values flow in, nothing flows back.</li>
+<li>The <code>BEGIN ... END</code> block holds the saved SQL — here, a single <code>INSERT</code>. It could hold many statements.</li>
+<li><code>CREATE FUNCTION TaxOn(...) RETURNS DECIMAL</code> — a function <strong>must</strong> declare its return type and <strong>must</strong> <code>RETURN</code> a value.</li>
+<li><code>DETERMINISTIC</code> tells the engine the same input always yields the same output, which helps it optimize.</li>
+<li>In <code>Doubler</code>, <code>OUT result INT</code> is the return channel; <code>SET result = n * 2</code> fills it.</li>
+<li>In Python, <code>cursor.callproc(name, args)</code> invokes a procedure by name; the returned list carries back any <code>OUT</code>/<code>INOUT</code> values.</li>
+</ul>
+<h2>16. Dry Run</h2>
+<p>Let's trace <code>CALL Doubler(5, @out)</code> end to end:</p>
+<ol>
+<li><code>n</code> receives <code>5</code> (an IN parameter).</li>
+<li><code>result</code> starts empty (an OUT parameter — a slot to be filled).</li>
+<li><code>SET result = n * 2</code> → <code>result = 5 * 2 = 10</code>.</li>
+<li>The procedure ends; <code>10</code> is written back into <code>@out</code>.</li>
+<li><code>SELECT @out;</code> displays <strong><code>10</code></strong>.</li>
+</ol>
+<p>We handed in one value and got one value back — a clean IN → OUT flow.</p>
+<h2>17. Complexity Analysis</h2>
+<ul>
+<li><strong>Per-call runtime:</strong> Whatever the SQL inside costs. A single <code>INSERT</code> is O(1) plus index maintenance. The win isn't asymptotic — it's the <strong>elimination of network round-trips</strong>: one <code>CALL</code> instead of ten statements.</li>
+<li><strong>Maintenance complexity:</strong> O(1) to change a rule — you edit one procedure — versus <strong>O(apps)</strong> with inline SQL. This is the real optimization.</li>
+<li><strong>Space:</strong> The logic is stored once in the database rather than duplicated across every application. O(1) versus O(apps).</li>
+</ul>
+<p>Why these are correct: centralization removes duplicated work both at <em>change time</em> (one edit) and at <em>runtime</em> (one round-trip), which is precisely why a slow report can drop from seconds to milliseconds.</p>
+<h2>18. Alternative Solutions</h2>
+<p>Procedures aren't the only tool. Pick the <strong>lightest</strong> one that fits:</p>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Best for</th>
+<th>Trade-off</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Application code</strong></td>
+<td>Logic you want to unit-test and version in Git</td>
+<td>Easier to test, but chattier over the network</td>
+</tr>
+<tr>
+<td><strong>Stored procedure</strong></td>
+<td>Centralized, action-heavy, security-sensitive logic</td>
+<td>Fast and centralized, but harder to debug and tied to your DB</td>
+</tr>
+<tr>
+<td><strong>View</strong></td>
+<td>A reusable <em>query</em> with no real logic</td>
+<td>Simplest reuse; can't perform actions or take parameters</td>
+</tr>
+</tbody>
+</table>
+<p>If all you need is a saved, reusable <code>SELECT</code> with no computation, a <strong>view</strong> is often all you need — don't reach for a procedure.</p>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong>Empty input / NULL parameters:</strong> <code>AddUser(NULL, NULL)</code> will insert NULLs (or fail a NOT NULL constraint). Validate before inserting.</li>
+<li><strong>Duplicates:</strong> Calling <code>AddUser</code> twice with the same data inserts two rows unless a UNIQUE constraint stops it.</li>
+<li><strong>Min/max values:</strong> <code>TaxOn</code> on a huge <code>price</code> can overflow the declared <code>DECIMAL</code> precision — size the return type deliberately.</li>
+<li><strong>Zero and negatives:</strong> <code>TaxOn(0)</code> returns <code>0</code>; <code>TaxOn(-100)</code> returns <code>-10</code>. Decide whether negative prices are even valid.</li>
+<li><strong>Uninitialized OUT parameter:</strong> If a procedure forgets to <code>SET</code> its OUT parameter on some path, the caller gets a stale or NULL value.</li>
+</ul>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Putting a heavy function inside a <code>SELECT</code> over millions of rows.</strong> The function runs once <em>per row</em>. A slow lookup buried in a function scanned over a million rows will crawl — this is a real, painful mistake. Keep functions <strong>light and predictable</strong>.</li>
+<li><strong>The row-by-row loop (RBAR — "row by row agonizing row").</strong> Writing a procedure that loops and updates one row at a time is like washing rice one grain at a time. Databases are built for <strong>whole sets at once</strong>. If you can replace a loop with a single <code>UPDATE</code>, do it.</li>
+<li><strong>Burying all business rules in the database.</strong> It becomes hard to test, hard to version, and hard for new engineers to find.</li>
+<li><strong>Forgetting <code>DELIMITER</code>.</strong> The inner semicolons end your definition early and throw confusing syntax errors.</li>
+<li><strong>Confusing procedures and functions.</strong> Trying to <code>SELECT AddUser(...)</code> fails — procedures don't return a value into a query. Trying to <code>INSERT</code> inside a function often isn't allowed either.</li>
+<li><strong>Non-deterministic functions marked <code>DETERMINISTIC</code>.</strong> Lying to the optimizer causes subtly wrong cached results.</li>
+</ol>
+<h2>21. Interview Questions (Likely Follow-Ups)</h2>
+<ul>
+<li>What's the difference between a stored procedure and a function? When would you pick each?</li>
+<li>Explain IN, OUT, and INOUT parameters with an example.</li>
+<li>Why can calling a function inside a large <code>SELECT</code> destroy performance?</li>
+<li>What is the row-by-row (RBAR) anti-pattern, and how do you fix it?</li>
+<li>How do stored procedures improve <strong>database security</strong>?</li>
+<li>When would a simple <em>view</em> be a better choice than a procedure?</li>
+<li>What are the downsides of putting business logic in the database?</li>
+</ul>
+<h2>22. Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 177 – Nth Highest Salary:</strong> Officially solved by writing a <strong>SQL function</strong> that returns one value — direct practice for function syntax and return semantics.</li>
+<li><strong>LeetCode 1873 – Calculate Special Bonus:</strong> Uses <code>CASE</code> logic that's a natural fit for a reusable function.</li>
+<li><strong>LeetCode 176 – Second Highest Salary:</strong> Reinforces returning a single scalar value (including handling <code>NULL</code>) — the exact contract a function must honor.</li>
+<li><strong>Any "create a view" problem:</strong> Sharpens the instinct for choosing the <em>lightest</em> reuse tool, echoing our alternatives table.</li>
+</ul>
+<p>These are related because they all force you to decide <em>what the reusable unit returns</em> and <em>which SQL construct fits</em> — the core lesson here.</p>
+<h2>23. Key Takeaways</h2>
+<ul>
+<li>A <strong>stored procedure</strong> is a saved button that performs actions; a <strong>function</strong> is a calculator that returns one value you use inside queries.</li>
+<li>They cut repeated code, reduce network chatter, and guard your tables behind a controlled door.</li>
+<li><strong>IN</strong> is a gift you give; <strong>OUT</strong> is a gift you get; <strong>INOUT</strong> does both.</li>
+<li>Keep functions <strong>light</strong>, avoid <strong>row-by-row loops</strong>, and don't hide your entire app inside the database.</li>
+<li>Always pick the <strong>lightest tool</strong> that fits: app code, procedure, or a plain view.</li>
+</ul>
+<h2>24. Watch the Video</h2>
+<p>Seeing these built live makes the IN/OUT/INOUT distinction click far faster than reading syntax. Watch the full walkthrough — we build a tiny procedure and a tiny function from scratch, break the parameters down, and demo the exact performance trap that bites beginners: 👉 <strong>{LINK}</strong></p>
+<h2>25. About the Series</h2>
+<p>This is part of the <strong>Fun with Learning Technology</strong> series — a friendly, no-fluff journey through databases, algorithms, and backend engineering, one focused lesson at a time. Each episode takes a single practical concept, builds real intuition before any code, and shows the traps that only show up in production. If you're learning <strong>SQL</strong>, preparing for <strong>coding interviews</strong>, or leveling up as a <strong>software engineer</strong>, the series is built to grow with you, lesson by lesson.</p>
+<h2>26. Call To Action</h2>
+<p>If this made stored procedures and functions click, here's how to help the series grow:</p>
+<ul>
+<li>👍 <strong>Like</strong> the video on YouTube — it tells the algorithm the lesson landed.</li>
+<li>🔔 <strong>Subscribe</strong> on YouTube and hit the bell — a follow means come back tomorrow.</li>
+<li>📩 <strong>Subscribe on Substack</strong> so each new lesson lands in your inbox.</li>
+<li>💬 <strong>Comment</strong> with the SQL topic you want next.</li>
+<li>🔗 <strong>Share</strong> this with a developer who keeps copy-pasting the same SQL.</li>
+</ul>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Trigger: repeated multi-step SQL logic reused across many app clients?</summary><p>Think stored procedure or function — a named, precompiled SQL block in the DB centralizing logic, cutting network round-trips, enforcing consistency.</p></details><details class='card2'><summary>Time complexity of a stored procedure?</summary><p>Same as the SQL it runs; the procedure wrapper adds no asymptotic cost. A row-by-row cursor loop is O(n) calls versus one set-based statement.</p></details><details class='card2'><summary>Space complexity of stored procedures/functions?</summary><p>O(1) stored definition plus whatever the query needs; cursors and OUT/temp result sets add space proportional to rows processed.</p></details><details class='card2'><summary>Common bug: procedural cursor loops instead of set operations?</summary><p>Row-by-row (RBAR) processing is slow and non-atomic. Rewrite as a single set-based statement; reserve cursors for genuinely sequential logic.</p></details><details class='card2'><summary>Procedure vs function: how do they differ?</summary><p>Functions return one value, are called inside queries, and avoid side effects. Procedures use IN/OUT/INOUT params, can modify data, and are CALL-ed standalone.</p></details><details class='card2'><summary>Follow-up: how do stored procedures improve security?</summary><p>Grant EXECUTE without table access, so callers run vetted logic only. Parameterized inputs resist SQL injection and hide the schema.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
