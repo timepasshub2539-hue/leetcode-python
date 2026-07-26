@@ -1,0 +1,5 @@
+-- SQL Server / standard SQL
+SELECT name FROM users
+ORDER BY id
+OFFSET 3 ROWS
+FETCH NEXT 3 ROWS ONLY;
