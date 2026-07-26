@@ -1,0 +1,300 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 10: Stop Using IF-ELSE for Row-by-Row Logic! — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-10-case-when-conditional-logic
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson-10-">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/sql-lesson-10-case-when-conditional-logic.html">
+<meta property="og:title" content="Lesson 10: Stop Using IF-ELSE for Row-by-Row Logic! — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-10-case-when-conditional-logic
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson-10-">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson 10: Stop Using IF-ELSE for Row-by-Row Logic!</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction: Why We Need Conditional Logic in SQL</h2>
+<p>Welcome back to the series. Today, we are tackling one of the most misunderstood yet powerful constructs in database programming: <code>CASE WHEN</code>. In many languages like Python or JavaScript, you immediately think of <code>if/else</code> statements when a problem requires conditional logic. But databases work differently. They don't have loops; they process millions of rows at once using set-based operations.</p>
+<p>If you've ever tried to filter data or create new categories based on specific rules inside a query, you might feel like you're writing spaghetti code with nested <code>WHERE</code> clauses or complex subqueries. It gets messy fast. That is where <code>CASE WHEN</code> steps in. It is SQL's native way of saying "if this, then that," and it allows us to perform conditional control flow directly on our data without changing the table structure itself.</p>
+<p>Interviewers love asking about this because it tests two things: your understanding of how SQL executes queries (top-down logic) and your ability to transform raw numbers into meaningful business insights—like categorizing sales as "High" or "Low"—in a single pass. By mastering <code>CASE</code>, you stop treating the database like a static storage box and start using it as an active data processor.</p>
+<h2>Problem Overview: Sorting Mail into Bins</h2>
+<p>Let's visualize what we are building. Imagine a bouncer at a club door. Every person approaching the line is checked against a set of rules. If they have a VIP pass, they go to the front. If they have a regular ticket but arrive early, they go to line B. If neither applies, they go to the back.</p>
+<p>In SQL terms:
+- The <strong>bouncer</strong> is the <code>CASE WHEN</code> statement.
+- The <strong>people</strong> are the rows in your table (e.g., customer orders).
+- The <strong>rules</strong> are your conditions (score thresholds, date ranges, or status flags).
+- The <strong>lines</strong> are the output values you assign to each row.</p>
+<p>The problem we will solve today is often referred to as "Data Labeling" or "Conditional Transformation." We need to take a column of raw numbers (like a test score, revenue, or age) and turn it into a categorical label (Pass/Fail, Tier A/B/C, Young/Old). Without <code>CASE</code>, you would have to post-process this data in Python or Excel. With <code>CASE</code>, we do the heavy lifting directly in the query.</p>
+<h2>Example: Categorizing Student Scores</h2>
+<p>To keep things concrete, let's imagine a table called <code>student_scores</code> with one column: <code>score</code>. We want to assign a grade letter based on the score.</p>
+<p><strong>Scenario:</strong>
+- Scores $\ge$ 90 get an 'A'.
+- Scores $\ge$ 80 (but less than 90) get a 'B'.
+- Scores $\ge$ 60 get a 'C'.
+- Anything below 60 gets an 'F'.</p>
+<h3>Input Data</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">id</th>
+<th style="text-align: left;">score</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">95</td>
+</tr>
+<tr>
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">85</td>
+</tr>
+<tr>
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">55</td>
+</tr>
+<tr>
+<td style="text-align: left;">4</td>
+<td style="text-align: left;">70</td>
+</tr>
+</tbody>
+</table>
+<h3>Desired Output</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">id</th>
+<th style="text-align: left;">score</th>
+<th style="text-align: left;">grade</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">95</td>
+<td style="text-align: left;">A</td>
+</tr>
+<tr>
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">85</td>
+<td style="text-align: left;">B</td>
+</tr>
+<tr>
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">55</td>
+<td style="text-align: left;">F</td>
+</tr>
+<tr>
+<td style="text-align: left;">4</td>
+<td style="text-align: left;">70</td>
+<td style="text-align: left;">C</td>
+</tr>
+</tbody>
+</table>
+<p>Notice how we are creating a new column <code>grade</code> that wasn't in the original table. This is exactly what <code>CASE WHEN</code> enables.</p>
+<h2>Intuition: The Bouncer Analogy and Order of Operations</h2>
+<p>How does an experienced engineer discover the solution? It's not about memorizing syntax; it's about understanding the flow.</p>
+<p>Think of a computer reading your code like a human reading a checklist. It doesn't jump to conclusions. It looks at rule #1. If that rule matches, it acts immediately and moves on. If not, it forgets rule #1 and looks at rule #2.</p>
+<p>This creates a critical intuition: <strong>Order matters more than you think.</strong></p>
+<p>If you put "Score &gt; 80" as your first rule and "Score &gt; 90" as your second rule, a student with a score of 95 will match the first rule (80+) and be labeled 'B', skipping the second rule entirely. The system stops checking once it finds a match.</p>
+<p>Therefore, the logic must always flow from <strong>Strictest to Loosest</strong>. We check for the highest scores first because that is the most specific condition. Once we pass that check (or fail it), we move down to the next category. This "top-down" execution model is unique to <code>CASE</code> and differs from some other programming languages where logic might be evaluated differently.</p>
+<h2>Brute Force Solution: Nested WHERE Clauses</h2>
+<p>Before discovering the elegance of <code>CASE</code>, how would a beginner try to solve this? They would likely try to nest their conditions in the <code>WHERE</code> clause or create multiple rows.</p>
+<p><strong>Idea:</strong> Create separate queries for each grade, then try to combine them (union).
+<strong>Algorithm:</strong>
+1. Query for all 'A's.
+2. Query for all 'B's.
+3. ...
+4. Combine results using <code>UNION ALL</code>.</p>
+<p><strong>Advantages:</strong> Easy to understand conceptually for very simple cases.
+<strong>Disadvantages:</strong>
+- It destroys the original row structure. If a student doesn't qualify as an 'A' or 'B', they disappear from the result set entirely.
+- It is inefficient for large datasets because you are running multiple scans.
+- You cannot easily add a "default" category (like 'F') without adding another query.</p>
+<p><strong>Complexity:</strong> $O(N \times K)$, where $N$ is the number of rows and $K$ is the number of grade categories. As categories grow, performance tanks.</p>
+<h2>Optimal Solution: The CASE WHEN Pattern</h2>
+<p>The optimal approach uses a single pass over the data. We use <code>CASE</code> to define logic directly in the <code>SELECT</code> list (for labeling) or the <code>SUM</code> aggregate function (for counting).</p>
+<p><strong>Algorithm:</strong>
+1. Start with the original table.
+2. In the <code>SELECT</code> clause, write <code>CASE</code> followed by <code>WHEN ... THEN ...</code>.
+3. Stack your conditions from most specific to least specific.
+4. End with an optional <code>ELSE</code> for default values.
+5. Close with <code>END</code>.</p>
+<p><strong>Visualizing the Logic:</strong></p>
+<pre><code class="language-text">Row 1 (95):
+  - Check: score &gt;= 90? -&gt; YES.
+  - Action: Return 'A'.
+  - STOP processing this row for CASE logic.
+
+Row 2 (85):
+  - Check: score &gt;= 90? -&gt; NO.
+  - Next Check: score &gt;= 80? -&gt; YES.
+  - Action: Return 'B'.
+  - STOP.
+</code></pre>
+<p>This ensures every single row gets exactly one output value, preserving the dataset's integrity while enriching it with meaning.</p>
+<h2>Python Code: The Solution</h2>
+<p>Here is a clean, production-quality implementation in SQL. While this is SQL, the logic applies universally. We will use standard ANSI SQL syntax which works on PostgreSQL, MySQL, SQLite, and BigQuery.</p>
+<pre><code class="language-python">import sqlite3
+
+# Connect to an in-memory database for demonstration
+conn = sqlite3.connect(':memory:')
+cursor = conn.cursor()
+
+# Create the sample table
+cursor.execute('''
+    CREATE TABLE student_scores (
+        id INTEGER PRIMARY KEY,
+        score INTEGER
+    )
+''')
+
+# Insert sample data
+data = [
+    (1, 95),
+    (2, 85),
+    (3, 55),
+    (4, 70)
+]
+cursor.executemany('INSERT INTO student_scores VALUES (?, ?)', data)
+
+# Define the CASE WHEN query
+query = '''
+    SELECT 
+        id, 
+        score,
+        -- Logic: Check specific thresholds from highest to lowest
+        CASE 
+            WHEN score &gt;= 90 THEN 'A'
+            WHEN score &gt;= 80 THEN 'B'
+            WHEN score &gt;= 60 THEN 'C'
+            ELSE 'F'  -- Safety net for anything below 60
+        END AS grade_letter
+    FROM student_scores
+'''
+
+# Execute and fetch results
+cursor.execute(query)
+results = cursor.fetchall()
+
+# Print results for verification
+for row in results:
+    print(f&quot;ID: {row[0]}, Score: {row[1]}, Grade: {row[2]}&quot;)
+
+conn.close()
+</code></pre>
+<h2>Code Walkthrough: Line-by-Line Analysis</h2>
+<p>Let's break down the query to understand the mechanics.</p>
+<ol>
+<li><code>SELECT id, score,</code>: We are selecting the original identifiers and values so we can see the transformation side-by-side.</li>
+<li><code>CASE ... END</code>: This block introduces a conditional expression that evaluates to a single value for each row.</li>
+<li><code>WHEN score &gt;= 90 THEN 'A'</code>: <strong>The Strictest Rule First.</strong> We check if the student is an honor roll candidate immediately. If true, we stop here and return 'A'.</li>
+<li><code>WHEN score &gt;= 80 THEN 'B'</code>: <strong>The Next Tier.</strong> Since we know this row failed the first check (score &lt; 90), we don't need to re-check <code>&gt;= 90</code> again. We just check for this next bucket.</li>
+<li><code>ELSE 'F'</code>: <strong>The Fallback.</strong> This catches any row where all previous <code>WHEN</code> statements were false. It prevents the column from becoming <code>NULL</code>.</li>
+<li><code>FROM student_scores</code>: We apply this logic to every single record in the table.</li>
+</ol>
+<h2>Dry Run: Walking Through an Example</h2>
+<p>Let's manually execute the query against our data to ensure the logic holds up.</p>
+<p><strong>Row 1:</strong> <code>(id=1, score=95)</code>
+- Check 1: Is <code>95 &gt;= 90</code>? <strong>Yes.</strong>
+- Action: Return <code>'A'</code>.
+- Result: <code>{'id': 1, 'score': 95, 'grade_letter': 'A'}</code>.</p>
+<p><strong>Row 2:</strong> <code>(id=2, score=85)</code>
+- Check 1: Is <code>85 &gt;= 90</code>? <strong>No.</strong> (Proceed to next check).
+- Check 2: Is <code>85 &gt;= 80</code>? <strong>Yes.</strong>
+- Action: Return <code>'B'</code>.
+- Result: <code>{'id': 2, 'score': 85, 'grade_letter': 'B'}</code>.</p>
+<p><strong>Row 3:</strong> <code>(id=3, score=55)</code>
+- Check 1: Is <code>55 &gt;= 90</code>? <strong>No.</strong>
+- Check 2: Is <code>55 &gt;= 80</code>? <strong>No.</strong>
+- Check 3: Is <code>55 &gt;= 60</code>? <strong>No.</strong>
+- Action: Hit the <code>ELSE</code>. Return <code>'F'</code>.
+- Result: <code>{'id': 3, 'score': 55, 'grade_letter': 'F'}</code>.</p>
+<p>This confirms that the logic flows sequentially and correctly categorizes every record.</p>
+<h2>Complexity Analysis</h2>
+<p>Why is this efficient? Because it's a single-pass operation.</p>
+<ul>
+<li><strong>Time Complexity:</strong> $O(N)$. The database scans the table once (or uses an index if one exists on the score column). For each row, the evaluation of <code>WHEN</code> conditions is constant time $O(1)$ because there are only $K$ branches in the <code>CASE</code>. Total time is proportional to the number of rows.</li>
+<li><strong>Space Complexity:</strong> $O(N)$. We are essentially creating a new virtual column for every row in the result set, which takes linear space relative to the output size.</li>
+</ul>
+<p>This is vastly superior to the Brute Force method, which would require multiple scans or temporary tables.</p>
+<h2>Alternative Solutions: When not to use CASE</h2>
+<p>There are other ways to handle conditional logic, but they come with trade-offs.</p>
+<ol>
+<li>
+<p><strong>Nested <code>IF()</code> Functions:</strong></p>
+<ul>
+<li><em>Syntax:</em> <code>IF(score &gt;= 90, 'A', IF(score &gt;= 80, 'B', 'F'))</code></li>
+<li><em>Pros:</em> Very short for simple 2-way splits.</li>
+<li><em>Cons:</em> Becomes unreadable ("spaghetti code") with more than 3-4 branches. Hard to maintain.</li>
+<li><em>Verdict:</em> Only use for binary choices (Yes/No). Use <code>CASE</code> for multi-category logic.</li>
+</ul>
+</li>
+<li>
+<p><strong>Lookup Tables:</strong></p>
+<ul>
+<li><em>Concept:</em> Store your score-to-grade mapping in a separate table and <code>JOIN</code>.</li>
+<li><em>Pros:</em> Clean separation of data and logic; easy to update grades without touching the main query.</li>
+<li><em>Cons:</em> Overkill for simple calculations; introduces join overhead.</li>
+<li><em>Verdict:</em> Great if your "rules" change frequently or are massive lists. Use a lookup table if your <code>CASE</code> statement grows larger than 10-15 lines.</li>
+</ul>
+</li>
+<li>
+<p><strong>String Concatenation Tricks:</strong></p>
+<ul>
+<li>Some might try to manipulate strings (e.g., converting scores to text and replacing substrings).</li>
+<li><em>Verdict:</em> Terrible idea. It's hacky, slow, and error-prone. Avoid.</li>
+</ul>
+</li>
+</ol>
+<h2>Edge Cases: Handling the Unexpected</h2>
+<p>A robust engineer anticipates edge cases before running the query.</p>
+<ol>
+<li><strong>NULL Values:</strong> If a student has no score (<code>NULL</code>), any comparison like <code>score &gt;= 90</code> evaluates to unknown (or false in some contexts), causing them to fall through to the <code>ELSE</code>. If you <em>don't</em> have an <code>ELSE</code>, they become <code>NULL</code> in the output column.<ul>
+<li><em>Fix:</em> Always include an <code>ELSE</code> unless <code>NULL</code> is a valid result state. Better yet, handle NULLs explicitly: <code>WHEN score IS NULL THEN 'Missing' ...</code>.</li>
+</ul>
+</li>
+<li><strong>Empty Input:</strong> If the table has zero rows, the query returns zero rows. No error occurs. This is expected behavior.</li>
+<li><strong>Exact Boundary Values:</strong> A score of exactly 90 satisfies <code>score &gt;= 90</code>. Ensure your thresholds match business requirements (e.g., does a 90 get an 'A' or not?). Using <code>&gt; 89</code> vs <code>&gt;= 90</code> makes no mathematical difference for integers, but matters for floating-point numbers.</li>
+<li><strong>Performance on Large Data:</strong> While <code>CASE</code> is fast, extremely complex conditions inside it can slow down query planners. If you find your queries slow, consider creating indexes on the columns used in the <code>WHEN</code> clauses.</li>
+</ol>
+<h2>Common Mistakes: Traps to Avoid</h2>
+<p>Even seniors make these errors. Watch out for:</p>
+<ol>
+<li><strong>Forgetting the <code>ELSE</code> Clause:</strong><ul>
+<li><em>Mistake:</em> Leaving out <code>ELSE 'Default'</code>.</li>
+<li><em>Consequence:</em> Rows that don't match any condition return <code>NULL</code>. If you later calculate an average (<code>AVG(score)</code>) including this new category column, <code>NULL</code>s will pull your average down or make it 0, skewing your metrics.</li>
+</ul>
+</li>
+<li><strong>Reversing the Order of Conditions:</strong><ul>
+<li><em>Mistake:</em> Putting <code>score &gt;= 90</code> last.</li>
+<li><em>Consequence:</em> A score of 95 matches the first rule (e.g., <code>score &gt;= 80</code>) and is mislabeled. This creates "dead code" (logic that never runs).</li>
+</ul>
+</li>
+<li><strong>Using <code>OR</code> instead of separate <code>WHEN</code> statements:</strong><ul>
+<li><em>Mistake:</em> Thinking <code>WHEN score = 90 OR score = 95 THEN 'A'</code> works differently.</li>
+<li><em>Note:</em> This actually works in standard SQL, but it's often clearer to list them: <code>WHEN score = 90 THEN 'A', WHEN score = 95 THEN 'A'</code>. However, using <code>IN</code> (e.g., <code>WHEN score IN (90, 95)</code>) is often more concise for specific values.</li>
+</ul>
+</li>
+<li><strong>Assuming Simple CASE matches all conditions:</strong><ul>
+<li><em>Mistake:</em> Using <code>SIMPLE CASE</code> syntax when you need complex math in the condition.</li>
+<li><em>Fix:</em> Always default to <code>SEARCHED CASE</code> unless you are doing a direct equality check (<code>column = value</code>). It gives you more flexibility.</li>
+</ul>
+</li>
+<li><strong>Deep Nesting:</strong><ul>
+<li><em>Mistake:</em> Creating a 20-line <code>CASE</code> statement.</li>
+<li><em>Consequence:</em> Hard to read and debug. Refactor into a lookup table or a view if the logic is complex.</li>
+</ul>
+</li>
+</ol>
+<h2>Interview Questions: What Interviewers Ask</h2>
+<p>If you face this problem in an interview, they might ask follow-ups like:</p>
+<ol>
+<li><strong>"How would you optimize this <code>CASE</code> statement?"</strong><ul>
+<li><em>Answer:</em> Discuss moving to a lookup table if the mapping is static and large, or using window functions if the logic involves comparing a row to its neighbors.</li>
+</ul>
+</li>
+<li><strong>"What happens if I forget the <code>ELSE</code> clause when calculating an average?"</strong><ul>
+<li><em>Answer:</em> Explain how <code>NULL</code> values are ignored in aggregation functions like</li>
+</ul>
+</li>
+</ol></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>What is the SQL pattern for row-by-row decision-making?</summary><p>Use CASE WHEN. It acts as native conditional logic to categorize data without changing table structure.</p></details><details class='card2'><summary>What is the time complexity of a simple CASE WHEN in a SELECT clause?</summary><p>O(1) per row evaluated, though the whole query scales linearly O(N) with total rows processed by the database.</p></details><details class='card2'><summary>What is the space complexity for using CASE WHEN?</summary><p>Generally O(1) auxiliary space if used in a SELECT projection; it modifies values virtually during retrieval.</p></details><details class='card2'><summary>What common mistake causes logic errors in CASE WHEN blocks?</summary><p>Forgetting ELSE results in NULLs when no condition matches, or overwriting columns by assigning to the wrong expression.</p></details><details class='card2'><summary>How does CASE vs Alternatives (like IF) differ in SQL context?</summary><p>CASE is native SQL control flow supporting multiple conditions sequentially; IF often functions as a scalar function limited to single checks.</p></details><details class='card2'><summary>Follow-up: How do you count rows meeting two different categories using CASE?</summary><p>Use the Superpower: Conditional Counts by summing boolean evaluations (1 for true, 0 for false) within each category column separately.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
