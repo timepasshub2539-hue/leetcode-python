@@ -1,0 +1,386 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SQL Lesson 21: The One Missing Word That Wipes Your Whole Table — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-21-insert-update-delete
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson-21-insert-">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/sql-lesson-21-insert-update-delete.html">
+<meta property="og:title" content="SQL Lesson 21: The One Missing Word That Wipes Your Whole Table — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-21-insert-update-delete
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson-21-insert-">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>SQL Lesson 21: The One Missing Word That Wipes Your Whole Table</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>8. Introduction</h2>
+<p>If you have spent time with SQL, you have almost certainly been <em>reading</em> data with <code>SELECT</code>. That is the comfortable half of the language—nothing you type can hurt anything. But real applications do not just read data. They add new customers, correct wrong values, and remove records that no longer belong. The moment you start <em>writing</em> data, SQL stops being a safe reading tool and becomes something with a sharp edge.</p>
+<p>That sharp edge has a name: the <strong>missing <code>WHERE</code> clause</strong>. It is the single most common way engineers accidentally destroy production data, and it takes about a tenth of a second to do it. Interviewers love this topic precisely because it separates people who have <em>used</em> a database from people who have only read about one. Anyone can memorize the syntax of <code>UPDATE</code>. Far fewer can explain <em>why</em> one forgotten keyword rewrites two thousand rows instead of one.</p>
+<p>In this lesson we cover the three commands that make up <strong>Data Manipulation Language (DML)</strong>: <code>INSERT</code>, <code>UPDATE</code>, and <code>DELETE</code>. You will learn exactly when to reach for each one, why two of them are dangerous, and the professional habits—SELECT-first, transactions, and soft deletes—that let senior engineers modify live data without fear. This is core knowledge for backend development, data engineering, and any software engineering role that touches a relational database.</p>
+<h2>9. Problem Overview</h2>
+<p>Every relational database is built on a small set of verbs. Reading is one. Changing is the other.</p>
+<p><strong>DML—Data Manipulation Language</strong>—is the group of SQL commands that manipulate the actual data stored inside your tables. If <code>SELECT</code> is reading a book, DML is picking up a pen and editing it. Stripped of jargon, DML is just three actions:</p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>What it does</th>
+<th>Danger level</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>INSERT</code></td>
+<td>Adds a new row</td>
+<td>Low</td>
+</tr>
+<tr>
+<td><code>UPDATE</code></td>
+<td>Changes existing rows</td>
+<td>High</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td>Removes whole rows</td>
+<td>High</td>
+</tr>
+</tbody>
+</table>
+<p>The core challenge is not memorizing syntax—it is understanding <strong>scope</strong>. <code>UPDATE</code> and <code>DELETE</code> both accept a <code>WHERE</code> clause that decides <em>which</em> rows are affected. Get the <code>WHERE</code> right and you touch exactly the rows you intended. Omit it, and SQL applies your change to <strong>every single row in the table</strong>, silently and completely. The database does exactly what you <em>said</em>, not what you <em>meant</em>.</p>
+<h2>10. Example</h2>
+<p>Let's work with a tiny <code>users</code> table all lesson. Small on purpose, so you can hold the whole thing in your head.</p>
+<p><strong>Starting state:</strong></p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>name</th>
+<th>age</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Alice</td>
+<td>30</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Bob</td>
+<td>25</td>
+</tr>
+</tbody>
+</table>
+<p>Two people. Now watch how each command grows it, tweaks it, or shrinks it.</p>
+<p><strong>INSERT — add Carol:</strong></p>
+<pre><code class="language-sql">INSERT INTO users (id, name, age)
+VALUES (3, 'Carol', 28);
+</code></pre>
+<p>Result:</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>name</th>
+<th>age</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Alice</td>
+<td>30</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Bob</td>
+<td>25</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Carol</td>
+<td>28</td>
+</tr>
+</tbody>
+</table>
+<p>One new row appears at the bottom. The values landed under the right columns because we listed the columns first (<code>id, name, age</code>) and lined the values up in the same order.</p>
+<p><strong>UPDATE — fix Alice's age:</strong></p>
+<pre><code class="language-sql">UPDATE users
+SET age = 31
+WHERE id = 1;
+</code></pre>
+<p>Result:</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>name</th>
+<th>age</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Alice</td>
+<td><strong>31</strong></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Bob</td>
+<td>25</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Carol</td>
+<td>28</td>
+</tr>
+</tbody>
+</table>
+<p>Only Alice changed, because <code>WHERE id = 1</code> pointed at exactly one row.</p>
+<p><strong>DELETE — remove Bob:</strong></p>
+<pre><code class="language-sql">DELETE FROM users
+WHERE id = 2;
+</code></pre>
+<p>Result:</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>name</th>
+<th>age</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Alice</td>
+<td>31</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Carol</td>
+<td>28</td>
+</tr>
+</tbody>
+</table>
+<p>Bob is gone; Alice and Carol are untouched. The <code>WHERE</code> pulled out the one matching row and left the rest alone.</p>
+<h2>11. Intuition</h2>
+<p>Here is how an experienced engineer thinks about these commands, before writing a single line.</p>
+<p>First, picture the table as a spreadsheet your customers depend on. Every DML command is a physical action on that sheet: <code>INSERT</code> staples a new row to the bottom, <code>UPDATE</code> reaches into existing rows and rewrites cells, <code>DELETE</code> tears whole rows out. Once you see it physically, the danger becomes obvious. Adding a row rarely disturbs what was already there—that's why <code>INSERT</code> is the calm one. But rewriting and tearing out <em>act on rows that already matter</em>.</p>
+<p>Second, understand what <code>WHERE</code> really is. It is not part of "finding" data—it is a <strong>filter that defines scope</strong>. When you write <code>UPDATE users SET age = 31</code>, SQL reads that as: "for the set of rows I'm about to touch, set age to 31." The <code>WHERE</code> clause is the only thing that shrinks "the set of rows" from <em>all of them</em> down to <em>the ones you want</em>. Remove the filter and the set defaults back to everything. SQL isn't being cruel; it's being literal.</p>
+<p>Third—and this is the mental shift that saves careers—<strong>treat the <code>WHERE</code> clause as the real command and <code>UPDATE</code>/<code>DELETE</code> as just the action attached to it.</strong> A senior engineer writes the <code>WHERE</code> first, verifies it, and only then decides what to do with the rows it selects. That reordering is the whole game.</p>
+<h2>12. Brute Force Solution (the naive, dangerous way)</h2>
+<p><strong>Idea:</strong> Just write the command and run it. You know what you want to change, so you type the <code>UPDATE</code> or <code>DELETE</code>, hit execute, and trust yourself to include the <code>WHERE</code>.</p>
+<p><strong>Algorithm:</strong>
+1. Decide which rows to change.
+2. Write the DML statement with a <code>WHERE</code> clause.
+3. Run it directly against the table.</p>
+<p><strong>Advantages:</strong>
+- Fast—one statement, one execution.
+- Simple to type when you're confident.</p>
+<p><strong>Disadvantages:</strong>
+- <strong>No safety net.</strong> If you forget the <code>WHERE</code>, or your <code>WHERE</code> is broader than you thought, the change is instant and irreversible.
+- A wrong <code>UPDATE</code> produces bad <em>values</em>, not errors—so nothing warns you. You may not notice for weeks.
+- Impossible to preview what will be affected before it happens.</p>
+<p><strong>Complexity of the mistake:</strong> The failure isn't algorithmic—it's operational. Running <code>UPDATE users SET age = 31;</code> with no <code>WHERE</code> rewrites <strong>all N rows</strong> in a single statement. On a live table that's thousands of records corrupted in roughly one tenth of a second, with no undo.</p>
+<h2>13. Optimal Solution (the safe engineering workflow)</h2>
+<p>Professionals don't rely on typing carefully. They build a workflow that makes the dangerous case <em>hard to trigger</em>. Three layers, from cheapest to strongest.</p>
+<h3>Layer 1 — SELECT-first (the five-second habit)</h3>
+<p>Before any <code>UPDATE</code> or <code>DELETE</code>, take your exact <code>WHERE</code> clause and run it as a <code>SELECT *</code> first:</p>
+<pre><code class="language-sql">SELECT * FROM users WHERE id = 1;
+</code></pre>
+<p>Whatever rows come back are <em>exactly</em> the rows your <code>UPDATE</code> or <code>DELETE</code> will hit. If two rows return, two rows change. If zero return, your filter is wrong. It costs five seconds and it has never once let a careful engineer down.</p>
+<h3>Layer 2 — Transactions (draft mode)</h3>
+<p>A transaction is like editing in draft. You <code>BEGIN</code>, make your changes, inspect the result, and only then decide to keep or discard them:</p>
+<pre><code class="language-sql">BEGIN;
+
+UPDATE users SET age = 31 WHERE id = 1;
+
+SELECT * FROM users;   -- inspect the result
+
+COMMIT;   -- keep it, OR:
+-- ROLLBACK;  -- undo everything since BEGIN
+</code></pre>
+<p><code>COMMIT</code> makes the changes permanent. <code>ROLLBACK</code> erases them as if they never happened. This is your undo button for the database.</p>
+<h3>Layer 3 — Soft delete (never truly lose data)</h3>
+<p>Instead of physically removing a row, flip a flag:</p>
+<pre><code class="language-sql">-- Schema has an is_deleted column
+UPDATE users SET is_deleted = TRUE WHERE id = 2;
+
+-- Normal reads just filter it out
+SELECT * FROM users WHERE is_deleted = FALSE;
+</code></pre>
+<p>The row still exists; it's just hidden. The minus is a little extra complexity in every query. The plus is that nothing is ever permanently lost, and you can sleep at night.</p>
+<p><strong>Decision table:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>Reach for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Adding a brand-new record</td>
+<td><code>INSERT</code></td>
+</tr>
+<tr>
+<td>Correcting a value in existing rows</td>
+<td><code>UPDATE</code> (with <code>WHERE</code>)</td>
+</tr>
+<tr>
+<td>Removing a row entirely</td>
+<td><code>DELETE</code> (with <code>WHERE</code>)</td>
+</tr>
+<tr>
+<td>Blanking out one field only</td>
+<td><code>UPDATE ... SET col = NULL</code> (<strong>not</strong> DELETE)</td>
+</tr>
+<tr>
+<td>Any risky edit on live data</td>
+<td>Wrap in <code>BEGIN ... COMMIT/ROLLBACK</code></td>
+</tr>
+<tr>
+<td>Data you might need to recover</td>
+<td>Soft delete flag</td>
+</tr>
+</tbody>
+</table>
+<h2>14. Python Code</h2>
+<p>Here's the complete workflow demonstrated in Python using the standard-library <code>sqlite3</code> module—no external dependencies. It shows the safe SELECT-first-then-modify pattern inside a transaction.</p>
+<pre><code class="language-python">import sqlite3
+
+
+def build_users_table(conn: sqlite3.Connection) -&gt; None:
+    &quot;&quot;&quot;Create a tiny users table and seed it with two rows.&quot;&quot;&quot;
+    conn.execute(&quot;CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)&quot;)
+    conn.executemany(
+        &quot;INSERT INTO users (id, name, age) VALUES (?, ?, ?)&quot;,
+        [(1, &quot;Alice&quot;, 30), (2, &quot;Bob&quot;, 25)],
+    )
+
+
+def preview(conn: sqlite3.Connection, where: str, params: tuple) -&gt; list:
+    &quot;&quot;&quot;SELECT-first: return the exact rows a WHERE clause will affect.&quot;&quot;&quot;
+    rows = conn.execute(f&quot;SELECT * FROM users WHERE {where}&quot;, params).fetchall()
+    print(f&quot;WHERE {where} matches {len(rows)} row(s): {rows}&quot;)
+    return rows
+
+
+def main() -&gt; None:
+    # In-memory DB so the demo leaves nothing behind.
+    conn = sqlite3.connect(&quot;:memory:&quot;)
+    build_users_table(conn)
+
+    # INSERT: add a new row.
+    conn.execute(&quot;INSERT INTO users (id, name, age) VALUES (?, ?, ?)&quot;, (3, &quot;Carol&quot;, 28))
+
+    # Transaction as draft mode: change, inspect, then commit or roll back.
+    try:
+        # SELECT-first BEFORE the risky UPDATE.
+        if preview(conn, &quot;id = ?&quot;, (1,)):
+            conn.execute(&quot;UPDATE users SET age = ? WHERE id = ?&quot;, (31, 1))
+
+        # DELETE, again scoped by a verified WHERE.
+        if preview(conn, &quot;id = ?&quot;, (2,)):
+            conn.execute(&quot;DELETE FROM users WHERE id = ?&quot;, (2,))
+
+        conn.commit()  # keep the changes
+    except Exception:
+        conn.rollback()  # undo everything on any error
+        raise
+
+    print(&quot;Final:&quot;, conn.execute(&quot;SELECT * FROM users ORDER BY id&quot;).fetchall())
+    conn.close()
+
+
+if __name__ == &quot;__main__&quot;:
+    main()
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<ul>
+<li><strong><code>build_users_table</code></strong> creates the <code>users</code> table and uses <code>executemany</code> to seed Alice and Bob in one call—cleaner than two separate inserts.</li>
+<li><strong><code>preview</code></strong> is the SELECT-first habit turned into a function. It runs your <code>WHERE</code> clause as a read-only <code>SELECT</code>, prints how many rows match, and returns them. Every risky command is gated behind this.</li>
+<li><strong>Parameterized queries (<code>?</code> placeholders)</strong> appear everywhere. We never glue user values into SQL strings—that prevents SQL injection and is the professional default. (Note the <code>WHERE</code> <em>structure</em> in <code>preview</code> is interpolated, but the <em>values</em> are always parameters.)</li>
+<li><strong>The <code>INSERT</code></strong> lists columns explicitly <code>(id, name, age)</code>. Always name your columns, even though SQL lets you skip them—it makes the statement survive future schema changes.</li>
+<li><strong>The <code>try/except</code></strong> wraps both risky operations. <code>conn.commit()</code> only runs if everything succeeded; any exception triggers <code>conn.rollback()</code>, restoring the table to its state at the last commit. This is the transaction "draft mode" in code.</li>
+<li><strong>The <code>UPDATE</code> and <code>DELETE</code></strong> each carry a <code>WHERE id = ?</code>, so they touch exactly one verified row.</li>
+</ul>
+<h2>16. Dry Run</h2>
+<p>Let's trace <code>main()</code> step by step.</p>
+<ol>
+<li><strong>Start:</strong> table is <code>[(1, Alice, 30), (2, Bob, 25)]</code>.</li>
+<li><strong>INSERT Carol:</strong> table becomes <code>[(1, Alice, 30), (2, Bob, 25), (3, Carol, 28)]</code>.</li>
+<li><strong>preview("id = ?", (1,))</strong> runs <code>SELECT * FROM users WHERE id = 1</code>. Prints: <code>matches 1 row(s): [(1, 'Alice', 30)]</code>. One row—safe to proceed.</li>
+<li><strong>UPDATE age = 31 WHERE id = 1:</strong> Alice's age becomes 31. Table: <code>[(1, Alice, 31), (2, Bob, 25), (3, Carol, 28)]</code>.</li>
+<li><strong>preview("id = ?", (2,))</strong> runs <code>SELECT * FROM users WHERE id = 2</code>. Prints: <code>matches 1 row(s): [(2, 'Bob', 25)]</code>. One row confirmed.</li>
+<li><strong>DELETE WHERE id = 2:</strong> Bob's row is removed. Table: <code>[(1, Alice, 31), (3, Carol, 28)]</code>.</li>
+<li><strong>commit():</strong> changes are made permanent.</li>
+<li><strong>Final output:</strong> <code>[(1, 'Alice', 31), (3, 'Carol', 28)]</code>.</li>
+</ol>
+<p>Notice how each mutation was previewed first, so at no point were we guessing about scope.</p>
+<h2>17. Complexity Analysis</h2>
+<ul>
+<li><strong><code>INSERT</code> of one row:</strong> <strong>O(1)</strong> time on average—appending a single row. (Index maintenance adds a small O(log N) cost per index, but it's not proportional to table size.)</li>
+<li><strong><code>UPDATE</code> / <code>DELETE</code> with a <code>WHERE</code> on a primary key:</strong> <strong>O(log N)</strong> time, because the database uses the index to jump straight to the matching row instead of scanning.</li>
+<li><strong><code>UPDATE</code> / <code>DELETE</code> <em>without</em> a <code>WHERE</code>:</strong> <strong>O(N)</strong>—it touches every one of the N rows. This is exactly why the missing <code>WHERE</code> is catastrophic: it turns a targeted O(log N) operation into a full-table O(N) rewrite.</li>
+<li><strong>Space:</strong> all three are <strong>O(1)</strong> extra space for the operation itself. Inside a transaction, the database keeps enough undo information to support <code>ROLLBACK</code>, which is proportional to the number of changed rows—another reason to keep your <code>WHERE</code> tight.</li>
+</ul>
+<h2>18. Alternative Solutions</h2>
+<p><strong><code>UPSERT</code> (INSERT ... ON CONFLICT).</strong> When you want to insert a row <em>or</em> update it if it already exists, doing a <code>SELECT</code> then branching to <code>INSERT</code>/<code>UPDATE</code> is two round trips and a race condition. Most databases offer a single atomic statement:</p>
+<pre><code class="language-sql">INSERT INTO users (id, name, age)
+VALUES (1, 'Alice', 31)
+ON CONFLICT (id) DO UPDATE SET age = EXCLUDED.age;
+</code></pre>
+<p>This is cleaner and safer than manual check-then-write. Use it whenever "insert or update" is the real intent.</p>
+<p><strong><code>TRUNCATE</code> vs <code>DELETE</code>.</strong> If you genuinely want to empty an entire table, <code>TRUNCATE TABLE users</code> is far faster than <code>DELETE FROM users</code> because it doesn't process rows individually. But it's also less recoverable and often can't be rolled back—so it's a specialist tool, not a default.</p>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong>Empty table:</strong> <code>UPDATE</code>/<code>DELETE</code> with a <code>WHERE</code> that matches nothing simply affects zero rows—no error. Good to confirm via SELECT-first.</li>
+<li><strong><code>WHERE</code> matching duplicates:</strong> if <code>WHERE age = 30</code> matches three people, all three change. This is the silent trap—always preview the count.</li>
+<li><strong>Blanking one field:</strong> <code>DELETE</code> removes whole rows, never single columns. To clear one field, use <code>UPDATE users SET age = NULL WHERE id = 1</code>.</li>
+<li><strong>Missing <code>WHERE</code> entirely:</strong> affects all N rows. The core disaster of the lesson.</li>
+<li><strong><code>NULL</code> in the <code>WHERE</code>:</strong> <code>WHERE age = NULL</code> matches <em>nothing</em>—<code>NULL</code> isn't equal to anything. Use <code>WHERE age IS NULL</code>.</li>
+<li><strong>Inserting a duplicate primary key:</strong> fails with a constraint violation; the row is rejected, not silently overwritten.</li>
+</ul>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting the <code>WHERE</code> clause.</strong> The headline mistake. <code>UPDATE users SET age = 31;</code> rewrites everyone. Always write the <code>WHERE</code> first.</li>
+<li><strong>Trusting <code>=</code> with <code>NULL</code>.</strong> <code>WHERE col = NULL</code> never matches. Use <code>IS NULL</code> / <code>IS NOT NULL</code>.</li>
+<li><strong>Using <code>DELETE</code> to clear a single field.</strong> <code>DELETE</code> removes rows. To empty a column, <code>UPDATE ... SET col = NULL</code>.</li>
+<li><strong>Skipping column names in <code>INSERT</code>.</strong> <code>INSERT INTO users VALUES (3, 'Carol', 28)</code> breaks silently if the table's column order changes. List columns explicitly.</li>
+<li><strong>Not previewing with <code>SELECT</code> first.</strong> Assuming your <code>WHERE</code> matches one row when it actually matches many.</li>
+<li><strong>Running risky edits outside a transaction.</strong> Without <code>BEGIN</code>/<code>ROLLBACK</code>, there's no undo when you realize the mistake.</li>
+</ol>
+<h2>21. Interview Questions</h2>
+<ul>
+<li><strong>What happens if you run an <code>UPDATE</code> without a <code>WHERE</code> clause?</strong> Every row in the table is updated to the new value.</li>
+<li><strong>How would you safely delete rows in a production database?</strong> SELECT-first to verify scope, wrap in a transaction, and consider soft deletes for recoverability.</li>
+<li><strong>What's the difference between <code>DELETE</code>, <code>TRUNCATE</code>, and <code>DROP</code>?</strong> <code>DELETE</code> removes selected rows (row by row, rollback-able); <code>TRUNCATE</code> empties the whole table fast; <code>DROP</code> removes the table itself.</li>
+<li><strong>Why is a bad <code>UPDATE</code> more dangerous than a bad <code>DELETE</code>?</strong> A missing row is obvious; a wrong value looks like valid data and can hide for weeks.</li>
+<li><strong>How do you insert a row or update it if it already exists in one statement?</strong> Use <code>UPSERT</code> (<code>INSERT ... ON CONFLICT DO UPDATE</code>).</li>
+<li><strong>What is a soft delete and when would you use it?</strong> Flagging a row as deleted instead of removing it, used when you may need to recover or audit data.</li>
+</ul>
+<h2>22. Similar Problems</h2>
+<p>While these are SQL concepts rather than LeetCode algorithm puzzles, the SQL problem set on LeetCode exercises the same muscles:</p>
+<ul>
+<li><strong>LeetCode 627 – Swap Salary</strong> (<code>UPDATE</code> with a <code>CASE</code>): direct practice of scoped updates.</li>
+<li><strong>LeetCode 196 – Delete Duplicate Emails</strong> (<code>DELETE</code>): forces you to write a precise <code>WHERE</code> so you remove duplicates without touching originals—exactly the scope discipline from this lesson.</li>
+<li><strong>LeetCode 1667 – Fix Names in a Table</strong> (<code>UPDATE</code>/<code>SELECT</code>): transforming existing values in place.</li>
+</ul>
+<p>They're related because each one lives or dies on getting the <code>WHERE</code>/filter scope exactly right.</p>
+<h2>23. Key Takeaways</h2>
+<ul>
+<li><strong>DML is three verbs:</strong> <code>INSERT</code> (add), <code>UPDATE</code> (change), <code>DELETE</code> (remove).</li>
+<li><strong><code>INSERT</code> is the gentle one;</strong> <code>UPDATE</code> and <code>DELETE</code> share one deadly edge—the missing <code>WHERE</code>, which applies your change to every row.</li>
+<li><strong>Write the <code>WHERE</code> first.</strong> Treat it as the real command.</li>
+<li><strong>SELECT-first</strong> turns your <code>WHERE</code> into a five-second preview.</li>
+<li><strong>Transactions</strong> give you an undo button; <strong>soft deletes</strong> mean nothing is ever truly lost.</li>
+<li><strong>A bad <code>UPDATE</code> is scarier than a bad <code>DELETE</code>,</strong> because wrong values hide.</li>
+</ul>
+<h2>24. Watch the Video</h2>
+<p>Reading the workflow is one thing—<em>seeing</em> rows appear, change, and vanish in real time makes it click. Watch the full walkthrough here, where we build the <code>users</code> table live and run each command step by step, including a look at exactly what the screen shows the instant a <code>WHERE</code> clause goes missing: <strong>{LINK}</strong></p>
+<h2>25. About the Series</h2>
+<p>This lesson is part of <strong>Fun with Learning Technology</strong>, a series that turns intimidating engineering topics into small, confident steps. We keep tables tiny, examples concrete, and explanations honest about the real dangers you'll meet on the job—so you learn not just the syntax, but the <em>judgment</em> that separates a junior from a senior engineer. SQL, Python, algorithms, and the everyday craft of software engineering, one approachable lesson at a time.</p>
+<h2>26. Call To Action</h2>
+<p>If this made <code>INSERT</code>, <code>UPDATE</code>, and <code>DELETE</code> feel less scary, <strong>like the video on YouTube</strong>—it genuinely helps more developers find it. <strong>Subscribe</strong> so you don't miss the next SQL lesson, and <strong>subscribe to the Substack</strong> for the written deep-dives like this one. Got a "that edge case broke me" story of your own? <strong>Drop it in the comments</strong>, and <strong>share this with a teammate</strong> who's one missing <code>WHERE</code> away from a very bad afternoon.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When you need to add, change, or remove table rows, which SQL commands?</summary><p>DML trio: INSERT adds new rows, UPDATE modifies existing rows, DELETE removes rows. DML = Data Manipulation Language, which changes stored data, not structure.</p></details><details class='card2'><summary>Time cost of UPDATE/DELETE with a WHERE on an unindexed column?</summary><p>O(n) — the engine scans every row to test the condition. An index on the filtered column drops it toward O(log n) lookup.</p></details><details class='card2'><summary>Extra space required by a basic INSERT, UPDATE, or DELETE?</summary><p>O(1) auxiliary per row for the operation itself; storage grows/shrinks by the row&#x27;s size. Transaction logs/undo add temporary space until commit.</p></details><details class='card2'><summary>The scariest DML bug involving a missing clause?</summary><p>Omitting WHERE: UPDATE or DELETE then hits every row in the table. Always test the filter with SELECT first, and wrap in a transaction.</p></details><details class='card2'><summary>UPDATE vs DELETE-then-INSERT for changing a row?</summary><p>UPDATE edits in place, keeping the key and untouched columns. DELETE+INSERT loses old values, can break foreign keys, and reshuffles auto-IDs. Prefer UPDATE.</p></details><details class='card2'><summary>Follow-up: how do you undo a wrong UPDATE you just ran?</summary><p>If still in an open transaction, ROLLBACK. Once committed, restore from backup or a point-in-time recovery — that&#x27;s why you BEGIN before risky DML.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
