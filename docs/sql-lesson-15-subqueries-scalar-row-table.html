@@ -1,0 +1,268 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 15: Breaking the GPS Problem: Matching Coordinates Without Errors — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-15-subqueries-scalar-row-table
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson-15-">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/sql-lesson-15-subqueries-scalar-row-table.html">
+<meta property="og:title" content="Lesson 15: Breaking the GPS Problem: Matching Coordinates Without Errors — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-15-subqueries-scalar-row-table
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson-15-">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson 15: Breaking the GPS Problem: Matching Coordinates Without Errors</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction: Why This Problem Matters</h2>
+<p>In the world of software engineering and data analysis, we often encounter situations where standard relationships between data points aren't enough to answer a specific question. We know how to connect <code>employees</code> to <code>departments</code> using foreign keys. But what happens when the criteria for the connection depends on a calculation that hasn't been performed yet?</p>
+<p>This is where <strong>Subqueries</strong> come in, and specifically, why understanding them is crucial for any serious Python or SQL developer. Interviewers frequently use these concepts to test whether you can architect logic that handles <em>dependent variables</em>—values that change based on the context of the data being retrieved.</p>
+<p>We often hear about "hard-coding" values ruining reports. Imagine building a dashboard where the threshold for "Top Salesperson" is hardcoded as 10,000. If sales jump to 12,000 next month, your report is instantly lying to the business. You need dynamic logic. Subqueries provide that magic box of dynamism, allowing us to calculate a metric first (like an average price or total sum) and then use that result to filter or join the rest of the data.</p>
+<p>In this lesson, we are tackling the "GPS Problem": matching coordinates without errors. We will explore why simple joins fail when you need to match on calculated aggregates, and how subqueries—specifically Scalar, Row, and Table variants—solve these complex dependency issues while maintaining clean, modular logic.</p>
+<h2>Problem Overview</h2>
+<p>Let's strip away the jargon for a moment and look at the core challenge: <strong>Matching Context</strong>.</p>
+<p>Imagine you are a data engineer trying to report on sales. You have a table of orders with <code>zip_code</code> and <code>street_name</code>. You want to find all customers who live in a specific store location.
+*   If you only filter by <code>zip_code</code>, you get thousands of wrong matches because many zip codes contain streets that aren't yours.
+*   If you join by <code>city</code>, you might include suburbs far away from your target location.</p>
+<p>The "GPS Problem" is the need to match on a specific, often composite, set of data (like Zip + Street) or a dynamic threshold (like "Average Price of Category X").</p>
+<p><strong>The Challenge:</strong>
+How do we write a query that says: <em>"Find me all employees who earn more than the average salary of their department,"</em> without accidentally creating a Cartesian product (doubling your rows)? Or, how do we say: <em>"Select orders where the shipping address matches the exact latitude and longitude of Warehouse A"</em>?</p>
+<p>These problems require <strong>dependent logic</strong>. The filter condition for the outer query relies entirely on the result set of an inner calculation. This is the domain of Subqueries. We need to master three specific types to handle this gracefully:
+1.  <strong>Scalar Subqueries</strong>: Returning a single value (e.g., "Average Price").
+2.  <strong>Row Subqueries</strong>: Returning a specific tuple of values (e.g., Zip + Street).
+3.  <strong>Table Subqueries</strong>: Returning a full set of rows to be joined against (e.g., a list of all high-performing regions).</p>
+<h2>Example: The GPS and Salary Scenarios</h2>
+<p>To understand the mechanics, let's define two concrete examples we will use throughout this guide.</p>
+<h3>Example A: The Dynamic Threshold (Scalar)</h3>
+<p><strong>Scenario</strong>: We have an <code>orders</code> table and want to find customers who spent more than the average order value.</p>
+<ul>
+<li>
+<p><strong>Input Data</strong>:</p>
+<ul>
+<li>Average Order Value (calculated dynamically): <code>$120.50</code></li>
+<li>Customer A Spent: <code>$90.00</code></li>
+<li>Customer B Spent: <code>$150.00</code></li>
+</ul>
+</li>
+<li>
+<p><strong>Desired Output</strong>:</p>
+<ul>
+<li>Only Customer B should appear in the final report.</li>
+</ul>
+</li>
+</ul>
+<h3>Example B: The Exact Match (Row)</h3>
+<p><strong>Scenario</strong>: We have a <code>locations</code> table with <code>(latitude, longitude)</code> and an <code>orders</code> table with delivery coordinates. We want to match orders strictly to a warehouse location.</p>
+<ul>
+<li>
+<p><strong>Input Data</strong>:</p>
+<ul>
+<li>Warehouse Location: <code>(40.7128, -74.0060)</code> (New York)</li>
+<li>Order Delivery 1: <code>(40.7130, -74.0058)</code></li>
+<li>Order Delivery 2: <code>(40.7128, -74.0060)</code></li>
+</ul>
+</li>
+<li>
+<p><strong>Desired Output</strong>:</p>
+<ul>
+<li>Only Order Delivery 2 matches. A standard <code>JOIN</code> on just latitude would fail here; we need the exact row tuple.</li>
+</ul>
+</li>
+</ul>
+<h2>Intuition: How an Experienced Engineer Solves This</h2>
+<p>If you look at a naive SQL query, it often looks like this (and fails):</p>
+<pre><code class="language-sql">SELECT name FROM customers c
+WHERE salary &gt; SELECT AVG(salary) FROM employees e; -- Syntax error!
+</code></pre>
+<p>Why is this wrong? You can't put a subquery directly after an operator like <code>&gt;</code> in a <code>SELECT</code> or <code>FROM</code> clause without specific syntax rules. The brain of the database engine needs to know <em>how</em> to execute this.</p>
+<p><strong>The Intuition Step:</strong>
+An experienced engineer thinks in layers. They don't try to solve everything in one flat line. They ask: <strong>"What is the single most difficult piece of logic here?"</strong></p>
+<p>In our examples, the difficulty is that the outer query needs a value (the average salary) <em>before</em> it can make its decision.
+1.  <strong>Isolate the Dependency</strong>: The "Average Salary" or "Exact Coordinates" is the dependency.
+2.  <strong>Build the Magic Box First</strong>: Calculate this dependency independently. Encapsulate it in parentheses <code>()</code>.
+3.  <strong>Feed It Back</strong>: Use that result to filter the main table.</p>
+<p>This modular approach ensures that your logic is readable and, more importantly, performant. You are essentially building a temporary view or a CTE (Common Table Expression) inside your query structure. By breaking the problem into "Calculate X" then "Filter Y based on X", you avoid the nightmare of nested joins that explode in memory usage.</p>
+<h2>Brute Force Solution</h2>
+<p>Let's pretend we are junior developers trying to solve this without subqueries, just using standard <code>JOIN</code>s.</p>
+<p><strong>The Idea:</strong>
+We will try to join every single row in the inner table against the outer table repeatedly to find the matching average or coordinate.</p>
+<p><strong>Algorithm:</strong>
+1.  Select all rows from <code>employees</code>.
+2.  For every employee, select <em>all</em> salaries from the <code>departments</code> table.
+3.  Calculate the average on the fly for every single row.
+4.  Filter where <code>salary &gt; calculated_average</code>.</p>
+<pre><code class="language-python"># Pseudo-code representing the Brute Force approach in SQL logic
+SELECT e.name, d.dept_name
+FROM employees e
+JOIN departments d ON e.dept_id = d.id -- Join happens here
+CROSS JOIN (SELECT AVG(salary) as avg_sal FROM salaries s) AS temp_avg; 
+-- Then filter
+WHERE e.salary &gt; temp_avg.avg_sal
+</code></pre>
+<p><strong>Advantages:</strong>
+*   It technically works syntactically in some databases if written with a <code>CROSS JOIN</code> to a derived table.
+*   It uses only standard <code>JOIN</code> syntax which many developers are comfortable with.</p>
+<p><strong>Disadvantages:</strong>
+*   <strong>Performance Catastrophe</strong>: If you don't use the correct subquery type, your database engine might treat it as a correlated query. This means for every row in <code>employees</code>, the database has to re-calculate the average of <em>all</em> salaries. If you have 100,000 employees and calculate an average across 500k rows repeatedly, that's 50 billion operations.
+*   <strong>Readability</strong>: The logic becomes buried in nested parentheses or massive join lists.
+*   <strong>Memory Usage</strong>: It creates intermediate result sets for every iteration.</p>
+<p><strong>Complexity:</strong>
+*   <strong>Time Complexity</strong>: $O(N \times M)$ where $N$ is the outer table size and $M$ is the inner calculation size, leading to severe slowdowns as data grows.
+*   <strong>Space Complexity</strong>: High, due to repeated creation of intermediate sets.</p>
+<h2>Optimal Solution</h2>
+<p>Now, let's apply the "Magic Box" (Subquery) correctly. We will distinguish between the three types based on what we need to return: a single value, a row, or a table.</p>
+<h3>1. Scalar Subqueries (Single Value)</h3>
+<p>For the salary average problem, we use a scalar subquery in the <code>WHERE</code> clause. The database engine knows it only needs one number to compare against.</p>
+<pre><code class="language-sql">SELECT name, dept_name, salary
+FROM employees e
+WHERE salary &gt; (
+    SELECT AVG(salary) 
+    FROM employees
+    GROUP BY dept_id
+)
+</code></pre>
+<h3>2. Row Subqueries (Exact Match)</h3>
+<p>For the GPS/Coordinates problem, we use <code>IN</code> or a specific equality check with a subquery that returns a tuple.</p>
+<pre><code class="language-sql">SELECT order_id, lat, long
+FROM orders o
+WHERE (o.latitude, o.longitude) IN (
+    SELECT location_lat, location_long
+    FROM warehouses
+    WHERE warehouse_name = 'New York HQ'
+)
+</code></pre>
+<h3>3. Table Subqueries (Set Matching)</h3>
+<p>Sometimes we don't want to filter; we want to join against a list of "bad addresses" or "high risk zones" calculated dynamically.</p>
+<pre><code class="language-sql">SELECT *
+FROM customers c
+JOIN (
+    SELECT state, city, total_spent
+    FROM sales_summary
+    WHERE total_spent &gt; 50000 -- Dynamic threshold calculated first
+) AS high_spenders ON c.state = high_spenders.state AND c.city = high_spenders.city;
+</code></pre>
+<h2>Python Code: Clean and Production-Ready</h2>
+<p>In real-world Python data engineering (using libraries like <code>pandas</code> or direct SQL execution via SQLAlchemy), we often translate this logic into functions. Here is a production-quality function that encapsulates the "GPS Problem" logic, allowing you to dynamically match coordinates without hardcoding them.</p>
+<pre><code class="language-python">import sqlite3
+from typing import Tuple, List
+
+class DataEngineer:
+    def __init__(self, db_connection):
+        &quot;&quot;&quot;Initialize with a database connection object.&quot;&quot;&quot;
+        self.conn = db_connection
+
+    def solve_gps_coordinate_match(
+        self, 
+        table_orders: str, 
+        target_wid: int, 
+        warehouse_table: str = 'warehouses'
+    ) -&gt; List[Tuple]:
+        &quot;&quot;&quot;
+        Finds orders matching a specific warehouse's coordinates.
+
+        This implements the 'Row Subquery' pattern. It calculates 
+        the target (lat, long) tuple first, then matches it exactly.
+
+        Args:
+            table_orders: The name of the orders table.
+            target_wid: The Warehouse ID to match against.
+            warehouse_table: Name of the warehouses lookup table.
+
+        Returns:
+            A list of matching order tuples (id, lat, long).
+        &quot;&quot;&quot;
+
+        # Step 1: Solve the &quot;Magic Box&quot; - Get the exact coordinates first
+        cursor = self.conn.cursor()
+
+        # Scalar/Row subquery pattern: Find the specific row data
+        query = &quot;&quot;&quot;
+        SELECT latitude, longitude 
+        FROM %s 
+        WHERE id = ?
+        &quot;&quot;&quot; % warehouse_table
+
+        cursor.execute(query, (target_wid,))
+        target_coords = cursor.fetchone() # Returns a tuple or None
+
+        if not target_coords:
+            return []
+
+        target_lat, target_long = target_coords
+
+        # Step 2: Apply the dependency to the outer table
+        # We use IN for the tuple matching pattern shown in SQL intuition
+        query_orders = f&quot;&quot;&quot;
+        SELECT order_id, latitude, longitude 
+        FROM {table_orders} 
+        WHERE (latitude, longitude) IN (
+            ({target_lat}, {target_long})
+        );
+        &quot;&quot;&quot;
+
+        cursor.execute(query_orders)
+
+        # Return results
+        results = cursor.fetchall()
+        return results
+
+# Usage Example
+# db_conn = sqlite3.connect('sales.db')
+# engineer = DataEngineer(db_conn)
+# matches = engineer.solve_gps_coordinate_match('orders', 101, 'warehouses')
+</code></pre>
+<h2>Code Walkthrough</h2>
+<p>Let's break down the Python logic to see why this is better than a raw SQL dump.</p>
+<ol>
+<li><strong>Parameterization</strong>: Notice the <code>?</code> placeholders in the first query. This is critical for security and prevents SQL injection attacks, especially when dealing with dynamic coordinates which could theoretically be malicious inputs in an API context.</li>
+<li><strong>Decoupling Logic</strong>: The function separates "Finding the Target" from "Filtering the Data".<ul>
+<li>Line <code>target_coords = cursor.fetchone()</code> isolates the subquery logic. If the warehouse doesn't exist, we handle it gracefully with <code>if not target_coords</code>.</li>
+</ul>
+</li>
+<li><strong>Modular Logic</strong>: The <code>solve_gps_coordinate_match</code> function is reusable. You don't need to hardcode "New York" coordinates every time; you pass in the ID, and the code fetches the fresh data. This aligns perfectly with the subquery principle of avoiding hardcoded numbers.</li>
+</ol>
+<h2>Dry Run: Walking Through an Example</h2>
+<p>Let's manually trace the execution for a specific scenario to ensure the logic holds up under pressure.</p>
+<p><strong>Scenario</strong>:
+*   <strong>Warehouse Table (<code>warehouses</code>)</strong>:
+    *   ID <code>101</code>, Lat <code>40.7</code>, Long <code>-74.0</code>
+*   <strong>Orders Table (<code>orders</code>)</strong>:
+    *   Order <code>A</code>: Lat <code>40.69</code>, Long <code>-73.99</code> (Close, but wrong)
+    *   Order <code>B</code>: Lat <code>40.71</code>, Long <code>-74.01</code> (Wrong sign)
+    *   Order <code>C</code>: Lat <code>40.7</code>, Long <code>-74.0</code> (<strong>Exact Match</strong>)</p>
+<p><strong>Execution Flow</strong>:
+1.  <strong>Subquery Execution</strong>: The database runs the inner query: <code>SELECT latitude, longitude FROM warehouses WHERE id = 101</code>.
+    *   <em>Result Set</em>: <code>(40.7, -74.0)</code>
+    *   This acts as the "Magic Box" value.
+2.  <strong>Outer Query Preparation</strong>: The outer query receives this tuple <code>(40.7, -74.0)</code>.
+3.  <strong>Comparison Logic</strong>: The engine evaluates the condition <code>(latitude, longitude) IN (40.7, -74.0)</code> for every row in <code>orders</code>.
+    *   Row A: <code>(40.69, -73.99) != (40.7, -74.0)</code> -&gt; <strong>Reject</strong>.
+    *   Row B: <code>(40.71, -74.01) != (40.7, -74.0)</code> -&gt; <strong>Reject</strong>.
+    *   Row C: <code>(40.7, -74.0) == (40.7, -74.0)</code> -&gt; <strong>Accept</strong>.
+4.  <strong>Final Result</strong>: Only Order <code>C</code> is returned.</p>
+<p>This confirms that the subquery successfully solved the "GPS Problem" by providing a precise reference point for filtering.</p>
+<h2>Complexity Analysis</h2>
+<p>Understanding the cost of these queries is vital for Senior Engineers.</p>
+<h3>Time Complexity: $O(N)$</h3>
+<ul>
+<li><strong>Scalar Subqueries</strong>: If used with <code>GROUP BY</code> or aggregations without indexes, the database might calculate the average for every row if not optimized correctly (correlated subquery). However, modern optimizers often materialize scalar subqueries once per query execution plan.</li>
+<li><strong>Table Subqueries</strong>: The complexity is $O(N \times M)$ only if no index exists on the join keys. With an index, it drops to $O(\log N + \log M)$.</li>
+<li><strong>Why correct?</strong> By using a subquery to fetch the <em>set</em> of values first (materialization), we ensure the outer loop iterates over the main table once, checking membership against a pre-computed set.</li>
+</ul>
+<h3>Space Complexity: $O(K)$</h3>
+<ul>
+<li>Where $K$ is the number of rows returned by the subquery.<ul>
+<li><strong>Scalar</strong>: $K=1$. Minimal overhead.</li>
+<li><strong>Table Subquery</strong>: $K$ can be large (all high-performing regions). This requires memory to hold the temporary result set before joining. This is the trade-off: we use more RAM now to avoid expensive CPU cycles later.</li>
+</ul>
+</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p>You might ask, "Can't I just use a <code>JOIN</code>?"
+Yes, often you can. But there is a subtle difference in <strong>Logical Order</strong>.</p>
+<ul>
+<li><strong>Join Approach</strong>: Joins combine tables based on a relationship (e.g., <code>dept_id</code>). It assumes the data exists in both tables <em>before</em> filtering.</li>
+<li><strong>Subquery Approach</strong>: Calculates a value <em>independent</em> of the main table structure.</li>
+</ul>
+<p><strong>When to switch back to Joins</strong>:
+If you need to return columns from both the employee and department tables simultaneously, a <code>JOIN</code> is often more readable. However, if your filter condition is "Salary &gt; Average Salary of Dept", a simple Join doesn't inherently know what "Average" means unless you construct it manually (which leads back to subqueries or Window Functions).</p>
+<p><strong>Window Functions as an Alternative</strong>:
+In modern SQL</p></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>What is the trigger for using scalar subqueries instead of joins?</summary><p>Use when a calculation or filter depends on another table&#x27;s state that cannot be easily joined in a single pass.</p></details><details class='card2'><summary>What is the time complexity risk of correlated scalar subqueries?</summary><p>They can degrade to O(n*m) performance because they execute once for every row in the outer query&#x27;s iteration.</p></details><details class='card2'><summary>What is a common bug when using subqueries with aggregates?</summary><p>Forgetting to use DISTINCT or GROUP BY, which causes incorrect duplication of rows if not handled properly.</p></details><details class='card2'><summary>How does a scalar subquery differ from a table-valued subquery?</summary><p>A scalar returns exactly one value for a single row; a table-valued returns a result set for multiple rows.</p></details><details class='card2'><summary>What is the best interview follow-up regarding subquery performance?</summary><p>Ask how to rewrite a correlated subquery as a JOIN or CTE to ensure linear scalability and lower latency.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
