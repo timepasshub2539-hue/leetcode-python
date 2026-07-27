@@ -1,0 +1,589 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maximum Product of Two Elements in an Array — 🟢 Beginner (1/3) — LeetCode Python Solution (why [2,2] returns 1) — Python LeetCode Solution</title><meta name="description" content="📍 Jump to your level:
+🟢 Beginner: 0:20–6:07
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/maximum-product-of-two-elements-in-an-array-beginner
+💻 Code on GitHub: https://github.com/time">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/maximum-product-of-two-elements-in-an-array-beginner.html">
+<meta property="og:title" content="Maximum Product of Two Elements in an Array — 🟢 Beginner (1/3) — LeetCode Python Solution (why [2,2] returns 1) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📍 Jump to your level:
+🟢 Beginner: 0:20–6:07
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/maximum-product-of-two-elements-in-an-array-beginner
+💻 Code on GitHub: https://github.com/time">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Maximum Product of Two Elements in an Array — 🟢 Beginner (1/3) — LeetCode Python Solution (why [2,2] returns 1)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h1>SEO PACKAGE</h1>
+<h2>1. SEO Title</h2>
+<p>Maximum Product of Two Elements in an Array — LeetCode 1464 Python Solution Explained (Sort vs Single Pass)</p>
+<h2>2. SEO Subtitle</h2>
+<p>Learn the "Top-Two Grab" pattern that turns a scary-looking array problem into a clean two-line Python solution — and why <code>[2,2]</code> correctly returns <code>1</code>.</p>
+<h2>3. Featured Quote</h2>
+<blockquote>
+<p>"The whole trick is realizing small numbers can never help you — you only ever need the two largest."</p>
+</blockquote>
+<h2>4. Meta Description</h2>
+<p>Solve LeetCode 1464 Maximum Product of Two Elements in Python. Sort vs single-pass, complexity, edge cases, and why [2,2] returns 1 — beginner friendly.</p>
+<h2>5. URL Slug</h2>
+<p><code>maximum-product-of-two-elements-in-an-array-leetcode-python</code></p>
+<h2>6. Keywords</h2>
+<ul>
+<li>maximum product of two elements in an array</li>
+<li>LeetCode 1464</li>
+<li>LeetCode Python solution</li>
+<li>coding interview array problems</li>
+<li>Python array problem beginner</li>
+<li>find two largest numbers Python</li>
+<li>top two elements algorithm</li>
+<li>sorting vs single pass</li>
+<li>O(n log n) vs O(n)</li>
+<li>time complexity beginners</li>
+<li>Python interview questions</li>
+<li>data structures and algorithms</li>
+<li>easy LeetCode problems</li>
+<li>array manipulation Python</li>
+<li>coding interview preparation</li>
+<li>software engineering fundamentals</li>
+<li>Python one-liner solution</li>
+<li>max product array</li>
+<li>beginner coding tutorial</li>
+<li>LeetCode easy Python</li>
+</ul>
+<h2>7. Tags</h2>
+<p><code>Python</code> · <code>LeetCode</code> · <code>Coding Interview</code> · <code>Algorithms</code> · <code>Data Structures</code> · <code>Arrays</code> · <code>Sorting</code> · <code>Time Complexity</code> · <code>Beginner Coding</code> · <code>Software Engineering</code> · <code>Problem Solving</code> · <code>Interview Preparation</code> · <code>LeetCode Easy</code></p>
+<hr />
+<h1>Maximum Product of Two Elements in an Array — The Beginner-Friendly Deep Dive</h1>
+<h2>8. Introduction</h2>
+<p>Some problems <em>look</em> intimidating because of how they're written, not because of how hard they actually are. <strong>Maximum Product of Two Elements in an Array</strong> (LeetCode 1464) is a perfect example. The phrasing — "return the maximum value of <code>(nums[i] - 1) * (nums[j] - 1)</code>" — has just enough notation to make a newcomer freeze. But once you strip the wrapping paper off, this is one of the gentlest problems in the entire array category.</p>
+<p>So why should you care about a problem this easy?</p>
+<p>Because interviewers at companies like <strong>Amazon</strong> and <strong>Google</strong> love using warm-up questions exactly like this. They're not testing whether you can find two numbers. They're testing whether you can <em>recognize a pattern</em>, choose between a simple solution and an optimal one, reason about <strong>time and space complexity</strong>, and handle the sneaky edge cases without panicking. Those are the real skills that carry over to every harder problem you'll ever face.</p>
+<p>There's also a bigger idea hiding here: <strong>"find the top few of something."</strong> Leaderboards, best-two prices, highest-rated products, top scorers — this instinct shows up constantly in real <strong>software engineering</strong>. Learn it cleanly once, and you'll spot it everywhere.</p>
+<p>This article is the first step in a beginner-friendly series. By the end, you'll understand not just <em>how</em> to solve it, but <em>why</em> every line works.</p>
+<h2>9. Problem Overview</h2>
+<p>Here's the problem in plain English.</p>
+<p>You're given an array (a list) of integers called <code>nums</code>. Your job is to pick <strong>two different positions</strong> in that list. Take the value at each position, subtract <code>1</code> from each, and multiply the two results together. Out of every possible pair you could choose, return the <strong>largest</strong> product.</p>
+<p>Formally, you want to maximize:</p>
+<pre><code>(nums[i] - 1) * (nums[j] - 1)
+</code></pre>
+<p>where <code>i</code> and <code>j</code> are two <strong>different indices</strong> (positions), not necessarily two different <em>values</em>.</p>
+<p>That last sentence is the one detail people miss, so keep it in your back pocket: the two spots must be different, but the numbers sitting in them are allowed to be identical.</p>
+<p>The constraints are friendly:
+- The array always has at least <strong>2</strong> elements.
+- Every number is a positive integer (typically <code>1 ≤ nums[i] ≤ 1000</code>).</p>
+<h2>10. Example</h2>
+<p>Let's make it concrete.</p>
+<p><strong>Example 1</strong></p>
+<pre><code>Input:  nums = [3, 4, 5, 2]
+Output: 12
+</code></pre>
+<p>Why? The two biggest numbers are <code>5</code> and <code>4</code>. Subtract one from each to get <code>4</code> and <code>3</code>. Multiply: <code>4 * 3 = 12</code>. No other pair beats that, because feeding in smaller numbers only shrinks the result.</p>
+<p><strong>Example 2</strong></p>
+<pre><code>Input:  nums = [1, 5, 4, 5]
+Output: 16
+</code></pre>
+<p>Here the two largest are <code>5</code> and <code>5</code>. Subtract one from each: <code>4</code> and <code>4</code>. Multiply: <code>4 * 4 = 16</code>.</p>
+<p><strong>Example 3 (the sneaky one)</strong></p>
+<pre><code>Input:  nums = [2, 2]
+Output: 1
+</code></pre>
+<p>Both numbers are <code>2</code>. Subtract one from each: <code>1</code> and <code>1</code>. Multiply: <code>1 * 1 = 1</code>. Even though the values are identical, they sit in <strong>different positions</strong>, so the pair is valid. This is the <code>[2,2]</code> case people trip over — the answer is <code>1</code>, not <code>4</code>.</p>
+<h2>11. Intuition</h2>
+<p>Let's build the insight the way an experienced engineer actually would — slowly, without jumping to code.</p>
+<p>Start by asking: <em>what does the formula reward?</em> We take each chosen number, knock it down by one, then multiply. Multiplication of two positive numbers grows when either number grows. Subtracting one first doesn't change that direction — a bigger input still produces a bigger <code>(x - 1)</code>.</p>
+<p>That single observation is the whole game:</p>
+<blockquote>
+<p><strong>Bigger inputs always produce a bigger result.</strong></p>
+</blockquote>
+<p>If that's true, then the smallest numbers in the array can <em>never</em> be part of the best answer. They're dead weight. The only two values that could possibly matter are the <strong>two largest</strong>.</p>
+<p>I like to give this a friendly name so it sticks: the <strong>Top-Two Grab</strong>. Whenever a problem's answer depends only on the largest couple of elements, this instinct kicks in.</p>
+<p>Now, how do we actually <em>get</em> the two largest? The most intuitive trick is <strong>sorting</strong>. Sorting rearranges the numbers from smallest to biggest, like kids lining up shortest to tallest for a class photo. Once they're lined up, the two tallest are simply <strong>the last two in line</strong>. Grab them, do the math, done.</p>
+<p>That's the entire solution in one mental image. Everything below is just turning that picture into code.</p>
+<h2>12. Brute Force Solution</h2>
+<p>Before the clever version, let's honor the honest first idea — because it's correct, and correctness comes first.</p>
+<p><strong>Idea</strong>
+Try <em>every</em> possible pair of positions. Compute <code>(nums[i] - 1) * (nums[j] - 1)</code> for each pair. Remember the biggest result you've seen.</p>
+<p><strong>Algorithm</strong>
+1. Set <code>best = 0</code>.
+2. Loop <code>i</code> over every index.
+3. Loop <code>j</code> over every index <em>after</em> <code>i</code> (so we never reuse the same position and never double-count a pair).
+4. Compute the product for that pair and update <code>best</code> if it's larger.
+5. Return <code>best</code>.</p>
+<pre><code class="language-python">def max_product_brute(nums):
+    best = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            product = (nums[i] - 1) * (nums[j] - 1)
+            best = max(best, product)
+    return best
+</code></pre>
+<p><strong>Advantages</strong>
+- Dead simple to reason about — it literally checks everything.
+- Impossible to get wrong logically; it's easy to <em>believe</em> it's correct.
+- A great safety net when you're unsure of a cleverer approach.</p>
+<p><strong>Disadvantages</strong>
+- It wastes enormous effort checking pairs we already know are useless (like the two smallest numbers).
+- It scales poorly as the array grows.</p>
+<p><strong>Complexity</strong>
+- <strong>Time:</strong> <code>O(n²)</code> — every element paired with every other.
+- <strong>Space:</strong> <code>O(1)</code> — just one running variable.</p>
+<h2>13. Optimal Solution</h2>
+<p>Here's the payoff for understanding the Top-Two Grab.</p>
+<p>We don't need every pair. We need the two largest numbers. So:</p>
+<ol>
+<li><strong>Sort</strong> the array (smallest to largest).</li>
+<li>Grab the <strong>last</strong> element and the <strong>second-to-last</strong> element.</li>
+<li>Subtract one from each.</li>
+<li>Multiply.</li>
+</ol>
+<p>That's the whole thing — two lines of real work.</p>
+<p>Let's visualize sorting <code>[3, 4, 5, 2]</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Array state</th>
+<th>Largest two</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Original</td>
+<td><code>[3, 4, 5, 2]</code></td>
+<td>not obvious yet</td>
+</tr>
+<tr>
+<td>After sort</td>
+<td><code>[2, 3, 4, 5]</code></td>
+<td><code>4</code> and <code>5</code> (last two)</td>
+</tr>
+<tr>
+<td>Subtract one</td>
+<td>—</td>
+<td><code>3</code> and <code>4</code></td>
+</tr>
+<tr>
+<td>Multiply</td>
+<td>—</td>
+<td><strong>12</strong></td>
+</tr>
+</tbody>
+</table>
+<p>In Python, negative indices count backward from the end:</p>
+<table>
+<thead>
+<tr>
+<th>Index</th>
+<th>Meaning</th>
+<th>Value in <code>[2, 3, 4, 5]</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nums[-1]</code></td>
+<td>last item</td>
+<td><code>5</code></td>
+</tr>
+<tr>
+<td><code>nums[-2]</code></td>
+<td>second-to-last item</td>
+<td><code>4</code></td>
+</tr>
+</tbody>
+</table>
+<p>So after sorting, <code>nums[-1]</code> and <code>nums[-2]</code> are <em>guaranteed</em> to be the two biggest numbers — exactly what the Top-Two Grab wants. No magic, just counting from the back.</p>
+<h2>14. Python Code</h2>
+<pre><code class="language-python">from typing import List
+
+
+class Solution:
+    def maxProduct(self, nums: List[int]) -&gt; int:
+        # Sort ascending, so the two largest values land at the end.
+        nums.sort()
+        # Take the last two, subtract one from each, multiply.
+        return (nums[-1] - 1) * (nums[-2] - 1)
+</code></pre>
+<p>And the no-sorting, single-pass version for when you want raw speed:</p>
+<pre><code class="language-python">from typing import List
+
+
+class Solution:
+    def maxProduct(self, nums: List[int]) -&gt; int:
+        first = second = 0  # largest and second-largest seen so far
+
+        for num in nums:
+            if num &gt; first:
+                second = first   # old max becomes second
+                first = num      # new max
+            elif num &gt; second:
+                second = num     # only beats the runner-up
+
+        return (first - 1) * (second - 1)
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<p>Let's break down the <strong>sort-based</strong> solution line by line, since it's the one you'll reach for in most interviews.</p>
+<ul>
+<li><code>nums.sort()</code> rearranges the list <em>in place</em> from smallest to largest. After this line, the biggest numbers are parked at the end.</li>
+<li><code>nums[-1]</code> is the largest value; <code>nums[-2]</code> is the second largest. Subtracting <code>1</code> from each applies the problem's formula.</li>
+<li>The multiplication returns the final answer directly — no extra variables, no loops.</li>
+</ul>
+<p>Now the <strong>single-pass</strong> version, which needs a little more care:</p>
+<ul>
+<li><code>first</code> and <code>second</code> track the largest and second-largest values seen so far, both starting at <code>0</code> (safe, since all inputs are positive).</li>
+<li>For each <code>num</code>, if it beats the current <code>first</code>, then the <em>old</em> <code>first</code> gets demoted to <code>second</code>, and <code>num</code> becomes the new <code>first</code>. The order of these two assignments matters — demote before you overwrite.</li>
+<li>The <code>elif</code> handles the case where <code>num</code> isn't the new maximum but is still bigger than the current runner-up.</li>
+<li>After one pass, we apply the same <code>(x - 1)</code> formula.</li>
+</ul>
+<p>This is why, for an easy problem, many engineers just sort: the single-pass swap logic is genuinely easy to get subtly wrong.</p>
+<h2>16. Dry Run</h2>
+<p>Let's trace the <strong>single-pass</strong> version on <code>nums = [3, 4, 5, 2]</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th><code>num</code></th>
+<th>Condition met</th>
+<th><code>first</code></th>
+<th><code>second</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Start</td>
+<td>—</td>
+<td>—</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>1</td>
+<td>3</td>
+<td><code>3 &gt; 0</code> → new max</td>
+<td>3</td>
+<td>0</td>
+</tr>
+<tr>
+<td>2</td>
+<td>4</td>
+<td><code>4 &gt; 3</code> → new max</td>
+<td>4</td>
+<td>3</td>
+</tr>
+<tr>
+<td>3</td>
+<td>5</td>
+<td><code>5 &gt; 4</code> → new max</td>
+<td>5</td>
+<td>4</td>
+</tr>
+<tr>
+<td>4</td>
+<td>2</td>
+<td><code>2 &gt; 5</code>? no. <code>2 &gt; 4</code>? no</td>
+<td>5</td>
+<td>4</td>
+</tr>
+</tbody>
+</table>
+<p>After the loop: <code>first = 5</code>, <code>second = 4</code>.</p>
+<p>Final answer: <code>(5 - 1) * (4 - 1) = 4 * 3 = 12</code>. ✅</p>
+<p>Now the famous <code>[2, 2]</code> case with the <strong>sort</strong> version:
+- After <code>sort()</code>: <code>[2, 2]</code>.
+- <code>nums[-1] = 2</code>, <code>nums[-2] = 2</code>.
+- <code>(2 - 1) * (2 - 1) = 1 * 1 = 1</code>. ✅</p>
+<p>The duplicate values are fine because they occupy two different positions.</p>
+<h2>17. Complexity Analysis</h2>
+<p><strong>Sort-based solution</strong>
+- <strong>Time:</strong> <code>O(n log n)</code> — dominated entirely by the sort. The index lookups afterward are <code>O(1)</code>.
+- <strong>Space:</strong> <code>O(1)</code> extra if you sort in place (Python's <code>sort()</code> mutates the list). If you must preserve the original order, <code>sorted()</code> costs <code>O(n)</code> extra space.</p>
+<p><strong>Single-pass solution</strong>
+- <strong>Time:</strong> <code>O(n)</code> — one walk through the list, touching each element once.
+- <strong>Space:</strong> <code>O(1)</code> — just two tracking variables.</p>
+<p>The single pass is theoretically faster because it avoids the <code>log n</code> factor and never rearranges the array. In practice, on the small inputs LeetCode gives you (a few hundred numbers), both finish instantly — so readability wins.</p>
+<h2>18. Alternative Solutions</h2>
+<p>A clean middle-ground uses Python's built-in <code>heapq.nlargest</code>, which grabs the top <em>k</em> elements without a full sort:</p>
+<pre><code class="language-python">import heapq
+from typing import List
+
+
+class Solution:
+    def maxProduct(self, nums: List[int]) -&gt; int:
+        a, b = heapq.nlargest(2, nums)
+        return (a - 1) * (b - 1)
+</code></pre>
+<p><strong>Comparison:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Time</th>
+<th>Space</th>
+<th>Readability</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Brute force</td>
+<td><code>O(n²)</code></td>
+<td><code>O(1)</code></td>
+<td>Simple but slow</td>
+</tr>
+<tr>
+<td>Sort</td>
+<td><code>O(n log n)</code></td>
+<td><code>O(1)</code></td>
+<td>Cleanest</td>
+</tr>
+<tr>
+<td>Single pass</td>
+<td><code>O(n)</code></td>
+<td><code>O(1)</code></td>
+<td>Fast, easy to misorder</td>
+</tr>
+<tr>
+<td><code>heapq.nlargest</code></td>
+<td><code>O(n log k)</code></td>
+<td><code>O(k)</code></td>
+<td>Very expressive</td>
+</tr>
+</tbody>
+</table>
+<p>For <code>k = 2</code>, <code>nlargest</code> behaves essentially like the single pass but hides the tricky swap logic behind a well-tested library call — a nice compromise.</p>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong>Smallest possible array (<code>[a, b]</code>):</strong> Only one pair exists, and every approach uses it directly. Nothing breaks.</li>
+<li><strong>All ones (<code>[1, 1, 1]</code>):</strong> <code>1 - 1 = 0</code>, so the product is <code>0</code>. Handled automatically — no special case needed.</li>
+<li><strong>Duplicates (<code>[5, 5]</code> or <code>[2, 2]</code>):</strong> Two different <em>positions</em> holding the same <em>value</em> is legal. Returns <code>16</code> and <code>1</code> respectively.</li>
+<li><strong>Maximum values (<code>[1000, 1000]</code>):</strong> <code>999 * 999 = 998001</code>. No overflow concerns in Python (integers are unbounded).</li>
+<li><strong>Mixed with a single large value (<code>[1, 1, 1, 100]</code>):</strong> The runner-up is <code>1</code>, so the answer is <code>99 * 0 = 0</code>. A good reminder that <em>both</em> chosen numbers affect the result.</li>
+</ul>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Assuming the two values must be different.</strong> The problem asks for two different <em>indices</em>, not two different <em>values</em>. <code>[2, 2]</code> is valid and returns <code>1</code>.</li>
+<li><strong>Forgetting to subtract one.</strong> Returning <code>nums[-1] * nums[-2]</code> gives <code>20</code> on <code>[3, 4, 5, 2]</code> instead of the correct <code>12</code>.</li>
+<li><strong>Getting the single-pass swap order wrong.</strong> Overwriting <code>first</code> <em>before</em> copying its old value into <code>second</code> silently loses the runner-up.</li>
+<li><strong>Reusing the same index in brute force.</strong> Starting the inner loop at <code>j = i</code> (instead of <code>j = i + 1</code>) lets a position pair with itself, which isn't allowed.</li>
+<li><strong>Assuming negative numbers are possible.</strong> This problem's constraints guarantee positive integers, so initializing trackers to <code>0</code> is safe — but don't blindly copy that pattern to problems that <em>do</em> allow negatives.</li>
+</ol>
+<h2>21. Interview Questions</h2>
+<p>Expect follow-ups like:</p>
+<ul>
+<li><em>"What if the array could contain negative numbers?"</em> Then two large negatives might produce a large positive product — the Top-Two Grab alone breaks, and you'd also track the two <em>smallest</em> values.</li>
+<li><em>"Can you do it in a single pass with O(1) space?"</em> Yes — walk once, tracking the top two.</li>
+<li><em>"What changes if you need the top three elements?"</em> Extend the tracking logic, or reach for <code>heapq.nlargest(3, nums)</code>.</li>
+<li><em>"Why is sorting O(n log n) and can you beat it?"</em> Yes, a linear scan finds the top two in <code>O(n)</code>.</li>
+<li><em>"What if the array is streamed and doesn't fit in memory?"</em> The single-pass approach shines — it never needs the whole array at once.</li>
+</ul>
+<h2>22. Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 1竞 — Kids With the Greatest Number of Candies</strong> — another "compare against the max" warm-up.</li>
+<li><strong>LeetCode 414 — Third Maximum Number</strong> — same "track the top few" instinct, extended to three.</li>
+<li><strong>LeetCode 628 — Maximum Product of Three Numbers</strong> — the natural next step, where negatives make it genuinely trickier.</li>
+<li><strong>LeetCode 215 — Kth Largest Element in an Array</strong> — generalizes "find the top few" using heaps or quickselect.</li>
+<li><strong>LeetCode 1913 — Maximum Product Difference Between Two Pairs</strong> — needs both the two largest <em>and</em> the two smallest.</li>
+</ul>
+<p>Each one reuses the muscle you just built: identify which few elements actually matter, and ignore the rest.</p>
+<h2>23. Key Takeaways</h2>
+<ul>
+<li>The formula rewards larger numbers, so <strong>only the two largest values ever matter</strong> — the Top-Two Grab.</li>
+<li><strong>Sorting</strong> is the cleanest way to surface them; <code>nums[-1]</code> and <code>nums[-2]</code> are the two biggest.</li>
+<li>A <strong>single pass</strong> trades a little readability for <code>O(n)</code> speed.</li>
+<li>The <code>[2, 2]</code> case returns <code>1</code> because two identical values in different positions are perfectly valid.</li>
+<li>Choosing the <em>clearest</em> correct solution — not just the fastest — is itself an interview skill.</li>
+</ul>
+<h2>24. Watch the Video</h2>
+<p>Want to see the Top-Two Grab traced out loud, complete with the pause-and-guess <code>[2,2]</code> moment? <strong>Watch the full walkthrough here:</strong> {LINK}</p>
+<p>Following along visually makes the "why it always works" click far faster than reading alone — so hit play and code it with me.</p>
+<h2>25. About the Series</h2>
+<p>This is part of <strong>Fun with Learning Technology</strong> — a series that turns intimidating-looking coding problems into simple, intuition-first lessons. We start every problem the way a real engineer thinks: build the mental picture first, <em>then</em> write the code. No memorizing, no hand-waving. Just clear reasoning you can reuse on the next problem, and the one after that. Tomorrow we take this same "find the top few" instinct to a slightly bigger challenge.</p>
+<h2>26. Call To Action</h2>
+<p>If this made the problem click for you:</p>
+<ul>
+<li>👍 <strong>Like</strong> the video on YouTube — it genuinely helps the channel grow.</li>
+<li>🔔 <strong>Subscribe</strong> so you never miss the next lesson in the series.</li>
+<li>📩 <strong>Subscribe on Substack</strong> for the written deep-dives like this one.</li>
+<li>💬 <strong>Comment</strong> with how <em>you</em> solved <code>[2, 2]</code> — did the answer surprise you?</li>
+<li>🔗 <strong>Share</strong> this with a friend who's just starting arrays.</li>
+</ul>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>Some coding problems look hard only because of how they're written.</p>
+<p>Take LeetCode 1464 — "Maximum Product of Two Elements in an Array." The formula <code>(nums[i] - 1) * (nums[j] - 1)</code> makes beginners freeze. But the actual idea is tiny.</p>
+<p>Here's the insight that unlocks it: subtracting one and then multiplying <em>rewards</em> bigger numbers. So the smallest values in the array can never help you. You only ever need the two largest. I call this the Top-Two Grab.</p>
+<p>Once you see that, the solution is two lines:
+1. Sort the array.
+2. Multiply <code>(last - 1) * (second_to_last - 1)</code>.</p>
+<p>Time complexity is O(n log n), space is O(1). If you want to skip sorting, a single pass tracks the top two in O(n) — faster, but the swap logic is easy to get subtly wrong. For an easy problem, I'd sort and keep it readable.</p>
+<p>One detail trips people up: the problem asks for two different <em>positions</em>, not two different <em>values</em>. That's why <code>[2, 2]</code> returns 1, not 4 — subtract one from each, multiply, done.</p>
+<p>Why does a problem this small matter? Because interviewers use it to test whether you can recognize a pattern, reason about complexity, and handle edge cases calmly. And the "find the top few" instinct shows up everywhere in real systems — leaderboards, best-price selection, top-rated results.</p>
+<p>Master the small problems cleanly, and the big ones stop feeling big.</p>
+<p>What's your favorite deceptively-simple LeetCode problem?</p>
+<h1>Python #LeetCode #CodingInterview #Algorithms #SoftwareEngineering</h1>
+<h2>Twitter/X Thread</h2>
+<p><strong>1/</strong>
+LeetCode 1464 looks scary: "return the max of <code>(nums[i]-1)*(nums[j]-1)</code>."</p>
+<p>It's actually one of the easiest array problems out there. Let me show you why. 🧵</p>
+<p><strong>2/</strong>
+The whole problem: pick two different spots in an array, subtract 1 from each value, multiply them, and make that result as big as possible.</p>
+<p>That's it. No clever math required.</p>
+<p><strong>3/</strong>
+Key insight: subtracting one and then multiplying <em>rewards</em> bigger inputs.</p>
+<p>So the small numbers can NEVER help you. You only ever need the two largest values.</p>
+<p>I call this the "Top-Two Grab."</p>
+<p><strong>4/</strong>
+How do you find the two largest? The most intuitive way is sorting.</p>
+<p>Sort smallest → largest, and the two biggest numbers are simply the last two in line. Like kids lining up for a class photo.</p>
+<p><strong>5/</strong>
+In Python, negative indices count from the end:
+- <code>nums[-1]</code> = last (biggest)
+- <code>nums[-2]</code> = second-to-last</p>
+<p>So after sorting, those two ARE your answer.</p>
+<p><strong>6/</strong>
+The full solution:</p>
+<pre><code class="language-python">nums.sort()
+return (nums[-1] - 1) * (nums[-2] - 1)
+</code></pre>
+<p>Two lines. O(n log n) time, O(1) space.</p>
+<p><strong>7/</strong>
+Quick quiz: what does <code>[2, 2]</code> return?</p>
+<p>Subtract one from each → 1 and 1.
+Multiply → <strong>1</strong>.</p>
+<p>Not 4! Two identical values in different positions are totally allowed.</p>
+<p><strong>8/</strong>
+Want to skip sorting? Walk the list once, tracking the biggest and second-biggest as you go. That's O(n) — faster.</p>
+<p>The catch: the swap logic is easy to mess up. For an easy problem, I just sort.</p>
+<p><strong>9/</strong>
+Edge cases the trick handles for free:
+- All ones → 0
+- Duplicates → fine
+- Two-element array → uses the only pair
+No special cases needed.</p>
+<p><strong>10/</strong>
+The real lesson isn't this problem — it's the "find the top few" instinct.</p>
+<p>Leaderboards, best prices, top scorers… you'll reuse it forever.</p>
+<p>Full walkthrough (with the [2,2] pause-and-guess) 👇 {LINK}</p>
+<h2>Facebook Post</h2>
+<p>Ever looked at a coding problem and felt your brain shut down at the notation? 😅</p>
+<p>LeetCode 1464 does exactly that — until you realize it's tiny.</p>
+<p>The task: pick two numbers from a list, subtract one from each, multiply them, and get the biggest possible result. The secret? Bigger numbers always win, so you only ever need the two largest. Sort the list, grab the last two, do a little math — done in two lines.</p>
+<p>And here's the fun gotcha: what does <code>[2, 2]</code> return? Not 4… it's 1! (Subtract one from each first. 😉)</p>
+<p>I break the whole thing down step by step in the new video — beginner-friendly, no math degree required. Come learn it with me 👇 {LINK}</p>
+<h2>Reddit Summary</h2>
+<p><strong>Breaking down LeetCode 1464 (Maximum Product of Two Elements) — the intuition, not just the code</strong></p>
+<p>This one looks harder than it is because of the <code>(nums[i]-1)*(nums[j]-1)</code> formula. Here's the reasoning that makes it click:</p>
+<p>Since you subtract one and then multiply, bigger inputs always give a bigger result. That means the smaller numbers in the array are irrelevant — you only ever need the two largest values.</p>
+<p>Two clean approaches:
+- <strong>Sort:</strong> <code>nums.sort()</code> then <code>(nums[-1]-1) * (nums[-2]-1)</code>. O(n log n), very readable.
+- <strong>Single pass:</strong> track the top two as you scan. O(n), but the swap logic is easy to get subtly wrong.</p>
+<p>The detail worth flagging: the problem wants two different <em>indices</em>, not two different <em>values</em>. So <code>[2, 2]</code> returns <code>1</code> (1×1), not <code>4</code>. That catches a lot of people.</p>
+<p>Edge cases (all ones → 0, duplicates, two-element arrays) all work without special handling.</p>
+<p>The takeaway that generalizes: recognizing "I only need the top few elements" is a pattern you'll reuse in problems like 628 (Max Product of Three) and 215 (Kth Largest). Curious how others approached the single-pass version — did anyone bother with a heap for just k=2?</p>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># Maximum Product of Two Elements in an Array — LeetCode 1464
+
+&gt; Beginner-friendly. Part of the **Fun with Learning Technology** series.
+
+## Problem
+
+Given an array of integers `nums`, choose two **different indices** `i` and `j`
+and maximize the value of `(nums[i] - 1) * (nums[j] - 1)`.
+
+- `2 &lt;= nums.length &lt;= 500`
+- `1 &lt;= nums[i] &lt;= 1000`
+
+**Note:** the two indices must be different, but the *values* at them may be equal.
+
+### Examples
+
+| Input            | Output | Why                          |
+|------------------|--------|------------------------------|
+| `[3, 4, 5, 2]`   | `12`   | `(5-1) * (4-1) = 4 * 3`      |
+| `[1, 5, 4, 5]`   | `16`   | `(5-1) * (5-1) = 4 * 4`      |
+| `[2, 2]`         | `1`    | `(2-1) * (2-1) = 1 * 1`      |
+
+## Intuition
+
+Subtracting one and then multiplying **rewards larger inputs**. So the smallest
+numbers can never contribute to the answer — you only ever need the **two
+largest** values. Call it the *Top-Two Grab*.
+
+## Approach
+
+1. **Sort** the array ascending — the two largest values move to the end.
+2. Take `nums[-1]` (largest) and `nums[-2]` (second largest).
+3. Subtract one from each and multiply.
+
+An alternative single pass tracks the top two in one scan for O(n) time.
+
+## Python Solution
+
+```python
+from typing import List
+
+
+class Solution:
+    def maxProduct(self, nums: List[int]) -&gt; int:
+        nums.sort()
+        return (nums[-1] - 1) * (nums[-2] - 1)
+</code></pre>
+<details>
+<summary>Single-pass O(n) version</summary>
+
+
+<pre><code class="language-python">from typing import List
+
+
+class Solution:
+    def maxProduct(self, nums: List[int]) -&gt; int:
+        first = second = 0
+        for num in nums:
+            if num &gt; first:
+                second, first = first, num
+            elif num &gt; second:
+                second = num
+        return (first - 1) * (second - 1)
+</code></pre>
+
+</details>
+
+<h2>Complexity</h2>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Time</th>
+<th>Space</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Brute force</td>
+<td><code>O(n^2)</code></td>
+<td><code>O(1)</code></td>
+</tr>
+<tr>
+<td>Sort</td>
+<td><code>O(n log n)</code></td>
+<td><code>O(1)</code></td>
+</tr>
+<tr>
+<td>Single pass</td>
+<td><code>O(n)</code></td>
+<td><code>O(1)</code></td>
+</tr>
+</tbody>
+</table>
+<h2>Video</h2>
+<p>▶️ Watch the full walkthrough: {LINK}</p>
+<h2>Article</h2>
+<p>📖 Read the in-depth explanation with dry runs, edge cases, and common mistakes: {LINK}</p>
+<hr />
+<p>⭐ Star this repo if it helped, and check out the rest of the series.
+```</p></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Pattern: find max product of two elements. What&#x27;s the trigger?</summary><p>When asked for the best pair (max/min product or sum) and only the two extremes matter, think: just grab the two largest values — no need to test all pairs.</p></details><details class='card2'><summary>Time complexity to find the two largest elements?</summary><p>O(n) — one pass tracking the top two values. Sorting first would be O(n log n), which is unnecessary here.</p></details><details class='card2'><summary>Space complexity for the single-pass approach?</summary><p>O(1) — just two variables holding the largest and second-largest seen so far.</p></details><details class='card2'><summary>Common bug when tracking the top two values?</summary><p>Updating second-largest wrong: when a new max appears, the old max must become second. Also this problem subtracts 1 from each, so answer is (a-1)*(b-1).</p></details><details class='card2'><summary>Brute force vs single-pass for the max pair?</summary><p>Brute force checks every pair: O(n²). Single pass keeps only the two biggest: O(n). Same answer, far fewer comparisons.</p></details><details class='card2'><summary>Follow-up: what if numbers could be negative?</summary><p>Two large negatives can give a bigger product than two positives. Track the two smallest and two largest, then compare both products.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>

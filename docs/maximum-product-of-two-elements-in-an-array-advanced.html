@@ -1,0 +1,545 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maximum Product of Two Elements in an Array — 🔴 Advanced (3/3) — LeetCode Python Solution (One Pass Trick) — Python LeetCode Solution</title><meta name="description" content="📍 Jump to your level:
+🔴 Advanced: 0:19–4:21
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/maximum-product-of-two-elements-in-an-array-advanced
+💻 Code on GitHub: https://github.com/time">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/maximum-product-of-two-elements-in-an-array-advanced.html">
+<meta property="og:title" content="Maximum Product of Two Elements in an Array — 🔴 Advanced (3/3) — LeetCode Python Solution (One Pass Trick) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📍 Jump to your level:
+🔴 Advanced: 0:19–4:21
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/maximum-product-of-two-elements-in-an-array-advanced
+💻 Code on GitHub: https://github.com/time">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Maximum Product of Two Elements in an Array — 🔴 Advanced (3/3) — LeetCode Python Solution (One Pass Trick)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h1>SEO PACKAGE</h1>
+<h2>1. SEO Title</h2>
+<p><strong>Maximum Product of Two Elements in an Array — LeetCode 1464 Python Solution (One-Pass O(n) Trick)</strong></p>
+<h2>2. SEO Subtitle</h2>
+<p>Learn why finding the two largest numbers in a single sweep beats sorting — and why this problem is really the K=2 case of top-K selection.</p>
+<h2>3. Featured Quote</h2>
+<blockquote>
+<p>"You don't need the whole array in order — you just need the two biggest numbers. Everything else is wasted work."</p>
+</blockquote>
+<h2>4. Meta Description</h2>
+<p>Solve LeetCode 1464 Maximum Product of Two Elements in Python. Compare sorting vs a clean O(n) one-pass top-two scan, with dry runs and edge cases. (154 chars)</p>
+<h2>5. URL Slug</h2>
+<p><code>maximum-product-of-two-elements-in-array-leetcode-python</code></p>
+<h2>6. Keywords</h2>
+<ul>
+<li>maximum product of two elements</li>
+<li>LeetCode 1464</li>
+<li>LeetCode Python solution</li>
+<li>coding interview</li>
+<li>one pass algorithm</li>
+<li>top two elements</li>
+<li>O(n) solution</li>
+<li>data structures and algorithms</li>
+<li>Python interview questions</li>
+<li>array algorithms</li>
+<li>greedy algorithm</li>
+<li>order statistics</li>
+<li>top-K selection</li>
+<li>time complexity analysis</li>
+<li>space complexity</li>
+<li>software engineering interview</li>
+<li>Python coding tutorial</li>
+<li>monotonic function</li>
+<li>sorting vs linear scan</li>
+<li>beginner Python algorithms</li>
+</ul>
+<h2>7. Tags</h2>
+<p><code>Python</code> · <code>LeetCode</code> · <code>Coding Interview</code> · <code>Algorithms</code> · <code>Data Structures</code> · <code>Arrays</code> · <code>Software Engineering</code> · <code>Interview Prep</code> · <code>Time Complexity</code> · <code>One Pass</code> · <code>Greedy</code> · <code>Order Statistics</code> · <code>Top K</code> · <code>Big O</code></p>
+<hr />
+<h1>8. Introduction</h1>
+<p>Some problems look intimidating and turn out to be simple. Others look simple and hide a lesson worth remembering. <strong>Maximum Product of Two Elements in an Array</strong> (LeetCode 1464) belongs to the second group. On the surface it's a one-line problem. Underneath, it's a clean test of whether you understand the difference between <em>sorting your data</em> and <em>selecting from it</em> — a distinction that separates engineers who reach for the obvious tool from those who reach for the right one.</p>
+<p>In a coding interview, nobody genuinely doubts you <em>can</em> solve this. The real signal an interviewer reads is <em>how</em> you solve it. Do you burn the phone screen on an <code>O(n log n)</code> sort because it's the first thing your fingers type? Or do you recognize that you only need the two largest values and grab them in a single <code>O(n)</code> pass?</p>
+<p>This problem also quietly rewards people who read constraints carefully. There's a trap hidden in the difference between <em>distinct indices</em> and <em>distinct values</em> — and a boundary assumption about non-negative numbers that makes the whole trick safe. Miss either, and you'll write code that returns the wrong answer on inputs the problem specifically allows.</p>
+<p>By the end of this article you'll understand not just the solution, but <em>why</em> it's correct, when it generalizes, and how it connects to the broader <strong>top-K selection</strong> pattern you'll see again and again in <strong>algorithms</strong> and <strong>data structures</strong> work.</p>
+<hr />
+<h1>9. Problem Overview</h1>
+<p>You're given an array of integers, <code>nums</code>. Your job is to pick <strong>two elements at two different positions</strong> in the array. Call the values you picked <code>a</code> and <code>b</code>.</p>
+<p>For each of them, subtract one. Then multiply the results:</p>
+<p>$$(a - 1) \times (b - 1)$$</p>
+<p>Return the <strong>largest possible value</strong> of that product over all valid pairs.</p>
+<p>Two important details from the constraints:</p>
+<ul>
+<li>You choose <strong>two different indices</strong>, not two different values. If the same number appears twice, you're allowed to use both occurrences.</li>
+<li>Every value is <strong>at least 1</strong>. There are no zeros or negative numbers to worry about.</li>
+</ul>
+<p>That second point matters more than it looks. Because every number is non-negative, subtracting one keeps things well-behaved, and the product can only grow as the chosen numbers grow. That single guarantee is what makes the shortcut in this problem valid.</p>
+<hr />
+<h1>10. Example</h1>
+<p><strong>Example 1</strong></p>
+<pre><code>Input:  nums = [3, 4, 5, 2]
+Output: 12
+</code></pre>
+<p>The two largest values are <code>5</code> and <code>4</code>. We compute <code>(5 - 1) * (4 - 1) = 4 * 3 = 12</code>. No other pair can beat this, because any smaller pair produces smaller factors.</p>
+<p><strong>Example 2</strong></p>
+<pre><code>Input:  nums = [1, 5, 4, 5]
+Output: 16
+</code></pre>
+<p>Here the value <code>5</code> appears twice, at two different positions. Since the problem only requires distinct <em>indices</em>, we're allowed to use both fives: <code>(5 - 1) * (5 - 1) = 4 * 4 = 16</code>.</p>
+<p><strong>Example 3 (the tricky one)</strong></p>
+<pre><code>Input:  nums = [2, 2]
+Output: 1
+</code></pre>
+<p>Two equal values, two positions. The product is <code>(2 - 1) * (2 - 1) = 1 * 1 = 1</code>. A lot of people expect this to break — it doesn't. Because we select two <em>positions</em>, the duplicate <code>2</code> legitimately fills both "largest" slots, and the answer is <code>1</code>.</p>
+<p><strong>Example 4 (all ones)</strong></p>
+<pre><code>Input:  nums = [1, 1, 1]
+Output: 0
+</code></pre>
+<p>Every value is the minimum, <code>1</code>. So <code>(1 - 1) * (1 - 1) = 0</code>. This is a correct answer, not a bug — worth remembering when we discuss edge cases.</p>
+<hr />
+<h1>11. Intuition</h1>
+<p>Let's build the reasoning the way an experienced engineer would, before writing a single line of code.</p>
+<p>We want to maximize <code>(a - 1) * (b - 1)</code>. The first instinct might be to try every pair. But look closer at the shape of the expression.</p>
+<p>Define a simple transform: <code>f(x) = x - 1</code>. On our domain — values that are always at least 1 — this function is <strong>monotonically increasing</strong>. A bigger input always gives a bigger output. Nothing tricky, no dips.</p>
+<p>Now, we're multiplying two of these transformed values together. Since every value is non-negative, both <code>(a - 1)</code> and <code>(b - 1)</code> are <code>≥ 0</code>. When you're multiplying two non-negative numbers and you want the product as large as possible, you make <strong>each factor as large as possible, independently</strong>. There's no tension between the two choices, no trade-off — bigger is always better on both sides.</p>
+<p>And what makes <code>(a - 1)</code> largest? The largest <code>a</code>. What makes <code>(b - 1)</code> largest? The next-largest value. So:</p>
+<blockquote>
+<p><strong>The optimal pair is always the two largest numbers in the array.</strong></p>
+</blockquote>
+<p>That's the whole problem. The length of the array, <code>n</code>, is a red herring. You don't need to sort everything, you don't need every pairwise combination — you just need the <strong>first and second largest values</strong>. In the language of algorithms, you want the <strong>1st and 2nd order statistics</strong>, and nothing else.</p>
+<p>⚠️ <strong>Why non-negativity matters:</strong> This shortcut only works because values can't be negative. If negatives were allowed, two large negative numbers could multiply into a huge positive product — so you'd also have to track the two <em>smallest</em> values. Because the problem guarantees everything is <code>≥ 1</code>, we get to ignore that entirely.</p>
+<hr />
+<h1>12. Brute Force Solution</h1>
+<p><strong>Idea:</strong> If we want the best pair, just try every pair.</p>
+<p><strong>Algorithm:</strong>
+1. Loop over every index <code>i</code>.
+2. For each <code>i</code>, loop over every later index <code>j</code>.
+3. Compute <code>(nums[i] - 1) * (nums[j] - 1)</code>.
+4. Keep the maximum seen.</p>
+<pre><code class="language-python">def maxProduct(nums: list[int]) -&gt; int:
+    best = 0
+    n = len(nums)
+    for i in range(n):
+        for j in range(i + 1, n):
+            best = max(best, (nums[i] - 1) * (nums[j] - 1))
+    return best
+</code></pre>
+<p><strong>Advantages:</strong>
+- Impossible to get the logic wrong — it literally checks everything.
+- Generalizes to problems where the objective <em>isn't</em> separable (where you genuinely need to compare full pairs).</p>
+<p><strong>Disadvantages:</strong>
+- Does a mountain of redundant work. For this monotonic product, comparing every pair is pure waste.
+- Scales badly.</p>
+<p><strong>Complexity:</strong>
+- <strong>Time:</strong> <code>O(n²)</code> — nested loops over all pairs.
+- <strong>Space:</strong> <code>O(1)</code>.</p>
+<p>This is the baseline you're beating. In an interview, mention it only to contrast, then move on.</p>
+<hr />
+<h1>13. Optimal Solution</h1>
+<p>We established that we only need the two largest values. There are two clean ways to get them.</p>
+<h3>Option A — Sort and read the tail</h3>
+<p>Sort the array ascending, then the two largest sit at the end:</p>
+<pre><code class="language-python">def maxProduct(nums: list[int]) -&gt; int:
+    nums.sort()
+    return (nums[-1] - 1) * (nums[-2] - 1)
+</code></pre>
+<p>This is the honest one-liner. It's readable and hard to get wrong. But be ready to say two things out loud in an interview:</p>
+<ul>
+<li>It's <code>O(n log n)</code> — you're paying to fully order the array just to learn <em>two</em> facts about it.</li>
+<li>It <strong>mutates the input in place</strong>. If the caller cares about immutability, flag it (use <code>sorted(nums)</code> instead).</li>
+</ul>
+<h3>Option B — One-pass "Top-Two Grab" (the trick)</h3>
+<p>Sweep the array once, keeping two registers: <code>first</code> (largest so far) and <code>second</code> (runner-up so far). Update them as you go.</p>
+<p>The core idea is a <strong>cascade</strong>. When a new value beats the current champion:
+- the old champion gets <strong>demoted</strong> to runner-up,
+- the new value becomes champion.</p>
+<p>That demotion is the entire correctness argument, and we'll see exactly why below.</p>
+<p>Here's how the two registers evolve on <code>nums = [3, 4, 5, 2]</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Value seen</th>
+<th>first</th>
+<th>second</th>
+<th>Reasoning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>init</td>
+<td>—</td>
+<td>0</td>
+<td>0</td>
+<td>seeded at 0 (safe: values ≥ 1)</td>
+</tr>
+<tr>
+<td>1</td>
+<td>3</td>
+<td>3</td>
+<td>0</td>
+<td>3 beats first → 0 demoted to second</td>
+</tr>
+<tr>
+<td>2</td>
+<td>4</td>
+<td>4</td>
+<td>3</td>
+<td>4 beats first → old champ 3 demoted</td>
+</tr>
+<tr>
+<td>3</td>
+<td>5</td>
+<td>5</td>
+<td>4</td>
+<td>5 beats first → old champ 4 demoted</td>
+</tr>
+<tr>
+<td>4</td>
+<td>2</td>
+<td>5</td>
+<td>4</td>
+<td>2 beats neither → no change</td>
+</tr>
+</tbody>
+</table>
+<p>Final: <code>(5 - 1) * (4 - 1) = 12</code>. ✅</p>
+<p>This runs in <strong><code>O(n)</code> time, <code>O(1)</code> space, in a single pass</strong> — and it never mutates the input. Crucially, being single-pass means it also works on a <strong>stream</strong> you can't rewind, which the sort version can't claim.</p>
+<hr />
+<h1>14. Python Code</h1>
+<pre><code class="language-python">def maxProduct(nums: list[int]) -&gt; int:
+    &quot;&quot;&quot;
+    LeetCode 1464 — Maximum Product of Two Elements in an Array.
+
+    Returns the maximum value of (nums[i] - 1) * (nums[j] - 1)
+    over all pairs of distinct indices i != j.
+
+    One-pass top-two selection: O(n) time, O(1) space.
+    &quot;&quot;&quot;
+    first = 0   # largest value seen so far
+    second = 0  # second-largest value seen so far
+    # Seeding at 0 is safe only because every value is guaranteed &gt;= 1.
+
+    for n in nums:
+        if n &gt;= first:
+            # New champion: demote the old champion to runner-up.
+            second = first
+            first = n
+        elif n &gt; second:
+            # Not a new champion, but beats the current runner-up.
+            second = n
+
+    return (first - 1) * (second - 1)
+</code></pre>
+<hr />
+<h1>15. Code Walkthrough</h1>
+<p>Let's go line by line where it matters.</p>
+<ul>
+<li>
+<p><strong><code>first = 0</code> / <code>second = 0</code></strong> — We seed both registers to <code>0</code>. This is safe <em>only</em> because the problem promises every value is at least <code>1</code>; any real element will beat the seed. If negatives were allowed, we'd seed with <code>float('-inf')</code> instead.</p>
+</li>
+<li>
+<p><strong><code>if n &gt;= first:</code></strong> — When the current number is a new maximum, we run the cascade: <code>second = first</code> <strong>first</strong>, then <code>first = n</code>. Doing the demotion first preserves the old champion as the new runner-up. The tuple-free two-step ordering here is deliberate; you could also write <code>first, second = n, first</code> as an atomic swap-style assignment to avoid any temp-variable ordering bug.</p>
+</li>
+<li>
+<p><strong><code>elif n &gt; second:</code></strong> — This branch is <strong>load-bearing</strong>. It catches values that don't beat the champion but <em>do</em> beat the runner-up. Note it's an <code>elif</code>, not a second <code>if</code>. If it were <code>if</code>, a single large value could fall through and fill <em>both</em> slots incorrectly.</p>
+</li>
+<li>
+<p><strong>The <code>&gt;=</code> in the first comparison</strong> — Using <code>&gt;=</code> (not strict <code>&gt;</code>) is what makes duplicates work. When a second equal maximum arrives, <code>n &gt;= first</code> is true, so the old max slides down into <code>second</code>. This is exactly why <em>distinct indices, not distinct values</em> is handled correctly.</p>
+</li>
+<li>
+<p><strong><code>return (first - 1) * (second - 1)</code></strong> — Apply the transform to the two largest and multiply.</p>
+</li>
+</ul>
+<hr />
+<h1>16. Dry Run</h1>
+<p>Let's trace <code>nums = [1, 5, 4, 5]</code>, the duplicate-maximum case, step by step.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th><code>n</code></th>
+<th>Branch taken</th>
+<th>first</th>
+<th>second</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>init</td>
+<td>—</td>
+<td>—</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>1</td>
+<td>1</td>
+<td><code>1 &gt;= 0</code> → champion</td>
+<td>1</td>
+<td>0</td>
+</tr>
+<tr>
+<td>2</td>
+<td>5</td>
+<td><code>5 &gt;= 1</code> → champion</td>
+<td>5</td>
+<td>1</td>
+</tr>
+<tr>
+<td>3</td>
+<td>4</td>
+<td><code>4 &gt; 1</code> → runner-up</td>
+<td>5</td>
+<td>4</td>
+</tr>
+<tr>
+<td>4</td>
+<td>5</td>
+<td><code>5 &gt;= 5</code> → champion</td>
+<td>5</td>
+<td>5</td>
+</tr>
+</tbody>
+</table>
+<p>On step 4, the second <code>5</code> satisfies <code>n &gt;= first</code>, so the old <code>5</code> is demoted into <code>second</code>. Both registers end at <code>5</code>.</p>
+<p><strong>Result:</strong> <code>(5 - 1) * (5 - 1) = 4 * 4 = 16</code>. ✅</p>
+<p>Notice how the <code>&gt;=</code> quietly handled the duplicate. A strict <code>&gt;</code> on that first comparison would have skipped the update, leaving <code>second = 4</code>, and returned <code>12</code> — wrong.</p>
+<hr />
+<h1>17. Complexity Analysis</h1>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Time</th>
+<th>Space</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Brute force</td>
+<td><code>O(n²)</code></td>
+<td><code>O(1)</code></td>
+<td>Checks every pair</td>
+</tr>
+<tr>
+<td>Sort</td>
+<td><code>O(n log n)</code></td>
+<td><code>O(1)</code>*</td>
+<td>Mutates input; overkill</td>
+</tr>
+<tr>
+<td>One pass</td>
+<td><strong><code>O(n)</code></strong></td>
+<td><strong><code>O(1)</code></strong></td>
+<td>Single pass, streamable</td>
+</tr>
+</tbody>
+</table>
+<p>* Space depends on the sort implementation; Python's Timsort can use <code>O(n)</code> in the worst case.</p>
+<p><strong>Why <code>O(n)</code> time?</strong> We touch each element exactly once, doing a constant amount of comparison and assignment per element. No nested loops, no re-scanning.</p>
+<p><strong>Why <code>O(1)</code> space?</strong> We store exactly two integers, <code>first</code> and <code>second</code>, regardless of input size. Nothing grows with <code>n</code>.</p>
+<p>The one-pass version wins on every axis that matters: fewer operations, constant memory, and — uniquely — it works on a one-directional stream.</p>
+<hr />
+<h1>18. Alternative Solutions</h1>
+<p><strong>Bounded heap (<code>heapq.nlargest</code>).</strong> Python's standard library gives you the top two directly:</p>
+<pre><code class="language-python">import heapq
+
+def maxProduct(nums: list[int]) -&gt; int:
+    a, b = heapq.nlargest(2, nums)
+    return (a - 1) * (b - 1)
+</code></pre>
+<p>This is the cleanest <em>readable</em> answer and runs in <code>O(n)</code> for a fixed small K. It's also the pattern that <strong>generalizes</strong>: the moment an interviewer bumps the problem to "top K" or a streaming feed, a bounded heap of size K keeps you linear-ish (<code>O(n log K)</code>) with <code>O(K)</code> space. The manual two-register version is just the K=2 specialization of this idea — worth recognizing that connection.</p>
+<p><strong>When to use which:</strong> For this exact problem, the hand-rolled one-pass is the fastest and most explicit. For top-K generalizations, reach for the heap.</p>
+<hr />
+<h1>19. Edge Cases</h1>
+<ul>
+<li><strong>Minimum length (<code>len == 2</code>):</strong> e.g. <code>[1, 1]</code>. Both registers always fill, so the <code>0</code> seed never leaks into the answer. Returns <code>0</code>.</li>
+<li><strong>All ones (<code>[1, 1, 1]</code>):</strong> Returns <code>0</code>. This is correct — every factor is <code>1 - 1 = 0</code>.</li>
+<li><strong>Duplicate maximum (<code>[5, 5]</code>):</strong> Handled by the <code>&gt;=</code> comparison. Returns <code>16</code>.</li>
+<li><strong>Large values:</strong> Products can be large, but Python integers are unbounded, so there's no overflow concern.</li>
+<li><strong>Values below 1:</strong> The problem forbids these. If they were allowed, the <code>0</code> seed would be unsafe and you'd need <code>-inf</code> seeds plus min-value tracking.</li>
+</ul>
+<hr />
+<h1>20. Common Mistakes</h1>
+<ol>
+<li><strong>Using a strict <code>&gt;</code> in the first comparison.</strong> This silently drops a duplicate maximum and returns the wrong product on inputs like <code>[5, 5]</code>.</li>
+<li><strong>Deduplicating with <code>set()</code>.</strong> Wrapping the input in a set assumes distinct <em>values</em>. The problem only requires distinct <em>indices</em>, so <code>[5, 5]</code> collapses to <code>[5]</code> and breaks.</li>
+<li><strong>Writing <code>if ... if ...</code> instead of <code>if ... elif ...</code>.</strong> Two independent <code>if</code>s can let a single large value overwrite both registers, leaking the true second-largest.</li>
+<li><strong>Forgetting the demotion.</strong> If you set <code>first = n</code> without first sliding the old champion into <code>second</code>, you lose the runner-up entirely and get a wrong answer.</li>
+<li><strong>Seeding at <code>0</code> while assuming general inputs.</strong> The <code>0</code> seed is only safe under the "values ≥ 1" guarantee. Reuse this template on a problem that allows non-positives, and it breaks quietly.</li>
+<li><strong>Sorting without flagging the cost.</strong> It works, but paying <code>O(n log n)</code> — and mutating the caller's array — to learn two facts is worth calling out in an interview.</li>
+</ol>
+<hr />
+<h1>21. Interview Questions (Likely Follow-ups)</h1>
+<ul>
+<li><strong>"What if I ask for the top K largest, not just two?"</strong> → Switch to a bounded min-heap of size K: <code>O(n log K)</code> time, <code>O(K)</code> space. Your two-register solution is the K=2 case.</li>
+<li><strong>"What if the input is a stream you can't re-read?"</strong> → The one-pass version already handles this; the sort version cannot.</li>
+<li><strong>"What if negative numbers were allowed?"</strong> → You'd also track the two <em>smallest</em> values and compare both candidate products, because two large negatives can multiply to a large positive.</li>
+<li><strong>"Can you do it without mutating the input?"</strong> → Yes — the one-pass and <code>heapq.nlargest</code> versions never touch the original array.</li>
+<li><strong>"Why is <code>O(n)</code> optimal here?"</strong> → You must inspect every element at least once to be sure you found the maximum, so you can't beat linear.</li>
+</ul>
+<hr />
+<h1>22. Similar Problems</h1>
+<ul>
+<li><strong>LeetCode 215 — Kth Largest Element in an Array.</strong> The direct generalization: same order-statistics idea, larger K.</li>
+<li><strong>LeetCode 628 — Maximum Product of Three Numbers.</strong> Adds the negative-number twist, so you must track smallest values too — a perfect contrast to why <em>this</em> problem stays simple.</li>
+<li><strong>LeetCode 414 — Third Maximum Number.</strong> Another fixed-register scan, extended to three slots with distinctness rules.</li>
+<li><strong>LeetCode 1913 — Maximum Product Difference Between Two Pairs.</strong> Needs both the two largest <em>and</em> two smallest in one pass.</li>
+</ul>
+<p>Each of these reinforces the same core skill: <strong>partial selection over full sorting</strong>.</p>
+<hr />
+<h1>23. Key Takeaways</h1>
+<ul>
+<li><strong>Monotonicity is what licenses the top-two shortcut.</strong> Because <code>x - 1</code> is increasing and values are non-negative, maximizing each factor independently maximizes the product.</li>
+<li><strong>The <code>elif</code> and the demotion are the two lines that carry correctness.</strong> Break either and you leak the second-largest.</li>
+<li><strong>The <code>0</code> seed is safe only under the non-negativity constraint.</strong> Know why, so you don't reuse it blindly.</li>
+<li><strong>Selection beats sorting when you only need a few order statistics.</strong> <code>O(n)</code> and single-pass beat <code>O(n log n)</code>.</li>
+<li><strong>This is top-K with K=2.</strong> Generalize it to a bounded heap and you get streaming top-K for free.</li>
+</ul>
+<hr />
+<h1>24. Watch the Video</h1>
+<p>Reading the reasoning is one thing — <em>watching</em> the two registers cascade in real time makes it click. In the video I predict the tricky <code>[2, 2]</code> output before running it, race sorting against the one-pass scan, and stress-test every edge case live. Watch the full walkthrough here: <strong>{LINK}</strong></p>
+<hr />
+<h1>25. About the Series</h1>
+<p>This is part of <strong>Fun with Learning Technology</strong> — a series that treats coding problems as a way to build real intuition, not memorize patterns. Every episode rebuilds a problem from first principles: <em>why</em> the approach works, <em>where</em> it breaks, and <em>how</em> it connects to the bigger ideas in <strong>algorithms</strong>, <strong>data structures</strong>, and everyday <strong>software engineering</strong>. If you're preparing for a <strong>coding interview</strong> or just want to think more clearly about <strong>Python</strong>, you're in the right place.</p>
+<hr />
+<h1>26. Call To Action</h1>
+<p>If this made the problem click for you:</p>
+<ul>
+<li>👍 <strong>Like</strong> the video on YouTube — it genuinely helps the channel reach more developers.</li>
+<li>🔔 <strong>Subscribe</strong> so you catch tomorrow's drop, where this exact top-two pattern levels up into a harder heap problem.</li>
+<li>📩 <strong>Subscribe on Substack</strong> for the written breakdowns delivered to your inbox.</li>
+<li>💬 <strong>Comment</strong> with your guess for the <code>[2, 2]</code> case — or a problem you want covered next.</li>
+<li>🔗 <strong>Share</strong> it with someone grinding through interview prep.</li>
+</ul>
+<hr />
+<h1>GITHUB README</h1>
+<pre><code class="language-markdown"># Maximum Product of Two Elements in an Array — LeetCode 1464 (Python)
+
+One-pass `O(n)` solution with full reasoning, dry runs, and edge cases.
+
+## Problem
+
+Given an array `nums`, choose two elements at **distinct indices** `i` and `j`
+and maximize `(nums[i] - 1) * (nums[j] - 1)`. Return that maximum.
+
+- Indices must differ; **values may repeat**.
+- Every value is guaranteed `&gt;= 1` (no zeros, no negatives).
+
+## Intuition
+
+Define `f(x) = x - 1`. On a non-negative domain, `f` is monotonically
+increasing, and the product of two non-negative increasing terms is maximized
+by maximizing each factor independently. Therefore the optimal pair is always
+**the two largest values** in the array. Sorting or checking every pair is
+wasted work — we only need the 1st and 2nd order statistics.
+
+&gt; The non-negativity guarantee is essential: with negatives allowed, two large
+&gt; negative values could win, and you'd also track the two smallest.
+
+## Approach
+
+Single pass with two registers, `first` and `second`. When a new value beats
+`first`, demote the old champion into `second` (the demotion is the whole
+correctness argument). The `&gt;=` comparison makes duplicate maxima work, which
+is why *distinct indices, not values* holds.
+
+## Python Solution
+
+```python
+def maxProduct(nums: list[int]) -&gt; int:
+    first = 0   # largest so far
+    second = 0  # runner-up so far  (0-seed safe because values &gt;= 1)
+
+    for n in nums:
+        if n &gt;= first:
+            second = first   # demote old champion
+            first = n
+        elif n &gt; second:
+            second = n
+
+    return (first - 1) * (second - 1)
+</code></pre>
+<h2>Complexity</h2>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Time</th>
+<th>Space</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Brute force</td>
+<td><code>O(n^2)</code></td>
+<td><code>O(1)</code></td>
+</tr>
+<tr>
+<td>Sort</td>
+<td><code>O(n log n)</code></td>
+<td><code>O(1)</code></td>
+</tr>
+<tr>
+<td>One pass</td>
+<td><strong><code>O(n)</code></strong></td>
+<td><code>O(1)</code></td>
+</tr>
+</tbody>
+</table>
+<p>The one-pass version is also single-pass and streamable.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><code>[2, 2]</code> → <code>1</code> (duplicate maxima, distinct indices)</li>
+<li><code>[1, 1, 1]</code> → <code>0</code> (all minimum values — correct, not a bug)</li>
+<li>Length-2 input → both registers always fill; <code>0</code>-seed never leaks</li>
+</ul>
+<h2>Video</h2>
+<p>Full walkthrough: {LINK}</p>
+<h2>Article</h2>
+<p>Deep dive with dry runs, common mistakes, and top-K generalization: {LINK}
+```</p>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>Here's a LeetCode problem that looks trivial and quietly teaches something important about engineering judgment: <strong>Maximum Product of Two Elements in an Array</strong> (1464).</p>
+<p>The task: pick two elements at different positions, subtract one from each, multiply, and maximize the result.</p>
+<p>Most people's first move is to sort the array and read the last two values. It works. It's also <code>O(n log n)</code> — and it mutates the caller's input. In an interview, that's the moment an interviewer learns how you think.</p>
+<p>The better instinct: you don't need the array <em>in order</em>. You only need the two largest values. That's a single <code>O(n)</code> pass with two variables — no sort, no extra memory, and it even works on a stream you can't rewind.</p>
+<p>Why is "two largest" always correct? Because <code>x - 1</code> is monotonically increasing on this problem's non-negative domain, and the product of two non-negative increasing terms is maximized by maximizing each factor independently. That reasoning is the whole solution.</p>
+<p>Two details that trip people up:
+• The problem says distinct <em>indices</em>, not distinct <em>values</em>. <code>[2, 2]</code> is valid and returns <code>1</code>.
+• Seeding your trackers at <code>0</code> is only safe because values are guaranteed <code>&gt;= 1</code>.</p>
+<p>The bigger lesson: this is just the K=2 case of top-K selection. Recognize that, and streaming top-K with a bounded heap comes for free.</p>
+<p>Selecting a few values isn't the same as sorting all of them — and knowing the difference is what interviews are really testing.</p>
+<p>Full breakdown in the comments. #Python #CodingInterview #Algorithms #DataStructures</p>
+<h2>Twitter/X Thread</h2>
+<p><strong>1/</strong> LeetCode 1464 "Maximum Product of Two Elements" looks like a one-liner. It's actually a clean test of whether you know the difference between <em>sorting</em> and <em>selecting</em>. Let's break it down. 🧵</p>
+<p><strong>2/</strong> The task: pick two elements at different positions, subtract 1 from each, multiply, maximize. That's it. So what's the catch?</p>
+<p><strong>3/</strong> First instinct: sort the array, take the last two. It works — but it's O(n log n) and it mutates your input. You're paying to fully order the array just to learn TWO facts about it.</p>
+<p><strong>4/</strong> Key realization: you don't need the array in order. You only need the two largest values. That's the 1st and 2nd order statistics — nothing else.</p>
+<p><strong>5/</strong> Why is "two largest" always optimal? f(x) = x - 1 is increasing on this non-negative domain. Product of two non-negative increasing terms → maximize each factor independently → grab the top two. Proven.</p>
+<p><strong>6/</strong> So: one pass, two variables. <code>first</code> = biggest so far, <code>second</code> = runner-up. When a new value beats <code>first</code>, demote the old champ into <code>second</code>. O(n) time, O(1) space.</p>
+<p><strong>7/</strong> That demotion line is the whole correctness argument. Skip it and you leak the second-largest. Classic off-by-one when people hand-roll this under pressure.</p>
+<p><strong>8/</strong> The trap: [2, 2]. Does it return 1 or break? It returns 1 — because the problem wants distinct INDICES, not distinct VALUES. A <code>set()</code> dedup or a strict <code>&gt;</code> silently breaks this.</p>
+<p><strong>9/</strong> Edge cases it survives: [1,1,1] → 0 (correct, not a bug). Length-2 input → both registers always fill, so the 0-seed never leaks. The only thing it can't handle: values below 1.</p>
+<p><strong>10/</strong> The real payoff: this is top-K with K=2. Generalize the two registers to a bounded heap and you've got streaming top-K for free. That's the follow-up interviewers love. Full walkthrough + video 👇</p>
+<h2>Facebook Post</h2>
+<p>Quick one for anyone doing coding interview prep 👇</p>
+<p>LeetCode's "Maximum Product of Two Elements in an Array" looks like a throwaway problem — pick two numbers, subtract one from each, multiply, maximize. But it hides a genuinely useful lesson.</p>
+<p>Most people sort the array and grab the last two. It works! But you don't actually need the whole thing sorted — you only need the two biggest numbers, which you can find in a single sweep with two variables. Faster, uses no extra memory, and it even works on data you can only read once.</p>
+<p>There's also a sneaky test case: <code>[2, 2]</code>. A lot of people assume it breaks, but it correctly returns <code>1</code>, because the problem lets you use two equal numbers as long as they sit in different positions.</p>
+<p>I walk through the whole thing — the intuition, the one-pass trick, and every edge case — in the new video. Come learn the <em>why</em>, not just the answer. 🙂</p>
+<h2>Reddit Summary</h2>
+<p><strong>Maximum Product of Two Elements in an Array (LeetCode 1464) — why the one-pass beats sorting, and the duplicate trap</strong></p>
+<p>Sharing a breakdown in case it helps someone. The problem: pick two elements at distinct indices, compute <code>(a-1)*(b-1)</code>, maximize it.</p>
+<p>The core insight is that <code>x - 1</code> is monotonically increasing on this problem's non-negative domain, so the product is maximized by just taking the two largest values — no need to sort everything or check all pairs. That reduces it to finding the 1st and 2nd order statistics, which is a single O(n) pass with two variables (O(1) space, and it works on a stream).</p>
+<p>Two things worth flagging:</p>
+<ul>
+<li>The constraint is distinct <strong>indices</strong>, not distinct <strong>values</strong>. So <code>[2, 2]</code> is valid and returns <code>1</code>. If you <code>set()</code> the input or use a strict <code>&gt;</code> when checking against your max, you'll silently drop the duplicate.</li>
+<li>Seeding your two trackers at <code>0</code> only works because values are guaranteed <code>&gt;= 1</code>. On a variant that allows negatives, you'd seed with <code>-inf</code> and also track the two smallest.</li>
+</ul>
+<p>The neat part is recognizing this as the K=2 case of top-K selection — swap the two registers for a bounded heap and you've generalized to streaming top-K.</p>
+<p>Happy to discuss the negative-number variant (LeetCode 628 is the natural next step) if anyone wants to compare approaches.</p></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Pattern for finding the max product of two array elements?</summary><p>Top-Two Grab: track the two largest values in one pass. Tell — a problem asking for a product/sum/diff of the two biggest (or smallest) elements.</p></details><details class='card2'><summary>Time complexity of the two-largest scan?</summary><p>O(n) — a single pass tracks the top two values. Sorting first would be O(n log n), which is unnecessary.</p></details><details class='card2'><summary>Space complexity of the Top-Two Grab?</summary><p>O(1) — you only keep two variables for the largest and second-largest, regardless of array size.</p></details><details class='card2'><summary>Common bug when tracking the top two values?</summary><p>Forgetting to demote: when a new max is found, the old max must become the second max — don&#x27;t just overwrite. Also seed both from actual elements, not 0.</p></details><details class='card2'><summary>Sorting vs single-pass for max product of two?</summary><p>Sorting: O(n log n), grab last two, simple to write. Single pass: O(n), two trackers. Same answer; single pass is optimal.</p></details><details class='card2'><summary>Follow-up: what if it were the two smallest, or products could be negative?</summary><p>Track the two smallest too. With negatives, two large-magnitude negatives can beat the top two positives — compare max×max2 against min×min2.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
