@@ -1,0 +1,339 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Python Lesson 13: Turn 4 Lines Into 1 With Comprehensions — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-13-comprehensions
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesson-13-compreh">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-13-comprehensions.html">
+<meta property="og:title" content="Python Lesson 13: Turn 4 Lines Into 1 With Comprehensions — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-13-comprehensions
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesson-13-compreh">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 13: Turn 4 Lines Into 1 With Comprehensions</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>8. Introduction</h2>
+<p>Every Python developer hits the same wall early on. You write a small loop that builds a list — three or four honest lines — and then you see a senior engineer collapse the exact same logic into a single line that reads almost like an English sentence. It feels like a magic trick, and magic tricks are uncomfortable when you're the one who has to maintain the code.</p>
+<p>Comprehensions are not magic. They are one of the most quietly important tools in Python because they show up <em>everywhere</em>: in data processing, in interview answers, in library source code, and in code review comments that say "this could be a comprehension." Interviewers like them because they test something deeper than syntax — they test whether you can express a <strong>transformation</strong> clearly. Can you take a collection, change each item, optionally filter some out, and collect the result, without drowning in boilerplate?</p>
+<p>More importantly, comprehensions teach a habit that carries into serious software engineering: separating <em>what you want</em> from <em>how you loop to get it</em>. That mental split makes you faster at reading unfamiliar Python and calmer when you write your own. By the end of this article, you'll read comprehensions at a glance and — just as valuably — you'll know the exact moments when reaching for one is the wrong call.</p>
+<h2>9. Problem Overview</h2>
+<p>Here's the recurring task, stated plainly:</p>
+<blockquote>
+<p>You have a collection of items. You want to produce a <strong>new</strong> collection where each item has been transformed in some way, and possibly where some items have been dropped based on a condition. Build that new collection cleanly.</p>
+</blockquote>
+<p>The classic, universal way to do this is a loop: create an empty container, walk through the source one item at a time, transform each item, and append the result. It works flawlessly. The problem isn't correctness — it's <em>noise</em>. You spend three lines of ceremony (<code>empty list</code>, <code>for</code>, <code>append</code>) to express one simple idea.</p>
+<p>A comprehension is Python's built-in shorthand for exactly this pattern. It lets you write the transformation as a single expression that says, in order: <strong>what you want</strong>, then <strong>where it comes from</strong>, then <strong>which items qualify</strong>. The same shape builds lists, sets, and dictionaries — only the brackets and punctuation change.</p>
+<p>Think of a factory conveyor belt. Raw items roll in one end, each one gets a quick stamp, finished items pile up at the other end. That's a comprehension: <em>take each item, change it, collect the results.</em></p>
+<h2>10. Example</h2>
+<p>Let's make it concrete with the most common case: squaring a list of numbers.</p>
+<p><strong>Input:</strong> <code>[1, 2, 3, 4, 5]</code>
+<strong>Goal:</strong> produce each number multiplied by itself.
+<strong>Output:</strong> <code>[1, 4, 9, 16, 25]</code></p>
+<p>Every output element is simply <code>n * n</code>. The <code>1</code> becomes <code>1</code>, the <code>2</code> becomes <code>4</code>, the <code>3</code> becomes <code>9</code>, and so on. Nothing is added or removed — it's a pure one-to-one transform.</p>
+<p>Now a filtered example. From the same input, keep only the <strong>even</strong> numbers:</p>
+<p><strong>Input:</strong> <code>[1, 2, 3, 4, 5]</code>
+<strong>Output:</strong> <code>[2, 4]</code></p>
+<p>Here <code>1</code>, <code>3</code>, and <code>5</code> are dropped entirely because they fail the "is even" test. The output is shorter than the input — that's the signature of a filter.</p>
+<p>And a <em>choosing</em> example. Label each number <code>"even"</code> or <code>"odd"</code>:</p>
+<p><strong>Input:</strong> <code>[1, 2, 3]</code>
+<strong>Output:</strong> <code>["odd", "even", "odd"]</code></p>
+<p>Notice the output is the <strong>same length</strong> as the input. Nothing was dropped — every item was mapped to one of two values. That distinction (filter vs. choose) is the single most important idea in this whole article.</p>
+<h2>11. Intuition</h2>
+<p>An experienced engineer doesn't memorize comprehension syntax as a formula. They think in terms of a pipeline and ask three questions in order:</p>
+<ol>
+<li><strong>What do I want each output item to look like?</strong> — the <em>expression</em>.</li>
+<li><strong>Where do the input items come from?</strong> — the <em>loop</em>.</li>
+<li><strong>Do I want all of them, or only some?</strong> — the <em>filter</em>.</li>
+</ol>
+<p>Start from the loop you already know how to write:</p>
+<pre><code class="language-python">squares = []
+for n in [1, 2, 3, 4, 5]:
+    squares.append(n * n)
+</code></pre>
+<p>Now watch the pieces migrate. The thing being appended (<code>n * n</code>) moves to the <strong>front</strong>. The loop header (<code>for n in [1, 2, 3, 4, 5]</code>) moves to the <strong>back</strong>. The empty list and the <code>.append()</code> call disappear entirely, because the surrounding brackets handle collection for you:</p>
+<pre><code class="language-python">squares = [n * n for n in [1, 2, 3, 4, 5]]
+</code></pre>
+<p>Read it out loud: <em>"give me n times n, for every n in this list."</em> The front says <strong>what</strong>, the back says <strong>where from</strong>. Once you see that swap, you genuinely cannot unsee it.</p>
+<p>The reason this reads so naturally is that it matches how we describe the task in plain language. We don't say "create an empty list, then iterate, then append." We say "I want the squares of these numbers." Comprehensions let the code match the sentence.</p>
+<h2>12. Brute Force Solution</h2>
+<p><strong>Idea:</strong> the explicit loop. Build an empty list and append transformed items one at a time.</p>
+<p><strong>Algorithm:</strong>
+1. Create an empty list <code>result</code>.
+2. Loop over each item in the source.
+3. Transform the item.
+4. Append the transformed value to <code>result</code>.
+5. Return <code>result</code>.</p>
+<pre><code class="language-python">def squares_loop(numbers):
+    result = []
+    for n in numbers:
+        result.append(n * n)
+    return result
+</code></pre>
+<p><strong>Advantages:</strong>
+- Maximally readable for newcomers — nothing is hidden.
+- Trivial to extend when logic gets complicated (multiple steps, logging, branching).
+- Easy to drop a breakpoint or <code>print</code> inside for debugging.</p>
+<p><strong>Disadvantages:</strong>
+- Verbose for simple transforms — three lines of scaffolding for one idea.
+- Slightly slower than a comprehension because each <code>.append</code> is a separate method lookup and call.
+- The intent ("I want squares") is buried under mechanics ("empty list, loop, append").</p>
+<p><strong>Time complexity:</strong> O(n) — we touch each of the n items once.
+<strong>Space complexity:</strong> O(n) — we build a new list of n items.</p>
+<h2>13. Optimal Solution</h2>
+<p>The comprehension keeps the same O(n) work but removes the ceremony and runs a touch faster. Let's build up every variation.</p>
+<p><strong>Basic transform:</strong></p>
+<pre><code class="language-python">squares = [n * n for n in numbers]
+</code></pre>
+<p><strong>Filter — <code>if</code> at the back.</strong> A bouncer at the door. The <code>if</code> decides which items are even <em>allowed</em> onto the belt. It keeps or drops — no <code>else</code>.</p>
+<pre><code class="language-python">evens = [n for n in numbers if n % 2 == 0]
+</code></pre>
+<p><strong>Choose — <code>if/else</code> at the front.</strong> When the <code>if</code> sits in front of the <code>for</code>, it isn't filtering — it's picking between two values for <em>every</em> item, so it <strong>must</strong> have an <code>else</code>.</p>
+<pre><code class="language-python">labels = [&quot;even&quot; if n % 2 == 0 else &quot;odd&quot; for n in numbers]
+</code></pre>
+<p>Here is the distinction as a table — internalize this and comprehensions stop tripping you up:</p>
+<table>
+<thead>
+<tr>
+<th>Position of <code>if</code></th>
+<th>Job</th>
+<th>Needs <code>else</code>?</th>
+<th>Output length</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Back</strong> (after <code>for</code>)</td>
+<td>Filter — keep or drop items</td>
+<td>No</td>
+<td>Can be shorter</td>
+</tr>
+<tr>
+<td><strong>Front</strong> (before <code>for</code>)</td>
+<td>Choose — pick a value per item</td>
+<td>Yes</td>
+<td>Same as input</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Set comprehension</strong> — curly braces, and duplicates vanish automatically:</p>
+<pre><code class="language-python">unique_letters = {ch for ch in &quot;banana&quot;}   # {'b', 'a', 'n'}
+</code></pre>
+<p><code>"banana"</code> collapses to just <code>b</code>, <code>a</code>, and <code>n</code> because a set can't hold duplicates.</p>
+<p><strong>Dict comprehension</strong> — curly braces plus a <code>key: value</code> pair:</p>
+<pre><code class="language-python">squares_map = {n: n * n for n in numbers}   # {1: 1, 2: 4, 3: 9, ...}
+</code></pre>
+<p><strong>Nested comprehension</strong> — chain two loops, read left to right, exactly like stacked <code>for</code> loops. The <strong>first</strong> loop is the outer (slow) one; the <strong>second</strong> spins fastest:</p>
+<pre><code class="language-python">grid = [(x, y) for x in range(3) for y in range(3)]
+# (0,0), (0,1), (0,2), (1,0), (1,1), ...
+</code></pre>
+<p>Picture a grid: <code>x</code> fixes the row, <code>y</code> slides across the columns. Finish the row, drop to the next <code>x</code>, slide across again. That's why the outer loop is written first — it's the slow hand.</p>
+<h2>14. Python Code</h2>
+<pre><code class="language-python">&quot;&quot;&quot;Comprehension patterns: transform, filter, choose, set, dict, and nested.&quot;&quot;&quot;
+
+
+def squares(numbers):
+    &quot;&quot;&quot;Return each number multiplied by itself.&quot;&quot;&quot;
+    return [n * n for n in numbers]
+
+
+def evens(numbers):
+    &quot;&quot;&quot;Keep only even numbers (filter: `if` at the back, no else).&quot;&quot;&quot;
+    return [n for n in numbers if n % 2 == 0]
+
+
+def parity_labels(numbers):
+    &quot;&quot;&quot;Label each number 'even' or 'odd' (choose: if/else at the front).&quot;&quot;&quot;
+    return [&quot;even&quot; if n % 2 == 0 else &quot;odd&quot; for n in numbers]
+
+
+def unique_chars(text):
+    &quot;&quot;&quot;Collect distinct characters using a set comprehension.&quot;&quot;&quot;
+    return {ch for ch in text}
+
+
+def square_map(numbers):
+    &quot;&quot;&quot;Map each number to its square using a dict comprehension.&quot;&quot;&quot;
+    return {n: n * n for n in numbers}
+
+
+def coordinate_grid(size):
+    &quot;&quot;&quot;Every (x, y) pair; outer loop first, inner loop spins fastest.&quot;&quot;&quot;
+    return [(x, y) for x in range(size) for y in range(size)]
+
+
+if __name__ == &quot;__main__&quot;:
+    assert squares([1, 2, 3, 4, 5]) == [1, 4, 9, 16, 25]
+    assert evens([1, 2, 3, 4, 5]) == [2, 4]
+    assert parity_labels([1, 2, 3]) == [&quot;odd&quot;, &quot;even&quot;, &quot;odd&quot;]
+    assert unique_chars(&quot;banana&quot;) == {&quot;b&quot;, &quot;a&quot;, &quot;n&quot;}
+    assert square_map([1, 2, 3]) == {1: 1, 2: 4, 3: 9}
+    assert coordinate_grid(2) == [(0, 0), (0, 1), (1, 0), (1, 1)]
+    print(&quot;All comprehension examples pass.&quot;)
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<ul>
+<li><strong><code>squares</code></strong> — <code>[n * n for n in numbers]</code> is the pure transform. The expression <code>n * n</code> is at the front; the loop feeds one <code>n</code> at a time from the back. No filtering.</li>
+<li><strong><code>evens</code></strong> — the trailing <code>if n % 2 == 0</code> is a filter. <code>n % 2</code> is the remainder after dividing by two; when it's <code>0</code>, the number is even and survives. Odd numbers are dropped, so the output can be shorter than the input.</li>
+<li><strong><code>parity_labels</code></strong> — the leading <code>"even" if n % 2 == 0 else "odd"</code> is a <em>choice</em>, not a filter. Every input produces exactly one label, so the <code>else</code> is mandatory and the output length always matches the input.</li>
+<li><strong><code>unique_chars</code></strong> — swapping <code>[]</code> for <code>{}</code> yields a set, which silently discards duplicate characters. This is the laziest way to dedupe.</li>
+<li><strong><code>square_map</code></strong> — adding <code>n:</code> before the value turns braces into a dictionary. The part before the colon is the key, the part after is the value.</li>
+<li><strong><code>coordinate_grid</code></strong> — two <code>for</code> clauses read top-to-bottom as nested loops: <code>x</code> is the outer/slow loop, <code>y</code> is the inner/fast loop.</li>
+<li><strong><code>__main__</code> block</strong> — each <code>assert</code> is a tiny, runnable proof that a function behaves. Run the file and it either prints success or blows up on the exact broken line.</li>
+</ul>
+<h2>16. Dry Run</h2>
+<p>Let's trace <code>evens([1, 2, 3, 4, 5])</code> step by step.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th><code>n</code></th>
+<th><code>n % 2</code></th>
+<th><code>== 0</code>?</th>
+<th>Action</th>
+<th><code>result</code> so far</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>No</td>
+<td>drop</td>
+<td><code>[]</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>2</td>
+<td>0</td>
+<td>Yes</td>
+<td>keep</td>
+<td><code>[2]</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>3</td>
+<td>1</td>
+<td>No</td>
+<td>drop</td>
+<td><code>[2]</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>4</td>
+<td>0</td>
+<td>Yes</td>
+<td>keep</td>
+<td><code>[2, 4]</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>5</td>
+<td>1</td>
+<td>No</td>
+<td>drop</td>
+<td><code>[2, 4]</code></td>
+</tr>
+</tbody>
+</table>
+<p>Final result: <code>[2, 4]</code>. The comprehension walked all five numbers, tested each against the filter, and only let the even ones through — exactly like a bouncer checking IDs at the door.</p>
+<h2>17. Complexity Analysis</h2>
+<p><strong>Time: O(n).</strong> A comprehension visits each of the n input items exactly once, performing constant-time work (a multiply, a modulo, an append handled internally) per item. Adding a filter doesn't change the class — you still inspect every item to decide whether it passes. A nested comprehension over two ranges of size m is <strong>O(m²)</strong>, because you produce every pair.</p>
+<p><strong>Space: O(n).</strong> You allocate a brand-new list (or set, or dict) holding up to n results. This is the same as the loop version — comprehensions save <em>lines</em>, not <em>memory</em>. If you don't need to store all results at once, a <strong>generator expression</strong> (<code>(n * n for n in numbers)</code>) drops the space to O(1) by producing items lazily on demand.</p>
+<p>Both bounds are tight because the transformation is unavoidable per-item work: you cannot build n results without touching n inputs and storing n outputs.</p>
+<h2>18. Alternative Solutions</h2>
+<p>The main alternative is the <strong>generator expression</strong> — identical syntax, but with round parentheses instead of square brackets:</p>
+<pre><code class="language-python">total = sum(n * n for n in numbers)   # no intermediate list built
+</code></pre>
+<p>A list comprehension builds the whole list in memory first; a generator yields one value at a time. When you're feeding the result straight into <code>sum()</code>, <code>max()</code>, <code>any()</code>, or a <code>for</code> loop — and never need the full list — the generator is strictly better on memory.</p>
+<p><strong><code>map</code> and <code>filter</code></strong> are the functional-style alternatives:</p>
+<pre><code class="language-python">squares = list(map(lambda n: n * n, numbers))
+evens = list(filter(lambda n: n % 2 == 0, numbers))
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Readability</th>
+<th>Memory</th>
+<th>When to prefer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>List comprehension</td>
+<td>High</td>
+<td>O(n)</td>
+<td>You need the full list</td>
+</tr>
+<tr>
+<td>Generator expression</td>
+<td>High</td>
+<td>O(1)</td>
+<td>You'll consume it once</td>
+</tr>
+<tr>
+<td><code>map</code> / <code>filter</code></td>
+<td>Medium</td>
+<td>Lazy</td>
+<td>Passing an existing named function</td>
+</tr>
+<tr>
+<td>Plain <code>for</code> loop</td>
+<td>Highest for complex logic</td>
+<td>O(n)</td>
+<td>Branching, side effects, debugging</td>
+</tr>
+</tbody>
+</table>
+<p>Most Pythonistas reach for the comprehension or generator; <code>map</code>/<code>filter</code> shine mainly when you already have a named function to pass.</p>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong>Empty input:</strong> <code>[n * n for n in []]</code> returns <code>[]</code>. Comprehensions handle empty collections gracefully — the loop simply never runs.</li>
+<li><strong>Duplicates in a set comprehension:</strong> they're silently collapsed. <code>{ch for ch in "aaa"}</code> is <code>{'a'}</code>. That's a feature, not a bug — but don't use a set if you need to <em>count</em> occurrences.</li>
+<li><strong>Duplicate keys in a dict comprehension:</strong> the <strong>last</strong> value wins. <code>{k: v for k, v in [("a", 1), ("a", 2)]}</code> gives <code>{"a": 2}</code>. Silent data loss if you didn't expect collisions.</li>
+<li><strong>Single-element input:</strong> works exactly as expected; nothing special.</li>
+<li><strong>Very large input:</strong> a list comprehension materializes everything in memory. For millions of items you'd feel it — switch to a generator expression.</li>
+</ul>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Filtering with <code>if</code> in front of <code>for</code>.</strong> <code>[n for n in numbers if n % 2 == 0]</code> filters; <code>["x" if cond else "y" for n in numbers]</code> chooses. Putting a bare front <code>if</code> without <code>else</code> is a <strong>syntax error</strong> — the front form <em>demands</em> an <code>else</code>.</li>
+<li><strong>Cramming too much logic in.</strong> Three loops and two conditions deep, nobody can read it — including you at 3am. If you have to squint, unfold it back into a normal loop.</li>
+<li><strong>Building a list only to loop over it once.</strong> Use a generator expression instead and save the memory.</li>
+<li><strong>Expecting a set comprehension to preserve order or duplicates.</strong> Sets are unordered and deduplicated by design.</li>
+<li><strong>Reference/scope surprises with nested loops.</strong> Getting the outer/inner loop order backward flips your grid. Remember: first <code>for</code> = outer/slow, second <code>for</code> = inner/fast.</li>
+<li><strong>Reaching for a comprehension when there are side effects.</strong> If the "body" needs to print, log, write a file, or raise — write a loop. Comprehensions are for <em>building values</em>, not <em>doing things</em>.</li>
+</ol>
+<h2>21. Interview Questions</h2>
+<ul>
+<li><strong>What's the difference between a list comprehension and a generator expression?</strong> (Eager list in memory vs. lazy one-at-a-time; brackets vs. parentheses; O(n) vs. O(1) space.)</li>
+<li><strong>When would you <em>not</em> use a comprehension?</strong> (Complex branching logic, side effects, or when a loop reads more clearly.)</li>
+<li><strong>Explain the difference between a leading <code>if/else</code> and a trailing <code>if</code>.</strong> (Choose a value vs. filter items.)</li>
+<li><strong>Rewrite this nested loop as a comprehension — and then argue whether you should.</strong></li>
+<li><strong>How do you deduplicate a list while transforming it in one line?</strong> (Set comprehension.)</li>
+<li><strong>What happens with duplicate keys in a dict comprehension?</strong> (Last value wins.)</li>
+</ul>
+<h2>22. Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 1108 — Defanging an IP Address:</strong> a pure per-character transform, ideal comprehension practice.</li>
+<li><strong>LeetCode 1929 — Concatenation of Array:</strong> building a new list from an existing one, the comprehension bread-and-butter.</li>
+<li><strong>LeetCode 1512 — Number of Good Pairs:</strong> naturally expressed with a nested comprehension counting pairs.</li>
+<li><strong>LeetCode 771 — Jewels and Stones:</strong> a set comprehension for the jewels plus a filtered count is the clean solution.</li>
+<li><strong>LeetCode 1720 — Decode XORed Array:</strong> a one-line transform from a running value, reinforcing "expression first."</li>
+</ul>
+<p>They're related because each is fundamentally <em>take a collection, transform and/or filter it, collect the result</em> — the exact shape comprehensions were built for.</p>
+<h2>23. Key Takeaways</h2>
+<ul>
+<li>Write <strong>what you want first</strong>, then the <strong>loop that feeds it</strong>.</li>
+<li>An <code>if</code> at the <strong>back filters</strong> (keep or drop, no <code>else</code>). An <code>if</code> at the <strong>front chooses</strong> a value (needs <code>else</code>).</li>
+<li>Change the brackets and punctuation: <code>[]</code> list, <code>{}</code> set, <code>{k: v}</code> dict.</li>
+<li>Nest loops <strong>left to right</strong> — outer loop first, inner loop spins fastest.</li>
+<li>Comprehensions are <strong>underrated for small transforms and overrated for everything else</strong>. One clean step → comprehension. Messy, branching logic → loop.</li>
+</ul>
+<h2>24. Watch the Video</h2>
+<p>Reading about the four-lines-into-one swap is one thing; <em>seeing</em> each piece slide into place makes it click for good. Watch the full walkthrough — including the live filter-vs-choose demo and the nested-grid animation — here: <strong>{LINK}</strong></p>
+<h2>25. About the Series</h2>
+<p>This is Lesson 13 of <strong>Fun with Learning Technology</strong> — a hands-on Python series that takes one small, real concept per episode and makes it genuinely <em>stick</em>. No fluff, no memorization drills: just the intuition an experienced engineer actually uses, explained the way you'd want a mentor to explain it. Each lesson builds toward reading and writing Python without hesitation.</p>
+<h2>26. Call To Action</h2>
+<p>If this made comprehensions finally click, <strong>like the video on YouTube</strong> and <strong>subscribe</strong> so the next lesson finds you. Get the written deep-dives — like this one — by <strong>subscribing to the Substack newsletter</strong>. Got a case where you're unsure whether to use a comprehension or a loop? <strong>Drop it in the comments</strong> and I'll weigh in. And if a teammate is still writing four lines where one would do, <strong>share this with them</strong>.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When you see a for-loop that builds a list by appending transformed items, what should you reach for?</summary><p>A list comprehension: [expr for x in iterable]. The tell is a loop whose whole body is result.append(something).</p></details><details class='card2'><summary>Time complexity of a comprehension over n items?</summary><p>O(n) — it visits each element once. Nesting two loops over sizes n and m is O(n*m), same as the equivalent nested for-loops.</p></details><details class='card2'><summary>Space complexity of a list/dict/set comprehension?</summary><p>O(n) — it materializes every result in memory. A generator expression (round brackets) is O(1) and lazy instead.</p></details><details class='card2'><summary>Common bug: what&#x27;s the difference between `if` at the end vs `if/else` in front?</summary><p>Trailing `if` filters (keeps some items). A front `x if cond else y` is a ternary that transforms every item — no filtering, keeps all.</p></details><details class='card2'><summary>List comprehension vs generator expression — when pick which?</summary><p>List builds all results now (indexable, reusable). Generator yields one at a time (memory-cheap, single-pass). Use generator for large or streamed data you iterate once.</p></details><details class='card2'><summary>Interview: when should you NOT use a comprehension?</summary><p>When it has side effects, deep nesting, or gets unreadable — reach for a plain loop. Comprehensions are for building a collection, not doing work.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
