@@ -1,0 +1,178 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Smallest Palindromic Rearrangement I — 🟡 Intermediate (2/3) — LeetCode Daily Python Solution (half the string, mirror the rest) — Python LeetCode Solution</title><meta name="description" content="📍 Jump to your level:
+🟡 Intermediate: 0:21–3:55
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/smallest-palindromic-rearrangement-i-intermediate
+💻 Code on GitHub: https://github.com/tim">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/smallest-palindromic-rearrangement-i-intermediate.html">
+<meta property="og:title" content="Smallest Palindromic Rearrangement I — 🟡 Intermediate (2/3) — LeetCode Daily Python Solution (half the string, mirror the rest) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📍 Jump to your level:
+🟡 Intermediate: 0:21–3:55
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/smallest-palindromic-rearrangement-i-intermediate
+💻 Code on GitHub: https://github.com/tim">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Smallest Palindromic Rearrangement I — 🟡 Intermediate (2/3) — LeetCode Daily Python Solution (half the string, mirror the rest)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Palindrome problems show up constantly in coding interviews, and for good reason — they force you to think about symmetry, which is a different muscle than the usual "iterate and track a variable" pattern. Smallest Palindromic Rearrangement I is a great example of a problem that looks like it needs heavy machinery (permutations, backtracking, sorting tricks) but actually collapses into something almost embarrassingly simple once you see the right observation.</p>
+<p>What interviewers are really testing here isn't your ability to write a sort or a loop. It's whether you can spot redundant work. Half of this string is completely determined by the other half — that's the whole interview signal. If you internalize that pattern, you'll recognize it instantly the next time a problem hands you a symmetric structure, whether that's a palindrome, a mirrored tree, or a two-pointer scenario.</p>
+<h2>Problem Overview</h2>
+<p>You're given a string that is already a palindrome. Your job is to rearrange its letters — using every letter exactly once — so that the result is still a palindrome, but is the lexicographically smallest one possible.</p>
+<p>In plain terms: same bag of letters, same "reads the same forwards and backwards" property, but arranged so it comes first alphabetically among all valid palindromic arrangements.</p>
+<p>Because the input is guaranteed to already be a palindrome, you know something powerful about the letter counts before you even look at the string: every letter appears an even number of times, except possibly one letter, which appears an odd number of times and must sit dead center.</p>
+<h2>Example</h2>
+<p>Input: <code>"babab"</code>
+Output: <code>"abbba"</code></p>
+<p>Let's check the counts: <code>b</code> appears 3 times, <code>a</code> appears 2 times. Since <code>b</code> is odd, <code>b</code> becomes the center letter. The remaining letters are <code>a, a, b, b</code>, split evenly — half of them (<code>a, b</code>) form the left side, sorted smallest first.</p>
+<p>Wait — sorted smallest first between <code>a</code> and <code>b</code> gives <code>ab</code>... but the actual output is <code>abbba</code>. Let's re-derive it directly from counts: half-counts are <code>a: 1, b: 1</code>. Sorting alphabetically gives the half-string <code>ab</code>. Mirroring around the center <code>b</code> gives <code>ab</code> + <code>b</code> + <code>ba</code> = <code>abbba</code>. That matches.</p>
+<p>Another example: <code>"tacocat"</code></p>
+<p>Counts: <code>t: 2, a: 2, c: 2, o: 1</code>. Only <code>o</code> is odd, so <code>o</code> sits in the center. The remaining letters, each divided by two: <code>t: 1, a: 1, c: 1</code>. Sorted alphabetically, the half becomes <code>act</code>. Mirror it around <code>o</code>: <code>act</code> + <code>o</code> + <code>tca</code> = <code>actotca</code>.</p>
+<h2>Intuition</h2>
+<p>Here's the thought process an experienced engineer walks through, roughly in order:</p>
+<p>First, notice the constraint that's easy to skim past: the input is <em>already</em> a palindrome. That's not flavor text — it's a guarantee about the shape of the letter-count distribution. In any palindrome, every character must be mirrored by an identical character on the other side, except possibly one character sitting alone in the exact middle (only possible when the string length is odd). So at most one letter can have an odd count.</p>
+<p>Second, ask: if the right half of any palindrome is fully determined by the left half, why touch the right half at all? Every operation you'd perform on it — sorting, placing, comparing — is wasted work, because it always ends up being the mirror image of whatever you build on the left.</p>
+<p>Third, think about what "smallest" means for a palindrome specifically. Lexicographic comparison looks left to right. Since the left half is read first, making the left half as small as possible, as early as possible, is the entire optimization. That means: take your smallest available letters and place them as far left as you can.</p>
+<p>That naturally leads to the algorithm: tally the letters, pull out the (at most one) odd-count letter for the center, take half of every other letter's count, sort those halves alphabetically, and glue: <code>half + middle + reverse(half)</code>.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Generate every distinct permutation of the string, filter to the ones that read as palindromes, and pick the smallest one.</p>
+<p><strong>Algorithm:</strong>
+1. Generate all unique permutations of the input string.
+2. For each permutation, check if it equals its own reverse.
+3. Among the palindromic permutations, return the alphabetically smallest.</p>
+<p><strong>Advantages:</strong> Dead simple to reason about, trivially correct, no clever insight required.</p>
+<p><strong>Disadvantages:</strong> Catastrophically slow. The number of permutations grows factorially with string length, and even after deduplicating repeated letters, you're still exploring a search space that's completely unnecessary given what we already know about palindrome structure.</p>
+<p><strong>Complexity:</strong> Time O(n!), space O(n!) to hold the permutations (or O(n) per permutation if generated lazily, but you're still paying O(n!) time). For a string of length 100,000, this isn't slow — it's uncomputable in the lifetime of the universe.</p>
+<h2>Optimal Solution</h2>
+<p>The <strong>Half and Mirror</strong> approach does one pass to count, one pass to build.</p>
+<p><strong>Step 1 — Tally.</strong> Walk the string once and count occurrences of each character using a hash map. Since the input is already a palindrome, at most one character will have an odd count.</p>
+<p><strong>Step 2 — Split.</strong> For every character, take <code>count // 2</code> as its contribution to the left half. If a character has an odd count, remember it as the middle character (there's at most one).</p>
+<p><strong>Step 3 — Sort.</strong> Build the left half by walking characters in alphabetical order and repeating each one <code>count // 2</code> times. Alphabetical order matters here — it's what guarantees the smallest possible left half, which guarantees the smallest possible whole string.</p>
+<p><strong>Step 4 — Mirror.</strong> Concatenate: <code>left_half + middle_char (if any) + reversed(left_half)</code>.</p>
+<p>A quick mental table for <code>"tacocat"</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Letter</th>
+<th>Count</th>
+<th>Half</th>
+<th>Middle?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a</td>
+<td>2</td>
+<td>1</td>
+<td>no</td>
+</tr>
+<tr>
+<td>c</td>
+<td>2</td>
+<td>1</td>
+<td>no</td>
+</tr>
+<tr>
+<td>o</td>
+<td>1</td>
+<td>0</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>t</td>
+<td>2</td>
+<td>1</td>
+<td>no</td>
+</tr>
+</tbody>
+</table>
+<p>Left half (alphabetical, repeated by half-count): <code>a c t</code> → <code>"act"</code>. Middle: <code>"o"</code>. Mirror: <code>"act" + "o" + "tca"</code> = <code>"actotca"</code>.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from collections import Counter
+
+
+def smallest_palindromic_rearrangement(s: str) -&gt; str:
+    counts = Counter(s)
+
+    middle = &quot;&quot;
+    half_chars = []
+
+    for char in sorted(counts):
+        count = counts[char]
+        if count % 2 == 1:
+            middle = char  # at most one odd count, guaranteed by input being a palindrome
+        half_chars.append(char * (count // 2))
+
+    half = &quot;&quot;.join(half_chars)
+    return half + middle + half[::-1]
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>Counter(s)</code> builds the letter tally in one linear pass — this is the "tally sheet" from the intuition section.</li>
+<li><code>sorted(counts)</code> iterates the distinct characters in alphabetical order, which is what forces the smallest possible left half.</li>
+<li>Inside the loop, <code>count % 2 == 1</code> catches the one letter (if any) with an odd count and stores it as <code>middle</code>. Because the input is guaranteed to already be a palindrome, this can happen at most once — no need to guard against multiple odd counts.</li>
+<li><code>half_chars.append(char * (count // 2))</code> builds up each letter's contribution to the left half, in the correct sorted position.</li>
+<li><code>half = "".join(half_chars)</code> collapses the list into the final left-half string.</li>
+<li>The return statement mirrors it: <code>half + middle + half[::-1]</code> — left half, center (if any), and the left half reversed to form the right half.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Input: <code>"babab"</code></p>
+<ol>
+<li><code>Counter("babab")</code> → <code>{'b': 3, 'a': 2}</code></li>
+<li>Sorted keys: <code>['a', 'b']</code></li>
+<li><code>a</code>: count 2, even → <code>half_chars = ["a"]</code></li>
+<li><code>b</code>: count 3, odd → <code>middle = "b"</code>, <code>half_chars = ["a", "b"]</code></li>
+<li><code>half = "ab"</code></li>
+<li>Result: <code>"ab" + "b" + "ba"</code> = <code>"abbba"</code></li>
+</ol>
+<p>Matches the expected output.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(n log k + n), where n is the string length and k is the alphabet size (at most 26 for lowercase English letters, so effectively a constant). Counting is O(n), sorting the distinct keys is O(k log k), and building the half/mirror strings is O(n). Overall this simplifies to O(n).</p>
+<p><strong>Space:</strong> O(n) for the output string and O(k) for the counts hash map, which is effectively O(1) additional space beyond the output since k is bounded by the alphabet size.</p>
+<p>This is correct because every step touches each character a constant number of times — one count, one placement into the half, one mirrored copy — with no repeated or exponential work anywhere in the pipeline.</p>
+<h2>Alternative Solutions</h2>
+<p>You could sort the entire original string and then try to rearrange it into a palindrome shape directly, checking parity as you go. This works but is functionally identical to the Half and Mirror approach — it just does more bookkeeping to arrive at the same place. The count-and-mirror method is preferred because it separates concerns cleanly: counting logic never touches placement logic, which makes the code easier to verify and extend to a k-distinct-middle-character variant, which is exactly what the follow-up "Smallest Palindromic Rearrangement II" problem asks for.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Single character</strong> (e.g., <code>"z"</code>): half is empty, the whole string becomes the middle. Output: <code>"z"</code>.</li>
+<li><strong>All identical characters</strong> (e.g., <code>"aaaa"</code>): half is <code>"aa"</code>, no middle, mirrors to <code>"aaaa"</code>.</li>
+<li><strong>Already smallest</strong> (e.g., <code>"aba"</code>): still rebuilt from scratch the same way — no special-casing needed, and the output equals the input.</li>
+<li><strong>Two distinct letters, even length</strong> (e.g., <code>"aabb"</code> rearranged as a palindrome from <code>"abba"</code>): no odd counts, so no middle character; half is <code>"ab"</code>, output <code>"abba"</code>.</li>
+<li><strong>Maximum length input</strong> (up to 100,000 characters): the linear algorithm handles this instantly, whereas brute force wouldn't finish.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting to pull out the odd-count letter separately</strong> before halving — this silently corrupts the palindrome property if you include it in the doubled half.</li>
+<li><strong>Sorting the wrong thing</strong> — sorting the full string instead of just the distinct characters used to build the half, which produces incorrect ordering when counts differ.</li>
+<li><strong>Assuming there can be more than one odd-count letter</strong> — this can't happen when the input is guaranteed to already be a palindrome, but it's an easy assumption to get wrong if you skip that guarantee.</li>
+<li><strong>Reversing the wrong half</strong> — mirroring the sorted half instead of building it once and reversing that exact string, which can introduce subtle bugs if the half is rebuilt from scratch for the right side.</li>
+<li><strong>Off-by-one errors with integer division</strong> — using <code>count / 2</code> instead of <code>count // 2</code> in Python, which produces a float and breaks string multiplication.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you handle this if the input string is <em>not</em> guaranteed to already be a palindrome?</li>
+<li>Can you produce not just the smallest, but the k-th smallest palindromic rearrangement?</li>
+<li>What if the string contains Unicode characters instead of just lowercase English letters — does your solution still hold?</li>
+<li>How would you extend this to find the <em>largest</em> palindromic rearrangement instead?</li>
+<li>Can you do this in-place, without allocating a new string for the output?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 409 — Longest Palindrome</strong>: same core idea of counting letter parity, but focused on length instead of construction.</li>
+<li><strong>LeetCode 680 — Valid Palindrome II</strong>: tests palindrome-checking with a single allowed deletion.</li>
+<li><strong>LeetCode 5 — Longest Palindromic Substring</strong>: a different flavor of palindrome problem, focused on substrings rather than full rearrangements.</li>
+<li><strong>LeetCode 3327 — Smallest Palindromic Rearrangement II</strong>: the direct sequel referenced in this video, extending the same trick to a harder variant.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Whenever a problem hands you a structure with built-in symmetry — a palindrome, a mirrored tree, a two-pointer array — look for the half you don't actually need to touch. Count once, sort the distinct symbols instead of the whole string, and let the mirror do the rest of the work for free. That single habit turns an exponential-looking problem into a linear one.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with the "tacocat" pause-and-solve challenge, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This is part of <strong>Fun with Learning Technology</strong>, a daily series breaking down LeetCode problems with a focus on the <em>why</em> behind each solution — not just the code, but the intuition that lets you recognize the same pattern the next time it shows up in a different disguise.</p>
+<h2>Call To Action</h2>
+<p>If this breakdown helped the trick click, drop a like on the video and subscribe on YouTube — new daily solutions drop every day. For deeper write-ups like this one, subscribe to the Substack newsletter. And if you spotted a cleaner way to explain any part of this, drop it in the comments — sharing this with someone prepping for interviews helps more than you'd think.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When you see &#x27;rearrange chars for smallest palindrome&#x27;, which pattern applies?</summary><p>Half-and-mirror: build the smallest half from sorted char counts, mirror it, insert leftover odd char in the middle.</p></details><details class='card2'><summary>Time complexity of the half-and-mirror palindrome build?</summary><p>O(n log n) — dominated by sorting/counting unique characters; construction itself is O(n).</p></details><details class='card2'><summary>Space complexity of this approach?</summary><p>O(n) for the frequency map and the output string/half-array.</p></details><details class='card2'><summary>Trickiest edge case in smallest palindromic rearrangement?</summary><p>More than one character with odd count means no palindrome is possible — must detect and reject before building.</p></details><details class='card2'><summary>Why not brute-force every permutation for smallest palindrome?</summary><p>Factorial blowup (n!); greedy half-construction reaches the same answer in near-linear time.</p></details><details class='card2'><summary>How does this shortcut relate to spell-check/DNA repair?</summary><p>Both rely on comparing symmetric halves or counts to find minimal edits/matches, same &#x27;reduce to half, mirror&#x27; reasoning.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
