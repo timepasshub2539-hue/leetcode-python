@@ -1,309 +1,245 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Stop Over-Catching Errors: The Try/Except Truth (Python Lesson 14) — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-14-error-handling-with-exceptions
+<title>Lesson 14: One Bad Line Can Crash Your Whole Program — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-14-error-handling-with-exceptions
 💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-l">
 <meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-14-error-handling-with-exceptions.html">
-<meta property="og:title" content="Stop Over-Catching Errors: The Try/Except Truth (Python Lesson 14) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:title" content="Lesson 14: One Bad Line Can Crash Your Whole Program — Python LeetCode Solution"><meta property="og:type" content="website">
 <meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-14-error-handling-with-exceptions
 💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-l">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Stop Over-Catching Errors: The Try/Except Truth (Python Lesson 14)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>8. Introduction: Why Error Handling Matters</h2>
-<p>Imagine you are driving down the highway at 60 mph. You rely on your seatbelt and airbags because, deep down, you know that accidents happen. You don't ignore the brakes or pretend they don't exist; you plan for them. Your Python code works exactly the same way.</p>
-<p>When a beginner writes their first "Hello World," errors are rare. But as soon as you start parsing user input, connecting to databases, or manipulating complex data structures, exceptions become inevitable. An <code>IndexError</code> when accessing the last element of an empty list. A <code>KeyError</code> when fetching a missing configuration setting. Or a <code>ZeroDivisionError</code> when a sensor fails to report a value.</p>
-<p>If you leave these errors unhandled, your program crashes instantly. The user sees a blank white screen or an ugly traceback that leads them straight to your error page. If you handle them poorly—by catching everything—you might as well not have handled them at all, because the application continues running in a broken state.</p>
-<p>In this lesson, we are going to move beyond the syntax of <code>try/except</code> and dive into the <em>philosophy</em> of exception handling. We will explore why catching generic exceptions is often a code smell, how the <code>else</code> block provides a cleaner path for happy paths, and why the <code>finally</code> block is non-negotiable for resource management.</p>
-<p>Interviewers love this topic not because they want to see if you can write syntax correctly, but because they want to know: <strong>How do you build software that survives in the real world?</strong> They are testing your understanding of stability, debugging, and architectural robustness. By the end of this guide, you will be equipped to write code that anticipates failure rather than hoping it never happens.</p>
-<h2>9. Problem Overview</h2>
-<p>The "problem" we are solving isn't a specific algorithmic puzzle like finding the maximum sum subarray; it is a fundamental engineering challenge: <strong>How do we execute risky operations without crashing our entire application, and how do we maintain program integrity regardless of success or failure?</strong></p>
-<p>In software development, code rarely runs in a vacuum. It interacts with users (who type typos), networks (which drop packets), databases (which go down), and operating systems (which run out of memory). Every interaction is a potential point of failure.</p>
-<p>Your goal in this lesson is to master the four pillars of exception handling:
-1.  <strong>Try</strong>: Define the risky code block where things might go wrong.
-2.  <strong>Except</strong>: Intercept specific errors to handle them gracefully or provide fallback values.
-3.  <strong>Else</strong>: Execute logic that <em>only</em> runs if the <code>try</code> block succeeded, keeping your success logic distinct from your error handling logic.
-4.  <strong>Finally</strong>: Guarantee cleanup actions (like closing files or releasing locks) run regardless of whether an error occurred.</p>
-<p>We will also learn how to actively inject errors using <code>raise</code> to test our own safety nets and understand the hierarchy of built-in exception classes so we can catch exactly what we expect, not just "anything."</p>
-<h2>10. Example: The Banking System Crash</h2>
-<p>Let's look at a concrete scenario. Imagine a function that transfers money between two bank accounts. This operation involves reading balances from a database, performing calculations, and writing the new balances back. If any of these steps fail, the transfer must not complete, and we cannot simply let the app crash.</p>
-<h3>Code Example</h3>
-<pre><code class="language-python">def transfer_funds(user_id, amount):
-    balance = read_balance(user_id)  # RISKY: Could raise DatabaseError
-    if balance &lt; amount:            # RISKY: Business logic violation
-        return &quot;Insufficient funds&quot;
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson 14: One Bad Line Can Crash Your Whole Program</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every developer eventually ships code that meets input it wasn't expecting. A user uploads a file that doesn't exist. A config value that should be a number arrives as a string. A network call that usually succeeds just... doesn't, this one time. None of these are exotic scenarios — they're Tuesday. The question isn't whether your program will encounter bad input, it's whether it has a plan for when it does.</p>
+<p>This matters far beyond personal projects. In coding interviews, exception handling is one of the fastest ways to separate a candidate who writes code that "works on the happy path" from one who writes code that survives contact with reality. Interviewers routinely probe this with questions like "what happens if this list is empty?" or "how would you handle a missing key here?" If your answer is a shrug, that's a signal. If your answer is "I'd catch that specific exception and handle it explicitly," that's a very different signal.</p>
+<p>Learning <code>try</code>/<code>except</code>/<code>else</code>/<code>finally</code> well is also one of those rare topics in Python where understanding it deeply pays off immediately — it changes how you read tracebacks, how you structure functions that touch files or networks, and how you reason about what "correct" even means when things go wrong.</p>
+<h2>Problem Overview</h2>
+<p>Here's the situation in plain terms: Python code executes top to bottom, line by line. If any line raises an exception — an error condition Python detects at runtime — and nothing is there to catch it, the program stops immediately. Every line after the failure point never runs. The user sees a traceback: a wall of red text that means nothing to someone who isn't debugging the code themselves.</p>
+<p>The goal is to build a mechanism where:</p>
+<ol>
+<li>Risky code (file access, type conversion, division, dictionary lookups) is clearly marked as risky.</li>
+<li>When something goes wrong inside that risky code, you catch the <em>specific</em> problem instead of letting the whole program die.</li>
+<li>Code that should only run after success has a dedicated place to live.</li>
+<li>Cleanup code — closing files, releasing connections — runs no matter what happened, success or failure.</li>
+</ol>
+<p>Python solves this with four keywords: <code>try</code>, <code>except</code>, <code>else</code>, and <code>finally</code>. You don't need all four in every block, but understanding what each one guarantees is what lets you reason correctly about your program's behavior under failure.</p>
+<h2>Example</h2>
+<p>Consider a small function that reads a user's age from input and validates it:</p>
+<pre><code class="language-python">def get_age(raw_value):
+    age = int(raw_value)
+    if age &lt; 0:
+        raise ValueError(&quot;age cannot be negative&quot;)
+    return age
 
-    new_balance = balance - amount
-    write_balance(user_id, new_balance) # RISKY: Could raise ConnectionError
-
-    return &quot;Transfer successful&quot;
+print(get_age(&quot;25&quot;))     # works fine -&gt; 25
+print(get_age(&quot;hello&quot;))  # crashes the whole program
+print(get_age(&quot;-3&quot;))     # never even runs
 </code></pre>
-<p>If <code>read_balance</code> crashes the app, the user gets nothing. If we catch every possible error here indiscriminately, we might accidentally hide a critical security breach or a logic bug that needs immediate attention from an engineer. We need a structured approach to ensure the system remains responsive and logs the issue for debugging later.</p>
-<h3>Visualizing the Flow</h3>
-<p>Here is a simple table showing what happens at each step if we apply the <code>try/except/else/finally</code> pattern:</p>
+<p>Run this, and the moment <code>get_age("hello")</code> executes, <code>int("hello")</code> raises a <code>ValueError</code>. Python has no instructions for what to do next, so it prints a traceback and exits. The third call, <code>get_age("-3")</code>, never gets a chance to run — not because it's wrong, but because the program already died one line earlier.</p>
+<p>Now compare that to a version with exception handling:</p>
+<pre><code class="language-python">def get_age(raw_value):
+    try:
+        age = int(raw_value)
+    except ValueError:
+        print(f&quot;'{raw_value}' is not a valid number&quot;)
+        return None
+    else:
+        if age &lt; 0:
+            print(&quot;age cannot be negative&quot;)
+            return None
+        return age
+
+for value in [&quot;25&quot;, &quot;hello&quot;, &quot;-3&quot;]:
+    print(get_age(value))
+</code></pre>
+<p>Output:</p>
+<pre><code>25
+'hello' is not a valid number
+None
+age cannot be negative
+None
+</code></pre>
+<p>Every input gets processed. The bad ones produce a clear message instead of a crash, and the loop keeps going. That's the entire point.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer actually thinks about this, before writing a single line of <code>try</code>/<code>except</code>.</p>
+<p>Picture a tightrope walker. The walk itself — the risky part — is the <code>try</code> block. It might go fine. It might not. If the walker falls, there's a safety net underneath: that's the <code>except</code> block, waiting specifically for a fall, not for anything else that could happen in the building. If the walk succeeds without incident, the crowd cheers — that's <code>else</code>, code that should only run when nothing went wrong. And no matter what happened, fall or no fall, the crew rolls up the mats afterward. That's <code>finally</code>. It always runs.</p>
+<p>The key intuition experienced engineers rely on: <strong>an exception is not a bug report, it's a named event.</strong> <code>ValueError</code>, <code>TypeError</code>, <code>KeyError</code>, <code>IndexError</code> — each name tells you exactly what kind of thing went wrong. That naming is the whole reason exception handling is more powerful than a generic "something failed" flag. When you catch <code>ValueError</code> specifically, you're saying "I anticipated exactly this failure mode, and I know what to do about it." When you catch everything with a bare <code>except</code>, you're saying "I have no idea what might go wrong, so I'll hide all of it" — which also means hiding your own typos and logic errors alongside the failure you actually expected.</p>
+<p>The second intuition: Python culture favors <strong>asking forgiveness rather than permission (EAFP)</strong> over <strong>checking first (LBYL)</strong>. You could check <code>if key in dictionary</code> before accessing it, or you could just try the access and catch <code>KeyError</code> if it's missing. For file and network operations especially, checking first doesn't even guarantee success a moment later — the file could be deleted, the connection could drop, between your check and your action. Trying the operation and catching the specific failure is usually the more honest, more reliable pattern.</p>
+<h2>Brute Force Solution</h2>
+<p>The "brute force" approach here is really the <em>absence</em> of exception handling, paired with manual pre-checks for every possible failure mode.</p>
+<p><strong>Idea:</strong> Before doing anything risky, check every condition that could possibly cause a problem.</p>
+<pre><code class="language-python">def get_age_checked(raw_value):
+    if not raw_value.lstrip(&quot;-&quot;).isdigit():
+        print(f&quot;'{raw_value}' is not a valid number&quot;)
+        return None
+    age = int(raw_value)
+    if age &lt; 0:
+        print(&quot;age cannot be negative&quot;)
+        return None
+    return age
+</code></pre>
+<p><strong>Advantages:</strong>
+- No exceptions involved, easy to trace line by line for simple cases.
+- Works fine for pure, self-contained validation like this.</p>
+<p><strong>Disadvantages:</strong>
+- Doesn't scale. Every new failure mode needs a new manual check, and it's easy to miss one.
+- Breaks down completely for anything involving timing, like files or networks — the state can change between your check and your action (a file can be deleted right after you confirm it exists).
+- Duplicates logic that Python's own parsing already knows how to detect (writing your own "is this a valid integer" check is reinventing what <code>int()</code> already does internally).</p>
+<p><strong>Complexity:</strong> Time O(n) for the string scan in this example, O(1) space. But complexity isn't really the point here — correctness under real-world timing is.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach is to let Python attempt the risky operation and catch the specific exception it raises, rather than pre-validating everything yourself.</p>
+<p>The mental model is a pipeline:</p>
 <table>
 <thead>
 <tr>
-<th style="text-align: left;">Step</th>
-<th style="text-align: left;">Action</th>
-<th style="text-align: left;">Success?</th>
-<th style="text-align: left;">What Runs?</th>
-<th style="text-align: left;">Result</th>
+<th>Stage</th>
+<th>Runs when</th>
+<th>Purpose</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style="text-align: left;">1</td>
-<td style="text-align: left;">Enter <code>try</code> block</td>
-<td style="text-align: left;">N/A</td>
-<td style="text-align: left;">Executes code</td>
-<td style="text-align: left;">Starts reading database</td>
+<td><code>try</code></td>
+<td>Always attempted first</td>
+<td>Contains the risky code</td>
 </tr>
 <tr>
-<td style="text-align: left;">2</td>
-<td style="text-align: left;">Read Balance</td>
-<td style="text-align: left;"><strong>Fail</strong> (<code>DBError</code>)</td>
-<td style="text-align: left;">Jumps to <code>except DBError</code></td>
-<td style="text-align: left;">Logs error, returns "Try later"</td>
+<td><code>except SpecificError</code></td>
+<td>Only if that exact exception was raised</td>
+<td>Handles one named failure</td>
 </tr>
 <tr>
-<td style="text-align: left;">3</td>
-<td style="text-align: left;">Check Funds</td>
-<td style="text-align: left;"><strong>Pass</strong></td>
-<td style="text-align: left;">Skips <code>except</code>, goes to <code>else</code></td>
-<td style="text-align: left;">Calculates new balance</td>
+<td><code>else</code></td>
+<td>Only if <code>try</code> succeeded with zero exceptions</td>
+<td>Code that depends on success</td>
 </tr>
 <tr>
-<td style="text-align: left;">4</td>
-<td style="text-align: left;">Write Balance</td>
-<td style="text-align: left;"><strong>Pass</strong></td>
-<td style="text-align: left;">Finishes block, goes to <code>finally</code></td>
-<td style="text-align: left;">Updates DB</td>
-</tr>
-<tr>
-<td style="text-align: left;">5</td>
-<td style="text-align: left;">Exit Block</td>
-<td style="text-align: left;">Always</td>
-<td style="text-align: left;">Executes <code>finally</code></td>
-<td style="text-align: left;">Closes connection</td>
+<td><code>finally</code></td>
+<td>Always, regardless of outcome</td>
+<td>Guaranteed cleanup</td>
 </tr>
 </tbody>
 </table>
-<h2>11. Intuition: The Tightrope Artist Analogy</h2>
-<p>Think of writing code on a tightrope. You are the program executing instructions.</p>
-<ul>
-<li><strong>The Try Block</strong>: This is you walking across the wire. You assume you will make it, but you know there's a risk of falling. You put only the steps that require balance in this area.</li>
-<li><strong>The Except Block</strong>: This isn't a parachute for your whole journey; it's a safety net specifically rigged under the tightrope section. If you fall (an error occurs), the net catches you. Crucially, you only want to use the net when you actually fall. If you walk successfully, the net sits idle.</li>
-<li><strong>The Else Block</strong>: This is the celebration stage. It runs <em>only</em> if you successfully crossed the tightrope without falling. This is distinct from "no error occurred." It specifically means "the risky part worked, so now I can safely do my non-risky task (like updating a UI or saving a file)."</li>
-<li><strong>The Finally Block</strong>: Imagine leaving the gym after your workout. Regardless of whether you injured your ankle (error) or finished perfectly (success), you must take off your shoes and wash your hands before going home. This is cleanup. It <em>must</em> happen.</li>
-</ul>
-<p><strong>Why this matters</strong>: Beginners often put everything in <code>try</code>. But if the risky code fails, you don't want to re-verify that failure inside every subsequent line of logic. You want to isolate the risk, handle it once, and let the rest of the program flow normally based on the outcome.</p>
-<h2>12. Brute Force Solution: The "Swallow All" Trap</h2>
-<p>What is the most common mistake new developers make? It's this:</p>
+<p>Python checks <code>except</code> clauses top to bottom and runs the <em>first</em> one that matches the raised exception type. If none match, the exception keeps propagating up the call stack — it does not get silently ignored.</p>
 <pre><code class="language-python">try:
-    risky_code()
-except: 
-    # Oops! Catching everything
-    pass 
+    result = 10 / 0
+except ZeroDivisionError:
+    print(&quot;cannot divide by zero&quot;)
+except ValueError:
+    print(&quot;this won't fire, wrong exception type&quot;)
 </code></pre>
-<h3>The Idea</h3>
-<p>The idea here is to prevent the program from crashing by catching <em>any</em> exception that Python throws. You wrap your code, catch it all, and do nothing (or just print "Oops").</p>
-<h3>Advantages</h3>
-<ul>
-<li><strong>Guaranteed Execution</strong>: Your application will technically never crash due to an unhandled exception in that block. It feels safe because the error is gone.</li>
-<li><strong>Simplicity</strong>: It requires no knowledge of specific error types.</li>
-</ul>
-<h3>Disadvantages</h3>
-<ol>
-<li><strong>Silent Failures</strong>: By catching everything, you lose context. Is it a <code>TypeError</code>? A <code>MemoryError</code>? Without logging or inspecting, you have no idea what went wrong later.</li>
-<li><strong>Debugging Nightmare</strong>: If your code catches an error and ignores it, the bug remains in the system. Users experience broken features, but you don't know why.</li>
-<li><strong>Infinite Loops</strong>: Sometimes catching generic errors (like <code>KeyboardInterrupt</code> or internal logic loops) can cause the app to get stuck in an endless retry cycle.</li>
-</ol>
-<h3>Complexity Analysis</h3>
-<ul>
-<li><strong>Time</strong>: O(1) relative to the error handling mechanism itself, but the hidden cost is debugging time which increases exponentially.</li>
-<li><strong>Space</strong>: Minimal additional memory for the block, but significant "debt" in terms of stability risk.</li>
-</ul>
-<p><strong>Verdict</strong>: Never use <code>except:</code> (without a specific exception type). It is the enemy of maintainable code.</p>
-<h2>13. Optimal Solution: The Specific Safety Net</h2>
-<p>The optimal approach involves being surgical with your error handling. You define what can go wrong and prepare for it specifically.</p>
-<h3>Strategy</h3>
-<ol>
-<li><strong>Isolate Risk</strong>: Wrap only the lines that can throw exceptions in <code>try</code>.</li>
-<li><strong>Catch Specifically</strong>: Match the exception type (e.g., <code>ValueError</code>, <code>FileNotFoundError</code>).</li>
-<li><strong>Handle Else</strong>: Place logic that depends on the success of the <code>try</code> block inside <code>else</code>.</li>
-<li><strong>Clean Up Always</strong>: Use <code>finally</code> for resource closure.</li>
-</ol>
-<h3>The Architecture</h3>
-<p>Let's refine our banking example with a robust implementation:</p>
-<pre><code class="language-python">def transfer_funds(user_id, amount):
-    &quot;&quot;&quot;
-    Transfers funds safely. 
-    Returns a message or raises a specific exception if fatal.
-    &quot;&quot;&quot;
+<p>Here, only the <code>ZeroDivisionError</code> handler runs, because that's the exception Python actually raised. The order of the <code>except</code> clauses matters only in that Python stops at the first match — so put more specific exceptions before more general ones if there's any overlap.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">class InvalidAgeError(ValueError):
+    &quot;&quot;&quot;Raised when an age value fails business-rule validation.&quot;&quot;&quot;
 
-    # 1. TRY: The risky operation
+
+def parse_age(raw_value: str) -&gt; int:
+    &quot;&quot;&quot;
+    Convert a raw string into a validated age.
+
+    Raises InvalidAgeError if the value isn't a valid non-negative integer.
+    &quot;&quot;&quot;
     try:
-        balance = get_db_balance(user_id)
-
-        # If this function throws an exception, we jump to except blocks below
-        new_balance = balance - amount
-
-        # Logic that depends on the success of 'get_db_balance'
-        # We put this in 'else' so it only runs if no error occurred above
-        set_db_balance(user_id, new_balance)
-
-    except ValueError as e:
-        # 2. EXCEPT (Specific): Invalid data
-        # Example: Amount is negative or non-numeric
-        log_error(f&quot;Invalid data type: {e}&quot;)
-        return &quot;Error: Please enter a valid amount.&quot;
-
-    except FileNotFoundError:
-        # Specific: User doesn't exist
-        return &quot;Error: Account not found.&quot;
-
-    except ZeroDivisionError:
-        # Specific: Logic error (though unlikely here, possible in other math)
-        log_error(&quot;Calculation failed due to division by zero.&quot;)
-        return &quot;Error: Calculation failed.&quot;
-
-    except Exception as e:
-        # 3. Generic Catch (The Safety Net of Last Resort)
-        # Only use this for truly unknown errors you want to fail-safe on
-        log_critical_error(f&quot;Unexpected error: {e}&quot;, traceback=True)
-        return &quot;Error: An unexpected system issue occurred.&quot;
-
-    # If we reach here, the transfer worked!
-    # (Note: Returning success message can go in 'else' or after 'finally')
-    return &quot;Transfer successful.&quot;
-
-def cleanup_connection():
-    &quot;&quot;&quot;Always run this, regardless of success or failure.&quot;&quot;&quot;
-    close_database_connection()
-    log_info(&quot;Cleanup complete.&quot;)
-</code></pre>
-<h3>Diagram: Flow of Control</h3>
-<pre><code class="language-text">[START]
-   |
-   v
-[TRY BLOCK] ---&gt; [Success?] --- NO ----&gt; [EXCEPT BLOCK (Specific)]
-   |                                              |
-   v                                              v
-[ELSE BLOCK] (Only if Success)               [LOG ERROR / RETURN FALLBACK]
-   |                                              |
-   +--------------&gt; [FINALLY BLOCK] &lt;-------------+
-   |                  (Always runs)                |
-   +-----&gt; [RETURN SUCCESS MESSAGE] -&gt; [END]
-</code></pre>
-<h2>14. Python Code: Production-Ready Implementation</h2>
-<p>Here is a complete, PEP 8 compliant solution that you can copy and paste into your project. It demonstrates raising custom exceptions and handling the full lifecycle of an error block.</p>
-<pre><code class="language-python">import logging
-
-# Configure logging (simulated for this example)
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-class InsufficientFundsError(Exception):
-    &quot;&quot;&quot;Custom exception for business logic violations.&quot;&quot;&quot;
-    pass
-
-def calculate_transfer(new_balance, fee):
-    &quot;&quot;&quot;
-    Calculates the final balance after a transfer.
-    Can raise InsufficientFundsError or ZeroDivisionError.
-    &quot;&quot;&quot;
-    if new_balance &lt; 0:
-        raise ValueError(&quot;Balance cannot be negative.&quot;)
-
-    # Simulating a risky calculation
-    result = new_balance - fee
-
-    return result
-
-def execute_transfer(amount, fee=10):
-    &quot;&quot;&quot;
-    Executes the transfer with proper error handling.
-
-    Args:
-        amount (int|float): The amount to transfer.
-        fee (int|float): The transaction fee.
-
-    Returns:
-        str: Status message of the operation.
-    &quot;&quot;&quot;
-
-    # Define a custom message for success that runs ONLY if try succeeds
-    success_message = f&quot;Successfully transferred ${amount} with ${fee} fee.&quot;
-
-    try:
-        # Risky Calculation
-        final_amount = calculate_transfer(amount, fee)
-
-        # Simulate writing to a DB (risky I/O)
-        write_to_database(final_amount)
-
-    except ValueError as ve:
-        # Handle Invalid Input specifically
-        logger.warning(f&quot;Input validation failed: {ve}&quot;)
-        return f&quot;Failed: {str(ve)}&quot;
-
-    except ZeroDivisionError:
-        # Handle Logic Errors specifically
-        logger.error(&quot;Calculation error detected.&quot;)
-        return &quot;Failed: Calculation error.&quot;
-
-    except FileNotFoundError:
-        # Handle Resource Errors specifically
-        logger.error(&quot;Database file not found.&quot;)
-        return &quot;Failed: Database connection lost.&quot;
-
-    except Exception as generic_error:
-        # The 'Swallow All' Catch (Used sparingly)
-        # This acts as a fallback for any weird Python internal errors
-        logger.critical(f&quot;Unrecoverable system error: {generic_error}&quot;)
-        return &quot;Failed: Critical system error.&quot;
-
+        age = int(raw_value)
+    except ValueError as exc:
+        raise InvalidAgeError(f&quot;'{raw_value}' is not a valid number&quot;) from exc
     else:
-        # This block runs ONLY if no exception occurred in try
-        logger.info(success_message)
-        return success_message
+        if age &lt; 0:
+            raise InvalidAgeError(&quot;age cannot be negative&quot;)
+        return age
 
-    finally:
-        # Cleanup happens here regardless of outcome
-        release_transaction_lock()
+
+def process_ages(raw_values: list[str]) -&gt; list[int]:
+    valid_ages = []
+    for raw_value in raw_values:
+        try:
+            age = parse_age(raw_value)
+        except InvalidAgeError as exc:
+            print(f&quot;Skipping invalid entry: {exc}&quot;)
+            continue
+        else:
+            valid_ages.append(age)
+        finally:
+            print(f&quot;Finished processing '{raw_value}'&quot;)
+    return valid_ages
+
+
+if __name__ == &quot;__main__&quot;:
+    inputs = [&quot;25&quot;, &quot;hello&quot;, &quot;-3&quot;, &quot;42&quot;]
+    print(process_ages(inputs))
 </code></pre>
-<h2>15. Code Walkthrough</h2>
-<p>Let's break down the implementation line by line to understand the mechanics.</p>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>class InvalidAgeError(ValueError)</code> — a custom exception that inherits from <code>ValueError</code>. This means it can be caught either as <code>InvalidAgeError</code> specifically, or as <code>ValueError</code> more broadly, giving callers flexibility.</li>
+<li><code>try: age = int(raw_value)</code> — the only genuinely risky line. <code>int()</code> raises <code>ValueError</code> if the string can't be converted.</li>
+<li><code>except ValueError as exc: raise InvalidAgeError(...) from exc</code> — catches the specific conversion failure and re-raises it as our own domain-specific exception. The <code>from exc</code> preserves the original traceback for debugging, rather than hiding where the error actually came from.</li>
+<li><code>else: if age &lt; 0: raise InvalidAgeError(...)</code> — this only runs if the conversion succeeded. Separating "did the conversion work" from "is the value valid" keeps each check honest about what it's testing.</li>
+<li>In <code>process_ages</code>, <code>except InvalidAgeError as exc</code> catches only the exception type we anticipated — a genuine bug elsewhere in the loop body would still surface normally instead of being swallowed.</li>
+<li><code>finally: print(...)</code> — runs for every single entry, whether it was valid, invalid, or even if something unexpected slipped through. This is the natural place for logging or cleanup that must happen no matter what.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Trace <code>inputs = ["25", "hello", "-3", "42"]</code> through <code>process_ages</code>:</p>
 <ol>
-<li><strong><code>class InsufficientFundsError(Exception)</code></strong>: We define a custom exception. In production, specific exceptions are better than generic strings because they trigger different business logic (e.g., an email alert vs. a UI popup).</li>
-<li><strong><code>try:</code> Block</strong>: We encapsulate <code>calculate_transfer</code> and <code>write_to_database</code>. These are the only lines we trust to be safe. If either throws, we immediately jump to the corresponding <code>except</code> block. Note that standard operations like defining variables or printing logs outside the try block are considered "safe" by convention.</li>
-<li><strong><code>except ValueError as ve:</code></strong>: We catch specific logic errors. By aliasing it to <code>ve</code>, we can access the error message (<code>str(ve)</code>) inside the block. This is crucial for debugging; you never want to lose the original error message.</li>
-<li><strong><code>except ZeroDivisionError:</code></strong>: Similar to above, but specifically for mathematical domain errors. We handle them distinctly because they might indicate a logic bug in our formula, not just user input.</li>
-<li><strong><code>except FileNotFoundError:</code></strong>: Handles I/O issues. If this happens, we know the external resource is missing. Our response should reflect that (e.g., "Connection lost") rather than a generic crash.</li>
-<li><strong><code>except Exception as generic_error:</code></strong>: This is the "catch-all." It is dangerous if used too broadly, but necessary in high-security apps where you might want to log <em>everything</em> without crashing the service, then return a safe fallback message. We use <code>logger.critical</code> here to flag it for immediate investigation.</li>
-<li><strong><code>else:</code> Block</strong>: This is the most underused feature. It runs if and only if the <code>try</code> block completes without error. Here we log the success message. If an exception had occurred, this entire block would be skipped. This keeps our "Happy Path" code separate from our "Sad Path" (error handling) code, making the function easier to read.</li>
-<li><strong><code>finally:</code> Block</strong>: The <code>release_transaction_lock()</code> call guarantees that whatever happened inside the try/except blocks, we release the resource. Even if the database write failed, the lock must be released to prevent deadlocks.</li>
+<li><code>"25"</code> → <code>parse_age</code> converts to <code>25</code>, <code>else</code> checks <code>25 &lt; 0</code> is false, returns <code>25</code>. <code>valid_ages = [25]</code>. <code>finally</code> prints.</li>
+<li><code>"hello"</code> → <code>int("hello")</code> raises <code>ValueError</code> → caught, re-raised as <code>InvalidAgeError("'hello' is not a valid number")</code>. Caught in <code>process_ages</code>, prints "Skipping invalid entry: ...". <code>finally</code> still prints.</li>
+<li><code>"-3"</code> → converts fine to <code>-3</code>, <code>else</code> branch catches <code>age &lt; 0</code>, raises <code>InvalidAgeError("age cannot be negative")</code>. Caught, skipped, <code>finally</code> prints.</li>
+<li><code>"42"</code> → converts fine, <code>42 &lt; 0</code> is false, returns <code>42</code>. <code>valid_ages = [25, 42]</code>. <code>finally</code> prints.</li>
 </ol>
-<h2>16. Dry Run: Tracing a Complete Example</h2>
-<p>Let's trace what happens when a user attempts to transfer \$50 with a fee of \$10, but their balance is insufficient (simulated by throwing a ValueError).</p>
-<p><strong>Input</strong>: <code>amount = 50</code>, <code>fee = 10</code>.</p>
+<p>Final output: <code>[25, 42]</code>, with four "Finished processing" lines interleaved with the skip messages — proof that <code>finally</code> really does run on every iteration, success or failure.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> O(n) where n is the number of entries in <code>raw_values</code> — each entry is processed exactly once, and exception handling itself adds no meaningful per-call overhead in the success path (Python's exception machinery is essentially free when no exception is raised; the cost is only paid when one actually fires).</li>
+<li><strong>Space:</strong> O(k) where k is the number of valid entries, for the <code>valid_ages</code> list being built. No auxiliary data structures scale with input size beyond that.</li>
+<li>These bounds are correct because exception handling changes <em>control flow</em>, not the underlying algorithmic work — you're still doing one pass over the input either way.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p><strong>LBYL (Look Before You Leap):</strong> Check <code>raw_value.lstrip("-").isdigit()</code> before calling <code>int()</code>. This works for pure computation like string parsing where there's no risk of state changing between the check and the action. It's a reasonable style choice here specifically because there's no external resource involved.</p>
+<p><strong>Where LBYL breaks down:</strong> anything involving files, network calls, or shared state. Checking <code>os.path.exists(path)</code> and then opening the file has a race condition — the file can vanish in between. The EAFP style (<code>try: open(path)</code> and catching <code>FileNotFoundError</code>) is strictly more correct in these cases, because it doesn't assume the world stays still between your check and your action.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty input:</strong> <code>parse_age("")</code> — <code>int("")</code> raises <code>ValueError</code>, correctly caught and converted to <code>InvalidAgeError</code>.</li>
+<li><strong>Whitespace-only input:</strong> <code>int("   ")</code> also raises <code>ValueError</code>, handled the same way.</li>
+<li><strong>Exact boundary value:</strong> <code>parse_age("0")</code> — zero is a valid, non-negative age, so it should return <code>0</code>, not be rejected. Worth a dedicated test since <code>0</code> is falsy in Python and easy to accidentally mishandle with a careless <code>if age:</code> check instead of <code>if age &lt; 0:</code>.</li>
+<li><strong>Very large numbers:</strong> <code>parse_age("99999999999999")</code> — Python integers have no fixed size limit, so this converts fine; any upper-bound validation is a business rule you'd add explicitly, not something Python enforces for you.</li>
+<li><strong>Non-string input types:</strong> if <code>raw_value</code> is <code>None</code> or a list, <code>int(raw_value)</code> raises <code>TypeError</code>, not <code>ValueError</code> — and the current code doesn't catch <code>TypeError</code>, so it would propagate up uncaught. This is intentional here to illustrate why matching the <em>exact</em> exception type matters.</li>
+</ul>
+<h2>Common Mistakes</h2>
 <ol>
-<li><strong>Start Function</strong>: Call <code>execute_transfer(50, 10)</code>.</li>
-<li><strong>Enter Try</strong>: Enter the <code>try</code> block.</li>
-<li><strong>Call Function</strong>: Execute <code>calculate_transfer(50, 10)</code>.<ul>
-<li><em>Assumption</em>: The internal logic of this function detects a validation issue (e.g., balance is 0) and throws <code>ValueError("Insufficient funds")</code>.</li>
+<li><strong>Bare <code>except:</code> with no exception type.</strong> This catches everything, including typos in your own code (<code>NameError</code> from a misspelled variable), and hides them right alongside the error you meant to catch.</li>
+<li><strong>Catching the generic <code>Exception</code> class as a habit.</strong> It technically works, but a network timeout and a typo in your code get the exact same vague error message, making debugging much harder later.</li>
+<li><strong>Using <code>except</code> and <code>pass</code> together with nothing else.</strong> This silently swallows failures with zero trace that anything went wrong — the program appears to work while quietly doing the wrong thing.</li>
+<li><strong>Putting too much code inside the <code>try</code> block.</strong> If five lines are inside <code>try</code> and only one of them can actually raise the exception you're catching, you risk masking failures from the other four lines under the same handler.</li>
+<li><strong>Forgetting that <code>else</code> only runs after zero exceptions.</strong> Some developers put post-success code directly after the <code>except</code> block instead of in <code>else</code>, which means it also runs even when an exception <em>was</em> caught but didn't cause a <code>return</code>.</li>
+<li><strong>Using <code>finally</code> for logic that should only happen on success or only on failure.</strong> <code>finally</code> runs unconditionally — it's for cleanup, not conditional business logic.</li>
+<li><strong>Catching an exception without re-raising or logging it when the caller genuinely needs to know.</strong> Swallowing an error you don't actually know how to handle just relocates the bug somewhere harder to find.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What's the difference between <code>except Exception</code> and a bare <code>except:</code>?</li>
+<li>When would you use <code>else</code> instead of just putting code at the end of the <code>try</code> block?</li>
+<li>Explain EAFP versus LBYL — when would you choose one over the other?</li>
+<li>Does <code>finally</code> run if the function returns from inside the <code>try</code> block? What if it returns from inside <code>except</code>?</li>
+<li>How would you design a custom exception hierarchy for a small application?</li>
+<li>What happens if an exception is raised inside a <code>finally</code> block?</li>
+<li>Why is catching overly broad exception types considered risky in production code?</li>
 </ul>
-</li>
-<li><strong>Exception Triggered</strong>: Python pauses the <code>try</code> block and looks for a matching <code>except</code> clause.</li>
-<li><strong>Match Found</strong>: It hits <code>except ValueError as ve:</code>.<ul>
-<li>The variable <code>ve</code> is set to the error object <code>"ValueError('Insufficient funds')"</code>.</li>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode-style input validation problems</strong> (e.g., parsing malformed strings to integers) — same core skill: catching <code>ValueError</code> from <code>int()</code>/<code>float()</code> conversions.</li>
+<li><strong>File I/O problems involving <code>FileNotFoundError</code> and <code>PermissionError</code></strong> — reinforce the EAFP pattern with real system resources instead of pure computation.</li>
+<li><strong>Dictionary/lookup-heavy problems using <code>.get()</code> versus direct indexing with <code>KeyError</code></strong> — a close cousin of this lesson, since <code>.get()</code> is essentially LBYL and try/except on direct access is EAFP.</li>
+<li><strong>Custom exception design problems</strong> in larger take-home assignments — extending this lesson's <code>InvalidAgeError</code> pattern to build a full exception hierarchy for a domain.</li>
 </ul>
-</li>
-<li><strong>Execute Except Body</strong>:<ul>
-<li>Logs:</li>
-</ul>
-</li>
-</ol></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>What is the standard Python pattern to catch errors without crashing?</summary><p>Use a try/except block: place risky code in &#x27;try&#x27;, handle specific errors in &#x27;except&#x27;, and add &#x27;finally&#x27; for cleanup.</p></details><details class='card2'><summary>What are the time and space complexities of a basic try/except block?</summary><p>Time complexity is O(1) regardless of whether an exception occurs. Space complexity is O(1) as it adds negligible stack overhead.</p></details><details class='card2'><summary>What happens if you use &#x27;except Exception&#x27; to catch every error indiscriminately?</summary><p>This is over-catching; it masks bugs like typos in syntax or logic errors that should fail fast, making debugging harder.</p></details><details class='card2'><summary>Which built-in exception type is raised when dividing by zero in Python?</summary><p>ZeroDivisionError is automatically raised at runtime to prevent an invalid mathematical operation from crashing the program.</p></details><details class='card2'><summary>What does &#x27;finally&#x27; guarantee regarding code execution even if an exception occurs?</summary><p>Code in &#x27;finally&#x27; always runs after &#x27;try&#x27; and &#x27;except&#x27;, ensuring critical resource cleanup like closing files or connections happens reliably.</p></details><details class='card2'><summary>How do you convert a crash into a controlled return value when processing user input?</summary><p>Wrap risky code in &#x27;try/except&#x27;, catch the specific exception, log it if needed, and return a default safe value instead of crashing.</p></details></div>
+<h2>Key Takeaways</h2>
+<p><code>try</code> holds the risky code. <code>except</code> catches a <em>specific</em>, named failure — never catch more broadly than you understand. <code>else</code> runs only when the <code>try</code> block succeeded completely, keeping success-path logic cleanly separated from the risky part. <code>finally</code> always runs, making it the right home for cleanup work like closing files or connections. You can also raise your own exceptions to enforce rules specific to your program, turning "invalid data" into a named, catchable event instead of a silent bug. Master this pattern, and your code stops crashing on bad input and starts handling problems the way production software actually needs to.</p>
+<h2>Watch the Video</h2>
+<p>This lesson is easier to absorb watching the flow play out step by step — catch the full walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <strong>Fun with Learning Technology</strong>, a series built around one idea: the concepts that trip up developers the most — exceptions, recursion, closures, generators — are almost always simple once you see the right mental model. Each lesson builds on the last, so if exception handling clicked for you here, the rest of the series is designed to keep that momentum going.</p>
+<h2>Call To Action</h2>
+<p>If this lesson made <code>try</code>/<code>except</code> click for you, the video has the full walkthrough with live code — give it a like and subscribe on YouTube so future lessons land in your feed automatically. For deeper dives and written breakdowns like this one, subscribe to the Substack. And if you've got a war story about a bare <code>except:</code> that hid a bug for way too long, drop it in the comments — those stories are usually the best teachers. Sharing this with a developer who's still fighting scary tracebacks helps the series reach more people who need it.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Try/except: when do you reach for it?</summary><p>Wrap code that can fail from external factors (input, files, network) so one bad line doesn&#x27;t crash the whole script.</p></details><details class='card2'><summary>Order of try/except/else/finally execution?</summary><p>try runs; if no error, else runs; except runs only on matching error; finally always runs last, error or not.</p></details><details class='card2'><summary>Why is &#x27;except:&#x27; (bare except) a common mistake?</summary><p>Catches everything including KeyboardInterrupt/SystemExit, hiding real bugs; always catch a specific exception type instead.</p></details><details class='card2'><summary>Trickiest edge case with multiple except blocks?</summary><p>Order matters—more specific exceptions must come before general ones (e.g. ValueError before Exception), or the specific one never triggers.</p></details><details class='card2'><summary>When should you raise your own exception?</summary><p>When input violates a business rule the language can&#x27;t detect itself, e.g. `raise ValueError(&#x27;age cannot be negative&#x27;)` for invalid domain data.</p></details><details class='card2'><summary>finally vs else — what&#x27;s the distinct trigger for each?</summary><p>else runs only if try succeeded (no exception); finally runs unconditionally, used for cleanup like closing files/connections.</p></details></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>
