@@ -1,0 +1,210 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Smallest Palindromic Rearrangement II — 🟢 Beginner (1/3) — LeetCode Daily Python Solution (why you only solve half) — Python LeetCode Solution</title><meta name="description" content="📍 Jump to your level:
+🟢 Beginner: 0:18–6:20
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/smallest-palindromic-rearrangement-ii-beginner
+💻 Code on GitHub: https://github.com/timepasshu">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/smallest-palindromic-rearrangement-ii-beginner.html">
+<meta property="og:title" content="Smallest Palindromic Rearrangement II — 🟢 Beginner (1/3) — LeetCode Daily Python Solution (why you only solve half) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📍 Jump to your level:
+🟢 Beginner: 0:18–6:20
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/smallest-palindromic-rearrangement-ii-beginner
+💻 Code on GitHub: https://github.com/timepasshu">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Smallest Palindromic Rearrangement II — 🟢 Beginner (1/3) — LeetCode Daily Python Solution (why you only solve half)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Palindrome problems show up constantly in coding interviews because they test something deeper than string manipulation — they test whether you can spot structure. Most candidates see "palindrome" and think "two pointers, check if it reads the same backwards." That instinct works for validation problems. It falls apart the moment you're asked to <em>construct</em> something, especially the k-th smallest arrangement out of potentially millions of valid ones.</p>
+<p>Smallest Palindromic Rearrangement II is a great example of a problem that looks intimidating — it's rated Hard on LeetCode — but becomes very manageable once you notice one thing: a palindrome is defined entirely by its first half. Interviewers use this problem to see if you reach for brute force out of habit, or if you look for the symmetry that cuts the problem size roughly in half (and, more importantly, avoids ever generating the full search space).</p>
+<p>Learning this pattern pays off beyond this one problem. Ranking arrangements without listing them — using counting instead of generation — is a recurring interview technique that appears in problems about k-th permutations, lexicographic ordering, and combinatorial enumeration in general.</p>
+<h2>Problem Overview</h2>
+<p>You're given a string <code>s</code> that is already a palindrome, and an integer <code>k</code>. Your task is to find the k-th smallest string, in alphabetical order, that you can form by rearranging the letters of <code>s</code>, such that the result is <em>also</em> a palindrome.</p>
+<p>If there aren't at least <code>k</code> distinct palindromic rearrangements possible, return an empty string.</p>
+<p>A few things worth internalizing before you touch any code:</p>
+<ul>
+<li>The input is guaranteed to already be a palindrome, so you never have to worry about more than one letter having an odd count — that edge case is handled for you by the problem's constraints.</li>
+<li>"Rearrangement" here specifically means: same multiset of letters, different order, and the result must still be a palindrome.</li>
+<li>Rankings are alphabetical, treating the full string as a word you'd find in a dictionary.</li>
+</ul>
+<h2>Example</h2>
+<p>Take <code>s = "cbabc"</code> and <code>k = 2</code>.</p>
+<p>The letters are: two <code>b</code>'s... wait, let's count precisely — <code>c</code>, <code>b</code>, <code>a</code>, <code>b</code>, <code>c</code>. That's <code>a</code>: 1, <code>b</code>: 2, <code>c</code>: 2.</p>
+<p>Since only <code>a</code> has an odd count, <code>a</code> sits in the middle. The remaining letters split into a left half and a mirrored right half. The left half must be built from one <code>b</code> and one <code>c</code>.</p>
+<p>The possible left halves, sorted alphabetically, are:
+1. <code>"bc"</code>
+2. <code>"cb"</code></p>
+<p>Mirroring each around the middle <code>a</code> gives the two full palindromes:
+1. <code>"bcacb"</code> → wait — mirroring <code>"bc"</code> gives <code>"bc" + "a" + "cb"</code> = <code>"bcacb"</code>
+2. <code>"cb" + "a" + "bc"</code> = <code>"cbabc"</code></p>
+<p>Since <code>k = 2</code>, the answer is <code>"cbabc"</code> — which happens to be the original string. This matches the transcript's walkthrough: ranking only ever requires reasoning about the tiny left half, not the full string.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer approaches this rather than jumping straight to code.</p>
+<p><strong>Step one: exploit the symmetry.</strong> A palindrome's right half is completely determined by its left half — it's just the left half reversed. That means "rearrange this string into a palindrome" is really "rearrange <em>half</em> the letters into any order, then mirror it." If a letter count is odd, exactly one letter is left over and it goes in the dead center. The problem's search space just shrank by roughly half.</p>
+<p><strong>Step two: recognize this is a ranking problem, not a generation problem.</strong> You don't need to know <em>what</em> the first, second, or hundredth arrangement looks like in order to find the k-th one — you need to know <em>how many</em> arrangements start with each candidate letter. This is the same idea behind converting a number to a factorial-based positional system: at each position, you ask "how many things could come after this choice?" and use that count to skip entire blocks of possibilities at once.</p>
+<p><strong>Step three: pick greedily, one letter at a time.</strong> Sort the distinct letters in the left half alphabetically. For the smallest letter, ask: "if I place this letter first, how many valid palindromes can follow?" If <code>k</code> fits within that number, commit to the letter and recurse into the next position with the same <code>k</code>. If not, subtract that count from <code>k</code> and move to the next letter. This is exactly like skipping past whole sections of a phone book instead of reading every name.</p>
+<p><strong>Step four: mirror and finish.</strong> Once the left half is fully decided, stitch it together, insert the middle letter if there is one, and append the reverse of the left half. No further decisions needed.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Generate every permutation of the string, filter down to only the ones that are palindromes, deduplicate, sort alphabetically, and index into position <code>k - 1</code>.</p>
+<p><strong>Algorithm:</strong>
+1. Generate all permutations of <code>s</code> (e.g. with <code>itertools.permutations</code>).
+2. Filter for strings equal to their own reverse.
+3. Put results in a set to remove duplicates.
+4. Sort the set.
+5. Return the k-th element, or empty string if there are fewer than <code>k</code>.</p>
+<p><strong>Advantages:</strong> Trivial to write, trivial to trust, works fine for tiny strings.</p>
+<p><strong>Disadvantages:</strong> The number of permutations of a string grows factorially with length. Even a modest string produces a rearrangement count in the millions, and most of those get thrown away for not being palindromes — wasted work at massive scale.</p>
+<p><strong>Time complexity:</strong> O(n! · n) — generating n! permutations, each requiring O(n) work to build and check.
+<strong>Space complexity:</strong> O(n! · n) to store the permutations before filtering.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach never generates a full string until it has already made every decision. It works entirely on counts.</p>
+<p><strong>Step 1 — Build the frequency table and find the middle letter.</strong>
+Count each letter with a hash map. If any letter has an odd count, it becomes the fixed middle character; every letter's count (after removing one for the middle letter, if applicable) is halved to get the multiset for the left half.</p>
+<p><strong>Step 2 — Count total arrangements using the multinomial formula.</strong>
+For a multiset with total length <code>L</code> and letter counts <code>c1, c2, ..., cm</code>, the number of distinct arrangements is:</p>
+<pre><code>L! / (c1! · c2! · ... · cm!)
+</code></pre>
+<p>If this total is less than <code>k</code>, return <code>""</code> immediately — no further work needed.</p>
+<p><strong>Step 3 — Greedily choose each letter of the left half.</strong>
+Walk positions left to right. At each position, try letters in alphabetical order. For a candidate letter, temporarily use one occurrence of it and compute how many arrangements are possible for the <em>remaining</em> letters at the <em>remaining</em> positions (same multinomial formula, smaller counts). Call this <code>count</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Condition</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>k &lt;= count</code></td>
+<td>Lock in this letter, move to next position, keep same <code>k</code></td>
+</tr>
+<tr>
+<td><code>k &gt; count</code></td>
+<td>Subtract <code>count</code> from <code>k</code>, try the next letter</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Step 4 — Mirror.</strong>
+Concatenate: <code>left_half + middle_letter (if any) + reversed(left_half)</code>.</p>
+<p>This walks past huge blocks of the search space in single arithmetic operations instead of enumerating them.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from collections import Counter
+from math import factorial
+
+
+def kth_palindrome_rearrangement(s: str, k: int) -&gt; str:
+    counts = Counter(s)
+
+    middle = &quot;&quot;
+    half_counts = {}
+    for letter, count in counts.items():
+        if count % 2 == 1:
+            middle = letter
+            count -= 1
+        if count:
+            half_counts[letter] = count // 2
+
+    half_length = sum(half_counts.values())
+
+    def arrangements(remaining_counts, remaining_length):
+        total = factorial(remaining_length)
+        for count in remaining_counts.values():
+            total //= factorial(count)
+        return total
+
+    total_arrangements = arrangements(half_counts, half_length)
+    if k &gt; total_arrangements:
+        return &quot;&quot;
+
+    left_half = []
+    remaining = dict(half_counts)
+    remaining_length = half_length
+
+    for _ in range(half_length):
+        for letter in sorted(remaining):
+            if remaining[letter] == 0:
+                continue
+
+            remaining[letter] -= 1
+            remaining_length -= 1
+            count = arrangements(remaining, remaining_length)
+
+            if k &lt;= count:
+                left_half.append(letter)
+                if remaining[letter] == 0:
+                    del remaining[letter]
+                break
+            else:
+                k -= count
+                remaining[letter] += 1
+                remaining_length += 1
+
+    left_str = &quot;&quot;.join(left_half)
+    return left_str + middle + left_str[::-1]
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>Counter(s)</code> builds the frequency table in one pass — no manual dictionary bookkeeping needed.</li>
+<li>The loop over <code>counts.items()</code> finds the odd-count letter (there's guaranteed to be at most one, since <code>s</code> is a valid palindrome) and builds <code>half_counts</code>, the letter counts for just the left half.</li>
+<li><code>arrangements()</code> implements the multinomial formula directly: factorial of the total length divided by the factorial of each letter's count. It's called both once up front (to validate <code>k</code>) and repeatedly during greedy selection (to test each candidate letter).</li>
+<li>The greedy loop tries letters in sorted order at each position. It provisionally "spends" one occurrence of the letter, checks how many arrangements the rest of the positions allow, and either commits (<code>k &lt;= count</code>) or backs out and subtracts <code>count</code> from <code>k</code> before trying the next letter.</li>
+<li>The final line builds the palindrome from the completed left half, the middle character (empty string if none), and the reversed left half.</li>
+</ul>
+<h2>Dry Run</h2>
+<p><code>s = "cbabc"</code>, <code>k = 2</code>.</p>
+<p><code>counts = {c: 2, b: 2, a: 1}</code>. <code>a</code> is odd → <code>middle = "a"</code>. <code>half_counts = {c: 1, b: 1}</code>, <code>half_length = 2</code>.</p>
+<p><code>total_arrangements = arrangements({c:1, b:1}, 2) = 2! / (1! · 1!) = 2</code>. Since <code>k = 2 &lt;= 2</code>, continue.</p>
+<p><strong>Position 0:</strong> Try <code>b</code> first (alphabetical). Spend one <code>b</code> → <code>remaining = {c:1, b:0}</code> → cleaned to <code>{c:1}</code>, <code>remaining_length = 1</code>. <code>arrangements({c:1}, 1) = 1</code>. Is <code>k(2) &lt;= 1</code>? No. So <code>k -= 1</code> → <code>k = 1</code>. Restore <code>b</code>. Try <code>c</code>: spend one <code>c</code> → <code>remaining = {b:1}</code>, <code>remaining_length = 1</code>. <code>arrangements = 1</code>. Is <code>k(1) &lt;= 1</code>? Yes. Commit <code>c</code>. <code>left_half = ["c"]</code>.</p>
+<p><strong>Position 1:</strong> Only <code>b</code> remains. Spend it → <code>remaining = {}</code>, <code>remaining_length = 0</code>. <code>arrangements = 1</code>. <code>k(1) &lt;= 1</code>? Yes. Commit <code>b</code>. <code>left_half = ["c", "b"]</code>.</p>
+<p>Result: <code>"cb" + "a" + "bc" = "cbabc"</code> — matches expected output.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(n² · log(max_count)) roughly — for each of the <code>n/2</code> positions, we try up to 26 letters, and each <code>arrangements()</code> call does O(n) work computing factorials (or O(1) if factorials are precomputed). In practice this is dominated by O(n · 26) ≈ O(n) per position, giving O(n²) overall for a small alphabet — dramatically better than the brute force's factorial blowup.</p>
+<p><strong>Space:</strong> O(n) for the counters and the result string.</p>
+<p><strong>Why correct:</strong> The multinomial formula exactly counts distinct arrangements of a multiset (it divides out arrangements that would otherwise be counted as different but produce identical strings due to repeated letters). The greedy step is correct because trying letters in sorted order and comparing <code>k</code> against the count of arrangements starting with each letter is precisely how lexicographic ranking works — it's the same logic used to find the k-th permutation of a set, adapted for multisets with repeated letters.</p>
+<h2>Alternative Solutions</h2>
+<p>A middle-ground approach: generate arrangements lazily with a recursive generator that yields palindromic rearrangements in sorted order, and stop at the k-th one without generating the rest. This avoids storing all arrangements in memory (unlike full brute force) but still does O(k) work in the worst case, which can be just as bad as brute force if <code>k</code> is large. The counting-based approach is strictly better because it computes the answer in polynomial time regardless of how large <code>k</code> is, as long as it's within the valid range.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>All letters identical</strong> (e.g. <code>"aaaa"</code>): only one arrangement exists. <code>k</code> must be exactly 1, otherwise return <code>""</code>.</li>
+<li><strong><code>k</code> exceeds total arrangements:</strong> caught immediately after computing <code>total_arrangements</code>, before any greedy work begins.</li>
+<li><strong>Single-character string:</strong> <code>half_counts</code> is empty, <code>middle</code> is the one character, and the result is just that character — <code>k</code> must be 1.</li>
+<li><strong>String with no repeated letters</strong> aside from the guaranteed odd-count letter: every arrangement is distinct, so <code>total_arrangements</code> equals the straightforward factorial of the half-length.</li>
+<li><strong><code>k = 1</code>:</strong> should always return the alphabetically smallest valid palindrome without needing any subtraction in the greedy loop.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting to restore state when a candidate letter doesn't fit.</strong> If you spend a letter to test <code>arrangements()</code> but the count doesn't cover <code>k</code>, you must put it back before trying the next letter.</li>
+<li><strong>Recomputing factorials incorrectly for repeated letters.</strong> Forgetting to divide by each letter's factorial count turns the multinomial formula into a plain factorial, wildly overcounting arrangements.</li>
+<li><strong>Applying brute force and hitting timeouts</strong> on longer strings — the constraint sizes for this problem are specifically chosen to punish O(n!) approaches.</li>
+<li><strong>Mishandling the middle character</strong> when the string has even total length (no odd-count letter) — <code>middle</code> should stay an empty string, not <code>None</code> or a placeholder that leaks into the final concatenation.</li>
+<li><strong>Off-by-one on <code>k</code>.</strong> Since <code>k</code> is 1-indexed in the problem statement, comparing <code>k &lt;= count</code> (not <code>k &lt; count</code>) is what keeps the indexing correct throughout the greedy loop.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you modify this to return the k-th <em>largest</em> palindrome instead of smallest?</li>
+<li>Can you compute the rank of a given palindrome instead of finding the palindrome at a given rank?</li>
+<li>What changes if the input string is not guaranteed to be a palindrome, but you're asked whether it <em>can</em> be rearranged into one?</li>
+<li>How would you handle extremely large <code>k</code> values that exceed standard integer ranges in other languages?</li>
+<li>Can you precompute factorials to speed up repeated <code>arrangements()</code> calls?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Permutation Sequence (LeetCode 60):</strong> the direct ancestor of this problem's ranking technique, without the palindrome constraint.</li>
+<li><strong>Next Permutation (LeetCode 31):</strong> builds intuition for lexicographic ordering of rearrangements.</li>
+<li><strong>Palindrome Permutation (LeetCode 266):</strong> the yes/no version — can a string be rearranged into a palindrome at all.</li>
+<li><strong>Palindrome Permutation II (LeetCode 267):</strong> generates all distinct palindromic permutations, useful for understanding why brute force doesn't scale.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Palindromes are defined by their left half — every problem involving palindrome construction should start by asking whether you can solve just the half and mirror the rest. Counting arrangements with factorials lets you validate feasibility and skip large chunks of the search space instantly, instead of generating and filtering. Greedy, position-by-position selection combined with a counting formula is the standard technique for any "find the k-th arrangement" problem, palindromic or not.</p>
+<h2>Watch the Video</h2>
+<p>For the full step-by-step walkthrough with visuals, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series that takes LeetCode's daily challenge and works through it from first principles — building intuition before writing a single line of code, and always explaining <em>why</em> an approach works, not just <em>what</em> it does.</p>
+<h2>Call To Action</h2>
+<p>If this helped the problem click, give the video a like on YouTube and subscribe for daily walkthroughs. For deeper dives and written breakdowns like this one, subscribe to the Substack newsletter. Drop a comment with your own approach or questions, and share this with anyone prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>What&#x27;s the pattern name and trigger here?</summary><p>Half-and-Mirror counting: when a string is a palindrome rearrangement, split counts in half and count arrangements of that half.</p></details><details class='card2'><summary>Time complexity of counting half-permutations?</summary><p>O(n log n) — dominated by sorting/grouping the half-multiset of characters.</p></details><details class='card2'><summary>Space complexity of this approach?</summary><p>O(n) or O(26) for character frequency counts of the half string, not the whole string.</p></details><details class='card2'><summary>Trickiest edge case to watch for?</summary><p>One odd-count character (the middle letter) breaks the even split — must be pulled out before halving.</p></details><details class='card2'><summary>Why avoid listing arrangements directly?</summary><p>Listing t is exponential; counting via factorial/multinomial formula on half-counts avoids enumerating candidates.</p></details><details class='card2'><summary>Follow-up: how do multiset permutation counts work?</summary><p>n! divided by the product of factorials of each repeated character&#x27;s count, applied to the half-string only.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
