@@ -1,0 +1,229 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 15: One Word (with) Fixes Your File Bugs — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-15-working-with-files
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesson-15-wor">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-15-working-with-files.html">
+<meta property="og:title" content="Lesson 15: One Word (with) Fixes Your File Bugs — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-15-working-with-files
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesson-15-wor">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson 15: One Word (with) Fixes Your File Bugs</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every program you write loses its memory the instant it stops running. Variables, lists, dictionaries — all of it vanishes the moment the process exits. Files are the escape hatch. They're how a program's work outlives the program itself, and that makes file handling one of the most practical skills in everyday Python, not just an academic topic.</p>
+<p>It's also a favorite subject in coding interviews and take-home assignments, because it exposes whether you actually understand resource management, not just syntax. Interviewers ask about it when reviewing log processing, data pipeline, or config-loading code, because file bugs are notoriously silent: nothing crashes, nothing throws a big red error, your data just quietly isn't there when you go looking for it.</p>
+<p>This lesson is about the smallest word in Python that fixes the biggest category of file bugs: <code>with</code>. Along the way, we'll cover file modes, reading line by line, and why <code>pathlib</code> has replaced string-glued file paths in modern Python.</p>
+<h2>Problem Overview</h2>
+<p>Here's the situation, in plain terms: you want to open a file, do something with it (read its contents or write new content), and then make sure the file is properly closed when you're done.</p>
+<p>That sounds trivial, but it hides four separate concepts that are easy to blur together:</p>
+<ul>
+<li><strong>File</strong> — a named container of data sitting on disk.</li>
+<li><strong>Path</strong> — the address that locates that file on the filesystem.</li>
+<li><strong>Mode</strong> — the instruction you give when opening it: read, write, or append.</li>
+<li><strong>Handle</strong> — the temporary connection object Python gives you so you can interact with the file's contents.</li>
+</ul>
+<p>The core problem is this: opening a file grabs a system resource, and if you forget to release that resource (close the handle), you get bugs that don't announce themselves. Data doesn't get flushed to disk. Other parts of your program — or other programs entirely — can't access the file. And if your program crashes between opening and closing, the closing code never runs at all.</p>
+<p>The goal isn't just "know how to call <code>open()</code>." It's understanding why the <em>safe</em> way to open a file looks different from the naive way, and why that difference matters.</p>
+<h2>Example</h2>
+<p>Say you're building a simple note-taking script. You want to write a line to <code>notes.txt</code>, then later read it back.</p>
+<pre><code class="language-python"># Naive version
+f = open(&quot;notes.txt&quot;, &quot;w&quot;)
+f.write(&quot;Buy milk\n&quot;)
+f.close()
+</code></pre>
+<p>This works — as long as nothing goes wrong. If <code>f.write()</code> raises an exception (say, the disk is full), execution jumps past <code>f.close()</code> entirely, and the file handle stays open until the operating system eventually cleans it up.</p>
+<p>Now compare:</p>
+<pre><code class="language-python">with open(&quot;notes.txt&quot;, &quot;w&quot;) as f:
+    f.write(&quot;Buy milk\n&quot;)
+</code></pre>
+<p>Same result when everything goes right. But if <code>f.write()</code> raises an exception here, Python still closes the file before the exception propagates further. That's the entire value proposition of <code>with</code> in one example.</p>
+<h2>Intuition</h2>
+<p>Imagine you're a librarian. Someone checks out a book manually — they write their name on a card, take the book, and are supposed to write "returned" on the card when they bring it back. Most of the time, that works. But people forget. People get hit by a bus (metaphorically — a crash) on the way to return it. The card never gets updated, and now the system thinks that book is out forever, even though it's back on the shelf.</p>
+<p>An experienced engineer doesn't try to fix this by reminding people harder to close things. They fix it by removing the human step entirely. That's what <code>with</code> does — it's not a new feature bolted onto file handling, it's a structural guarantee: "whatever happens inside this block, I will clean up after you when it ends." This pattern — acquire a resource, guarantee its release, regardless of how the block exits — is called a <strong>context manager</strong>, and files are the most common example you'll meet it through.</p>
+<p>Once you see file handling this way, the mode letters (<code>"w"</code>, <code>"a"</code>, <code>"r"</code>) stop being arbitrary syntax and become intentional decisions: are you starting fresh, or adding to what's already there? That's a decision worth pausing on every single time you type <code>open()</code>.</p>
+<h2>Brute Force Solution</h2>
+<p>The "brute force" approach here is the manual open/close pattern:</p>
+<pre><code class="language-python">f = open(&quot;data.txt&quot;, &quot;r&quot;)
+contents = f.read()
+f.close()
+</code></pre>
+<p><strong>Idea:</strong> Explicitly manage the file handle's lifecycle yourself.</p>
+<p><strong>Algorithm:</strong>
+1. Call <code>open()</code> with a path and mode.
+2. Do whatever reading/writing you need.
+3. Call <code>.close()</code> when finished.</p>
+<p><strong>Advantages:</strong>
+- Explicit — every step is visible, nothing implicit happening.
+- Works fine for short, linear scripts with no branching logic.</p>
+<p><strong>Disadvantages:</strong>
+- Any exception raised between open and close skips the close call.
+- Easy to forget the close line entirely, especially as functions grow.
+- Doesn't scale — as soon as you add early returns or conditional branches, you need <code>try/finally</code> to guarantee cleanup, which is more code than <code>with</code> for the same guarantee.</p>
+<p><strong>Time complexity:</strong> O(n) where n is the number of bytes/lines read or written — the mode of opening doesn't change this.
+<strong>Space complexity:</strong> O(n) if you read the whole file into memory at once (e.g., <code>.read()</code>), or O(1) additional space if you stream line by line.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal solution is the <code>with</code> statement, paired with the right mode and <code>pathlib</code> for paths.</p>
+<p><strong>Step 1 — Open safely with <code>with</code>:</strong></p>
+<pre><code class="language-python">with open(&quot;data.txt&quot;, &quot;r&quot;) as f:
+    contents = f.read()
+</code></pre>
+<p>The moment the indented block ends — normally or via exception — <code>f.close()</code> runs automatically.</p>
+<p><strong>Step 2 — Pick the correct mode:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Meaning</th>
+<th>Effect on existing content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>"r"</code></td>
+<td>Read</td>
+<td>File must exist; unchanged</td>
+</tr>
+<tr>
+<td><code>"w"</code></td>
+<td>Write</td>
+<td><strong>Erases</strong> everything, starts blank</td>
+</tr>
+<tr>
+<td><code>"a"</code></td>
+<td>Append</td>
+<td>Adds to the end, existing content untouched</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Step 3 — Read large files line by line instead of all at once:</strong></p>
+<pre><code class="language-python">with open(&quot;data.txt&quot;, &quot;r&quot;) as f:
+    for line in f:
+        print(line.strip())
+</code></pre>
+<p>Looping directly over the file handle reads one line at a time instead of loading the entire file into memory — critical once files get large.</p>
+<p><strong>Step 4 — Build paths with <code>pathlib</code> instead of string concatenation:</strong></p>
+<pre><code class="language-python">from pathlib import Path
+
+folder = Path(&quot;data&quot;)
+file_path = folder / &quot;notes.txt&quot;
+</code></pre>
+<p>The <code>/</code> operator here isn't division — it's path joining, and it produces correct separators whether you're on Windows (<code>\</code>) or macOS/Linux (<code>/</code>).</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from pathlib import Path
+
+
+def write_note(folder: str, filename: str, text: str) -&gt; Path:
+    &quot;&quot;&quot;Append a line of text to a note file, creating the folder if needed.&quot;&quot;&quot;
+    dir_path = Path(folder)
+    dir_path.mkdir(parents=True, exist_ok=True)
+    file_path = dir_path / filename
+
+    with open(file_path, &quot;a&quot;) as f:
+        f.write(text + &quot;\n&quot;)
+
+    return file_path
+
+
+def read_notes(file_path: Path) -&gt; list[str]:
+    &quot;&quot;&quot;Read all lines from a note file, stripped of trailing newlines.&quot;&quot;&quot;
+    if not file_path.exists():
+        return []
+
+    with open(file_path, &quot;r&quot;) as f:
+        return [line.strip() for line in f]
+
+
+if __name__ == &quot;__main__&quot;:
+    path = write_note(&quot;data&quot;, &quot;notes.txt&quot;, &quot;Buy milk&quot;)
+    print(read_notes(path))
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>Path(folder)</code> wraps the folder name in a <code>Path</code> object so all later joins and checks are OS-independent.</li>
+<li><code>dir_path.mkdir(parents=True, exist_ok=True)</code> creates the folder if it doesn't exist yet, without erroring if it already does — this sidesteps a common "file not found" bug caused by a missing parent directory.</li>
+<li><code>dir_path / filename</code> joins the folder and filename into a full path using <code>pathlib</code>'s overloaded <code>/</code> operator.</li>
+<li><code>with open(file_path, "a") as f:</code> opens in append mode, so calling <code>write_note</code> repeatedly adds new lines instead of wiping old ones, and guarantees the file closes even if <code>f.write()</code> fails.</li>
+<li><code>read_notes</code> checks <code>file_path.exists()</code> first, avoiding a <code>FileNotFoundError</code> for a file that was never written.</li>
+<li><code>[line.strip() for line in f]</code> iterates the handle line by line — memory-efficient — and strips the newline character each line carries.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Call <code>write_note("data", "notes.txt", "Buy milk")</code>:</p>
+<ol>
+<li><code>dir_path</code> becomes <code>Path("data")</code>.</li>
+<li><code>mkdir</code> creates the <code>data/</code> folder (or does nothing if it exists).</li>
+<li><code>file_path</code> becomes <code>Path("data/notes.txt")</code>.</li>
+<li><code>with open(file_path, "a") as f:</code> opens (creating the file if absent), writes <code>"Buy milk\n"</code>, then closes automatically.</li>
+<li>Function returns <code>Path("data/notes.txt")</code>.</li>
+</ol>
+<p>Call <code>read_notes(Path("data/notes.txt"))</code>:</p>
+<ol>
+<li><code>file_path.exists()</code> returns <code>True</code>.</li>
+<li><code>with open(...) as f:</code> opens for reading.</li>
+<li>The list comprehension iterates the file, producing <code>["Buy milk"]</code>.</li>
+<li>File closes automatically as the <code>with</code> block ends.</li>
+</ol>
+<p>Output: <code>['Buy milk']</code></p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> O(n) for both writing and reading, where n is the size of the text being written or the number of lines being read. Opening and closing a file handle is O(1) overhead regardless of file size.</li>
+<li><strong>Space:</strong> O(1) additional space for <code>write_note</code> (streaming write). <code>read_notes</code> uses O(n) space because it materializes every line into a list — reasonable for note files, but worth reconsidering for very large files where a generator would be better.</li>
+<li>These bounds are correct because neither function loads more into memory than the data it's actually asked to produce or consume; there's no hidden buffering step.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p>For a quick one-shot read, <code>pathlib</code> offers a shortcut that skips <code>open</code> and <code>with</code> entirely:</p>
+<pre><code class="language-python">contents = Path(&quot;data.txt&quot;).read_text()
+</code></pre>
+<p>This is convenient and perfectly safe for small files — it internally handles opening and closing for you. The tradeoff: it loads the <em>entire</em> file into memory at once, so it's a poor choice for anything beyond a few megabytes. For large files, the line-by-line loop from the optimal solution remains the right tool.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty file:</strong> Reading returns an empty string (<code>.read()</code>) or zero iterations (looping) — no error, just nothing to process.</li>
+<li><strong>File doesn't exist, mode <code>"r"</code>:</strong> Raises <code>FileNotFoundError</code>. Always check <code>.exists()</code> first, or catch the exception, if the file's presence isn't guaranteed.</li>
+<li><strong>File doesn't exist, mode <code>"w"</code> or <code>"a"</code>:</strong> Both modes create the file if it's missing — no error.</li>
+<li><strong>Wrong mode on an existing important file (<code>"w"</code> instead of <code>"a"</code>):</strong> Silently erases all prior content with no confirmation prompt. This is the single most damaging mistake in this lesson.</li>
+<li><strong>Relative path run from the wrong working directory:</strong> Produces <code>FileNotFoundError</code> even though the file genuinely exists — just not relative to where the process happened to start.</li>
+<li><strong>Very large files read with <code>.read_text()</code> or <code>.read()</code>:</strong> Can exhaust memory; prefer line-by-line iteration.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Using mode <code>"w"</code> when you meant <code>"a"</code>, wiping out existing data with no warning.</li>
+<li>Forgetting to close a manually-opened file, leaking the handle if an exception occurs.</li>
+<li>Hardcoding relative paths that only work when the script is run from one specific directory.</li>
+<li>Gluing paths together with string concatenation and hardcoded <code>/</code> or <code>\</code>, breaking on the other operating system.</li>
+<li>Loading an entire large file into memory with <code>.read()</code> when line-by-line iteration would suffice.</li>
+<li>Forgetting to strip the trailing newline character when comparing or processing lines read from a file.</li>
+<li>Assuming <code>open()</code> in read mode will create the file if it's missing — it won't, and raises <code>FileNotFoundError</code> instead.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What does the <code>with</code> statement actually do under the hood? (Hint: <code>__enter__</code> and <code>__exit__</code>.)</li>
+<li>What's the difference between <code>"w"</code>, <code>"a"</code>, <code>"x"</code>, and <code>"r+"</code> modes?</li>
+<li>How would you read a 10 GB file without running out of memory?</li>
+<li>Why does <code>pathlib</code> handle cross-platform paths better than string concatenation?</li>
+<li>How do you safely write to a file such that a crash mid-write can't corrupt existing data? (Hint: write to a temp file, then atomically rename.)</li>
+<li>What happens if you open a file in <code>"r"</code> mode and it doesn't exist?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode-style log/text processing problems</strong> (e.g., parsing structured text into records) — they all begin with correctly opening and iterating a file.</li>
+<li><strong>Design a rate limiter using a file-based counter</strong> — tests understanding of read-modify-write cycles and file locking.</li>
+<li><strong>Design an in-memory file system (LeetCode 588)</strong> — reinforces the file/path/handle mental model in a data-structure context.</li>
+<li><strong>CSV/JSON parsing exercises</strong> — build directly on top of safe file-opening patterns covered here.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Files let data survive after your program exits — that's the entire point of learning this.</li>
+<li><code>with</code> guarantees a file closes even when something crashes mid-operation; manual <code>open</code>/<code>close</code> doesn't.</li>
+<li>Mode letters are a decision, not decoration: <code>"w"</code> erases, <code>"a"</code> appends, <code>"r"</code> requires the file to exist.</li>
+<li>Reading line by line scales to large files; loading everything with <code>.read()</code> doesn't.</li>
+<li><code>pathlib</code> removes an entire class of cross-platform path bugs that string concatenation used to cause.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with live coding, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <strong>Fun with Learning Technology</strong>, a series that breaks down programming and computer science fundamentals into short, practical lessons — built for developers who want to actually understand <em>why</em> something works, not just memorize syntax.</p>
+<h2>Call To Action</h2>
+<p>If this cleared something up for you, drop a like on the video and subscribe on YouTube so future lessons reach you. For deeper write-ups like this one delivered straight to your inbox, subscribe to the Substack. And if you've got a file-handling war story of your own, share it in the comments — those twenty-minute "wrong directory" bugs are basically a rite of passage.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Why use `with open(...)` instead of manual open/close?</summary><p>Guarantees the file closes automatically even if an error occurs mid-read/write, avoiding leaked file handles.</p></details><details class='card2'><summary>What happens if you forget to close a manually-opened file?</summary><p>Changes may not flush to disk, and the OS can run out of file handles if this repeats across a program.</p></details><details class='card2'><summary>What mode do you pass to overwrite vs append to a file?</summary><p>&#x27;w&#x27; truncates and overwrites existing content; &#x27;a&#x27; appends to the end without erasing it.</p></details><details class='card2'><summary>Why prefer `pathlib.Path` over string concatenation for file paths?</summary><p>It handles OS-specific separators automatically and offers readable methods like `.exists()`, `.parent`, `/` joins.</p></details><details class='card2'><summary>What&#x27;s the classic &#x27;wrong path&#x27; bug when opening files?</summary><p>Using a relative path that resolves against the script&#x27;s *working directory*, not the script&#x27;s own folder location.</p></details><details class='card2'><summary>How do you read a file line by line without loading it all into memory?</summary><p>Iterate directly over the file object in a for loop (e.g. `for line in f:`), which streams one line at a time.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
