@@ -1,0 +1,274 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>9 Out Of 10 Wrong on One SELECT — SQL Interview Basics Lesson 29 — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-29-sql-interview-questions-basics
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson-">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/sql-lesson-29-sql-interview-questions-basics.html">
+<meta property="og:title" content="9 Out Of 10 Wrong on One SELECT — SQL Interview Basics Lesson 29 — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-29-sql-interview-questions-basics
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesson-">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>9 Out Of 10 Wrong on One SELECT — SQL Interview Basics Lesson 29</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Why SQL Basics Decide the Interview Before It Really Starts</h2>
+<p>Most people preparing for a SQL interview spend their time rehearsing window functions, recursive CTEs, and multi-table joins. That instinct is backwards. The overwhelming majority of SQL interview failures happen in the first five minutes, on questions about <code>SELECT</code> and <code>WHERE</code> — the stuff that looks too simple to study.</p>
+<p>Here's why that matters: interviewers structure SQL rounds like a funnel. If you stumble on basic filtering, they rarely move on to ask about joins, subqueries, or performance tuning — not because those topics don't matter, but because there's no point probing depth when the foundation already cracked. Nailing the basics isn't busywork. It's the gate that determines whether the rest of the conversation even happens.</p>
+<p>This lesson walks through the handful of SELECT/WHERE traps that quietly sink otherwise strong candidates: the NULL comparison trap, DISTINCT vs GROUP BY confusion, Top-N query patterns, WHERE vs HAVING mix-ups, and why long OR chains are a design smell. None of this is exotic. All of it is testable, memorizable, and — once you see it clearly — impossible to get wrong again.</p>
+<h2>Problem Overview</h2>
+<p>Strip away the jargon and every SQL interview basics question is really testing one thing: do you understand what a row filter actually does before, during, and after grouping?</p>
+<p>Concretely, you'll typically be asked to:</p>
+<ul>
+<li>Retrieve rows that match a condition (<code>SELECT ... WHERE</code>)</li>
+<li>Correctly identify missing data (<code>NULL</code> handling)</li>
+<li>Return unique values versus computing per-group aggregates (<code>DISTINCT</code> vs <code>GROUP BY</code>)</li>
+<li>Find the Nth-highest or Nth-lowest row in a result set (<code>ORDER BY</code> + <code>LIMIT</code> + <code>OFFSET</code>)</li>
+<li>Filter on a computed aggregate rather than a raw column (<code>HAVING</code> vs <code>WHERE</code>)</li>
+<li>Write a clean multi-value condition instead of a chain of <code>OR</code>s (<code>IN</code>)</li>
+</ul>
+<p>None of these require exotic SQL features. They require precision about <em>when</em> SQL evaluates each clause, and that precision is exactly what separates a candidate who "kind of knows SQL" from one an interviewer trusts with production queries.</p>
+<h2>Example</h2>
+<p>Imagine a table <code>employees</code>:</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>name</th>
+<th>department</th>
+<th>salary</th>
+<th>email</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Asha</td>
+<td>Sales</td>
+<td>72000</td>
+<td>asha@co.com</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Marco</td>
+<td>Sales</td>
+<td>65000</td>
+<td>NULL</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Priya</td>
+<td>Engineering</td>
+<td>98000</td>
+<td>priya@co.com</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Diego</td>
+<td>Engineering</td>
+<td>91000</td>
+<td>diego@co.com</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Wren</td>
+<td>Engineering</td>
+<td>91000</td>
+<td>NULL</td>
+</tr>
+</tbody>
+</table>
+<p>A few questions this table can generate:</p>
+<ul>
+<li>"Find employees with no email on file." A candidate who writes <code>WHERE email = NULL</code> gets <strong>zero rows back</strong>, even though Marco and Wren clearly qualify. That's the NULL trap.</li>
+<li>"How many employees are in each department?" This needs <code>GROUP BY department</code> with <code>COUNT(*)</code> — not <code>SELECT DISTINCT department</code>, which only lists department names without counts.</li>
+<li>"Who has the third-highest salary?" That's <code>ORDER BY salary DESC OFFSET 2 LIMIT 1</code> — skip the top two, take the next one. Priya and Diego/Wren tie at similar salaries, which is exactly the kind of edge case interviewers plant on purpose.</li>
+<li>"Which departments have more than 2 employees?" You can't write <code>WHERE COUNT(*) &gt; 2</code> — <code>COUNT(*)</code> doesn't exist yet at the row-filtering stage. That's a job for <code>HAVING COUNT(*) &gt; 2</code>, applied after grouping.</li>
+</ul>
+<h2>Intuition</h2>
+<p>Before touching syntax, build the mental model an experienced engineer already has running in the background.</p>
+<p><strong>WHERE is a bouncer at a door.</strong> Rows show up one at a time, the bouncer checks a condition against that single row, and only matching rows get through. Nothing aggregate exists yet — no counts, no sums, no averages — because grouping hasn't happened. This is the single fact that explains almost every WHERE-related bug in this lesson.</p>
+<p><strong>NULL means "unknown," not "empty."</strong> SQL's three-valued logic (<code>TRUE</code>, <code>FALSE</code>, <code>UNKNOWN</code>) means comparing anything to NULL with <code>=</code> returns <code>UNKNOWN</code>, which behaves like <code>FALSE</code> when filtering. <code>NULL = NULL</code> is <em>also</em> unknown — even a NULL doesn't equal itself. The only way to test for NULL is with the special operators <code>IS NULL</code> / <code>IS NOT NULL</code>, which check for the state directly instead of comparing values.</p>
+<p><strong>DISTINCT and GROUP BY solve different problems.</strong> DISTINCT collapses duplicate rows into one — it's a dedup operation, nothing more. GROUP BY buckets rows so you can compute something <em>per bucket</em>: a count, a sum, an average. If the question asks "how many," "what's the total," or "what's the average, per X," you need GROUP BY. If it asks "what are the unique values," you need DISTINCT. Reaching for DISTINCT when the interviewer wants a per-department count is one of the most common tells that a candidate is pattern-matching rather than understanding.</p>
+<p><strong>HAVING exists because WHERE runs too early to see aggregates.</strong> The logical order of SQL execution is roughly: <code>FROM</code> → <code>WHERE</code> → <code>GROUP BY</code> → <code>HAVING</code> → <code>SELECT</code> → <code>ORDER BY</code>. By the time HAVING runs, groups already exist, so it can filter on <code>COUNT</code>, <code>SUM</code>, <code>AVG</code>, and other aggregates. WHERE runs before any of that — it only ever sees raw, ungrouped rows.</p>
+<p><strong>IN is a lookup, OR is a manual list.</strong> A chain of <code>dept = 'Sales' OR dept = 'Engineering' OR dept = 'Marketing'</code> and <code>dept IN ('Sales', 'Engineering', 'Marketing')</code> produce identical results, but IN is shorter, harder to get wrong with parentheses, and reads as a single intent rather than three fragile conditions stitched together.</p>
+<p>Once these five mental models are solid, the actual SQL is almost mechanical.</p>
+<h2>Brute Force Solution</h2>
+<p>There isn't really a "brute force" version of writing a WHERE clause — but there is a brute-force <em>mental habit</em>, and it's worth naming because it's what most struggling candidates default to.</p>
+<p><strong>The habit:</strong> treat every filtering problem as "write conditions until the query runs," without first asking whether the condition needs <code>IS NULL</code>, whether the count belongs in <code>WHERE</code> or <code>HAVING</code>, or whether <code>AND</code>/<code>OR</code> need explicit parentheses.</p>
+<ul>
+<li><strong>Idea:</strong> trial-and-error the syntax until the database stops complaining, then assume correctness.</li>
+<li><strong>Algorithm:</strong> guess a clause, run it, eyeball the output, adjust if it looks wrong.</li>
+<li><strong>Advantage:</strong> feels fast under interview pressure.</li>
+<li><strong>Disadvantage:</strong> this is exactly how the NULL trap and the WHERE/HAVING mix-up survive undetected — both produce a <em>syntactically valid</em> query that silently returns the wrong rows. There's no error to catch you.</li>
+<li><strong>Time/space complexity:</strong> not applicable — the cost here isn't computational, it's the cost of an undetected logic bug shipping to production.</li>
+</ul>
+<p>This is the version that fails interviews and, worse, fails in real reporting pipelines where nobody double-checks the row count.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach is a deliberate checklist applied <em>before</em> writing any WHERE clause, matched to the specific pattern the question is testing.</p>
+<p><strong>Pattern 1 — Missing data:</strong> always reach for <code>IS NULL</code> / <code>IS NOT NULL</code>, never <code>= NULL</code> or <code>!= NULL</code>.</p>
+<p><strong>Pattern 2 — Ambiguous logic:</strong> whenever AND and OR appear together, wrap the OR conditions in parentheses. SQL evaluates AND with higher precedence than OR, so <code>WHERE dept = 'Sales' AND salary &gt; 70000 OR dept = 'Engineering'</code> doesn't mean what most people read it as — it silently becomes <code>(dept = 'Sales' AND salary &gt; 70000) OR dept = 'Engineering'</code>, pulling in every Engineering row regardless of salary.</p>
+<p><strong>Pattern 3 — Unique values vs. per-group math:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Need</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>List of distinct department names</td>
+<td><code>SELECT DISTINCT department</code></td>
+</tr>
+<tr>
+<td>Count of employees per department</td>
+<td><code>SELECT department, COUNT(*) ... GROUP BY department</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Pattern 4 — Nth-ranked row:</strong> sort, skip, then take one.</p>
+<pre><code>ORDER BY salary DESC
+OFFSET 2
+LIMIT 1
+</code></pre>
+<p><strong>Pattern 5 — Filter timing:</strong> raw-row conditions go in WHERE; aggregate conditions go in HAVING.</p>
+<pre><code>FROM employees
+WHERE department = 'Engineering'      -- filters raw rows first
+GROUP BY department
+HAVING COUNT(*) &gt; 2                   -- filters the resulting groups
+</code></pre>
+<p><strong>Pattern 6 — Multi-value match:</strong> replace OR chains with IN.</p>
+<pre><code>WHERE department IN ('Sales', 'Engineering', 'Marketing')
+</code></pre>
+<h2>Python Code</h2>
+<p>Since this lesson is about query logic rather than a general-purpose algorithm, the "production code" here is the query itself, wrapped in a small Python utility that executes it safely against a database connection — useful for anyone automating these checks rather than running them by hand each time.</p>
+<pre><code class="language-python">import sqlite3
+from typing import Any
+
+
+def run_query(connection: sqlite3.Connection, query: str, params: tuple = ()) -&gt; list[dict[str, Any]]:
+    &quot;&quot;&quot;Execute a parameterized query and return rows as dictionaries.&quot;&quot;&quot;
+    connection.row_factory = sqlite3.Row
+    cursor = connection.execute(query, params)
+    return [dict(row) for row in cursor.fetchall()]
+
+
+# Pattern 1: correct NULL check
+MISSING_EMAIL_QUERY = &quot;&quot;&quot;
+    SELECT id, name
+    FROM employees
+    WHERE email IS NULL
+&quot;&quot;&quot;
+
+# Pattern 3: aggregate per group, not just distinct values
+HEADCOUNT_BY_DEPT_QUERY = &quot;&quot;&quot;
+    SELECT department, COUNT(*) AS headcount
+    FROM employees
+    GROUP BY department
+&quot;&quot;&quot;
+
+# Pattern 4: third-highest salary
+THIRD_HIGHEST_SALARY_QUERY = &quot;&quot;&quot;
+    SELECT name, salary
+    FROM employees
+    ORDER BY salary DESC
+    LIMIT 1 OFFSET 2
+&quot;&quot;&quot;
+
+# Pattern 5: filter raw rows, then filter groups
+LARGE_ENGINEERING_TEAMS_QUERY = &quot;&quot;&quot;
+    SELECT department, COUNT(*) AS headcount
+    FROM employees
+    WHERE department = 'Engineering'
+    GROUP BY department
+    HAVING COUNT(*) &gt; 2
+&quot;&quot;&quot;
+
+# Pattern 6: IN instead of chained OR
+TARGET_DEPARTMENTS_QUERY = &quot;&quot;&quot;
+    SELECT name, department
+    FROM employees
+    WHERE department IN ('Sales', 'Engineering', 'Marketing')
+&quot;&quot;&quot;
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>run_query</code> centralizes execution so every query above goes through the same parameterized path — this also means none of these are vulnerable to SQL injection, since real inputs would be passed via <code>params</code>, not string-formatted into the query.</li>
+<li><code>MISSING_EMAIL_QUERY</code> demonstrates the fix for the NULL trap directly: <code>IS NULL</code>, not <code>= NULL</code>.</li>
+<li><code>HEADCOUNT_BY_DEPT_QUERY</code> shows GROUP BY answering a "how many per bucket" question — notice <code>COUNT(*)</code> sits in the SELECT list, which only works because GROUP BY has already formed the buckets.</li>
+<li><code>THIRD_HIGHEST_SALARY_QUERY</code> uses <code>LIMIT 1 OFFSET 2</code> — offset 2 skips the top two rows, then limit 1 grabs the next one, landing exactly on third place.</li>
+<li><code>LARGE_ENGINEERING_TEAMS_QUERY</code> filters raw rows first with WHERE (only Engineering rows enter the group), then filters the resulting group with HAVING (only groups larger than 2). Doing this in the wrong order, or in the wrong clause, either throws an error or silently returns nothing.</li>
+<li><code>TARGET_DEPARTMENTS_QUERY</code> replaces what would otherwise be a three-part OR chain with one IN clause — same result, less room for a missing parenthesis to break the logic.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Take <code>LARGE_ENGINEERING_TEAMS_QUERY</code> against the five-row <code>employees</code> table above.</p>
+<ol>
+<li><strong>FROM employees</strong> — start with all 5 rows.</li>
+<li><strong>WHERE department = 'Engineering'</strong> — keep only raw rows where department is Engineering: Priya, Diego, Wren survive; Asha and Marco are dropped.</li>
+<li><strong>GROUP BY department</strong> — the 3 surviving rows collapse into a single group: <code>Engineering</code>.</li>
+<li><strong>HAVING COUNT(*) &gt; 2</strong> — the Engineering group has 3 rows, <code>3 &gt; 2</code> is true, so the group survives.</li>
+<li><strong>SELECT department, COUNT(*)</strong> — output: <code>Engineering, 3</code>.</li>
+</ol>
+<p>If you'd tried <code>WHERE COUNT(*) &gt; 2</code> instead of HAVING, the query fails outright — <code>COUNT(*)</code> isn't valid until grouping has happened. If you'd used <code>department = NULL</code> anywhere in that chain by mistake, rows would vanish with no error at all — which is the more dangerous failure mode of the two.</p>
+<h2>Complexity Analysis</h2>
+<p>These are logical correctness problems, not algorithmic ones, so "complexity" here refers to query cost rather than Big-O:</p>
+<ul>
+<li><strong>WHERE filtering:</strong> typically O(n) over the scanned rows, or O(log n) per lookup if an index exists on the filtered column.</li>
+<li><strong>GROUP BY / HAVING:</strong> requires an aggregation pass over filtered rows, generally O(n log n) if the engine sorts to group, or O(n) with hash-based grouping.</li>
+<li><strong>ORDER BY + LIMIT/OFFSET:</strong> O(n log n) for the sort; OFFSET does not reduce this cost — the engine still computes the full sorted order and then discards the skipped rows, which matters at scale but not for the small examples here.</li>
+</ul>
+<p>The complexity isn't the interview risk in these questions — correctness is. A candidate can write an O(n) query that is asymptotically fine and still return the wrong 3 rows because of a NULL comparison or precedence bug.</p>
+<h2>Alternative Solutions</h2>
+<p>For the Top-N pattern, window functions are a reasonable alternative once you're past the basics round:</p>
+<pre><code class="language-sql">SELECT name, salary
+FROM (
+    SELECT name, salary,
+           DENSE_RANK() OVER (ORDER BY salary DESC) AS rnk
+    FROM employees
+) ranked
+WHERE rnk = 3
+</code></pre>
+<p><code>DENSE_RANK()</code> handles ties correctly (two people tied for 2nd both get rank 2, and rank 3 goes to the next distinct salary), whereas <code>OFFSET</code>/<code>LIMIT</code> treats ties as arbitrary row order. For an interview at the basics level, <code>ORDER BY ... LIMIT ... OFFSET</code> is the expected answer — but flagging the tie-handling difference to your interviewer shows you understand the tradeoff, which is a strong signal on its own.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty table:</strong> every query above should return zero rows without erroring — worth explicitly stating in an interview rather than assuming it.</li>
+<li><strong>All values NULL in the filtered column:</strong> <code>WHERE email IS NULL</code> returns every row; <code>WHERE email = NULL</code> still returns none, which is the trap restated at its most extreme.</li>
+<li><strong>Ties at the Top-N boundary:</strong> if two employees share the "third place" salary, <code>LIMIT 1 OFFSET 2</code> arbitrarily picks one of them unless the ORDER BY has a tiebreaker (e.g., <code>ORDER BY salary DESC, name ASC</code>).</li>
+<li><strong>HAVING with no matching groups:</strong> if no department has more than 2 employees, the query returns zero rows, not an error — don't assume a query "isn't working" just because the result set is empty.</li>
+<li><strong>Single-row IN list:</strong> <code>WHERE department IN ('Sales')</code> works identically to <code>WHERE department = 'Sales'</code> — a good sanity check that IN is just OR generalized.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Writing <code>WHERE column = NULL</code> instead of <code>WHERE column IS NULL</code>.</li>
+<li>Mixing AND and OR without parentheses, silently changing which rows match.</li>
+<li>Using <code>SELECT DISTINCT</code> when the question actually wants a per-group count via <code>GROUP BY</code>.</li>
+<li>Trying to filter on an aggregate (<code>COUNT</code>, <code>SUM</code>, <code>AVG</code>) inside WHERE instead of HAVING.</li>
+<li>Forgetting a tiebreaker column in ORDER BY when the ranking needs to be deterministic.</li>
+<li>Defaulting to a long OR chain instead of IN, then missing a parenthesis somewhere in the chain.</li>
+<li>Assuming an empty result set means the query is broken, rather than checking whether the filter is simply too strict.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>"Why does <code>WHERE email = NULL</code> return zero rows even when NULL emails exist?"</li>
+<li>"What's the difference between <code>DENSE_RANK()</code>, <code>RANK()</code>, and <code>ROW_NUMBER()</code> for Top-N queries?"</li>
+<li>"Can you rewrite this OR chain using IN, and does the result change?"</li>
+<li>"In what order does SQL logically evaluate WHERE, GROUP BY, HAVING, and ORDER BY?"</li>
+<li>"How would you find the 2nd-highest salary in each department, not just overall?"</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 176 — Second Highest Salary:</strong> directly tests the Top-N / NULL-when-missing pattern from this lesson.</li>
+<li><strong>LeetCode 184 — Department Highest Salary:</strong> combines GROUP BY reasoning with a join, a natural next step after this lesson.</li>
+<li><strong>LeetCode 262 — Trips and Users:</strong> heavy WHERE/HAVING and NULL-handling practice in a messier, real-world-shaped schema.</li>
+<li><strong>LeetCode 1934 — Confirmation Rate:</strong> tests DISTINCT vs GROUP BY judgment under a LEFT JOIN.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The basics are not a warm-up — they're the gate. Four checks cover most of what fails candidates: use <code>IS NULL</code> for missing data, choose DISTINCT or GROUP BY deliberately, parenthesize AND/OR explicitly, and know whether a condition belongs in WHERE or HAVING. None of these mistakes throw an error. All of them silently return the wrong rows, which is precisely why they're dangerous in an interview and in production reporting alike.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with live queries and the pre-interview checklist in action, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <strong>Fun with Learning Technology</strong>, a series built around one idea: the fundamentals are where careers actually get made or stalled, and they deserve more rigor than they usually get. Each lesson takes a concept that looks "too basic to matter" and shows exactly where it quietly breaks real interviews and real systems.</p>
+<h2>Call To Action</h2>
+<p>If this lesson saved you from a mistake you didn't know you were making, like the video on YouTube and subscribe for the rest of the SQL Interview Basics series. Subscribe to the Substack for the full written breakdowns with extra examples that don't make it into the video. Drop a comment with the SQL trap that's bitten you before — chances are someone else in the comments has hit the exact same one. And if you know someone prepping for a SQL round, share this with them before their interview, not after.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Why do most SQL interview candidates fail basics questions?</summary><p>They rush past edge cases like NULLs and filter logic instead of proving they understand core mechanics first.</p></details><details class='card2'><summary>WHERE filters rows, but which clause filters after grouping?</summary><p>HAVING — WHERE applies before aggregation, HAVING applies to grouped/aggregated results.</p></details><details class='card2'><summary>Why does `col != value` silently drop NULL rows?</summary><p>NULL comparisons return UNKNOWN, not true/false, so those rows get excluded — use IS NOT NULL explicitly.</p></details><details class='card2'><summary>DISTINCT vs GROUP BY — when do they behave differently?</summary><p>DISTINCT dedupes selected columns; GROUP BY dedupes plus enables per-group aggregates like COUNT or SUM.</p></details><details class='card2'><summary>How do you get the top-N rows per query cleanly?</summary><p>ORDER BY the ranking column, then LIMIT N — avoids nested subqueries for simple top-N cases.</p></details><details class='card2'><summary>Why replace a long OR chain on one column with something else?</summary><p>Use IN (...) instead — same logic, more readable, and signals you know cleaner filtering idioms.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
