@@ -1,0 +1,175 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 28: The Bug That Loses Money — Transactions &amp; ACID Explained — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-28-transactions-and-acid-properties
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesso">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/sql-lesson-28-transactions-and-acid-properties.html">
+<meta property="og:title" content="Lesson 28: The Bug That Loses Money — Transactions &amp; ACID Explained — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/sql-lesson-28-transactions-and-acid-properties
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/sql-lesso">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson 28: The Bug That Loses Money — Transactions &amp; ACID Explained</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every backend engineer eventually writes a bug that looks harmless until money — or data — disappears. It usually looks something like this: you update one row, then update a second row, and somewhere between those two statements, something goes wrong. A network blip. A constraint violation. A server crash. The first update already happened. The second one didn't. Now your database is lying to you.</p>
+<p>This is one of those bugs that doesn't show up in code review, because the code reads perfectly fine line by line. It only shows up in production, usually during a demo, usually involving someone's money. That's exactly why SQL transactions and the ACID properties are a recurring topic in backend interviews — not because interviewers care if you memorized four letters, but because they want to know if you understand what "correct" means when multiple writes have to succeed or fail together.</p>
+<p>By the end of this article, you'll understand why transactions exist, what each ACID property actually guarantees, and — just as importantly — when you don't need to reach for one.</p>
+<h2>Problem Overview</h2>
+<p>Imagine a simple bank transfer: move $100 from Account A to Account B. Naively, this is two separate SQL statements:</p>
+<ol>
+<li>Subtract $100 from Account A.</li>
+<li>Add $100 to Account B.</li>
+</ol>
+<p>Run individually, each statement is valid SQL and each one succeeds or fails on its own. The problem is that <em>together</em> they represent a single logical operation. If the first statement runs and the second one fails — because the server crashes, the connection drops, or Account B doesn't exist — you're left with a database that already took the money out of Account A but never put it into Account B. The money isn't lost in some abstract sense; it's just gone, and no query can find it, because it was never written anywhere.</p>
+<p>This is the core problem a transaction solves: some sequences of writes only make sense as a single unit. Either all of them happen, or none of them do. There is no acceptable middle state.</p>
+<h2>Example</h2>
+<p>Let's say Account A has a balance of $500 and Account B has a balance of $200.</p>
+<p><strong>Without a transaction:</strong></p>
+<pre><code class="language-sql">UPDATE accounts SET balance = balance - 100 WHERE id = 'A';
+-- server crashes here
+UPDATE accounts SET balance = balance + 100 WHERE id = 'B';
+</code></pre>
+<p>Result: Account A now has $400. Account B still has $200. Total money in the system: $600, down from $700. $100 evaporated.</p>
+<p><strong>With a transaction:</strong></p>
+<pre><code class="language-sql">BEGIN;
+UPDATE accounts SET balance = balance - 100 WHERE id = 'A';
+UPDATE accounts SET balance = balance + 100 WHERE id = 'B';
+COMMIT;
+</code></pre>
+<p>If the crash happens before <code>COMMIT</code>, the database discards the first update automatically when it restarts. Account A is back to $500, exactly as if the transfer never started. Total money in the system: still $700.</p>
+<p>That's the entire value proposition in one comparison. Nothing clever, just a guarantee that half-finished work doesn't get to count.</p>
+<h2>Intuition</h2>
+<p>Here's how an engineer arrives at this solution without ever having heard the word "ACID." You start by asking: what does it <em>mean</em> for this operation to be correct? Not "did each SQL statement execute without an error," but "does the world make sense after this operation, no matter what interrupts it?"</p>
+<p>Once you frame it that way, you realize individual statements are the wrong unit of correctness. The unit of correctness is the whole transfer. Debiting one account without crediting the other isn't a partial success — it's a failure that happens to look like a success, because the database didn't complain.</p>
+<p>The next question is: how would you <em>implement</em> "all or nothing" yourself, if the database didn't offer it? You'd probably reach for some kind of log — write down what you're about to do before you do it, so that if you get interrupted, you can either finish the job or undo it. That's not a hack; that's essentially what the database's transaction log does under the hood. Recognizing that "all or nothing" requires a durable record of intent is the entire insight. Once you see that, <code>BEGIN</code> / <code>COMMIT</code> / <code>ROLLBACK</code> stop looking like syntax to memorize and start looking like the obvious tool for the job.</p>
+<p>From there, ACID isn't four unrelated rules — it's four different ways the "half-finished state" problem can sneak back in, even after you've wrapped things in a transaction:</p>
+<ul>
+<li>What if the transaction itself is interrupted mid-way? → <strong>Atomicity</strong></li>
+<li>What if a completed transaction leaves the data in a state that violates your business rules? → <strong>Consistency</strong></li>
+<li>What if someone else reads the data while your transaction is still running? → <strong>Isolation</strong></li>
+<li>What if the transaction completes, gets confirmed, and then the server loses power? → <strong>Durability</strong></li>
+</ul>
+<p>Each property is closing off one more way the "all or nothing" promise could quietly break.</p>
+<h2>Brute Force Solution</h2>
+<p>The "brute force" approach here is to not use a transaction at all, and instead try to handle failure manually in application code:</p>
+<pre><code class="language-python">def transfer_naive(conn, from_id, to_id, amount):
+    conn.execute(&quot;UPDATE accounts SET balance = balance - %s WHERE id = %s&quot;, (amount, from_id))
+    try:
+        conn.execute(&quot;UPDATE accounts SET balance = balance + %s WHERE id = %s&quot;, (amount, to_id))
+    except Exception:
+        # try to &quot;undo&quot; the first update manually
+        conn.execute(&quot;UPDATE accounts SET balance = balance + %s WHERE id = %s&quot;, (amount, from_id))
+</code></pre>
+<p><strong>Idea:</strong> run the first update, and if the second one fails, run a compensating update to reverse the first.</p>
+<p><strong>Advantages:</strong> doesn't require understanding transactions; looks like it works in the happy path and in simple failure tests.</p>
+<p><strong>Disadvantages:</strong>
+- If the process crashes between the two updates (not just an exception, but a full crash), the compensating code never runs at all. You're back to square one.
+- Concurrent readers can see the half-updated state — Account A already debited, Account B not yet credited — and make decisions based on money that's temporarily nowhere.
+- You're re-implementing rollback logic by hand, badly, for one specific case, when the database already does this correctly for the general case.</p>
+<p><strong>Time complexity:</strong> O(1) extra queries in the failure path — cheap to run, expensive to trust.
+<strong>Space complexity:</strong> O(1) — no additional storage, which is exactly the problem; there's no durable record of intent to recover from a hard crash.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal solution is to let the database do what it's already built to do: wrap the related writes in a transaction and let atomicity handle the failure case for you.</p>
+<pre><code>BEGIN
+   │
+   ▼
+UPDATE Account A (-100)   ← written to transaction log, not yet final
+   │
+   ▼
+UPDATE Account B (+100)   ← written to transaction log, not yet final
+   │
+   ▼
+COMMIT  ──► both changes become permanent and visible, together
+   │
+   ▼ (if anything fails before COMMIT)
+ROLLBACK ──► both changes are discarded, as if nothing happened
+</code></pre>
+<p>The key shift in thinking: you stop treating <code>UPDATE</code> statements as immediately final. Inside a transaction, they're provisional — recorded, but not yet real from the outside world's perspective. <code>COMMIT</code> is the single moment where "provisional" becomes "permanent," for every statement in the transaction at once. <code>ROLLBACK</code> (explicit, or automatic on crash) throws away everything provisional.</p>
+<p>This is also where isolation matters: while the transaction is open, other connections querying Account A or Account B don't see the in-progress debit or credit. They see either the pre-transfer state or the post-transfer state — never the moment in between where $100 is debited but not yet credited.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def transfer(conn, from_id: str, to_id: str, amount: int) -&gt; None:
+    &quot;&quot;&quot;Move `amount` from one account to another as a single atomic unit.&quot;&quot;&quot;
+    with conn:  # commits on success, rolls back automatically on exception
+        conn.execute(
+            &quot;UPDATE accounts SET balance = balance - %s WHERE id = %s&quot;,
+            (amount, from_id),
+        )
+        conn.execute(
+            &quot;UPDATE accounts SET balance = balance + %s WHERE id = %s&quot;,
+            (amount, to_id),
+        )
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>with conn:</code> — most Python DB-API drivers (psycopg2, sqlite3) treat entering this context manager as starting a transaction. If the block finishes without an exception, the driver issues <code>COMMIT</code>. If an exception is raised anywhere inside, it issues <code>ROLLBACK</code> automatically. This mirrors <code>BEGIN ... COMMIT</code> at the SQL level without you having to write it explicitly.</li>
+<li>The first <code>execute</code> debits <code>from_id</code>. Nothing is permanent yet — it's recorded, provisional.</li>
+<li>The second <code>execute</code> credits <code>to_id</code>. If <code>to_id</code> doesn't exist, the database driver raises an exception (a foreign key violation or similar).</li>
+<li>Because the exception happens inside the <code>with</code> block, the context manager rolls back everything — including the first update — before the exception propagates further.</li>
+<li>Parameterized queries (<code>%s</code> placeholders) are used instead of string formatting to avoid SQL injection — unrelated to transactions, but never skip it.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Starting balances: A = $500, B = $200. Call <code>transfer(conn, 'A', 'B', 100)</code>.</p>
+<ol>
+<li><code>with conn:</code> opens a transaction.</li>
+<li><code>UPDATE accounts SET balance = balance - 100 WHERE id = 'A'</code> → A's balance is provisionally $400.</li>
+<li><code>UPDATE accounts SET balance = balance + 100 WHERE id = 'B'</code> → B's balance is provisionally $300.</li>
+<li>No exception was raised, so the <code>with</code> block exits normally and issues <code>COMMIT</code>.</li>
+<li>Both changes become permanent and visible at once: A = $400, B = $300.</li>
+</ol>
+<p>Now suppose <code>to_id = 'C'</code> and Account C doesn't exist:</p>
+<ol>
+<li><code>with conn:</code> opens a transaction.</li>
+<li>A's balance is provisionally debited to $400.</li>
+<li>The insert into C fails with a foreign key or constraint error, raising an exception.</li>
+<li>The <code>with</code> block catches the exception on exit and issues <code>ROLLBACK</code>.</li>
+<li>A's balance reverts to $500. Nothing was ever visible to other queries in between.</li>
+</ol>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(1) additional overhead per statement for logging, plus the cost of holding any locks acquired during the transaction — negligible for a two-statement transfer like this. The number of statements executed is the same with or without the transaction; you're not doing more work, just grouping it correctly.</p>
+<p><strong>Space:</strong> O(k) where k is the number of statements in the transaction, since the database needs to keep a record (write-ahead log) of each provisional change until commit or rollback. For a transfer between two accounts, that's a constant, small amount of extra bookkeeping — trivial compared to the cost of a silent data corruption bug.</p>
+<p>These bounds hold because a transaction doesn't change the algorithm — it changes the <em>guarantee</em> around an algorithm you were already going to run.</p>
+<h2>Alternative Solutions</h2>
+<p><strong>Application-level compensation (sagas):</strong> for distributed systems where a single database transaction can't span all the writes (e.g., debiting a bank account in one microservice and crediting one in another), you sometimes can't use <code>BEGIN</code>/<code>COMMIT</code> at all. The alternative is a saga — each step has a corresponding compensating action, and if a later step fails, you explicitly run the compensations for everything that already succeeded. This is strictly harder to get right than a database transaction and should only be used when a single transaction genuinely isn't possible.</p>
+<p><strong>Optimistic locking with version columns:</strong> for high-concurrency systems, some engineers avoid holding transactions open for coordination and instead use a version number on rows, checking it hasn't changed before committing. This addresses isolation-related contention rather than atomicity, and is a separate concern from the crash-safety problem this article focuses on.</p>
+<p>For a single-database bank transfer like the one here, a plain transaction is simpler and more reliable than either alternative.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty transaction (no statements between BEGIN and COMMIT):</strong> legal, but a no-op — nothing to commit or roll back.</li>
+<li><strong>Transferring to a non-existent account:</strong> should fail the second statement and roll back the first — verify your foreign key constraints actually enforce this, or the "failure" won't happen and you'll silently create an orphaned credit.</li>
+<li><strong>Transferring the maximum representable amount:</strong> watch for integer overflow if you're storing balances as fixed-width integers; this isn't a transaction concern but will corrupt data just as silently.</li>
+<li><strong>Debiting more than the account's balance:</strong> a transaction won't catch this on its own — you need a <code>CHECK (balance &gt;= 0)</code> constraint or application-level validation, otherwise ACID will happily commit a negative balance because nothing told it that's invalid.</li>
+<li><strong>Nested transactions:</strong> most databases don't support true nested transactions; calling <code>BEGIN</code> inside an open transaction either errors or is a no-op, depending on the driver — don't assume savepoints and nested <code>BEGIN</code> behave the same way.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Assuming a network-level retry is the same as a rollback.</strong> Retrying a failed request without knowing whether the first statement already committed can double-apply a write.</li>
+<li><strong>Wrapping read-only queries in transactions "just in case."</strong> This adds lock overhead for no correctness benefit — transactions are for related <em>writes</em>, not defensive habit.</li>
+<li><strong>Believing <code>COMMIT</code> means "fast" rather than "durable."</strong> A successful commit means the data survived a crash, not that it was written quickly — these are different guarantees.</li>
+<li><strong>Holding a transaction open across a slow external call</strong> (an API request, a user prompt) while inside <code>BEGIN</code>/<code>COMMIT</code>. This holds locks far longer than necessary and can block every other write to those rows.</li>
+<li><strong>Forgetting that a transaction protects against crashes, not against bad business logic.</strong> If your consistency rules (constraints, checks) are missing, a transaction will commit an invalid state just as reliably as a valid one.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What's the difference between atomicity and isolation, and can you give an example where one holds but the other doesn't?</li>
+<li>What are SQL isolation levels (<code>READ COMMITTED</code>, <code>REPEATABLE READ</code>, <code>SERIALIZABLE</code>), and what specific anomaly does each one prevent?</li>
+<li>How does a database implement rollback internally — what does the write-ahead log actually store?</li>
+<li>When would you <em>avoid</em> wrapping something in a transaction?</li>
+<li>How do transactions behave differently across multiple database connections versus multiple microservices?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode-style database design questions involving multi-table consistency</strong> — any problem requiring updates across related tables (e.g., inventory and orders) touches the same atomicity concerns.</li>
+<li><strong>Distributed systems: two-phase commit</strong> — the multi-node generalization of the same all-or-nothing problem this article covers for a single database.</li>
+<li><strong>Idempotency key design in payment APIs</strong> — a related but distinct problem: making sure a retried request doesn't apply twice, which pairs naturally with transactional writes.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>A transaction groups related writes into a single all-or-nothing unit, because some operations only make sense together — debiting one account and crediting another is either both-or-neither, with no valid state in between. ACID is the four-part promise underneath that grouping: atomicity guarantees the all-or-nothing behavior itself, consistency guarantees the result never violates your data's rules, isolation guarantees concurrent transactions don't see each other's half-finished work, and durability guarantees a committed transaction survives a crash. The engineering judgment call isn't whether to use transactions — it's recognizing which writes are actually coupled and wrapping exactly those, no more and no less.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough — including a live demonstration of the failure case and the fix — watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of the <strong>Fun with Learning Technology</strong> series, where real backend bugs are used as the entry point into the concepts behind them, instead of teaching theory in isolation. Each lesson starts with something that actually breaks in production and works backward to the fundamentals that explain why — and how to prevent it next time.</p>
+<h2>Call To Action</h2>
+<p>If this saved you from a future 2am debugging session, hit like on the video and subscribe on YouTube so the next lesson finds you. For deeper write-ups like this one delivered straight to your inbox, subscribe to the Substack. And if you've hit this exact bug before, drop a comment — I'd genuinely like to hear how you found it.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>What&#x27;s the pattern trigger for wrapping SQL in a transaction?</summary><p>When multiple related updates must all succeed or all fail together — e.g. money transfers, multi-table writes.</p></details><details class='card2'><summary>Name the four ACID properties in order.</summary><p>Atomicity, Consistency, Isolation, Durability.</p></details><details class='card2'><summary>What does Atomicity guarantee if step 2 of 3 fails?</summary><p>The whole transaction rolls back — no partial writes persist, as if nothing happened.</p></details><details class='card2'><summary>Trickiest bug: what happens if you forget COMMIT/ROLLBACK on failure?</summary><p>Connection may hold an open transaction, locking rows and silently blocking other queries indefinitely.</p></details><details class='card2'><summary>Isolation vs Durability — what&#x27;s the difference?</summary><p>Isolation hides in-progress transactions from concurrent reads; Durability ensures committed data survives a crash.</p></details><details class='card2'><summary>Follow-up: why does a failed transfer update need a transaction, not just a try/catch?</summary><p>Try/catch alone doesn&#x27;t undo the first UPDATE already sent to the DB — only a transaction&#x27;s ROLLBACK reverts committed-in-progress statements.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
