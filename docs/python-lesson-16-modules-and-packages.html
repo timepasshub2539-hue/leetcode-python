@@ -1,0 +1,223 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 16: What Does __name__ == &#x27;__main__&#x27; Actually Do? — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-16-modules-and-packages
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesson-16-m">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-16-modules-and-packages.html">
+<meta property="og:title" content="Lesson 16: What Does __name__ == &#x27;__main__&#x27; Actually Do? — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-16-modules-and-packages
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesson-16-m">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson 16: What Does __name__ == &#x27;__main__&#x27; Actually Do?</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every Python developer hits this bug at least once: you write a useful function, copy it into a second file because you need it there too, then copy it again into a third file. Weeks later you find a bug in that function — and now you have to remember every place you pasted it. Miss one copy, and you've got a silent, hard-to-trace inconsistency in your codebase.</p>
+<p>This isn't just a beginner mistake. It's the exact problem that Python's module and import system was built to solve. Understanding <em>how</em> imports actually work — not just the syntax, but what Python is doing behind the scenes — is one of those fundamentals that separates someone who writes scripts from someone who builds maintainable software. It also shows up constantly in technical interviews and code reviews: "why did you guard that with <code>if __name__ == "__main__":</code>?" is a question that trips up even experienced developers who've never had to explain it out loud.</p>
+<p>In this lesson, we'll cover what a module actually is, the three ways to import one, how Python finds the file you're importing, why the <code>__main__</code> guard exists, and how a folder becomes a real Python package. By the end, you'll understand exactly why copy-pasting code doesn't scale — and what to do instead.</p>
+<h2>Problem Overview</h2>
+<p>Here's the situation in plain terms: you have a function, say <code>clean_name()</code>, that strips whitespace and formats a string consistently. You need this function in three different files in your project. The naive approach is to paste the function definition into each file.</p>
+<p>This works, technically. The code runs. But it creates a maintenance trap: the three copies are only <em>identical</em> at the moment you pasted them. The instant you fix a bug or add a feature in one copy, the other two silently fall out of sync. There's no compiler error, no warning — just three functions that look the same but slowly diverge.</p>
+<p>The real problem to solve isn't "how do I write this function" — it's "how do I write this function <em>once</em> and reuse it everywhere, so there's exactly one source of truth." That's what Python's import system is for.</p>
+<h2>Example</h2>
+<p>Imagine two files sitting in the same folder:</p>
+<pre><code>project/
+├── greetings.py
+└── app.py
+</code></pre>
+<p><code>greetings.py</code> contains:</p>
+<pre><code class="language-python">def hello(name):
+    print(f&quot;Hello {name}&quot;)
+
+def goodbye(name):
+    print(f&quot;Goodbye {name}&quot;)
+</code></pre>
+<p><code>app.py</code> wants to use <code>hello()</code>. Instead of retyping the function, <code>app.py</code> imports it:</p>
+<pre><code class="language-python">import greetings
+
+greetings.hello(&quot;Ada&quot;)
+</code></pre>
+<p>Running <code>app.py</code> prints:</p>
+<pre><code>Hello Ada
+</code></pre>
+<p>Nothing about <code>greetings.py</code> is special here — no decorator, no registration step. The moment <code>app.py</code> imports it, Python treats it as a module and gives <code>app.py</code> a reference to everything defined inside it. That's the whole mechanism: one file, one definition, borrowed wherever it's needed.</p>
+<h2>Intuition</h2>
+<p>Here's the mental model that makes this click: think of a <code>.py</code> file as a toolbox sitting in a shared garage. A <strong>module</strong> is just that file — its functions, variables, and classes are tools sitting on a shelf. When you <code>import</code> it, you don't copy the tools into your own toolbox. You walk over to the shared garage and use them directly, in place.</p>
+<p>This reframes the whole problem. You're not asking "how do I get a copy of this function into my file?" You're asking "how do I point at the one function that already exists?" Once you think in terms of <em>pointing</em>, the rest of the system makes sense:</p>
+<ul>
+<li><code>import x</code> gives you a pointer to the whole module — you reach into it with <code>x.something</code>.</li>
+<li><code>from x import y</code> gives you a direct pointer to one specific name inside the module.</li>
+<li><code>import x as z</code> is the same pointer, just under a different local nickname.</li>
+</ul>
+<p>None of these copy code. They all just create a reference. That's also why fixing a bug in <code>greetings.py</code> fixes it <em>everywhere</em> the module is imported — there's only ever one <code>hello()</code> function in memory, no matter how many files point at it.</p>
+<p>The second piece of intuition — the <code>__main__</code> guard — comes from a simple observation: a file behaves differently depending on how it's started. If you <em>run</em> a file directly, it's the "front door." If another file imports it, it's the "side door." Python needs a way to tell you which door was used, so you can decide whether test code, demo prints, or setup logic should actually execute. That's exactly what <code>__name__</code> is for.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>The idea:</strong> Copy the function definition into every file that needs it.</p>
+<p><strong>Algorithm:</strong>
+1. Write the function once.
+2. Paste the same code into every file that needs to use it.
+3. Repeat step 2 every time you fix a bug in the function.</p>
+<p><strong>Advantages:</strong>
+- No imports to think about — the function is always "right there."
+- Works for a one-off script you'll never touch again.</p>
+<p><strong>Disadvantages:</strong>
+- Every bug fix has to be applied N times, once per copy.
+- Copies drift apart silently — no error tells you they're now different.
+- Doesn't scale past a couple of files; becomes unmanageable with real projects.</p>
+<p><strong>Complexity:</strong>
+- Time to fix a bug: O(n) manual edits, where n is the number of copies — and that cost is paid by a human, not the computer, which is worse.
+- Space: O(n) duplicated code stored on disk for a function that only needed to exist once.</p>
+<h2>Optimal Solution</h2>
+<p>The fix is to treat the function as living in exactly one place — the module — and have every other file <em>reference</em> it instead of duplicating it.</p>
+<p><strong>Step 1: Write the module once.</strong>
+Put <code>hello()</code> and <code>goodbye()</code> in <code>greetings.py</code>. Nothing else needs to happen for this to be a module — any <code>.py</code> file is automatically a module the moment something imports it.</p>
+<p><strong>Step 2: Import it where needed.</strong>
+Any file that needs <code>hello()</code> writes <code>import greetings</code> and calls <code>greetings.hello(...)</code>. There's one function in memory; every caller points at it.</p>
+<p><strong>Step 3: Guard code that shouldn't run on import.</strong>
+If <code>greetings.py</code> has test or demo code at the bottom, wrap it in the <code>__main__</code> guard so it only fires when the file is run directly:</p>
+<pre><code class="language-python">if __name__ == &quot;__main__&quot;:
+    print(hello(&quot;test run&quot;))
+</code></pre>
+<p>Here's the table that explains why this works:</p>
+<table>
+<thead>
+<tr>
+<th>How the file is started</th>
+<th>Value of <code>__name__</code></th>
+<th>Does the guarded block run?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>python greetings.py</code> (run directly)</td>
+<td><code>"__main__"</code></td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><code>import greetings</code> (imported from elsewhere)</td>
+<td><code>"greetings"</code></td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<p>Python sets <code>__name__</code> automatically on every module — you never assign it yourself. Run the file, and Python sets <code>__name__</code> to <code>"__main__"</code>. Import the file, and Python sets <code>__name__</code> to the module's own name. The guard is just a plain <code>if</code> statement checking that value.</p>
+<p><strong>Step 4: Group related modules into a package.</strong>
+Once you have several related files — formatting, validation, greetings — put them in a folder and add an empty <code>__init__.py</code>:</p>
+<pre><code>toolkit/
+├── __init__.py
+└── greetings.py
+</code></pre>
+<p>The presence of <code>__init__.py</code> tells Python "treat this folder as an importable package, not just a random directory." It can also control what gets exposed when someone imports the package itself, but in most real projects it's just an empty file — that's completely normal.</p>
+<p>Now <code>app.py</code> can import through the folder:</p>
+<pre><code class="language-python">from toolkit import greetings
+
+greetings.hello(&quot;Ada&quot;)
+</code></pre>
+<p>Same borrowing idea as before, just with one more level of nesting.</p>
+<h2>Python Code</h2>
+<p>Here's the complete, working example, structured the way you'd actually organize it:</p>
+<pre><code class="language-python"># toolkit/greetings.py
+
+def hello(name: str) -&gt; None:
+    &quot;&quot;&quot;Print a friendly greeting.&quot;&quot;&quot;
+    print(f&quot;Hello {name}&quot;)
+
+
+def goodbye(name: str) -&gt; None:
+    &quot;&quot;&quot;Print a friendly farewell.&quot;&quot;&quot;
+    print(f&quot;Goodbye {name}&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    # Only runs when this file is executed directly,
+    # never when it's imported by another module.
+    hello(&quot;test run&quot;)
+</code></pre>
+<pre><code class="language-python"># toolkit/__init__.py
+# (intentionally empty — its presence marks this folder as a package)
+</code></pre>
+<pre><code class="language-python"># app.py
+
+from toolkit import greetings
+
+greetings.hello(&quot;Ada&quot;)
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>def hello(name: str) -&gt; None:</code> — a plain function, nothing import-specific about it. Type hints aren't required for imports to work; they're just good practice.</li>
+<li><code>if __name__ == "__main__":</code> — checks the automatically-set <code>__name__</code> variable. This block is the <em>only</em> part of the file that behaves differently depending on how the file was started.</li>
+<li><code>toolkit/__init__.py</code> — an empty file whose only job is to exist. Its presence is what makes <code>toolkit</code> a package that <code>from toolkit import greetings</code> can reach into.</li>
+<li><code>from toolkit import greetings</code> — a dotted path: look inside the <code>toolkit</code> package, find the <code>greetings</code> module, and bind the name <code>greetings</code> in <code>app.py</code>. Note this imports the <em>module</em>, not a specific function, so you still call <code>greetings.hello(...)</code>.</li>
+<li><code>greetings.hello("Ada")</code> — reaches through the module reference to call the function. Because it's a reference, not a copy, this always calls the current version of <code>hello()</code>, wherever it was last edited.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Let's trace exactly what happens when you run <code>python app.py</code>:</p>
+<ol>
+<li>Python starts executing <code>app.py</code>. <code>app.py</code>'s own <code>__name__</code> is set to <code>"__main__"</code>.</li>
+<li>Python hits <code>from toolkit import greetings</code>. It has never seen <code>toolkit</code> before, so it locates the <code>toolkit/</code> folder, sees <code>__init__.py</code>, and confirms it's a valid package.</li>
+<li>Python locates <code>greetings.py</code> inside <code>toolkit/</code>, and executes it top to bottom — this is the "import runs the file once" step. During this execution, <code>greetings.py</code>'s <code>__name__</code> is set to <code>"toolkit.greetings"</code> (not <code>"__main__"</code>, because it was <em>imported</em>, not run directly).</li>
+<li>Because <code>__name__</code> inside <code>greetings.py</code> isn't <code>"__main__"</code>, the guarded <code>hello("test run")</code> call is skipped entirely.</li>
+<li>Control returns to <code>app.py</code>. The name <code>greetings</code> now points at the fully-executed module.</li>
+<li><code>app.py</code> calls <code>greetings.hello("Ada")</code>, which runs the function body and prints <code>Hello Ada</code>.</li>
+</ol>
+<p>Now compare: if you instead ran <code>python toolkit/greetings.py</code> directly, step 3 never happens as an import — <code>greetings.py</code> itself becomes the entry point, <code>__name__</code> is set to <code>"__main__"</code>, and this time the guard <em>does</em> let <code>hello("test run")</code> execute, printing <code>Hello test run</code>.</p>
+<h2>Complexity Analysis</h2>
+<p>This isn't a classic algorithmic problem, but it's worth reasoning about cost the same way:</p>
+<ul>
+<li><strong>Time:</strong> A module is executed exactly once per process, no matter how many times it's imported elsewhere — Python caches it in <code>sys.modules</code> after the first import. So importing the same module from five different files costs one execution, not five. Subsequent imports are O(1) dictionary lookups.</li>
+<li><strong>Space:</strong> One copy of the function lives in memory, referenced by every importer — O(1) relative to the number of files that use it, compared to the brute-force O(n) copies sitting on disk.</li>
+<li><strong>Why this matters for correctness:</strong> because there's exactly one execution and one in-memory copy, a bug fix applied once is visible everywhere immediately. There's no synchronization problem because there was never more than one copy to begin with.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p><strong>Relative imports (<code>from . import greetings</code>)</strong> inside a package work similarly to <code>from toolkit import greetings</code>, but are written relative to the current package rather than by full name. They're useful inside larger packages but can get confusing when a file is sometimes run directly and sometimes imported — a common source of <code>ImportError: attempted relative import with no known parent package</code>. For a project this size, absolute imports (<code>from toolkit import greetings</code>) are simpler and less error-prone.</p>
+<p><strong>Adding the folder to <code>sys.path</code> manually</strong> and importing without a package structure is another option, but it bypasses the safety of <code>__init__.py</code>-based packaging and tends to cause the exact naming collisions described below. Prefer proper packages unless you have a specific reason not to.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty file imported as a module:</strong> perfectly legal — you just get a module with no names in it. Common for placeholder files during early development.</li>
+<li><strong>Circular imports:</strong> if <code>a.py</code> imports <code>b.py</code> and <code>b.py</code> imports <code>a.py</code>, Python will raise an error or return a partially-initialized module, because each file tries to execute before the other has finished. Avoid by restructuring shared code into a third module both files import from.</li>
+<li><strong>Name shadowing a standard library module:</strong> naming your file <code>random.py</code> in a folder that's on <code>sys.path</code> will cause <code>import random</code> to load <em>your</em> file instead of the standard library — and any code expecting <code>random.randint()</code> will break with a confusing error.</li>
+<li><strong>Missing <code>__init__.py</code>:</strong> in most modern Python versions this still often works via "namespace packages," but relying on that is fragile and surprising — always add the file explicitly for a real package.</li>
+<li><strong>Importing a module that has top-level code with side effects</strong> (like a <code>print()</code> outside any guard): that code runs on import, whether you wanted it to or not — this is precisely what the <code>__main__</code> guard prevents.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting the <code>__main__</code> guard entirely</strong>, so test/demo code fires every time the module is imported anywhere.</li>
+<li><strong>Naming a file after a standard library or third-party module</strong> (<code>random.py</code>, <code>json.py</code>), silently shadowing it.</li>
+<li><strong>Confusing <code>import x</code> with <code>from x import y</code></strong> and then calling the function without the module prefix, e.g. writing <code>hello()</code> instead of <code>greetings.hello()</code> after <code>import greetings</code>.</li>
+<li><strong>Forgetting <code>__init__.py</code></strong> and being confused why the folder "isn't a package" in older setups or certain tooling.</li>
+<li><strong>Copy-pasting functions between files</strong> instead of importing, recreating the exact bug this lesson exists to fix.</li>
+<li><strong>Assuming import "runs the code every time it's called"</strong> — it only executes the module body on the <em>first</em> import; later imports reuse the cached module.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What's the difference between a module and a package in Python?</li>
+<li>What does <code>__name__</code> equal when a file is run directly versus imported? Why does Python design it this way?</li>
+<li>Walk through what happens, step by step, when <code>import mymodule</code> executes.</li>
+<li>What's the difference between <code>import x</code>, <code>from x import y</code>, and <code>import x as z</code> — when would you choose each?</li>
+<li>What is <code>sys.path</code>, and how does Python decide where to look for a module?</li>
+<li>What problem does <code>__init__.py</code> solve, and what happens if you import a folder without one?</li>
+<li>Why can a locally named file "break" a standard library import? How would you debug that?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Design a plugin/registration system in Python</strong> — builds directly on understanding how imports execute module-level code exactly once.</li>
+<li><strong>Refactor a script into a reusable library</strong> — the practical, real-world version of "stop copy-pasting functions," directly reflecting this lesson.</li>
+<li><strong>Debug a circular import error</strong> — tests whether you understand <em>when</em> module code actually executes, not just import syntax.</li>
+<li><strong>Implement a namespace/relative import structure for a multi-package project</strong> — extends the package concept covered here to larger codebases.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>A module is just a <code>.py</code> file — nothing more mystical than that.</li>
+<li>Import doesn't copy code; it runs the file once and hands you a reference, so there's always exactly one source of truth.</li>
+<li><code>import x</code>, <code>from x import y</code>, and <code>import x as z</code> all do the same job with different amounts of typing — pick for readability, not brevity.</li>
+<li>Every file has a <code>__name__</code> variable that's <code>"__main__"</code> when run directly and the module's own name when imported — that's the entire mechanism behind the <code>if __name__ == "__main__":</code> guard.</li>
+<li>A package is just a folder with an <code>__init__.py</code>, letting you group related modules under one importable name.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This lesson is easier to absorb watching it built step by step — {LINK} walks through writing <code>greetings.py</code>, importing it two different ways, and watching the <code>__main__</code> guard fire (or not) in real time.</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <em>Fun with Learning Technology</em>, a series that breaks down Python and software engineering fundamentals — the kind of concepts that show up constantly in real code and in interviews but rarely get explained from first principles. Each lesson builds a small, working example so you can see the concept in action, not just read about it.</p>
+<h2>Call To Action</h2>
+<p>If this cleared something up, give the video a like on YouTube — it helps the series reach more developers working through the same fundamentals. Subscribe on YouTube for the rest of the series, and subscribe to the Substack newsletter for write-ups like this one delivered straight to your inbox. Drop a comment with what confused you most about imports before this, and share it with anyone still copy-pasting functions between files.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Bug: Python found the wrong module. Likely cause?</summary><p>Name collision — a local file/folder shares a name with a stdlib or third-party module and shadows it on the import path.</p></details><details class='card2'><summary>What is a &#x27;module&#x27; in Python, fundamentally?</summary><p>Just a .py file — its top-level names become attributes accessible via import.</p></details><details class='card2'><summary>Three ways to import — name them.</summary><p>import module; from module import name; import module as alias (aliasing).</p></details><details class='card2'><summary>Where does Python search for modules, in order?</summary><p>Current script&#x27;s dir, then PYTHONPATH dirs, then stdlib, then site-packages (sys.path order).</p></details><details class='card2'><summary>Why does `if __name__ == &#x27;__main__&#x27;:` matter?</summary><p>Lets a file behave as a library (importable, no side effects) or a script (runs main logic) depending on how it&#x27;s invoked.</p></details><details class='card2'><summary>What file marks a directory as a package?</summary><p>`__init__.py` (even empty) — without it, imports across sibling modules can fail or behave inconsistently.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
