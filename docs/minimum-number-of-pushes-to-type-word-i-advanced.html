@@ -1,0 +1,214 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Minimum Number of Pushes to Type Word I — 🔴 Advanced (3/3) — LeetCode Daily Python Solution (10 letters, one formula) — Python LeetCode Solution</title><meta name="description" content="📍 Jump to your level:
+🔴 Advanced: 0:18–3:58
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/minimum-number-of-pushes-to-type-word-i-advanced
+💻 Code on GitHub: https://github.com/timepass">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/minimum-number-of-pushes-to-type-word-i-advanced.html">
+<meta property="og:title" content="Minimum Number of Pushes to Type Word I — 🔴 Advanced (3/3) — LeetCode Daily Python Solution (10 letters, one formula) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📍 Jump to your level:
+🔴 Advanced: 0:18–3:58
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/minimum-number-of-pushes-to-type-word-i-advanced
+💻 Code on GitHub: https://github.com/timepass">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Minimum Number of Pushes to Type Word I — 🔴 Advanced (3/3) — LeetCode Daily Python Solution (10 letters, one formula)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every so often LeetCode drops a problem that looks like a throwaway string puzzle but is secretly testing whether you understand one of the most important ideas in algorithm design: greedy optimality through an exchange argument. Minimum Number of Pushes to Type Word I is exactly that kind of problem.</p>
+<p>On the surface, it's about an old-style phone keypad — the kind where each number key holds several letters, and you press a key repeatedly to cycle to the letter you want. But the real question the interviewer is asking has nothing to do with phones. It's: given the freedom to assign items to groups, and a cost that depends only on an item's position within its group, how do you minimize total cost?</p>
+<p>That shape shows up constantly. It's the backbone of Huffman coding, it appears in load-balancing and task-scheduling problems, and it's a favorite way for interviewers to check whether you can <em>prove</em> a greedy strategy works instead of just guessing that it does. If you can walk through this problem cleanly — including why sorting is the right move — you're demonstrating exactly the kind of reasoning interviewers are trying to find.</p>
+<h2>Problem Overview</h2>
+<p>You're given a string made up of lowercase English letters. You want to type this string on a keypad where you get to decide, ahead of time, how letters are distributed across 8 keys. Each key can hold at most 8 distinct letters.</p>
+<p>To type a letter, you press its key as many times as its position within that key's group. If a key holds the letters <code>a, b, c</code> in that order, typing <code>a</code> costs 1 press, <code>b</code> costs 2 presses, and <code>c</code> costs 3 presses.</p>
+<p>You control the entire assignment: which letters go on which key, and in what order within each key. Your goal is to minimize the total number of key presses needed to type every letter in the word (counting each letter once per distinct occurrence... more precisely, weighted by how often it appears).</p>
+<p>The twist in the "I" version of this problem: the word consists of <strong>distinct letters only</strong> — no repeats. That constraint quietly removes a variable from the problem, and noticing that is half the battle.</p>
+<h2>Example</h2>
+<p>Take the word <code>"xycdefghij"</code> — 10 distinct letters, no repeats.</p>
+<p>Since every letter appears exactly once, frequency can't distinguish between them. All 10 letters are "equally important," so there's nothing to sort by value. The only thing that matters is <strong>how you group them</strong>.</p>
+<p>With 8 letters allowed per key:</p>
+<ul>
+<li>Put any 8 of the letters on separate keys, one letter each in position 1. Each costs 1 press.</li>
+<li>The remaining 2 letters must share a key with something, landing in position 2. Each costs 2 presses.</li>
+</ul>
+<p>Total cost: <code>8 × 1 + 2 × 2 = 8 + 4 = 12</code>.</p>
+<p>That's it — 12 presses to type all 10 letters, regardless of which specific letters end up in which bucket, because they're all weighted equally (each appears once).</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer approaches this rather than jumping straight to code.</p>
+<p>First, recognize the shape: <strong>cost depends on rank, not identity</strong>. You've seen this before if you've done Huffman coding or any weighted-scheduling problem — when items get assigned to slots and the slot determines cost, the way to minimize total cost is to put your <em>heaviest</em> (most frequent) items in your <em>cheapest</em> slots.</p>
+<p>This is the rearrangement inequality in action: pair descending frequency with ascending cost. If you ever have a scenario where a higher-frequency letter sits in a more expensive slot than a lower-frequency letter, you can swap them and strictly reduce total cost. That swap argument is exactly the "exchange argument" used to prove Huffman coding optimal — and it transfers here without modification.</p>
+<p>Now apply the constraint of this specific problem: <strong>all letters are distinct</strong>, meaning every letter has an implicit frequency of 1. If every item has identical weight, sorting by frequency does nothing — there's no inversion to fix. The exchange argument's conclusion ("sort descending by frequency") degenerates into "any order is equally optimal," because there's nothing to differentiate the items.</p>
+<p>What's left? Only the <strong>structure of the buckets</strong>. With 8 slots per key, the first 8 letters (by rank, in any order since they're tied) go into position 1, the next 8 go into position 2, and so on. This gives you a formula purely from position:</p>
+<pre><code>cost(rank) = floor(rank / 8) + 1
+</code></pre>
+<p>This is base-8 digit extraction — if you've worked on radix-adjacent problems, this pattern should feel immediately familiar. Ranks 0–7 cost 1, ranks 8–15 cost 2, ranks 16–23 cost 3, and so on.</p>
+<p>For our 10-letter example: ranks 0 through 7 (8 letters) cost <code>floor(7/8)+1 = 1</code>. Ranks 8 and 9 (2 letters) cost <code>floor(8/8)+1 = 2</code> and <code>floor(9/8)+1 = 2</code>. That reproduces <code>8×1 + 2×2 = 12</code>.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Try every possible way of partitioning the letters into groups of at most 8, and every internal ordering within each group, computing total cost for each arrangement, then keep the minimum.</p>
+<p><strong>Algorithm:</strong>
+1. Generate every possible assignment of letters to 8 keys, respecting the 8-letters-per-key cap.
+2. For each assignment, order letters within each key in every possible way.
+3. Compute the total press cost for that arrangement.
+4. Track the minimum cost seen.</p>
+<p><strong>Advantages:</strong> Conceptually simple, guaranteed correct, no need to reason about optimality.</p>
+<p><strong>Disadvantages:</strong> Catastrophically slow. With up to 26 distinct letters, the number of ways to partition and order them explodes combinatorially — worst case is on the order of <code>O(26!)</code>, which is intractable past roughly a dozen letters. It's not "slow," it's not something you would ever run.</p>
+<p><strong>Complexity:</strong> Time <code>O(n!)</code> in the worst case, space equally unreasonable for tracking partial states. Worth mentioning to an interviewer only to immediately pivot to why it's unnecessary — brute force isn't a real option here, and knowing that is more valuable than attempting it.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach follows directly from the intuition above, and it generalizes cleanly to the version of this problem where letters <em>can</em> repeat (LeetCode's "II" variant), which is worth internalizing since interviewers love asking the follow-up.</p>
+<p><strong>General version (letters may repeat):</strong>
+1. Count the frequency of every letter using a <code>Counter</code>.
+2. Sort the frequencies in descending order.
+3. Assign the most frequent letter to the cheapest available slot, the next most frequent to the next cheapest, and so on — filling 8 slots at "cost 1," then 8 at "cost 2," etc.
+4. Sum <code>frequency[i] * (i // 8 + 1)</code> across all letters, where <code>i</code> is the 0-indexed rank after sorting.</p>
+<p><strong>Distinct-letters version (this problem):</strong>
+Since every frequency is exactly 1, the sort step does nothing meaningful — it's degenerate. You skip straight to bucketing by rank:</p>
+<pre><code>cost(rank) = rank // 8 + 1
+</code></pre>
+<p>Sum that over all ranks from 0 to <code>n - 1</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Rank range</th>
+<th>Press cost</th>
+<th>Letters covered</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0–7</td>
+<td>1</td>
+<td>up to 8</td>
+</tr>
+<tr>
+<td>8–15</td>
+<td>2</td>
+<td>next 8</td>
+</tr>
+<tr>
+<td>16–23</td>
+<td>3</td>
+<td>next 8</td>
+</tr>
+<tr>
+<td>24–25</td>
+<td>4</td>
+<td>remaining (max 26 letters)</td>
+</tr>
+</tbody>
+</table>
+<p>Notice the formula needs <strong>no special-casing</strong> for small inputs. If <code>n ≤ 8</code>, every rank falls into bucket 0, cost is 1 for each letter, and total cost is simply <code>n</code>. The formula degrades gracefully — that's a correctness signal worth stating out loud in an interview, not just something you happen to notice.</p>
+<p>The general (non-distinct) formula also generalizes across key count. Swap the hardcoded 8 for a variable <code>k</code>, and the formula becomes <code>floor(i / k) + 1</code>. Nothing else about the algorithm changes.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from collections import Counter
+
+
+def minimum_pushes(word: str) -&gt; int:
+    &quot;&quot;&quot;Minimum key presses to type `word` on an 8-key keypad,
+    given free assignment of letters to keys.&quot;&quot;&quot;
+    frequencies = sorted(Counter(word).values(), reverse=True)
+
+    total_presses = 0
+    for rank, freq in enumerate(frequencies):
+        cost_per_press = rank // 8 + 1
+        total_presses += freq * cost_per_press
+
+    return total_presses
+
+
+def minimum_pushes_k_keys(word: str, k: int) -&gt; int:
+    &quot;&quot;&quot;Generalized version: assign letters across `k` keys instead of 8.&quot;&quot;&quot;
+    frequencies = sorted(Counter(word).values(), reverse=True)
+
+    total_presses = 0
+    for rank, freq in enumerate(frequencies):
+        cost_per_press = rank // k + 1
+        total_presses += freq * cost_per_press
+
+    return total_presses
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>Counter(word)</code> builds a frequency map of every letter in the word in a single pass — <code>O(n)</code>.</li>
+<li><code>.values()</code> pulls just the frequency counts; we don't need to know which letter is which, only how often each one shows up.</li>
+<li><code>sorted(..., reverse=True)</code> orders frequencies from highest to lowest. This is the step that implements the exchange argument: the most frequent letters get processed first, so they land in the cheapest buckets.</li>
+<li><code>enumerate(frequencies)</code> gives us the 0-indexed rank of each frequency after sorting.</li>
+<li><code>rank // 8 + 1</code> computes which bucket this rank falls into and converts it to a 1-indexed press cost.</li>
+<li><code>freq * cost_per_press</code> is the total contribution of this letter to the overall press count — how many times it appears, multiplied by what it costs to type it once.</li>
+<li>Summing across all letters gives the final answer.</li>
+</ul>
+<p>Note that this code never checks whether letters repeat. It's already correct for the general (non-distinct) case, and — since a frequency of exactly 1 is just a special case — it's correct for the distinct-letters version too, without any extra logic.</p>
+<h2>Dry Run</h2>
+<p>Word: <code>"xycdefghij"</code> (10 distinct letters).</p>
+<ol>
+<li><code>Counter(word)</code> → each letter maps to frequency 1: <code>{x:1, y:1, c:1, d:1, e:1, f:1, g:1, h:1, i:1, j:1}</code>.</li>
+<li><code>.values()</code> → <code>[1, 1, 1, 1, 1, 1, 1, 1, 1, 1]</code>.</li>
+<li><code>sorted(..., reverse=True)</code> → order doesn't change anything since all values are equal: still ten 1's.</li>
+<li>Iterate with <code>enumerate</code>:
+   - Ranks 0–7 → <code>cost = rank // 8 + 1 = 1</code>. Each contributes <code>1 * 1 = 1</code>. Subtotal: 8.
+   - Ranks 8–9 → <code>cost = rank // 8 + 1 = 2</code>. Each contributes <code>1 * 2 = 2</code>. Subtotal: 4.</li>
+<li>Total: <code>8 + 4 = 12</code>.</li>
+</ol>
+<p>Matches the hand-derived answer exactly.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> <code>O(n log n)</code>, dominated entirely by the sort. Building the <code>Counter</code> is <code>O(n)</code>, and the final summation loop is <code>O(n)</code>. This is tight — you can't beat comparison-sort-equivalent work here without exploiting more structure than "distinct letters" gives you. Counting sort doesn't help either, since in the distinct-letters case every frequency is 0 or 1, which gives you no useful bucketing signal to exploit.</p>
+<p><strong>Space:</strong> <code>O(n)</code> for the <code>Counter</code> and the sorted list of frequencies (bounded by the alphabet size, so effectively <code>O(1)</code> in practice for lowercase English letters — at most 26 entries).</p>
+<p><strong>Why these are correct:</strong> The exchange argument guarantees that sorted-greedy assignment is optimal, not just a reasonable heuristic. Any deviation from descending-frequency-to-ascending-cost pairing can be strictly improved by swapping, so the sorted arrangement is a genuine global minimum, not a local one.</p>
+<h2>Alternative Solutions</h2>
+<p>You can replace the explicit loop with a one-line <code>sum()</code> and <code>enumerate</code>:</p>
+<pre><code class="language-python">def minimum_pushes(word: str) -&gt; int:
+    frequencies = sorted(Counter(word).values(), reverse=True)
+    return sum(freq * (rank // 8 + 1) for rank, freq in enumerate(frequencies))
+</code></pre>
+<p>This isn't asymptotically different — same <code>O(n log n)</code> time — it's purely a style choice. Some interviewers will ask for this compressed form to check comfort with generator expressions; either version is acceptable to present first.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty string:</strong> No letters to type, so the answer is 0. <code>Counter("")</code> returns an empty counter, and the loop simply never executes.</li>
+<li><strong>Fewer than 8 distinct letters:</strong> Every letter lands in bucket 0 (cost 1), so total cost is just the number of letters. The formula requires no special-casing to handle this correctly.</li>
+<li><strong>Exactly 8 letters:</strong> All costs are 1; total is exactly <code>n</code>. This is the boundary where the formula transitions from "single bucket" to "needs a second bucket."</li>
+<li><strong>Maximum alphabet size (26 distinct letters):</strong> Spans buckets of cost 1, 2, 3, and 4. Confirm your loop handles the full range without an off-by-one.</li>
+<li><strong>All letters identical (in the non-distinct variant):</strong> Frequency map has a single entry with a large count; that single letter gets rank 0, cost 1, so total cost equals its frequency.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting the 1-indexing of press cost.</strong> The first letter in a bucket costs 1 press, not 0 — an off-by-one here silently shifts every answer.</li>
+<li><strong>Sorting ascending instead of descending.</strong> This inverts the entire strategy and puts your most "expensive-to-place" letters in the cheapest slots — the exact opposite of optimal.</li>
+<li><strong>Assuming frequency doesn't matter because letters are distinct.</strong> Frequency was never irrelevant in principle — it's just that with all frequencies equal to 1, the sort step becomes a no-op. Missing this distinction leads to reasoning that breaks the moment repeats are allowed.</li>
+<li><strong>Hardcoding 8 everywhere instead of treating it as a parameter.</strong> This makes the natural "what if k keys instead of 8" follow-up much harder to answer cleanly on the fly.</li>
+<li><strong>Attempting to brute-force the assignment "just to be safe."</strong> For any alphabet-sized input this doesn't finish in a reasonable time, and offering it as a real candidate signals you haven't recognized the greedy structure.</li>
+<li><strong>Not testing the boundary at exactly <code>n = 8</code> or <code>n = 16</code>,</strong> where the bucket transitions happen — these are exactly where off-by-one errors surface.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>"How would you prove that the greedy sorted assignment is optimal?" — Walk through the exchange/rearrangement argument: any inversion between frequency order and cost order can be swapped for a strict improvement.</li>
+<li>"What changes if there are <code>k</code> keys instead of 8?" — Replace 8 with <code>k</code> in the formula; the rest of the algorithm is unchanged.</li>
+<li>"What if letters can repeat?" — Nothing changes in the code; the <code>Counter</code>-based solution already handles it, since it never assumes frequency equals 1.</li>
+<li>"Can you do better than <code>O(n log n)</code>?" — No, not without more structure than distinct/near-uniform frequencies provide; the sort is unavoidable in general.</li>
+<li>"What's the actual time complexity if the alphabet is small (bounded by 26)?" — Effectively <code>O(1)</code>, since the input size to the sort is capped by the alphabet size regardless of the word's length.</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Huffman Coding</strong> — the canonical example of the exact same exchange-argument proof technique applied to prefix-free binary codes.</li>
+<li><strong>Task Scheduler (LeetCode 621)</strong> — another problem where frequency-based greedy bucketing determines the optimal schedule length.</li>
+<li><strong>Reorganize String (LeetCode 767)</strong> — frequency counting plus greedy placement to satisfy an adjacency constraint.</li>
+<li><strong>Minimum Number of Pushes to Type Word II (LeetCode)</strong> — the direct generalization of this problem to repeated letters, solved by the exact same code shown above.</li>
+<li><strong>Rearrange Array to Maximize Prefix Score / similar rearrangement-inequality problems</strong> — share the "sort and pair" optimality proof structure.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Whenever cost is a function of an item's rank within a group, think sort-and-bucket — this single idea underlies Huffman coding, scheduling, and this problem.</li>
+<li>The exchange argument isn't just a way to justify a greedy solution intuitively — it's a rigorous proof that no other arrangement can beat it.</li>
+<li>Distinct letters don't remove frequency from the problem; they make every frequency equal, which degenerates the sort step into a formality.</li>
+<li>A well-designed formula, like <code>rank // k + 1</code>, should require no special-casing for small inputs — that's a sign you've found the right abstraction.</li>
+<li>Brute force is worth naming to preempt the question, but never worth attempting; recognizing why it's intractable is itself a signal of strong problem-solving.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>For the full worked walkthrough — including the live derivation of the bucketing formula, the k-key generalization, and a quick quiz to test your understanding — watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of the <strong>Fun with Learning Technology</strong> series, where each episode takes a LeetCode problem and dissects the reasoning an experienced engineer actually uses to solve it — not just the final code, but the pattern-recognition and proof techniques that make the solution obvious in hindsight. The goal is to build durable intuition that transfers across problems, not just memorized solutions to individual questions.</p>
+<h2>Call To Action</h2>
+<p>If this breakdown helped clarify the greedy exchange argument, consider liking the video on YouTube and subscribing for more daily LeetCode walkthroughs. For deeper dives and written companions to every video, subscribe to the Substack newsletter. Drop a comment with your answer to the quiz round, and share this with anyone prepping for coding interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Optimal keypad letter assignment for min button presses — which algorithm?</summary><p>Huffman-style greedy: sort letters by frequency descending, assign shortest press-counts (1,1,1,1,1,1,1,1,2,2,...) first.</p></details><details class='card2'><summary>Time complexity of the greedy keypad assignment?</summary><p>O(n log n) for counting + sorting frequencies, where n = word length (26 possible letters).</p></details><details class='card2'><summary>Space complexity of the frequency-count + greedy assignment?</summary><p>O(1) extra — at most 26 letter slots, independent of input size.</p></details><details class='card2'><summary>Trickiest bug: why does naive round-robin ordering break past 8 letters?</summary><p>Only 8 keys hold single-press letters; letters 9-16 need 2 presses each — must re-sort by freq before assigning, not just cycle keys.</p></details><details class='card2'><summary>Exchange argument in one line — why greedy is optimal here?</summary><p>Swapping a higher-freq letter into a cheaper slot than a lower-freq letter never increases total cost, so sorted-by-frequency assignment is optimal.</p></details><details class='card2'><summary>Interview follow-up: how does this relate to Huffman coding?</summary><p>Both minimize weighted cost by giving high-frequency items shorter codes/presses — same exchange-argument proof, different encoding scheme (8 buckets vs binary tree).</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>

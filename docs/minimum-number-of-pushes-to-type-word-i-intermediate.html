@@ -1,0 +1,171 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Minimum Number of Pushes to Type Word I — 🟡 Intermediate (2/3) — LeetCode Daily Python Solution (&#x27;abcdefghi&#x27; = 10 pushes) — Python LeetCode Solution</title><meta name="description" content="📍 Jump to your level:
+🟡 Intermediate: 0:18–4:21
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/minimum-number-of-pushes-to-type-word-i-intermediate
+💻 Code on GitHub: https://github.com/">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/minimum-number-of-pushes-to-type-word-i-intermediate.html">
+<meta property="og:title" content="Minimum Number of Pushes to Type Word I — 🟡 Intermediate (2/3) — LeetCode Daily Python Solution (&#x27;abcdefghi&#x27; = 10 pushes) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📍 Jump to your level:
+🟡 Intermediate: 0:18–4:21
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/minimum-number-of-pushes-to-type-word-i-intermediate
+💻 Code on GitHub: https://github.com/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Minimum Number of Pushes to Type Word I — 🟡 Intermediate (2/3) — LeetCode Daily Python Solution (&#x27;abcdefghi&#x27; = 10 pushes)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every so often LeetCode hands you a problem that looks like a keypad puzzle on the surface and turns out to be a classic algorithm in disguise. Minimum Number of Pushes to Type Word I is one of those. It's rated easy-to-medium in difficulty, but the way you <em>arrive</em> at the solution — the reasoning, not the code — is exactly the kind of thinking interviewers at companies like Amazon and Bloomberg are trying to draw out of you.</p>
+<p>The code you'll end up writing is short. Genuinely short — a <code>Counter</code> call and a sorted sum. But the interesting part isn't the code, it's the two-minute mental leap that gets you there: realizing that a problem about "assigning letters to keys" is actually a problem about "which positions are scarce." That's the same insight behind Huffman coding, the compression algorithm that shrinks real files by giving common symbols short codes and rare symbols long ones. Once you've internalized this pattern, you'll start recognizing it in problems that don't look anything like this one on the surface.</p>
+<h2>Problem Overview</h2>
+<p>You're given a word made entirely of distinct lowercase letters. You have 8 keys on a keypad, and you get to decide, freely, which letters go on which key and in what order within that key.</p>
+<p>Typing a letter costs a number of pushes equal to its <em>position</em> on its key. The first letter assigned to any key costs 1 push. The second letter assigned to that same key costs 2 pushes. The third costs 3, and so on. There's no cap on how many letters you can pile onto one key — you could technically put every letter on a single key if you wanted to (you'd just pay heavily for it).</p>
+<p>Your job: assign every letter in the word to a key, in some order, so that the total number of pushes needed to type the entire word is as small as possible. Return that minimum total.</p>
+<h2>Example</h2>
+<p>Take <code>word = "xycdefghij"</code> — ten distinct letters.</p>
+<p>You have 8 keys, so the smartest strategy is to spread the first 8 letters across all 8 keys, one letter per key, each costing 1 push. That covers <code>x, y, c, d, e, f, g, h</code>. Now you have 2 letters left over — <code>i</code> and <code>j</code> — and only 8 keys, all of which already have one letter on them. Those two have to become the <em>second</em> letter on some key, which costs 2 pushes each.</p>
+<p>Total: <code>8 × 1 + 2 × 2 = 8 + 4 = 12</code>.</p>
+<p>Now try <code>word = "abcdefghi"</code> — nine letters. The first 8 (<code>a</code> through <code>h</code>) each land on their own key at 1 push apiece, costing 8. The ninth letter, <code>i</code>, has nowhere cheap left to go — it becomes a second letter on one of the keys, costing 2. Total: <code>8 + 2 = 10</code>.</p>
+<p>Notice something important: in both examples, <em>which</em> letter ends up paying the higher cost didn't matter to the math — only <em>how many</em> letters existed and how they got distributed across buckets of 8.</p>
+<h2>Intuition</h2>
+<p>Here's the trap most people fall into on first read: since every letter in the word is distinct, it's tempting to assume the assignment is arbitrary — just spread letters across 8 keys and be done with it. That works fine as long as you have 8 or fewer letters; everyone gets the cheapest slot, one push each, and there's nothing to optimize.</p>
+<p>The moment you cross 8 letters, though, a real decision appears. You now have more letters than cheap slots. Someone has to pay 2 pushes instead of 1. The question becomes: who pays it?</p>
+<p>Think about a parking lot. The spots closest to the entrance are the most convenient, and there's a limited number of them. You wouldn't give the closest spot to a car that's there once a month and stick the daily commuter's car at the far end. You give the <em>closest</em> spots to the cars that come and go the <em>most</em>. The scarce resource (near spots, or in our case, cheap first-position slots) should go to whoever uses it most.</p>
+<p>Translate that back to letters: since this problem doesn't care about the letters' identities — only how often each one appears in the final typed word — the letters that show up most often should get the cheapest positions. Sort letter frequencies from highest to lowest, then greedily hand out the cheap slots first. Once the first 8 slots (cost 1) are full, the next 8 letters have to accept cost 2. Once those are full, the next 8 pay cost 3, and so on.</p>
+<p>This is Huffman coding's core idea, just simplified because every letter here occupies exactly one "slot" instead of a variable-length code — put your most-used items where they're cheapest to reach.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Try every possible way to assign letters to the 8 keys and every possible ordering within each key, compute the total cost for each arrangement, and keep the minimum.</p>
+<p><strong>Algorithm:</strong>
+1. Generate all permutations of letter-to-key-position assignments.
+2. For each arrangement, compute total pushes.
+3. Track the minimum across all arrangements.</p>
+<p><strong>Advantages:</strong> Guaranteed correct — it's an exhaustive search, so it can't miss the optimal arrangement.</p>
+<p><strong>Disadvantages:</strong> The number of arrangements explodes combinatorially. With up to 26 distinct letters, you're looking at something on the order of 26! possible orderings before even accounting for key groupings — completely unusable outside of tiny inputs.</p>
+<p><strong>Time complexity:</strong> O(n!) — factorial, dominated by the number of ways to order n letters.
+<strong>Space complexity:</strong> O(n) for storing a candidate arrangement, though the search space itself is what kills this approach.</p>
+<h2>Optimal Solution</h2>
+<p>The greedy approach collapses that entire search space into three steps:</p>
+<ol>
+<li><strong>Count frequencies.</strong> Use a <code>Counter</code> to tally how many times each letter appears in the word.</li>
+<li><strong>Sort descending.</strong> Order those counts from most frequent to least frequent — the busiest letters go first.</li>
+<li><strong>Bucket by 8, cost rises per bucket.</strong> Walk through the sorted counts. The first 8 entries (rank 0–7) belong to bucket 1, costing 1 push each. The next 8 (rank 8–15) belong to bucket 2, costing 2 pushes each. In general, the letter at rank <code>i</code> (0-indexed) belongs to bucket <code>i // 8 + 1</code>.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Rank (0-indexed)</th>
+<th>Bucket (rank // 8 + 1)</th>
+<th>Cost per push</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0–7</td>
+<td>1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>8–15</td>
+<td>2</td>
+<td>2</td>
+</tr>
+<tr>
+<td>16–23</td>
+<td>3</td>
+<td>3</td>
+</tr>
+<tr>
+<td>24–25</td>
+<td>4</td>
+<td>4</td>
+</tr>
+</tbody>
+</table>
+<p>For each letter, multiply its frequency by its bucket number and add that to a running total. That running total is your answer.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from collections import Counter
+
+
+def minimum_pushes(word: str) -&gt; int:
+    &quot;&quot;&quot;Return the minimum key pushes needed to type `word`.&quot;&quot;&quot;
+    frequencies = sorted(Counter(word).values(), reverse=True)
+
+    total_pushes = 0
+    for rank, freq in enumerate(frequencies):
+        bucket_cost = rank // 8 + 1
+        total_pushes += bucket_cost * freq
+
+    return total_pushes
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>Counter(word)</code> builds a dictionary-like tally of how many times each distinct letter appears in <code>word</code>.</li>
+<li><code>.values()</code> pulls out just the frequency counts, discarding which letter they belong to — we established earlier that identity doesn't matter, only frequency.</li>
+<li><code>sorted(..., reverse=True)</code> puts the highest frequencies first, so the busiest letters get processed — and priced — first.</li>
+<li><code>enumerate(frequencies)</code> gives us both the 0-indexed rank and the frequency value as we iterate.</li>
+<li><code>rank // 8 + 1</code> computes the bucket number: integer division by 8 groups every 8 consecutive ranks together, and <code>+ 1</code> shifts the cost to start at 1 instead of 0.</li>
+<li><code>bucket_cost * freq</code> gives the total pushes contributed by this one letter — its per-push cost times how many times it needs typing.</li>
+<li>The running sum, <code>total_pushes</code>, accumulates the answer across all letters.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Walk through <code>word = "abcdefghi"</code>:</p>
+<ol>
+<li><code>Counter("abcdefghi")</code> → each letter appears once: <code>{'a': 1, 'b': 1, ..., 'i': 1}</code>.</li>
+<li><code>.values()</code> sorted descending → <code>[1, 1, 1, 1, 1, 1, 1, 1, 1]</code> (nine 1's — order among equal values doesn't matter).</li>
+<li>Iterate with rank 0 through 8:
+   - Ranks 0–7 (<code>a</code> through <code>h</code>): bucket = <code>0//8+1</code> through <code>7//8+1</code> = all bucket 1, cost 1 each → contributes <code>8 × 1 = 8</code>.
+   - Rank 8 (<code>i</code>): bucket = <code>8//8+1</code> = <code>1+1</code> = 2, cost 2 → contributes <code>1 × 2 = 2</code>.</li>
+<li>Total = <code>8 + 2 = 10</code>. ✅ Matches the expected answer.</li>
+</ol>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(n log n), where n is the number of distinct letters (at most 26). Building the <code>Counter</code> is O(n), but sorting the frequencies dominates at O(n log n). The final loop is O(n).</p>
+<p><strong>Space:</strong> O(n) for the <code>Counter</code> and the sorted list of frequencies — no extra structures beyond that, and since n is capped at 26, this is effectively constant space in practice.</p>
+<p>These bounds are correct because sorting is the only super-linear operation in the whole algorithm, and there's no way to determine bucket assignments without first establishing the frequency ranking.</p>
+<h2>Alternative Solutions</h2>
+<p>You could skip building an explicit <code>Counter</code> and instead sort the word's characters directly with a manual frequency pass, but that just re-implements what <code>Counter</code> already does more clumsily. There's no meaningfully different <em>algorithmic</em> alternative here beyond greedy — brute force is correct but exponentially worse, and there's no dynamic programming angle since there's no overlapping subproblem structure to exploit. The greedy sort-and-bucket approach is strictly the right tool.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty string:</strong> No letters to assign, so the total cost is 0.</li>
+<li><strong>Word length ≤ 8:</strong> Every letter fits in bucket 1, so the answer is simply the length of the word (or, since letters are distinct, the number of distinct letters).</li>
+<li><strong>Single-letter word:</strong> Costs exactly 1 push.</li>
+<li><strong>Exactly 8 letters:</strong> All fit at cost 1 each; total equals 8.</li>
+<li><strong>Maximum length (26 distinct letters):</strong> Buckets fill up through bucket 4 (<code>ranks 24–25</code> land in bucket 4), since 26 = 3×8 + 2.</li>
+</ul>
+<p>Because the problem guarantees distinct letters, every value from <code>Counter</code> will be exactly 1 — this makes the "sort descending" step trivial (all values are equal), though the bucket logic is what's actually doing the work.</p>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting the ranks are 0-indexed</strong> and using <code>rank // 8</code> without checking that rank 7 (the 8th letter) still belongs to bucket 1, not bucket 2.</li>
+<li><strong>Sorting ascending instead of descending</strong>, which would give the <em>rarest</em> letters the cheapest slots — the opposite of what you want.</li>
+<li><strong>Assuming order doesn't matter for word lengths under 8</strong> and adding unnecessary bucket logic when the answer is just the word's length.</li>
+<li><strong>Trying to track which specific letter goes where</strong>, when the problem only ever asks for a total cost — identity is irrelevant, only frequency and rank matter.</li>
+<li><strong>Off-by-one errors in bucket cost</strong>, forgetting the <code>+ 1</code> and starting costs at 0 instead of 1.</li>
+<li><strong>Reaching for brute-force permutations</strong> out of instinct without recognizing the greedy structure first, leading to a factorial-time solution that times out.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would this change if keys could only hold a fixed maximum number of letters instead of unlimited?</li>
+<li>What if letters weren't guaranteed distinct — how would repeated letters in the input word affect your frequency counting?</li>
+<li>Can you connect this greedy strategy formally to Huffman coding — where do they diverge?</li>
+<li>How would you prove this greedy choice is optimal (an exchange argument)?</li>
+<li>What's the answer if you have <code>k</code> keys instead of a fixed 8?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 451 — Sort Characters By Frequency:</strong> Same core skill — counting and sorting by frequency — applied to string reconstruction instead of cost computation.</li>
+<li><strong>LeetCode 3016 — Minimum Number of Pushes to Type Word II:</strong> The direct sequel, where letters can repeat and you need to count occurrences across the whole word rather than treating each letter as appearing once.</li>
+<li><strong>LeetCode 1834 — Single-Threaded CPU:</strong> Different domain, same "sort by priority, process greedily" backbone.</li>
+<li><strong>LeetCode 621 — Task Scheduler:</strong> Another frequency-driven greedy/bucket problem where the most frequent task dictates the schedule's shape.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The lesson here isn't really about keypads — it's about recognizing when a problem's <em>cost structure</em> is scarce and tiered. Whenever you see "limited cheap resources, unlimited expensive ones," count frequencies, sort descending, and hand out the cheap resource to whoever needs it most. That single move turns a factorial brute-force nightmare into an O(n log n) two-liner, and it's a pattern that resurfaces constantly in interview problems well beyond this one.</p>
+<h2>Watch the Video</h2>
+<p>Prefer watching this get built step by step, bugs and all? Check out the full walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a daily series working through LeetCode's daily challenge in Python — one problem, one clear mental model, every day. The goal isn't just to get a green checkmark, it's to build the kind of pattern recognition that makes the <em>next</em> problem easier too.</p>
+<h2>Call To Action</h2>
+<p>If this greedy bucket trick clicked for you, drop a like on the video — it's the easiest way to signal that these breakdowns are worth doing more of. Subscribe on YouTube so tomorrow's daily challenge shows up in your feed, and subscribe to the Substack for the written deep dives like this one delivered straight to your inbox. Got a different way you'd explain the intuition, or a follow-up question an interviewer might throw at you? Drop it in the comments — and if this helped, share it with someone prepping for interviews right now.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Rearranged-keypad word cost: what pattern/trick applies?</summary><p>Greedy frequency-to-slot assignment — most frequent letters get cheapest button positions (like Huffman-lite frequency packing).</p></details><details class='card2'><summary>Time complexity of the min-pushes solution?</summary><p>O(n + k log k), n = word length for counting, k ≤ 26 letters sorted by frequency.</p></details><details class='card2'><summary>Space complexity of the min-pushes solution?</summary><p>O(k), a frequency map/array over at most 26 distinct letters.</p></details><details class='card2'><summary>Common bug when assigning letters to keys?</summary><p>Forgetting each key holds up to 8 letters — cost = ceil(rank/8), not rank; miscounting bumps push count.</p></details><details class='card2'><summary>Why does sorting by frequency beat &#x27;assign in order&#x27; (first idea)?</summary><p>Arbitrary order ignores that high-frequency letters need low press-counts; sorting minimizes total presses, order doesn&#x27;t.</p></details><details class='card2'><summary>Interview follow-up: how would you handle multiple words sharing one keypad?</summary><p>Sum frequencies across all words first, then do one greedy sort/assign pass over the combined counts.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
