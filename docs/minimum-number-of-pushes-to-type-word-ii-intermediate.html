@@ -1,0 +1,181 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Minimum Number of Pushes to Type Word II — 🟡 Intermediate (2/3) — LeetCode Daily Python Solution (8 letters per key, not 3) — Python LeetCode Solution</title><meta name="description" content="📍 Jump to your level:
+🟡 Intermediate: 0:16–4:42
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/minimum-number-of-pushes-to-type-word-ii-intermediate
+💻 Code on GitHub: https://github.com">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/minimum-number-of-pushes-to-type-word-ii-intermediate.html">
+<meta property="og:title" content="Minimum Number of Pushes to Type Word II — 🟡 Intermediate (2/3) — LeetCode Daily Python Solution (8 letters per key, not 3) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📍 Jump to your level:
+🟡 Intermediate: 0:16–4:42
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/minimum-number-of-pushes-to-type-word-ii-intermediate
+💻 Code on GitHub: https://github.com">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Minimum Number of Pushes to Type Word II — 🟡 Intermediate (2/3) — LeetCode Daily Python Solution (8 letters per key, not 3)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every keypad-based typing problem on LeetCode traces back to the same real-world annoyance: your phone's T9 layout was designed around finger reach, not typing speed. Key 2 permanently owns <code>a</code>, <code>b</code>, <code>c</code> whether or not those letters ever show up in what you're typing. <strong>Minimum Number of Pushes to Type Word II</strong> flips that constraint on its head — you get to design the keypad yourself, choosing which letters land on which key, with the sole goal of minimizing total key presses for a given word.</p>
+<p>This problem shows up in interviews because it tests something more valuable than syntax: can you recognize when a problem is secretly asking for a greedy assignment based on frequency? That pattern — sort by how often something occurs, then hand the cheapest resource to the most common items — powers everything from Huffman coding to cache eviction policies to music app "recently played" shortcuts. If you can spot it here, you'll spot it in a dozen other disguises.</p>
+<h2>Problem Overview</h2>
+<p>You're given a lowercase English word and eight keys (keys 2 through 9). You must distribute all 26 letters of the alphabet across these eight keys, with each key holding its own distinct set of letters — no overlaps, no restrictions on how many letters a key can hold.</p>
+<p>Typing a letter costs a number of pushes equal to its position on its key. The first letter assigned to a key costs 1 push, the second letter on that same key costs 2 pushes, the third costs 3, and so on.</p>
+<p>Given a word, you choose the letter-to-key assignment that minimizes the total number of pushes needed to type the entire word, where each letter's cost is multiplied by how many times it appears.</p>
+<p>The word can be up to 100,000 characters long, but since there are only 26 possible letters, the actual "shape" of the problem never grows past that fixed alphabet size.</p>
+<h2>Example</h2>
+<p>Take <code>word = "abcde"</code>. Every letter appears exactly once. No matter how you distribute them, each one only needs its first slot on some key, so every letter costs exactly 1 push. Total: <strong>5</strong>.</p>
+<p>Now take <code>word = "aabbc"</code>. Frequencies are <code>a: 2</code>, <code>b: 2</code>, <code>c: 1</code>. There are only three distinct letters, so all three easily fit as the <em>first</em> letter on three separate keys — every occurrence costs 1 push. Total: <code>2 + 2 + 1 = 5</code>.</p>
+<p>Notice both examples land on 5, but for very different reasons — one because every letter is unique, the other because even repeated letters stayed cheap since there weren't enough distinct letters to force anyone into a second-tier slot.</p>
+<h2>Intuition</h2>
+<p>Start from the failure case: a real phone keypad. Key 2 is stuck with <code>a</code>, <code>b</code>, <code>c</code> forever. If your word is packed with the letter <code>z</code>, you're paying an expensive, rigid price for no reason — <code>z</code> might be your most frequent letter, yet the fixed real-world layout dumps it into a high-cost slot at the very last key while <code>a</code>, <code>b</code>, <code>c</code> sit comfortable and cheap regardless of how rarely they're used.</p>
+<p>This problem removes that rigidity. Since <em>you</em> choose the layout, the smart move is obvious once you say it out loud: <strong>give the cheapest slots to the letters you'll type most often.</strong></p>
+<p>Think of a spice rack. The sauce you reach for daily sits at the front, within arm's reach. The jar you use twice a year goes on the top shelf, out of the way. It costs you nothing extra to organize it this way, and it saves real effort every single day. Music apps do this too — your most-played tracks get one-tap shortcuts, while your neglected playlist requires digging.</p>
+<p>Here's the proof this greedy idea actually is optimal, not just intuitive: imagine a frequent letter sitting in a cost-2 slot while a rarer letter sits in a cost-1 slot. Swap them. The frequent letter now costs less per occurrence, the rare letter costs more per occurrence — but since the frequent letter occurs more, the total only drops or stays the same. It never increases. That means <strong>any arrangement not sorted by frequency can always be improved</strong>, so the fully sorted arrangement must be optimal.</p>
+<p>With eight keys and unlimited letters per key, the cost structure falls into clean blocks of eight:
+- Ranks 0–7 (the 8 most frequent letters): cost 1 each
+- Ranks 8–15 (next 8 most frequent): cost 2 each
+- Ranks 16–23 (next 8): cost 3 each
+- Ranks 24–25 (the last 2, since there are only 26 letters): cost 4 each</p>
+<p>I call this the <strong>Frequency Ladder</strong> — every group of 8 ranks climbs one rung, and one rung equals one extra push.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Try every possible way to partition 26 letters across 8 keys, compute the total cost for each partition, and keep the minimum.</p>
+<p><strong>Algorithm:</strong> Generate all partitions of the alphabet into 8 (possibly empty) groups, assign costs 1, 2, 3... within each group, sum up <code>frequency × cost</code> for every letter in the word, and track the best result.</p>
+<p><strong>Advantages:</strong> Conceptually simple — it's guaranteed correct because it checks everything.</p>
+<p><strong>Disadvantages:</strong> The number of ways to partition 26 items into 8 ordered groups is astronomically large. This is completely infeasible to compute directly.</p>
+<p><strong>Time complexity:</strong> Exponential (technically related to Stirling numbers of the second kind times permutations) — intractable.
+<strong>Space complexity:</strong> Also exponential if you tried to enumerate partitions.</p>
+<p>Brute force isn't a real option here — it's mentioned only to highlight why the greedy insight matters so much. Once you see the swap argument from the Intuition section, brute force becomes unnecessary.</p>
+<h2>Optimal Solution</h2>
+<p>The Frequency Ladder approach runs in four clean steps:</p>
+<ol>
+<li><strong>Count</strong> how often each letter appears in the word.</li>
+<li><strong>Sort</strong> those frequencies in descending order — most common first.</li>
+<li><strong>Rank</strong> each frequency by its position (0-indexed) in that sorted list.</li>
+<li><strong>Cost</strong> each rank as <code>(rank // 8) + 1</code>, multiply by its frequency, and sum everything.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Rank</th>
+<th>Key slot</th>
+<th>Cost per push</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0–7</td>
+<td>1st letter on 8 keys</td>
+<td>1</td>
+</tr>
+<tr>
+<td>8–15</td>
+<td>2nd letter on 8 keys</td>
+<td>2</td>
+</tr>
+<tr>
+<td>16–23</td>
+<td>3rd letter on 8 keys</td>
+<td>3</td>
+</tr>
+<tr>
+<td>24–25</td>
+<td>4th letter on 2 keys</td>
+<td>4</td>
+</tr>
+</tbody>
+</table>
+<p>Walking through a slightly bigger example — 9 distinct letters with sorted frequencies <code>[5, 4, 4, 3, 3, 2, 2, 1, 1]</code>:</p>
+<ul>
+<li>Ranks 0–7 (the first eight letters) each cost 1 push per occurrence: <code>5+4+4+3+3+2+2+1 = 24</code></li>
+<li>Rank 8 (the ninth letter) crosses into the second rung, costing 2 pushes per occurrence: <code>1 × 2 = 2</code></li>
+<li>Total: <code>24 + 2 = 26</code></li>
+</ul>
+<p>No heaps, no dynamic programming — just counting, sorting, and integer division.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from collections import Counter
+
+
+def minimum_pushes(word: str) -&gt; int:
+    &quot;&quot;&quot;Return the minimum total key presses to type `word`
+    on a keypad we design ourselves (8 keys, letters assigned
+    by descending frequency).&quot;&quot;&quot;
+    frequencies = sorted(Counter(word).values(), reverse=True)
+
+    total_pushes = 0
+    for rank, freq in enumerate(frequencies):
+        cost = (rank // 8) + 1
+        total_pushes += freq * cost
+
+    return total_pushes
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>Counter(word)</code> performs a single linear pass over the word, producing a dictionary of <code>letter -&gt; frequency</code>.</li>
+<li><code>.values()</code> pulls out just the frequency counts — we don't need to know <em>which</em> letter they belong to, only <em>how often</em> each occurs.</li>
+<li><code>sorted(..., reverse=True)</code> orders those counts from most frequent to least frequent. This ordering is what makes the greedy assignment valid.</li>
+<li><code>enumerate(frequencies)</code> gives us <code>rank</code>, the 0-indexed position of each frequency in the sorted list — this rank stands in for "which slot on which key" without us ever having to model actual keys.</li>
+<li><code>(rank // 8) + 1</code> converts rank directly into cost. Ranks 0 through 7 all floor-divide to 0, giving cost 1. Ranks 8 through 15 floor-divide to 1, giving cost 2. And so on.</li>
+<li><code>freq * cost</code> scales the per-occurrence cost by how many times that letter actually appears in the word, and we accumulate the running total.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Let's trace <code>word = "aabbc"</code> by hand.</p>
+<ol>
+<li><code>Counter("aabbc")</code> → <code>{'a': 2, 'b': 2, 'c': 1}</code></li>
+<li><code>.values()</code> → <code>[2, 2, 1]</code></li>
+<li><code>sorted(reverse=True)</code> → <code>[2, 2, 1]</code> (already descending)</li>
+<li>Enumerate:
+   - rank 0, freq 2 → cost <code>0 // 8 + 1 = 1</code> → contributes <code>2 × 1 = 2</code>
+   - rank 1, freq 2 → cost <code>0 // 8 + 1 = 1</code> → contributes <code>2 × 1 = 2</code>
+   - rank 2, freq 1 → cost <code>0 // 8 + 1 = 1</code> → contributes <code>1 × 1 = 1</code></li>
+<li>Total: <code>2 + 2 + 1 = 5</code></li>
+</ol>
+<p>Matches the expected answer.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time complexity: O(n)</strong>, where <code>n</code> is the length of the word. Building the <code>Counter</code> is a single linear scan — O(n). Sorting the frequency values touches at most 26 numbers (one per letter of the alphabet), which is a constant-size sort, effectively O(1) regardless of how large <code>n</code> gets. The final loop over frequencies is also bounded by 26 iterations. So the dominant cost is the initial counting pass, giving overall O(n).</p>
+<p><strong>Space complexity: O(1)</strong> relative to the alphabet — the <code>Counter</code> and the sorted list can hold at most 26 entries, since there are only 26 lowercase English letters. This stays constant no matter how long the word is.</p>
+<h2>Alternative Solutions</h2>
+<p>You could replace the <code>sorted()</code> call with a <strong>bucket sort</strong> over the 26 possible frequency values (since frequencies are bounded by <code>n</code>, you could bucket them and read off counts in descending order without a comparison sort). This would technically avoid the <code>O(k log k)</code> sort step entirely. In practice, since <code>k</code> is fixed at a maximum of 26, this optimization saves nothing meaningful — sorting 26 numbers is already about as fast as anything gets. Stick with <code>sorted()</code>; it's clearer and just as fast for this input size.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Single character word</strong> (<code>"a"</code>): only one letter, rank 0, cost 1. Returns 1.</li>
+<li><strong>All identical characters</strong> (<code>"aaaa...a"</code>): only one distinct letter, always rank 0, always cost 1. Total equals the word's length.</li>
+<li><strong>All 26 letters used with maximal spread</strong>: the two least frequent letters land at ranks 24 and 25, finally reaching cost 4 — the most expensive rung on the ladder.</li>
+<li><strong>Empty word</strong>: not a valid input per constraints, but the function would correctly return 0 since <code>Counter("")</code> produces an empty dict.</li>
+<li><strong>Word with exactly 8 distinct letters</strong>: every letter fits in the cost-1 tier exactly, with no letter ever paying more than 1 push.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Sorting frequencies ascending instead of descending</strong> — this hands your most frequent letter the most expensive slot, exactly backwards from the greedy proof.</li>
+<li><strong>Assuming a real T9 keypad layout applies</strong> — this problem asks you to design your own layout; the real-world <code>a, b, c</code> on key 2 is irrelevant here.</li>
+<li><strong>Forgetting to multiply cost by frequency</strong> — computing cost per rank but summing costs instead of <code>frequency × cost</code> gives the wrong total.</li>
+<li><strong>Off-by-one errors in the rank-to-cost formula</strong> — using <code>rank // 8</code> without the <code>+ 1</code> will give cost 0 for the first tier instead of cost 1.</li>
+<li><strong>Trying to model actual key assignments explicitly</strong> — you never need to track which physical key a letter lives on; the rank alone fully determines the cost.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Why is sorting by frequency guaranteed to produce the optimal result? (Be ready to explain the swap argument.)</li>
+<li>How would your solution change if there were a different number of keys, or a different alphabet size?</li>
+<li>Could you solve this without sorting, using a counting/bucket approach? What's the tradeoff?</li>
+<li>What's the time complexity if the alphabet size were unbounded instead of fixed at 26?</li>
+<li>How does this problem relate to Huffman coding or other greedy compression techniques?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Minimum Number of Pushes to Type Word I</strong> — the simpler sibling where letters are ranked by first appearance in the word rather than by frequency; a great next problem to test whether you actually understand <em>why</em> frequency matters here.</li>
+<li><strong>Huffman Encoding</strong> — the same "cheap slot for common item, expensive slot for rare item" greedy principle, applied to building optimal prefix codes.</li>
+<li><strong>Top K Frequent Elements</strong> — shares the same <code>Counter</code> + sort-by-frequency backbone.</li>
+<li><strong>Reorganize String</strong> — another frequency-driven greedy arrangement problem.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The moment a problem lets you choose an assignment freely, ask whether frequency should drive that assignment. Count occurrences, sort descending, and let rank determine cost — that's the entire Frequency Ladder pattern. The swap argument is what elevates this from "seems right" to provably optimal, and that kind of reasoning is exactly what separates a solution you can defend in an interview from one you got lucky with.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with the hand-traced <code>"aabbc"</code> example and the two most common mistakes flagged in real time, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series that treats interview problems as excuses to talk about the ideas underneath them — sorting, greedy proofs, frequency analysis, and the intuition that turns a memorized trick into something you can reconstruct from scratch under pressure.</p>
+<h2>Call To Action</h2>
+<p>If this clicked for you, drop a like on the video and subscribe on YouTube — it directly helps this channel grow. For deeper written breakdowns like this one delivered straight to your inbox, subscribe to the Substack. And if you spotted a cleaner way to explain the swap argument, or you tried Word I after watching, drop a comment — I read every one.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Fixed alphabet, need min total keypresses — which pattern?</summary><p>Greedy frequency-to-cost assignment: sort char frequencies descending, assign cheapest button slots first (like Huffman-lite bucketing).</p></details><details class='card2'><summary>Time complexity of the greedy T9-keypad solution?</summary><p>O(n + k log k) — n to count frequencies, k log k to sort the distinct letters.</p></details><details class='card2'><summary>Space complexity of this approach?</summary><p>O(k) for the frequency map/array, k ≤ 26 distinct letters — effectively O(1).</p></details><details class='card2'><summary>Common bug when assigning letters to buttons?</summary><p>Forgetting each button holds up to 3 letters, so cost per letter = 1 + (index // 8) presses, not a flat rate.</p></details><details class='card2'><summary>This greedy bucketing resembles which other pattern?</summary><p>Huffman coding&#x27;s greedy-by-frequency idea, but here bucket size is fixed (8 buttons × 3 slots) instead of building a tree.</p></details><details class='card2'><summary>Interview follow-up: why is exactly 8 buttons key here?</summary><p>Real T9 phones use digits 2–9 for letters; that fixed count caps letters-per-first-press at 8, driving the cost formula.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
