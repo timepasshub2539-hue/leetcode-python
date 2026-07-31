@@ -1,0 +1,196 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>25 Steps For 10 Million Items? Lesson: Binary Search Explained — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/binary-search-in-python
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/binary-search-in-python
+
+Chapter">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/binary-search-in-python.html">
+<meta property="og:title" content="25 Steps For 10 Million Items? Lesson: Binary Search Explained — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/binary-search-in-python
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/binary-search-in-python
+
+Chapter">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>25 Steps For 10 Million Items? Lesson: Binary Search Explained</h1><span class='badge' style='background:#38bdf822;color:#38bdf8'>🎯 Binary Search</span><article><h2>Introduction</h2>
+<p>Search a sorted array of 10 million numbers for one target value. Check every item one by one, and in the worst case you're looking at 10 million comparisons. Use binary search instead, and you're done in about 25.</p>
+<p>That gap — 10,000,000 versus 25 — is the entire reason binary search shows up in nearly every technical interview and every algorithms course on day one. It's not just a clever trick; it's the cleanest possible demonstration of why the <em>shape</em> of an algorithm matters more than how fast the machine running it is. A faster computer makes linear search a little faster. A better algorithm makes it exponentially faster, and that gap only widens as the data grows.</p>
+<p>Interviewers lean on binary search because it tests three things at once: whether you can reason about a precondition (the data must be sorted), whether you can translate "throw away half" into correct loop boundaries without off-by-one bugs, and whether you actually understand <em>why</em> it works rather than having memorized a template. This article walks through all three — starting from intuition, not code — so you leave with a mental model you can rebuild from scratch, in an interview or anywhere else.</p>
+<h2>Problem Overview</h2>
+<p>You're given a list of numbers sorted from smallest to largest, and a target value. Your job is to return the index of that target if it exists in the list, or signal clearly that it doesn't (typically by returning <code>-1</code>).</p>
+<p>The one condition that makes this problem interesting is that <strong>the list must already be sorted</strong>. If it isn't, there's no reliable shortcut — you're back to checking items one at a time, because nothing tells you which direction the target might be in.</p>
+<h2>Example</h2>
+<p>Consider this sorted array of 10 integers:</p>
+<pre><code>index:  0   1   2   3   4   5   6   7   8   9
+value:  2   5   8  13  21  27  33  41  50  67
+</code></pre>
+<p>Say we're searching for <code>33</code>. A linear scan checks index 0, then 1, then 2… all the way until it hits index 6. That's 7 comparisons.</p>
+<p>Binary search instead starts by looking at the <em>middle</em> of the array. If the middle value is bigger than the target, the target — if it exists — has to be somewhere in the left half, because the array is sorted. If the middle value is smaller, the target has to be in the right half. Either way, half the array gets eliminated without inspecting a single element in it.</p>
+<p>For <code>33</code> in the array above, binary search finds it in 2 comparisons instead of 7. On a 10-million-item array, that same principle brings a worst case of 10 million comparisons down to about 25 — because each comparison doesn't just eliminate one item, it eliminates half of whatever's left.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer arrives at this solution without memorizing anything.</p>
+<p>Start with the observation that scanning one item at a time wastes information. Every time you check <code>array[3]</code> and it's not the target, a linear scan learns exactly one fact: index 3 isn't it. Nothing more.</p>
+<p>But if the array is sorted, checking the <em>middle</em> element tells you something much bigger. Suppose the middle value is smaller than your target. Because everything to the left of the middle is even smaller (sorted, remember), you now know with certainty that <em>none</em> of those elements can be the target either. You didn't just rule out one index — you ruled out half the array in a single comparison.</p>
+<p>Repeat that logic on the remaining half. Check its middle. Rule out another half. And again. Each round the search space shrinks by half, which means the number of rounds needed is however many times you can cut a number in half before reaching 1 — that's exactly what a logarithm measures. Cutting 10,000,000 in half repeatedly hits 1 in about 24 steps. That's where the "25 steps" comes from.</p>
+<p>The mental picture that makes this stick: a phone book. You don't start at "Aaronson" and read every name looking for "Mitchell." You open to the middle, see you're past or before where "Mitchell" would be, and flip to the half that could still contain it. Nobody taught you that consciously — it's exactly binary search.</p>
+<p>The one thing this entire idea depends on is order. In a phone book, that's alphabetical order. In an array, that's sorted order. Take that away — a junk drawer instead of a phone book — and the middle element tells you nothing about which half to search, because "smaller" and "larger" no longer point anywhere useful.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Walk through the array from the first element to the last, comparing each one to the target.</p>
+<p><strong>Algorithm:</strong>
+1. Start at index 0.
+2. Compare the current element to the target.
+3. If it matches, return the current index.
+4. Otherwise, move to the next index and repeat.
+5. If you reach the end without a match, return -1.</p>
+<p><strong>Advantages:</strong>
+- Works on unsorted data — no precondition required.
+- Trivial to write and reason about.</p>
+<p><strong>Disadvantages:</strong>
+- Worst case checks every single element.
+- Doesn't take advantage of any structure in the data, even when structure (sorted order) is available.</p>
+<p><strong>Time complexity:</strong> O(n) — worst case checks all n elements.
+<strong>Space complexity:</strong> O(1) — no extra memory beyond a loop counter.</p>
+<h2>Optimal Solution</h2>
+<p>Binary search maintains two pointers, <code>low</code> and <code>high</code>, marking the current boundaries of the search space — initially the whole array.</p>
+<p>Step by step:</p>
+<ol>
+<li>Compute <code>mid = (low + high) // 2</code>.</li>
+<li>Compare <code>array[mid]</code> to the target.</li>
+<li>If they match, you're done — return <code>mid</code>.</li>
+<li>If <code>array[mid]</code> is smaller than the target, the target (if present) must be to the right, so set <code>low = mid + 1</code>.</li>
+<li>If <code>array[mid]</code> is larger than the target, the target must be to the left, so set <code>high = mid - 1</code>.</li>
+<li>Repeat with the new <code>low</code>/<code>high</code> range.</li>
+<li>Stop when <code>low &gt; high</code> — at that point there's no range left to search, meaning the target isn't in the array.</li>
+</ol>
+<p>Tracing this on the earlier array, searching for <code>33</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>low</th>
+<th>high</th>
+<th>mid</th>
+<th>array[mid]</th>
+<th>Comparison</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>0</td>
+<td>9</td>
+<td>4</td>
+<td>21</td>
+<td>21 &lt; 33</td>
+<td>low = 5</td>
+</tr>
+<tr>
+<td>2</td>
+<td>5</td>
+<td>9</td>
+<td>7</td>
+<td>33</td>
+<td>match</td>
+<td>return 7</td>
+</tr>
+</tbody>
+</table>
+<p>Two steps, not eight. Every round, <code>low</code> and <code>high</code> squeeze closer together, and the moment they cross (<code>low &gt; high</code>), the search space is empty — that's the signal the value genuinely isn't in the array, not a bug.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def binary_search(array: list[int], target: int) -&gt; int:
+    &quot;&quot;&quot;Return the index of target in a sorted array, or -1 if absent.&quot;&quot;&quot;
+    low, high = 0, len(array) - 1
+
+    while low &lt;= high:
+        mid = (low + high) // 2
+
+        if array[mid] == target:
+            return mid
+        elif array[mid] &lt; target:
+            low = mid + 1
+        else:
+            high = mid - 1
+
+    return -1
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>low, high = 0, len(array) - 1</code> — the search space starts as the entire array.</li>
+<li><code>while low &lt;= high</code> — the loop continues as long as there's a valid range to check. The moment <code>low</code> slides past <code>high</code>, the range is empty and the loop exits.</li>
+<li><code>mid = (low + high) // 2</code> — integer division picks the middle index of the current range.</li>
+<li><code>if array[mid] == target: return mid</code> — found it, stop immediately.</li>
+<li><code>elif array[mid] &lt; target: low = mid + 1</code> — the target must be strictly to the right of <code>mid</code>, so the new range excludes <code>mid</code> entirely.</li>
+<li><code>else: high = mid - 1</code> — the target must be strictly to the left of <code>mid</code>.</li>
+<li><code>return -1</code> — reached only when the loop exits without finding a match, meaning the target isn't present.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Search for <code>33</code> in <code>[2, 5, 8, 13, 21, 27, 33, 41, 50, 67]</code>:</p>
+<ul>
+<li><code>low=0, high=9</code> → <code>mid=4</code> → <code>array[4]=21</code> → <code>21 &lt; 33</code> → <code>low=5</code></li>
+<li><code>low=5, high=9</code> → <code>mid=7</code> → <code>array[7]=33</code> → match → return <code>7</code></li>
+</ul>
+<p>Now search for <code>100</code>, which isn't in the array:</p>
+<ul>
+<li><code>low=0, high=9</code> → <code>mid=4</code> → <code>21 &lt; 100</code> → <code>low=5</code></li>
+<li><code>low=5, high=9</code> → <code>mid=7</code> → <code>41 &lt; 100</code> → <code>low=8</code></li>
+<li><code>low=8, high=9</code> → <code>mid=8</code> → <code>50 &lt; 100</code> → <code>low=9</code></li>
+<li><code>low=9, high=9</code> → <code>mid=9</code> → <code>67 &lt; 100</code> → <code>low=10</code></li>
+<li><code>low=10, high=9</code> → loop condition <code>low &lt;= high</code> fails → return <code>-1</code></li>
+</ul>
+<h2>Complexity Analysis</h2>
+<p><strong>Time: O(log n).</strong> Each iteration cuts the search range in half. Starting from n elements, the number of halvings needed to shrink the range to a single element is log₂(n). For n = 10,000,000, log₂(n) ≈ 23–24, matching the "about 25 steps" from the video.</p>
+<p><strong>Space: O(1)</strong> for the iterative version above — only a fixed number of variables (<code>low</code>, <code>high</code>, <code>mid</code>) regardless of array size. (A recursive version would use O(log n) space for the call stack.)</p>
+<p>These bounds are tight, not approximate: every iteration strictly shrinks the range, and the range can only shrink log₂(n) times before hitting a single element, so the algorithm can't do better or worse than this asymptotically.</p>
+<h2>Alternative Solutions</h2>
+<p><strong>Recursive binary search</strong> expresses the same logic as a function calling itself on a smaller range instead of looping. Same O(log n) time, but O(log n) space due to the call stack — worth mentioning in an interview as a trade-off, but the iterative version is generally preferred in production code to avoid stack depth concerns.</p>
+<p><strong>Using <code>bisect</code> from Python's standard library</strong> (<code>bisect.bisect_left</code>) does the same job for real-world code, since it's implemented in C and well-tested. Writing binary search by hand is still worth knowing cold, though — it's less about the specific problem and more about the boundary-handling skill it tests.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty array</strong> — <code>low=0, high=-1</code>, loop never executes, returns <code>-1</code> immediately. Correct.</li>
+<li><strong>Single-element array</strong> — <code>low=0, high=0</code>, one comparison, resolves either way.</li>
+<li><strong>Target is the first or last element</strong> — works correctly since the range naturally narrows toward either end.</li>
+<li><strong>Duplicate values</strong> — this version returns <em>some</em> valid index matching the target, not necessarily the first or last occurrence. If you need the first/last occurrence specifically, that requires a modified binary search that keeps narrowing even after finding a match.</li>
+<li><strong>Target smaller than every element or larger than every element</strong> — the range shrinks toward one edge and then crosses, correctly returning <code>-1</code>.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Using <code>mid</code> instead of <code>mid + 1</code> or <code>mid - 1</code> when updating bounds.</strong> Setting <code>low = mid</code> instead of <code>low = mid + 1</code> can cause an infinite loop, since the range never actually shrinks.</li>
+<li><strong>Running binary search on unsorted data.</strong> It won't error — it will just silently return wrong results, which is far more dangerous than a crash.</li>
+<li><strong>Off-by-one errors in the loop condition</strong>, using <code>low &lt; high</code> instead of <code>low &lt;= high</code>, which misses the case where the range has exactly one element left to check.</li>
+<li><strong>Integer overflow when computing <code>mid</code></strong> in languages with fixed-size integers (<code>(low + high) // 2</code> can overflow for very large arrays). Not a practical issue in Python, but a classic interview follow-up — the fix is <code>mid = low + (high - low) // 2</code>.</li>
+<li><strong>Forgetting to return <code>-1</code> (or an equivalent signal)</strong> and instead letting the function fall through and return <code>None</code> implicitly, which can cause confusing bugs downstream if the caller expects an integer.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you modify this to find the <em>first</em> or <em>last</em> occurrence of a duplicate target?</li>
+<li>How would you binary search on a rotated sorted array?</li>
+<li>Can you write this recursively, and what's the space trade-off?</li>
+<li>What's the smallest and largest possible number of iterations for a given array size?</li>
+<li>How would binary search apply to a problem where the array itself isn't sorted, but some derived property of it is monotonic (binary search on the answer)?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Search in Rotated Sorted Array (LeetCode 33)</strong> — same binary search skeleton, adapted to handle a rotation point.</li>
+<li><strong>Find First and Last Position of Element in Sorted Array (LeetCode 34)</strong> — a direct extension of the duplicate-handling edge case above.</li>
+<li><strong>Search Insert Position (LeetCode 35)</strong> — binary search where the "not found" case still needs a meaningful answer (where the value would be inserted).</li>
+<li><strong>Koko Eating Bananas (LeetCode 875)</strong> and <strong>Capacity to Ship Packages Within D Days (LeetCode 1011)</strong> — "binary search on the answer" problems, where you binary search over a range of possible answers rather than over an array.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Binary search only works on sorted data — that precondition is not optional.</li>
+<li>Each comparison eliminates half the remaining search space, which is why the total steps scale with log(n) instead of n.</li>
+<li>The loop terminates correctly when <code>low &gt; high</code>, which is your signal that the target doesn't exist.</li>
+<li>Almost every bug in a hand-written binary search comes from boundary handling — get <code>mid + 1</code> / <code>mid - 1</code> and <code>&lt;=</code> right, and the rest follows from the intuition.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough — including tracing the algorithm by hand and running it against the code live — watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This article is part of <em>Fun with Learning Technology</em>, a series focused on tracing algorithms and code until they actually make sense — not just copying a solution that works, but understanding why it works well enough to rebuild it from scratch under pressure.</p>
+<h2>Call To Action</h2>
+<p>If this cleared up binary search for you, the video walks through the trace and live run side by side — give it a watch and a like on YouTube. Subscribe there for more of these breakdowns, and subscribe to the Substack for the written companion pieces. Drop a comment with the trickiest boundary bug you've hit in your own binary search, and share this with anyone prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>See &#x27;search a sorted array for a target&#x27; — which pattern?</summary><p>Binary search: repeatedly halve the sorted range instead of scanning linearly.</p></details><details class='card2'><summary>Time complexity of binary search on n items?</summary><p>O(log n) — each step discards half the remaining range.</p></details><details class='card2'><summary>Space complexity of iterative binary search?</summary><p>O(1) — just low/high/mid pointers, no extra structures.</p></details><details class='card2'><summary>Biggest bug source when computing mid index?</summary><p>low+(high-low)//2 vs (low+high)//2; also forgetting array must be sorted first.</p></details><details class='card2'><summary>How do you know the target isn&#x27;t in the array?</summary><p>Loop ends when low &gt; high without a match — return -1/None, don&#x27;t assume it&#x27;s present.</p></details><details class='card2'><summary>Follow-up: why does binary search beat linear scan at scale?</summary><p>10M items: ~24 comparisons vs up to 10M — logarithmic growth stays fast as n grows.</p></details></div><h2 class='ph1' style='font-size:1.4rem'>Similar problems</h2><div class='grid'><a class='card' href='manim-binary-search.html'><div class='body'><h3>Binary Search Explained Visually — 1,000,000 Items in 20 Steps</h3><span class='badge' style='background:#38bdf822;color:#38bdf8'>🎯 Binary Search</span></div></a></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
