@@ -1,0 +1,244 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson: Why Does Python Let You Edit a List But Not a Tuple? — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/why-python-lists-are-mutable-but-tuples-are-not
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/why-pyth">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/why-python-lists-are-mutable-but-tuples-are-not.html">
+<meta property="og:title" content="Lesson: Why Does Python Let You Edit a List But Not a Tuple? — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/why-python-lists-are-mutable-but-tuples-are-not
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/why-pyth">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson: Why Does Python Let You Edit a List But Not a Tuple?</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every Python developer eventually writes <code>some_tuple.append(4)</code> out of habit and gets slapped with an <code>AttributeError</code>. It looks like a typo. It isn't. It's Python enforcing a rule that goes to the core of how the language represents data in memory, and it's one of the most common conceptual gaps interviewers probe for — not because the syntax is hard, but because it separates people who memorized "lists are mutable, tuples aren't" from people who actually understand <em>why</em>.</p>
+<p>This distinction matters far beyond trivia. It explains why some objects can be dictionary keys and others can't, why passing a list into a function can silently modify the caller's data while passing a tuple can't, and why a function default argument bug (<code>def f(x=[])</code>) is a rite of passage for every Python developer. Once you understand mutability at the object level, a whole category of "mysterious" bugs stops being mysterious.</p>
+<h2>Problem Overview</h2>
+<p>Here's the puzzle in its simplest form: you have two collections that look almost identical on the surface, a list and a tuple. You try the same operation, adding an element after creation, on both.</p>
+<pre><code class="language-python">my_list = [1, 2, 3]
+my_list.append(4)   # works fine
+
+my_tuple = (1, 2, 3)
+my_tuple.append(4)  # AttributeError: 'tuple' object has no attribute 'append'
+</code></pre>
+<p>The question isn't "how do I fix the error" — you can't append to a tuple, full stop. The real question is: what property of a list makes this possible, and what property of a tuple makes it impossible? Answering that requires understanding what a Python variable actually is, and what happens in memory when you "change" an object.</p>
+<h2>Example</h2>
+<p>Let's make the invisible visible using <code>id()</code>, which returns the memory address of an object.</p>
+<pre><code class="language-python">my_list = [1, 2, 3]
+print(id(my_list))      # e.g. 140712834558912
+my_list.append(4)
+print(id(my_list))      # 140712834558912 — identical
+print(my_list)           # [1, 2, 3, 4]
+</code></pre>
+<p>The id never changes. Python didn't create a new list and reassign <code>my_list</code> to point at it — it reached into the existing object at that memory address and rewrote its internal contents.</p>
+<p>Now compare with a tuple:</p>
+<pre><code class="language-python">my_tuple = (1, 2, 3)
+print(id(my_tuple))     # e.g. 140712834561600
+my_tuple = my_tuple + (4,)
+print(id(my_tuple))     # different address entirely
+print(my_tuple)          # (1, 2, 3, 4)
+</code></pre>
+<p>Since a tuple has no in-place way to grow, "adding" an element actually means building a brand-new tuple and pointing the variable at it. The old tuple <code>(1, 2, 3)</code> still exists unchanged somewhere in memory until garbage collected.</p>
+<h2>Intuition</h2>
+<p>Here's the mental model that makes everything else click: <strong>a variable is not a box that holds a value — it's a label stuck onto an object that lives somewhere else in memory.</strong></p>
+<p>When you write <code>my_list.append(4)</code>, you're not touching the label at all. You're following the label to the object it points at and modifying that object directly. The label (<code>my_list</code>) never moves.</p>
+<p>An object is <em>mutable</em> if it exposes some way to modify its internal state without creating a new object — methods like <code>.append()</code>, <code>.pop()</code>, <code>.sort()</code>, or index assignment (<code>my_list[0] = 99</code>) all edit the existing object in place.</p>
+<p>An object is <em>immutable</em> if no such mechanism exists. Once a tuple, string, int, or frozenset is built, there's no operation Python offers to reach in and rewrite its slots. Any "modification" necessarily means constructing an entirely new object.</p>
+<p>This isn't an accident of API design — it's a deliberate contract the object type makes with everyone holding a reference to it. If you hand a list to another function, that function can mutate it and you'll see the change, because you're both pointing at the same box. If you hand a tuple to another function, it <em>cannot</em> be mutated out from under you, because no operation exists that would let it.</p>
+<h2>Brute Force Solution</h2>
+<p>There isn't really a "brute force vs optimal" axis for a conceptual question like this, but if you want a naive way to <em>demonstrate</em> mutability without knowing about <code>id()</code>, you could compare objects for equality before and after an operation and assume unchanged identity:</p>
+<p><strong>Idea:</strong> Print the object, mutate it, print again, and eyeball whether the reference "still feels like" the same object.</p>
+<p><strong>Algorithm:</strong>
+1. Print the collection.
+2. Attempt the modification.
+3. Print the collection again.
+4. Infer mutability from whether the operation succeeded.</p>
+<p><strong>Advantages:</strong> Requires no special functions, easy to explain to a beginner.</p>
+<p><strong>Disadvantages:</strong> Doesn't actually prove anything about memory — it only observes that values changed, not whether the underlying object is the same. You could be fooled by reassignment, which also changes printed output without mutating anything.</p>
+<p><strong>Time/space complexity:</strong> O(1) for the check itself; not really the point of this exercise since it's conceptual rather than algorithmic.</p>
+<h2>Optimal Solution</h2>
+<p>The rigorous way to prove mutability is exactly what the video demonstrates: compare <code>id()</code> before and after the operation.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>List</th>
+<th>Tuple</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Create object</td>
+<td><code>id</code> = A</td>
+<td><code>id</code> = B</td>
+</tr>
+<tr>
+<td>Attempt modification</td>
+<td><code>.append()</code> succeeds</td>
+<td><code>.append()</code> doesn't exist</td>
+</tr>
+<tr>
+<td>Check <code>id()</code> after</td>
+<td>Still A</td>
+<td>N/A — operation fails, or if you concatenate, new tuple gets <code>id</code> = C</td>
+</tr>
+<tr>
+<td>Conclusion</td>
+<td>Same box, new contents → <strong>mutable</strong></td>
+<td>New box required for any change → <strong>immutable</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The <code>id()</code> function is the ground truth here because it reports the actual memory address the interpreter allocated for the object — nothing about print statements or <code>==</code> comparisons can fake this out. Two lists with the same contents but different identities will have different <code>id()</code> values and <code>is</code> will return <code>False</code> between them, even though <code>==</code> returns <code>True</code>.</p>
+<p>This also explains <strong>hashability</strong>. Python's dict and set implementations compute a hash of a key when it's inserted, and use that hash to file the object into a bucket for fast lookup. That hash is computed once and must remain valid for the object's entire lifetime in the collection — if the object's contents could change after insertion, its hash would go stale and the dict would silently become unable to find its own keys.</p>
+<pre><code class="language-python">d = {(1, 2): &quot;point A&quot;}      # works — tuple is immutable, hash is stable
+d = {[1, 2]: &quot;point A&quot;}      # TypeError: unhashable type: 'list'
+</code></pre>
+<p>Tuples (and strings, ints, frozensets) implement <code>__hash__</code> because they can guarantee their contents never change. Lists deliberately do not implement <code>__hash__</code> — Python protects you from creating dictionary keys that could quietly become inconsistent.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def demonstrate_mutability():
+    &quot;&quot;&quot;Show identity-preserving mutation on a list vs. forced
+    reallocation on a tuple.&quot;&quot;&quot;
+    my_list = [1, 2, 3]
+    list_id_before = id(my_list)
+    my_list.append(4)
+    list_id_after = id(my_list)
+
+    my_tuple = (1, 2, 3)
+    tuple_id_before = id(my_tuple)
+    try:
+        my_tuple.append(4)  # will raise
+    except AttributeError:
+        pass
+    tuple_id_after_failed_mutation = id(my_tuple)
+
+    # The only way to &quot;grow&quot; a tuple is to build a new one
+    new_tuple = my_tuple + (4,)
+    tuple_id_after_rebuild = id(new_tuple)
+
+    return {
+        &quot;list_same_object&quot;: list_id_before == list_id_after,
+        &quot;tuple_unchanged_after_failed_append&quot;: (
+            tuple_id_before == tuple_id_after_failed_mutation
+        ),
+        &quot;rebuilt_tuple_is_new_object&quot;: tuple_id_before != tuple_id_after_rebuild,
+    }
+
+
+def hashable_check(value):
+    &quot;&quot;&quot;Return True if value can be used as a dict key / set member.&quot;&quot;&quot;
+    try:
+        hash(value)
+        return True
+    except TypeError:
+        return False
+
+
+if __name__ == &quot;__main__&quot;:
+    result = demonstrate_mutability()
+    assert result[&quot;list_same_object&quot;] is True
+    assert result[&quot;tuple_unchanged_after_failed_append&quot;] is True
+    assert result[&quot;rebuilt_tuple_is_new_object&quot;] is True
+
+    assert hashable_check((1, 2)) is True
+    assert hashable_check([1, 2]) is False
+    assert hashable_check(&quot;point&quot;) is True
+
+    print(&quot;All mutability and hashability checks passed.&quot;)
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>list_id_before = id(my_list)</code> captures the memory address before any mutation, our baseline.</li>
+<li><code>my_list.append(4)</code> mutates the list in place — no new object is created.</li>
+<li><code>list_id_after == list_id_before</code> confirms the object identity never changed, proving the append happened in-place.</li>
+<li><code>my_tuple.append(4)</code> is wrapped in a <code>try/except</code> because tuples genuinely have no <code>append</code> method — this isn't a runtime restriction, it's the absence of a method entirely.</li>
+<li><code>new_tuple = my_tuple + (4,)</code> is the <em>only</em> way to get "an extended tuple" — concatenation always builds a new tuple object.</li>
+<li><code>tuple_id_before != tuple_id_after_rebuild</code> proves that "growing" a tuple necessarily means a new memory address, not an in-place edit.</li>
+<li><code>hashable_check()</code> calls <code>hash()</code> inside a try block — this is the actual mechanism Python uses internally when you use a value as a dict key or add it to a set. If <code>__hash__</code> isn't implemented (as with <code>list</code>), it raises <code>TypeError</code> immediately.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Trace <code>demonstrate_mutability()</code> step by step:</p>
+<ol>
+<li><code>my_list = [1, 2, 3]</code> → allocated at address, say, <code>0x100</code>.</li>
+<li><code>list_id_before = 0x100</code>.</li>
+<li><code>my_list.append(4)</code> → list becomes <code>[1, 2, 3, 4]</code>, still at <code>0x100</code>.</li>
+<li><code>list_id_after = 0x100</code> → matches <code>list_id_before</code>.</li>
+<li><code>my_tuple = (1, 2, 3)</code> → allocated at, say, <code>0x200</code>.</li>
+<li><code>tuple_id_before = 0x200</code>.</li>
+<li><code>my_tuple.append(4)</code> → raises <code>AttributeError</code>, caught, nothing changes.</li>
+<li><code>tuple_id_after_failed_mutation = 0x200</code> → unchanged, as expected since nothing succeeded.</li>
+<li><code>new_tuple = my_tuple + (4,)</code> → Python builds a fresh tuple <code>(1, 2, 3, 4)</code> at a new address, say <code>0x300</code>.</li>
+<li><code>tuple_id_after_rebuild = 0x300</code> → different from <code>0x200</code>, confirming a new object was necessary.</li>
+</ol>
+<p>All three assertions pass, matching the theory exactly.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><code>id()</code> lookups: O(1) — it's just reading an attribute of the object header.</li>
+<li><code>list.append()</code>: amortized O(1) — Python over-allocates list capacity so most appends don't require a reallocation.</li>
+<li>Tuple concatenation (<code>tuple + tuple</code>): O(n) — a new tuple of combined length must be allocated and both source tuples copied into it.</li>
+<li><code>hash()</code> on a tuple: O(n) in the size of the tuple (it must hash each element and combine), but for interview purposes this is treated as effectively O(1) for small fixed-size tuples like coordinates.</li>
+<li>Space: list append is O(1) amortized extra space; tuple "growth" is always O(n) extra space since the whole new tuple must be materialized.</li>
+</ul>
+<p>These complexities aren't incidental — they're a direct consequence of the mutability model. Mutable objects can amortize costs across in-place edits; immutable objects pay full reconstruction cost on every "change" because reconstruction is the only operation available.</p>
+<h2>Alternative Solutions</h2>
+<p>If you need tuple-like immutability but with named fields and better readability, <code>collections.namedtuple</code> or a <code>frozen=True</code> dataclass are the idiomatic alternatives:</p>
+<pre><code class="language-python">from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class Point:
+    x: int
+    y: int
+</code></pre>
+<p>This is still immutable (attempting <code>point.x = 5</code> raises <code>FrozenInstanceError</code>), still hashable by default, but gives you named access instead of positional indexing. It's strictly better than a raw tuple when the fields have meaning beyond position — use a plain tuple when the shape truly is anonymous, like a lightweight coordinate pair passed briefly between two functions.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty tuple/list</strong>: <code>()</code> and <code>[]</code> behave identically under this model — the emptiness doesn't change the mutability rules at all.</li>
+<li><strong>Single-element tuple</strong>: <code>(4,)</code> — easy to forget the trailing comma; <code>(4)</code> is just an int in parentheses, not a tuple.</li>
+<li><strong>Nested mutable object inside a tuple</strong>: <code>t = ([1, 2], 3)</code> — the tuple's <em>slots</em> are locked (you can't do <code>t[0] = something_else</code>), but the list living in slot 0 can still be mutated: <code>t[0].append(99)</code> works fine and <code>id(t)</code> never changes. This is the shallow-immutability gotcha — immutability protects the container's structure, not necessarily the mutable objects it references.</li>
+<li><strong>Attempting to hash a tuple containing an unhashable element</strong>: <code>hash(([1,2], 3))</code> still raises <code>TypeError</code>, because Python has to hash every element, and the nested list has no <code>__hash__</code>.</li>
+<li><strong>Large lists vs. large tuples</strong>: appending to a huge list stays cheap due to amortized growth; "appending" to a huge tuple via concatenation gets expensive fast since the entire tuple is copied every time.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Assuming a tuple makes everything inside it permanently frozen.</strong> It only locks its own slots — nested lists inside a tuple remain fully mutable.</li>
+<li><strong>Using a mutable default argument</strong>, e.g. <code>def f(x=[])</code>. Since the default is created once at function definition time, every call that doesn't pass <code>x</code> shares and mutates the same list.</li>
+<li><strong>Confusing <code>==</code> with <code>is</code>.</strong> Two lists with identical contents but different identities are <code>==</code> but not <code>is</code> — conflating them leads to subtle bugs when identity actually matters (e.g. checking if two variables reference the same object).</li>
+<li><strong>Trying to use a list as a dictionary key</strong> and being surprised by <code>TypeError: unhashable type</code>, instead of reaching for a tuple.</li>
+<li><strong>Believing <code>id()</code> changes mean the values changed, or vice versa.</strong> They're orthogonal — reassigning a variable to an equal-but-different object changes <code>id()</code> without necessarily changing the printed value, and in-place mutation changes the printed value without changing <code>id()</code>.</li>
+<li><strong>Forgetting the single-element tuple comma</strong>, silently creating an int instead of a tuple, then getting confusing errors much later in the code.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What does it mean for an object to be hashable, and how does that relate to mutability?</li>
+<li>Why can't lists be dictionary keys, but tuples can?</li>
+<li>If you pass a list into a function and the function appends to it, does the caller see the change? What about a tuple?</li>
+<li>What's the difference between <code>==</code> and <code>is</code> in Python, and when would you use each?</li>
+<li>Explain the mutable default argument bug and how to avoid it.</li>
+<li>Is a tuple containing a list "fully immutable"? Why or why not?</li>
+<li>How would you make a deeply immutable structure in Python?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 705 — Design HashSet</strong>: reinforces why hashability and object identity matter for building your own hash-based structure.</li>
+<li><strong>LeetCode 49 — Group Anagrams</strong>: commonly solved by using a sorted tuple of characters as a dict key — a direct real-world use of tuple hashability.</li>
+<li><strong>LeetCode 1010 — Pairs of Songs With Total Durations Divisible by 60</strong>: another problem where using tuples (or plain ints) as dict keys is essential because they're hashable.</li>
+<li><strong>"Design a LRU Cache" (LeetCode 146)</strong>: touches on the same mutable-object-in-place-editing concept, since the cache relies on mutating existing structures rather than rebuilding them.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>A variable is a label pointing at an object, not a container holding a value.</li>
+<li>Mutable objects (lists, dicts, sets) can be edited in place — same <code>id()</code>, new contents.</li>
+<li>Immutable objects (tuples, strings, ints, frozensets) can never be edited in place — any "change" requires building a new object with a new <code>id()</code>.</li>
+<li>Immutability is what makes hashability possible, and hashability is what makes an object usable as a dict key or set member.</li>
+<li>Immutability only locks the container's own slots — a mutable object nested inside an immutable one is still fully mutable.</li>
+<li>Choose a tuple when the shape of your data is fixed and meaningful (coordinates, database rows); choose a list when you expect to grow, shrink, or reorder it.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with live <code>id()</code> comparisons and the exact crash in action, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <em>Fun with Learning Technology</em>, a series built around exactly the kind of gap that trips up developers at every level: concepts you technically "know" but have never seen proven. Each video takes one deceptively simple question, shows you the code that breaks, and builds the intuition back up from first principles instead of just handing you a rule to memorize.</p>
+<h2>Call To Action</h2>
+<p>If this cleared up something that's been fuzzy for a while, do two things: hit like on the video so more developers see it, and subscribe on YouTube so you don't miss the next one. For deeper written breakdowns like this one delivered straight to your inbox, subscribe to the Substack. And if you've been bitten by the shallow-immutability gotcha before, drop a comment — that story helps the next person avoid the same bug.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Why does `t=(1,2); t[0]=5` crash but `l=[1,2]; l[0]=5` doesn&#x27;t?</summary><p>Lists are mutable (support item assignment); tuples are immutable and raise TypeError on any attempt to change an element.</p></details><details class='card2'><summary>What does &#x27;mutable&#x27; actually mean for an object?</summary><p>Its internal state can change after creation while keeping the same identity (same id()) — the box stays, contents change.</p></details><details class='card2'><summary>What proves a list changed in place instead of creating a new object?</summary><p>id(lst) before and after l.append(x) or l[0]=x stays identical — same memory address, different contents.</p></details><details class='card2'><summary>Why can&#x27;t tuples support item assignment at all?</summary><p>CPython&#x27;s tuple struct has no mutation methods/slots by design; it&#x27;s a fixed, read-only array of pointers set once at creation.</p></details><details class='card2'><summary>What&#x27;s the payoff of immutability for hashability?</summary><p>Tuples (with hashable elements) can be dict keys/set members because their hash never changes; mutable lists can&#x27;t since a changing hash would break lookups.</p></details><details class='card2'><summary>Gotcha: is a tuple containing a list fully immutable?</summary><p>No — the tuple&#x27;s slots are fixed, but a list *inside* it can still be mutated in place; immutability is shallow, not deep.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
