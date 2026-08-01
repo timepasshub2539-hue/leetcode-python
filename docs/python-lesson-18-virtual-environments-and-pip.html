@@ -1,0 +1,212 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 18: Why Does pip install Break Your Other Project? — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-18-virtual-environments-and-pip
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-les">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-18-virtual-environments-and-pip.html">
+<meta property="og:title" content="Lesson 18: Why Does pip install Break Your Other Project? — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-18-virtual-environments-and-pip
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-les">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson 18: Why Does pip install Break Your Other Project?</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every Python developer hits this wall eventually: you're working on two projects, both use the same package, and one day a <code>pip install</code> on Project A quietly breaks Project B. Nothing crashes loudly. No error tells you what happened. You just start seeing <code>AttributeError</code> or <code>ImportError</code> messages in code that worked yesterday, and you have no idea why.</p>
+<p>This isn't a Python bug. It's a structural problem with how packages get installed on your machine by default, and it's one of the first things that separates developers who understand their tooling from developers who are just typing commands and hoping. Interviewers care about this because it signals whether you understand your environment, not just your algorithms. Teams care about it because "works on my machine" is one of the most expensive sentences in software.</p>
+<p>The fix is a concept called a virtual environment, and once you understand what it actually is under the hood — not just the commands, but the mechanism — you'll never accidentally break a project with a stray <code>pip install</code> again.</p>
+<h2>Problem Overview</h2>
+<p>By default, when you run <code>pip install some-package</code>, Python installs that package into a single, shared, global location tied to your system's Python interpreter. Every project on your machine that uses that same Python installation pulls from that same shared pool of packages.</p>
+<p>That's fine as long as every project agrees on which version of every package it needs. The moment two projects disagree — Project A needs <code>requests==2.25</code>, Project B needs <code>requests==2.31</code> — you have a conflict that can't be resolved by installing anything, because there's only one slot for <code>requests</code> to live in globally. Installing the version one project wants automatically takes the correct version away from the other.</p>
+<p>The goal is to give each project its own private copy of the Python interpreter and its own private set of installed packages, so installing something for one project can never affect any other project, ever.</p>
+<h2>Example</h2>
+<p>Imagine two folders on your machine:</p>
+<pre><code>~/projects/scraper/     → needs requests==2.25
+~/projects/api-client/  → needs requests==2.31
+</code></pre>
+<p>Without isolation:</p>
+<pre><code class="language-bash">cd ~/projects/scraper
+pip install requests==2.25
+# works fine
+
+cd ~/projects/api-client
+pip install requests==2.31
+# this silently overwrites the global requests install
+
+cd ~/projects/scraper
+python run.py
+# breaks — it's now running against 2.31, not the version it was built for
+</code></pre>
+<p>Nothing in that sequence looks wrong when you run it. Each command succeeds. The breakage only shows up later, in a different project, when you least expect it — which is exactly why this bug is so easy to misdiagnose as "something's wrong with my code" instead of "something's wrong with my environment."</p>
+<h2>Intuition</h2>
+<p>Think about how your shell actually finds a program when you type its name. When you type <code>python</code>, your shell doesn't magically know what "python" means — it searches through a list of folders defined by your <code>PATH</code> environment variable, in order, and runs the first matching executable it finds.</p>
+<p>That single fact is the entire trick behind virtual environments. If you could create a folder that contains its own copy of the Python interpreter and its own package directory, and get your shell to check that folder <em>before</em> it checks anywhere else, then every command you type — <code>python</code>, <code>pip</code> — would transparently resolve to the private copy instead of the shared system one. No changes to your code. No special import syntax. Just a different program running under the same name.</p>
+<p>That's exactly what a virtual environment is: a folder with an interpreter and a package directory, plus an activation step that temporarily rewrites your <code>PATH</code> so that folder comes first. It's not sandboxing at the OS level, it's not a container, it's not magic — it's ordinary shell path resolution, aimed at a private folder instead of a shared one.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Don't isolate anything. Install every package your projects need into the single global Python environment, and manage version conflicts manually — by uninstalling and reinstalling the right version every time you switch projects.</p>
+<p><strong>Algorithm:</strong>
+1. Work on Project A, <code>pip install</code> whatever it needs.
+2. Switch to Project B. If it needs a different version of the same package, <code>pip uninstall</code> the old one and <code>pip install</code> the new one.
+3. Repeat every time you switch context.</p>
+<p><strong>Advantages:</strong>
+- Zero setup — no extra commands, no extra folders.
+- Works fine if you only ever have one project, or all your projects happen to share compatible versions.</p>
+<p><strong>Disadvantages:</strong>
+- Doesn't scale past two projects with conflicting dependencies.
+- Entirely manual and easy to forget — you will eventually run the wrong project against the wrong version.
+- No record of what a project actually needs, so nobody else can reliably reproduce your setup.</p>
+<p><strong>Complexity:</strong> Time cost grows with the number of context switches — effectively O(n) manual reinstalls for n switches between conflicting projects. Space cost is O(1) since there's only ever one global install, but that's the whole problem, not a benefit.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach is to give every project its own isolated environment and its own manifest describing exactly what it needs. This has two parts:</p>
+<p><strong>1. Isolation — the virtual environment.</strong></p>
+<p>A venv is created with a single command run inside your project folder:</p>
+<pre><code class="language-bash">python -m venv .venv
+</code></pre>
+<p>This builds a <code>.venv</code> folder containing a copy of the Python interpreter and an empty <code>site-packages</code> directory for that project alone. Nothing outside <code>.venv</code> is touched.</p>
+<p><strong>2. Activation — rewriting the search order.</strong></p>
+<pre><code class="language-bash"># macOS/Linux
+source .venv/bin/activate
+
+# Windows
+.venv\Scripts\activate
+</code></pre>
+<p>Activation doesn't install anything. It prepends <code>.venv</code>'s folder to your shell's <code>PATH</code>, so <code>python</code> and <code>pip</code> resolve to the copies inside <code>.venv</code> before they ever reach the system installation. Your prompt changes to show the environment name — that's your confirmation it's active.</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th><code>python</code> resolves to</th>
+<th><code>pip install</code> installs into</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Before activation</td>
+<td>System Python</td>
+<td>Global <code>site-packages</code></td>
+</tr>
+<tr>
+<td>After activation</td>
+<td><code>.venv</code>'s Python</td>
+<td><code>.venv</code>'s <code>site-packages</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>3. Reproducibility — requirements.txt.</strong></p>
+<p>Isolation solves your machine. It doesn't solve handing the project to someone else, because <code>.venv</code> is local machine setup, not code — it never gets committed. Instead, you record <em>what</em> is installed, not the folder itself:</p>
+<pre><code class="language-bash">pip freeze &gt; requirements.txt
+</code></pre>
+<p>This writes every installed package and its exact version to a plain text file. Anyone who clones your repo runs:</p>
+<pre><code class="language-bash">python -m venv .venv
+source .venv/bin/activate   # or .venv\Scripts\activate on Windows
+pip install -r requirements.txt
+</code></pre>
+<p>...and ends up with the exact same set of packages, in their own private environment, without ever touching yours.</p>
+<h2>Python Code</h2>
+<p>There's no algorithm to implement here — the "solution" is a workflow, best captured as a small setup script you'd hand to a new project:</p>
+<pre><code class="language-python">&quot;&quot;&quot;setup_env.py — bootstrap an isolated environment for this project.&quot;&quot;&quot;
+
+import subprocess
+import sys
+from pathlib import Path
+
+VENV_DIR = Path(&quot;.venv&quot;)
+REQUIREMENTS_FILE = Path(&quot;requirements.txt&quot;)
+
+
+def create_virtualenv() -&gt; None:
+    if VENV_DIR.exists():
+        print(f&quot;{VENV_DIR} already exists, skipping creation.&quot;)
+        return
+    subprocess.run([sys.executable, &quot;-m&quot;, &quot;venv&quot;, str(VENV_DIR)], check=True)
+    print(f&quot;Created virtual environment at {VENV_DIR}&quot;)
+
+
+def venv_pip_path() -&gt; Path:
+    # Windows and POSIX venvs put the pip executable in different subfolders.
+    if sys.platform.startswith(&quot;win&quot;):
+        return VENV_DIR / &quot;Scripts&quot; / &quot;pip.exe&quot;
+    return VENV_DIR / &quot;bin&quot; / &quot;pip&quot;
+
+
+def install_requirements() -&gt; None:
+    if not REQUIREMENTS_FILE.exists():
+        print(&quot;No requirements.txt found, nothing to install.&quot;)
+        return
+    subprocess.run(
+        [str(venv_pip_path()), &quot;install&quot;, &quot;-r&quot;, str(REQUIREMENTS_FILE)],
+        check=True,
+    )
+    print(&quot;Installed dependencies from requirements.txt&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    create_virtualenv()
+    install_requirements()
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>VENV_DIR</code> and <code>REQUIREMENTS_FILE</code> are just the two artifacts the whole workflow revolves around: the isolated folder and the manifest.</li>
+<li><code>create_virtualenv</code> shells out to <code>python -m venv .venv</code>, using <code>sys.executable</code> so it always uses whichever Python interpreter is currently running the script, not a hardcoded path. It skips creation if the folder already exists, so re-running the script is safe.</li>
+<li><code>venv_pip_path</code> handles the one real platform difference in this whole process: Windows venvs put executables in <code>Scripts/</code>, POSIX systems put them in <code>bin/</code>. Calling the venv's <code>pip</code> directly (instead of relying on activation) means this script works correctly even before you've activated anything.</li>
+<li><code>install_requirements</code> runs <code>pip install -r requirements.txt</code> using the venv's own <code>pip</code>, guaranteeing packages land inside <code>.venv</code>, not the system Python — which is the entire point of the exercise.</li>
+<li><code>check=True</code> on both <code>subprocess.run</code> calls ensures a failed install or venv creation raises immediately instead of silently continuing with a broken environment.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Starting from a fresh clone of <code>api-client/</code> with a <code>requirements.txt</code> containing <code>requests==2.31.0</code>:</p>
+<ol>
+<li><code>create_virtualenv()</code> checks for <code>.venv</code> — doesn't exist — runs <code>python -m venv .venv</code>. A new folder appears containing an interpreter and empty <code>site-packages</code>.</li>
+<li><code>venv_pip_path()</code> returns <code>.venv/bin/pip</code> (assume macOS/Linux).</li>
+<li><code>install_requirements()</code> checks <code>requirements.txt</code> — exists — runs <code>.venv/bin/pip install -r requirements.txt</code>.</li>
+<li><code>requests==2.31.0</code> downloads from PyPI and lands inside <code>.venv/lib/.../site-packages/requests</code>.</li>
+<li>The system Python and any other project's venv are untouched — the package physically exists only inside this one folder.</li>
+</ol>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> Creating a venv and installing n packages is O(n) in the number of packages — each one is downloaded and written independently. This is unavoidable; you can't install packages faster than you can fetch and unpack them.</li>
+<li><strong>Space:</strong> Each venv duplicates disk space for its own interpreter copy and packages, so total disk usage is O(p × v) for p average packages across v venvs. This is the deliberate tradeoff: you're spending disk space to buy isolation, which is virtually always worth it compared to debugging silent global conflicts.</li>
+<li>Both are correct because isolation fundamentally requires separate copies — there's no way to give two projects independently-versioned dependencies while sharing one physical install.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p>Tools like <strong>Poetry</strong> and <strong>uv</strong> wrap this same underlying mechanism with better ergonomics: automatic environment creation, a lockfile more precise than <code>requirements.txt</code>, and one command instead of the create-activate-install sequence. They're worth adopting once you're juggling more than a couple of projects, but they don't replace the concept — they're a nicer interface over the exact same venv-based isolation described here. Understanding the manual version first makes the tooling make sense instead of feeling like magic.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty requirements.txt</strong> — <code>pip install -r requirements.txt</code> succeeds and does nothing; the venv stays empty.</li>
+<li><strong><code>.venv</code> already exists but is corrupted</strong> — deleting the folder and recreating it is safe and cheap, since it holds no source code, only installed copies.</li>
+<li><strong>Package needs OS-specific binaries</strong> — a <code>.venv</code> built on macOS won't work if committed and reused on Windows, which is exactly why <code>.venv</code> itself should never be committed, only <code>requirements.txt</code>.</li>
+<li><strong>Two packages in requirements.txt with conflicting sub-dependencies</strong> — <code>pip</code> will fail to resolve and report the conflict at install time, before you ever run your code.</li>
+<li><strong>Activating the wrong venv</strong> — your prompt prefix is the only visual cue; always check it before running <code>pip install</code> if you work across multiple projects in one terminal session.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Committing <code>.venv</code> to version control.</strong> It's often thousands of files, produces enormous diffs, and won't even work on a teammate's OS since it contains a compiled interpreter copy.</li>
+<li><strong>Forgetting to activate before installing.</strong> Running <code>pip install</code> without activation silently installs into the global environment instead of the project's isolated one.</li>
+<li><strong>Never regenerating <code>requirements.txt</code> after adding a package.</strong> The file drifts out of sync with what's actually installed, so a teammate's rebuild is missing dependencies.</li>
+<li><strong>Pinning nothing (<code>pip freeze</code> skipped, hand-writing loose names).</strong> Without exact versions, <code>pip install -r requirements.txt</code> can pull a newer, incompatible release months later.</li>
+<li><strong>Assuming <code>deactivate</code> uninstalls packages.</strong> It doesn't — it only resets your shell's <code>PATH</code>. The packages stay exactly where they were installed, inside <code>.venv</code>.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What is a virtual environment, mechanically — what changes on your machine when you activate one?</li>
+<li>Why does <code>.venv</code> never get committed to git, but <code>requirements.txt</code> does?</li>
+<li>What's the difference between <code>pip freeze</code> and manually listing packages in <code>requirements.txt</code>?</li>
+<li>How would you handle a package that needs to be compiled differently on Windows vs. Linux inside a shared requirements file?</li>
+<li>What problem do tools like Poetry or uv solve on top of plain <code>venv</code>?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Docker container isolation</strong> — same core idea (isolate dependencies per unit of work) applied at the OS/filesystem level instead of just the Python package level.</li>
+<li><strong>Node.js <code>node_modules</code> and <code>package-lock.json</code></strong> — the same isolation-plus-manifest pattern in the JavaScript ecosystem.</li>
+<li><strong>Conda environments</strong> — a heavier alternative to venv that also manages non-Python dependencies and multiple Python versions.</li>
+<li><strong>Python version management (pyenv)</strong> — solves a related but distinct problem: multiple Python <em>interpreter versions</em>, not just package versions.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>A virtual environment is nothing more than a folder holding a private interpreter and package directory, with activation temporarily rewriting your shell's search order so it's found first. Every install stays contained to that folder, so two projects can depend on completely different versions of the same package without ever colliding. <code>requirements.txt</code> is how you hand that setup to someone else without handing them the folder itself — commit the recipe, never the baked cake.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough — including watching a package quietly break one project while another stays untouched — check out the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <strong>Fun with Learning Technology</strong>, a series built for developers who want to actually understand their tools instead of memorizing commands. Each episode takes one piece of everyday friction — the kind of thing you hit constantly but never stop to fully understand — and breaks down exactly what's happening underneath.</p>
+<h2>Call To Action</h2>
+<p>If this cleared something up, the best way to support the series is simple: like the video on YouTube, subscribe so you don't miss the next lesson, and subscribe to the Substack for the written companion pieces like this one. Drop a comment if you've been bitten by this exact bug before, and share it with a teammate who's still installing everything globally.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When you see &#x27;ModuleNotFoundError works for me but not teammate&#x27;, think?</summary><p>Missing venv isolation — packages installed globally or in a different venv, not tracked in the repo.</p></details><details class='card2'><summary>What problem does a virtual environment solve?</summary><p>Isolates per-project dependencies so different projects can use conflicting package versions without clashing.</p></details><details class='card2'><summary>Where do packages installed via pip inside an activated venv live?</summary><p>Inside the venv&#x27;s site-packages folder, not system-wide — invisible to other venvs/projects.</p></details><details class='card2'><summary>Trickiest bug: it works on your machine but breaks after teammate clones repo. Why?</summary><p>You committed .venv or forgot requirements.txt — teammate has no installed packages or a stale/wrong Python path.</p></details><details class='card2'><summary>requirements.txt vs committing the .venv folder — which is correct?</summary><p>Always requirements.txt (pip freeze); .venv is machine-specific binaries/paths and must never be committed.</p></details><details class='card2'><summary>Follow-up: how do you recreate someone else&#x27;s exact environment?</summary><p>Create a fresh venv, activate it, run `pip install -r requirements.txt`.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
