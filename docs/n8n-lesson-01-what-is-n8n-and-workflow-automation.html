@@ -1,0 +1,234 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 1: What Is n8n? (Nodes, Triggers &amp; Workflows Explained) — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/n8n-lesson-01-what-is-n8n-and-workflow-automation
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/n8n-le">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/n8n-lesson-01-what-is-n8n-and-workflow-automation.html">
+<meta property="og:title" content="Lesson 1: What Is n8n? (Nodes, Triggers &amp; Workflows Explained) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/n8n-lesson-01-what-is-n8n-and-workflow-automation
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/n8n-le">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson 1: What Is n8n? (Nodes, Triggers &amp; Workflows Explained)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every developer has lived some version of the same morning: a lead lands in your inbox, and you copy a name into a spreadsheet, then retype the same three facts into a Slack message. Nothing about that work requires a human brain — it requires hands, and hands are the most expensive part of the process.</p>
+<p>This is the exact problem n8n exists to solve, and it's worth understanding well because workflow automation has quietly become a core skill for developers. Companies don't just want engineers who can write code from scratch anymore — they want engineers who know how to connect systems that already exist, cut out manual busywork, and build reliable pipelines between tools that were never designed to talk to each other. If you've touched backend integrations, internal tooling, or DevOps, you've already brushed up against the ideas n8n is built on: events, triggers, data transformation, and execution logging.</p>
+<p>This lesson is the foundation. Before you can build anything real in n8n, you need four concepts locked in: what a node is, how nodes become a workflow, what starts a workflow, and how you prove it actually ran. Get these four right and everything else in n8n — HTTP requests, conditionals, loops, error handling — is just variations on the same pattern.</p>
+<h2>Problem Overview</h2>
+<p>Picture a small business process: a new lead arrives by email, someone logs it in a spreadsheet for record-keeping, and someone else posts a summary in a team Slack channel so the sales team notices immediately.</p>
+<p>Three tools — Gmail, Google Sheets, and Slack — each hold a piece of the picture, but none of them are aware the other two exist. Gmail doesn't know Sheets exists. Sheets doesn't know Slack exists. The only thing stitching them together is a person, doing the same three-step manual transfer every single time a lead comes in.</p>
+<p>That manual stitching is the actual problem. It's not that the data is hard to get — it's that a human has become the integration layer between systems that should be talking directly to each other. n8n's job is to replace that human wiring with an automated, repeatable, observable process.</p>
+<h2>Example</h2>
+<p>Let's make this concrete with the exact scenario from the lesson:</p>
+<ol>
+<li>A new lead email lands in Gmail.</li>
+<li>The name and contact info get copied into a Google Sheet as a permanent record.</li>
+<li>A short summary gets posted into a Slack channel so the sales team can act on it.</li>
+</ol>
+<p>Manually, that's three separate actions, three separate app windows, and one person acting as the messenger between them. Automated with n8n, it becomes a single workflow: <strong>new lead detected → row added to sheet → message posted to Slack</strong>. The trigger, the middle step, and the final action are stitched together once, and after that, they run themselves every time a new lead shows up — no matter if it happens once a week or fifty times a day.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer actually arrives at this solution, rather than just being told the answer.</p>
+<p>Start by asking: what is actually changing hands here? Not tools, not UI — data. A name and an email address are being copied from one system's storage into two other systems' storage. That's it. Once you see it as data movement rather than "using an app," the solution becomes obvious: you don't need three humans clicking around three interfaces, you need one pipe that carries the data from the first system to the other two.</p>
+<p>The next question an experienced engineer asks is: how do I break this pipe into pieces I can reason about independently? You don't want one giant tangled script that does everything at once, because when it breaks, you won't know which part failed. So you decompose the pipe into discrete steps — one step per action. That decomposition is exactly what a "node" is in n8n: one action, isolated, testable, and swappable.</p>
+<p>Once you have discrete steps, order matters. "Add row" has to happen with the lead's data already available, so it must come after the lead arrives, and "notify Slack" is the last thing that should happen, since it's the human-facing summary of everything that already occurred. Chaining these ordered steps together is a workflow.</p>
+<p>But a workflow sitting idle does nothing — something external has to kick it off. That's the role of a trigger: it's the event that says "start now," whether that's a new email arriving, a scheduled time of day, or a webhook ping from another system.</p>
+<p>Finally, once something runs automatically and unattended, you lose the ability to just watch it happen. You need a record of what happened and when — which is why every run generates an execution log. Without it, debugging an automation that fails at 2 a.m. would be guesswork.</p>
+<p>Nodes, workflows, triggers, and executions aren't four unrelated features — they're the natural decomposition of "replace a human doing repetitive multi-app work" into something a machine can run reliably and you can debug when it doesn't.</p>
+<h2>Brute Force Solution</h2>
+<p>The "brute force" version of this problem is simply not automating it — a human repeats the copy-paste-type sequence manually every time a lead comes in.</p>
+<p><strong>Idea:</strong> A person monitors Gmail, and on seeing a new lead, manually transcribes the relevant fields into Sheets and Slack.</p>
+<p><strong>Algorithm:</strong>
+1. Watch inbox for new leads.
+2. On arrival, extract name and contact details.
+3. Open Sheets, paste into a new row.
+4. Open Slack, type a summary message, send.</p>
+<p><strong>Advantages:</strong>
+- Zero setup cost — no tooling, no learning curve.
+- Full manual judgment on edge cases (e.g., deciding a lead looks like spam).</p>
+<p><strong>Disadvantages:</strong>
+- Doesn't scale — every additional lead costs the same amount of human time.
+- Error-prone — manual retyping introduces typos and dropped fields.
+- No log — if a lead gets missed, there's no record showing where the process broke.
+- Bottlenecked by availability — nothing happens if the person is offline or asleep.</p>
+<p><strong>Time complexity:</strong> O(n) human-minutes per n leads, with a high constant factor.
+<strong>Space complexity:</strong> O(1) additional storage beyond what Gmail, Sheets, and Slack already hold — but effectively unbounded "space" in the sense of someone's attention and time.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal solution is the n8n workflow itself, and it's optimal because it replaces linear human effort with a fixed one-time setup cost.</p>
+<p>Here's the shape of it:</p>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Role</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Trigger</td>
+<td>Starts the workflow</td>
+<td>New email received in Gmail</td>
+</tr>
+<tr>
+<td>Node 1</td>
+<td>First action</td>
+<td>Extract lead name/email from message</td>
+</tr>
+<tr>
+<td>Node 2</td>
+<td>Second action</td>
+<td>Add a row to Google Sheets</td>
+</tr>
+<tr>
+<td>Node 3</td>
+<td>Third action</td>
+<td>Post a summary message to Slack</td>
+</tr>
+<tr>
+<td>Execution</td>
+<td>Proof of run</td>
+<td>Log entry showing exact data that flowed through</td>
+</tr>
+</tbody>
+</table>
+<p>The key mental model, straight from the lesson: watch the data move left to right. It enters at the trigger, gets read and possibly reshaped at each node, and lands at the final action. Nothing here is "magic" — it's a value getting passed and transformed one step at a time, the same way data flows through a pipeline of functions in code.</p>
+<p>Two design decisions matter for building this well:</p>
+<p><strong>One workflow, one job.</strong> A workflow trying to do five unrelated things at once becomes impossible to debug — when it breaks, you won't know which of the five jobs caused it. Keep each workflow scoped to a single clear purpose, the same discipline you'd apply to writing a single-responsibility function.</p>
+<p><strong>Pick your trigger deliberately.</strong> A trigger can be a schedule (run at 9 a.m. daily), a webhook (another app pings n8n when something happens), or a manual click. The trigger type shapes the whole workflow's behavior — a scheduled trigger checks for changes periodically, while a webhook trigger reacts instantly.</p>
+<h2>Python Code</h2>
+<p>n8n itself is a visual, node-based tool — you're not writing Python inside it for basic workflows. But it's useful to see the equivalent logic in Python, since it reveals that a workflow is fundamentally a small, ordered function pipeline with a triggering condition:</p>
+<pre><code class="language-python">from dataclasses import dataclass, field
+from datetime import datetime
+
+
+@dataclass
+class Execution:
+    &quot;&quot;&quot;Represents one workflow run and what data flowed through it.&quot;&quot;&quot;
+    workflow_name: str
+    started_at: datetime = field(default_factory=datetime.now)
+    steps: list = field(default_factory=list)
+    status: str = &quot;running&quot;
+
+    def log_step(self, node_name: str, data: dict) -&gt; None:
+        self.steps.append({&quot;node&quot;: node_name, &quot;data&quot;: dict(data)})
+
+    def finish(self, status: str = &quot;success&quot;) -&gt; None:
+        self.status = status
+
+
+def extract_lead(data: dict) -&gt; dict:
+    &quot;&quot;&quot;Node 1: pull the fields we care about from the raw event.&quot;&quot;&quot;
+    return {&quot;name&quot;: data[&quot;name&quot;], &quot;email&quot;: data[&quot;email&quot;]}
+
+
+def add_row_to_sheet(data: dict) -&gt; dict:
+    &quot;&quot;&quot;Node 2: simulate writing a row to a spreadsheet.&quot;&quot;&quot;
+    print(f&quot;Sheet row added: {data['name']} &lt;{data['email']}&gt;&quot;)
+    return data
+
+
+def notify_slack(data: dict) -&gt; dict:
+    &quot;&quot;&quot;Node 3: simulate posting a Slack message.&quot;&quot;&quot;
+    print(f&quot;Slack: New lead - {data['name']}&quot;)
+    return data
+
+
+def run_new_lead_workflow(trigger_data: dict) -&gt; Execution:
+    &quot;&quot;&quot;The workflow: an ordered chain of nodes, with a logged execution.&quot;&quot;&quot;
+    execution = Execution(workflow_name=&quot;new_lead_notification&quot;)
+
+    data = extract_lead(trigger_data)
+    execution.log_step(&quot;extract_lead&quot;, data)
+
+    data = add_row_to_sheet(data)
+    execution.log_step(&quot;add_row_to_sheet&quot;, data)
+
+    data = notify_slack(data)
+    execution.log_step(&quot;notify_slack&quot;, data)
+
+    execution.finish(&quot;success&quot;)
+    return execution
+
+
+if __name__ == &quot;__main__&quot;:
+    # Simulated Gmail trigger firing with a new lead
+    incoming_lead = {&quot;name&quot;: &quot;Jordan Lee&quot;, &quot;email&quot;: &quot;jordan@example.com&quot;}
+    result = run_new_lead_workflow(incoming_lead)
+
+    assert result.status == &quot;success&quot;
+    assert len(result.steps) == 3
+    assert result.steps[0][&quot;node&quot;] == &quot;extract_lead&quot;
+    assert result.steps[-1][&quot;data&quot;][&quot;name&quot;] == &quot;Jordan Lee&quot;
+    print(&quot;Execution log:&quot;, result.steps)
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>Execution</code> mirrors n8n's execution log — it records the workflow name, when it started, every step's output, and a final status, exactly like opening a failed execution in n8n's UI to see where it broke.</li>
+<li><code>extract_lead</code>, <code>add_row_to_sheet</code>, and <code>notify_slack</code> are each a <strong>node</strong> — one isolated action with a single responsibility, no knowledge of what happens before or after it.</li>
+<li><code>run_new_lead_workflow</code> is the <strong>workflow</strong> — it chains the nodes in a fixed order and passes the return value of one node as the input to the next, mimicking n8n's left-to-right data flow.</li>
+<li>The <code>incoming_lead</code> dictionary being passed into <code>run_new_lead_workflow</code> stands in for the <strong>trigger</strong> firing — in n8n this would be Gmail detecting a new message and kicking off the run automatically.</li>
+<li><code>execution.log_step</code> after every node call is what makes debugging possible later — without it, a failure gives you no information about which step broke.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Trace <code>run_new_lead_workflow({"name": "Jordan Lee", "email": "jordan@example.com"})</code>:</p>
+<ol>
+<li><code>Execution</code> is created with <code>status="running"</code> and an empty <code>steps</code> list.</li>
+<li><code>extract_lead</code> runs, returning <code>{"name": "Jordan Lee", "email": "jordan@example.com"}</code>. Logged as step 1.</li>
+<li><code>add_row_to_sheet</code> prints the simulated sheet write and returns the same dict unchanged. Logged as step 2.</li>
+<li><code>notify_slack</code> prints the simulated Slack message and returns the dict. Logged as step 3.</li>
+<li><code>execution.finish("success")</code> sets <code>status = "success"</code>.</li>
+<li>The function returns the <code>Execution</code> object with three logged steps, each showing the exact data at that point — precisely what you'd see inspecting an n8n execution.</li>
+</ol>
+<h2>Complexity Analysis</h2>
+<p><strong>Time complexity:</strong> O(k) per execution, where k is the fixed number of nodes in the workflow (here, k = 3). This is correct because each node runs exactly once per trigger event — there's no branching or looping over the lead data itself, just a straight chain.</p>
+<p><strong>Space complexity:</strong> O(k) for storing the execution log, since one log entry is kept per node. This is correct because the log's size scales only with how many steps the workflow has, not with the size of the incoming data (assuming each node's output is roughly constant size).</p>
+<p>Compare this to the brute-force manual process: time cost there is O(n) <em>human-minutes</em> across n leads, since a person repeats the full sequence every time. The automated workflow's O(k) cost is paid once per event and doesn't grow with human attention — it grows with machine execution time, which is orders of magnitude cheaper.</p>
+<h2>Alternative Solutions</h2>
+<p>The most common alternatives developers evaluate are <strong>Zapier</strong> and <strong>Make</strong> — and the meaningful difference isn't features, it's the pricing and ownership model.</p>
+<ul>
+<li><strong>Zapier / Make (task-based pricing):</strong> You're charged per task executed. Run the same workflow a thousand times, and you pay for a thousand tasks. This scales badly for high-volume automations, and if the vendor changes pricing, you have no way to move your workflows elsewhere — there's no server to take with you.</li>
+<li><strong>n8n (workflow-based pricing, self-hostable):</strong> You're charged per workflow, not per run — executing it once or ten thousand times costs the same. You can self-host on your own infrastructure and own everything, or use n8n's cloud offering to skip maintenance, and either way you can migrate your workflows out whenever you choose.</li>
+</ul>
+<p>The lesson's framing is worth internalizing: integration counts (six thousand apps vs four hundred) are a distraction if the platform can effectively hold your automations hostage through pricing or lock-in. The real question to ask when choosing a tool is "can I leave?" — and it's a question worth asking about any vendor dependency in your stack, not just automation tools.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty trigger data:</strong> What happens if a "new lead" event fires with a missing name or email? A production workflow needs a validation node before proceeding, or downstream nodes will silently write incomplete rows.</li>
+<li><strong>Duplicate trigger fires:</strong> Some triggers (webhooks especially) can fire more than once for the same event. Without deduplication logic, you'd get duplicate Sheet rows and duplicate Slack pings.</li>
+<li><strong>Trigger never fires:</strong> If the schedule or webhook is misconfigured, the workflow silently never runs — this is why checking execution history regularly matters, not just when something visibly breaks.</li>
+<li><strong>A node fails mid-chain:</strong> If "add row to sheet" succeeds but "notify Slack" fails (e.g., API rate limit), you get an inconsistent state — the lead is logged but nobody's notified. The execution log is what lets you spot and reprocess this.</li>
+<li><strong>High volume trigger bursts:</strong> A hundred leads arriving in the same minute — the workflow needs to handle concurrent executions without stepping on shared resources like a rate-limited API.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Building one giant workflow that does five unrelated jobs.</strong> Exactly the mistake called out in the lesson — when it breaks, you can't isolate which piece failed. Keep workflows scoped to one job.</li>
+<li><strong>Not checking execution logs after setup.</strong> A workflow can be "working" the first time you test it and then silently fail days later on an edge case you never hit during testing.</li>
+<li><strong>Choosing the wrong trigger type.</strong> Using a scheduled trigger when you actually need instant reaction (or vice versa) either delays automations that should be immediate or wastes resources polling when nothing changed.</li>
+<li><strong>Ignoring the pricing model until it's expensive.</strong> Task-based pricing tools feel cheap at low volume and become very expensive once a workflow scales — evaluate cost at your target volume, not your current one.</li>
+<li><strong>Skipping data validation between nodes.</strong> Assuming every upstream node's output is well-formed leads to downstream nodes failing on malformed or missing fields.</li>
+<li><strong>Self-hosting without a maintenance plan.</strong> Owning your infrastructure means owning uptime, updates, and backups too — going self-hosted without accounting for that trades vendor lock-in for a different kind of risk.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you design an idempotent workflow so retried trigger events don't create duplicate side effects?</li>
+<li>What's the tradeoff between a scheduled trigger and a webhook trigger for a given use case?</li>
+<li>How would you add error handling so a failure in one node doesn't leave downstream systems in an inconsistent state?</li>
+<li>How does workflow-based pricing change the cost model for a system with unpredictable or spiky traffic compared to task-based pricing?</li>
+<li>What would you log in an execution record to make a 2 a.m. failure debuggable without waking anyone up?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Designing an event-driven pipeline (systems design):</strong> Same core pattern — a trigger/event source, a chain of processing steps, and observability into what ran. Understanding n8n's model translates directly to designing message-queue-based systems.</li>
+<li><strong>Building a CI/CD pipeline:</strong> A pipeline is also triggered (on push), runs an ordered chain of steps (build, test, deploy), and needs execution logs (build logs) for debugging — same shape, different domain.</li>
+<li><strong>Writing a Unix pipeline (<code>cmd1 | cmd2 | cmd3</code>):</strong> Each command is a node, the pipe is the workflow's data flow, and the shell's exit codes are a crude execution log.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>n8n replaces manual, repetitive cross-app work with four composable ideas: a <strong>node</strong> is one action, a <strong>workflow</strong> is an ordered chain of nodes, a <strong>trigger</strong> starts the chain, and an <strong>execution</strong> proves it ran and shows exactly what data moved through it. The technical model is simple by design — the real leverage is in the pricing and ownership story: paying per workflow instead of per task, and being able to self-host so you're never locked into a vendor's terms.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with visuals of the workflow builder in action, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <strong>Fun with Learning Technology</strong>, a series built for developers who want to actually understand the tools they use — not just click through a UI tutorial, but grasp the underlying model well enough to debug it at 2 a.m. when something breaks. Future lessons in this n8n track will build a real workflow from scratch, layer in conditionals and error handling, and cover self-hosting.</p>
+<h2>Call To Action</h2>
+<p>If this helped you understand n8n, drop a like on the video and subscribe on YouTube — the channel is small right now, and every subscribe genuinely moves the needle. For deeper written breakdowns like this one delivered straight to your inbox, subscribe to the Substack. And if you've got a question about triggers, workflows, or your own automation idea, drop it in the comments — I read all of them and future lessons often come directly from what people ask.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>n8n: what is it, in one line?</summary><p>Automation tool that connects apps via visual workflows—nodes wired together, triggered by events, self-hostable or cloud.</p></details><details class='card2'><summary>Smallest unit in n8n?</summary><p>A Node — one step that does one thing (fetch, transform, send).</p></details><details class='card2'><summary>What turns nodes into a workflow?</summary><p>Chaining nodes together so output of one feeds the next, forming a pipeline.</p></details><details class='card2'><summary>What starts a workflow running?</summary><p>A Trigger — webhook, schedule, or app event that kicks off execution.</p></details><details class='card2'><summary>How do you verify a workflow ran correctly?</summary><p>Check the Execution — a recorded run showing data at each node, success/fail per step.</p></details><details class='card2'><summary>n8n vs Zapier/Make — key difference?</summary><p>n8n gives node-level data visibility and self-hosting/control; Zapier/Make trade that for simpler, more polished no-code UX.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
