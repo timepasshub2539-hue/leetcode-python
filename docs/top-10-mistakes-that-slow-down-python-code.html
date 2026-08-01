@@ -1,0 +1,243 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson: Why Is Your Python Code Slow And You Don&#x27;t Know It? — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/top-10-mistakes-that-slow-down-python-code
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/top-10-mistak">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/top-10-mistakes-that-slow-down-python-code.html">
+<meta property="og:title" content="Lesson: Why Is Your Python Code Slow And You Don&#x27;t Know It? — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/top-10-mistakes-that-slow-down-python-code
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/top-10-mistak">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson: Why Is Your Python Code Slow And You Don&#x27;t Know It?</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>You've probably felt this before: the code isn't doing anything unusual, the logic checks out, and yet it crawls. Nothing looks broken, but it's slow — and that gap between "looks fine" and "runs fine" is exactly where a lot of real-world Python performance problems live.</p>
+<p>This matters for two reasons. First, in interviews, correctness alone doesn't always cut it — interviewers frequently probe <em>why</em> your solution is efficient, not just whether it produces the right answer. Second, in production code, these habits compound. A pattern that costs a few milliseconds on a 10-item list can cost minutes on a 10-million-item dataset.</p>
+<p>The good news is that almost none of this requires exotic knowledge. It's a short list of habits — how you build strings, which data structure you reach for, whether you're recalculating things you don't need to — that are easy to fix once you know to look for them. Let's go through all ten, build the intuition behind each one, and end with the meta-skill that actually matters more than memorizing the list: measuring instead of guessing.</p>
+<h2>Problem Overview</h2>
+<p>The underlying question is simple: <strong>given a piece of working Python code, why might it run far slower than it needs to, even though the logic is correct?</strong></p>
+<p>This isn't one bug — it's a set of independent patterns, each of which trades away performance for what looks like convenience or habit. They fall into a few buckets:</p>
+<ul>
+<li><strong>Doing more copying than necessary</strong> (strings, lists)</li>
+<li><strong>Doing more searching than necessary</strong> (checking membership in the wrong structure)</li>
+<li><strong>Doing more computing than necessary</strong> (repeated work, unnecessary object creation)</li>
+<li><strong>Doing more lookup work than necessary</strong> (globals, dotted attribute access)</li>
+<li><strong>Not using faster machinery that already exists</strong> (built-ins, the right data structure)</li>
+<li><strong>Not measuring at all</strong> (optimizing blind)</li>
+</ul>
+<p>Understanding each one individually is useful. Understanding the <em>shape</em> they share — unnecessary work repeated many times — is what lets you spot new instances you've never seen before.</p>
+<h2>Example</h2>
+<p>Say you're building a report by joining log lines into one string, and checking each new line against a list of "already seen" entries to avoid duplicates:</p>
+<pre><code class="language-python">seen = []
+report = &quot;&quot;
+for line in logs:
+    if line not in seen:        # membership check
+        report += line + &quot;\n&quot;   # string concatenation
+        seen.append(line)
+</code></pre>
+<p>For 100 log lines, this finishes instantly. For 500,000 log lines, this can take minutes — not because the machine is slow, but because both the <code>in seen</code> check and the <code>+=</code> are doing far more work per iteration than they need to. That gap between "small input, fine" and "large input, unusable" is the tell that you've hit one of the ten patterns below.</p>
+<h2>Intuition</h2>
+<p>Before touching code, an experienced engineer asks one question repeatedly: <strong>"How much total work does this do as the input grows, and is any of that work avoidable?"</strong></p>
+<p>Two follow-up instincts come out of that:</p>
+<ol>
+<li><strong>Is something being rebuilt that could just be extended?</strong> Strings and lists that grow via <code>+=</code> inside a loop often get fully recopied each time, rather than appended to.</li>
+<li><strong>Is something being searched that could be looked up instead?</strong> Checking "is X in this collection" is fundamentally a search problem, and different data structures solve search at wildly different speeds.</li>
+</ol>
+<p>Once you internalize those two questions, most of the ten habits collapse into two families: <strong>needless copying</strong> and <strong>needless searching/recomputing</strong>. The rest — globals, built-ins, wrong data structures — are specific instances of those same ideas.</p>
+<h2>Brute Force Solution</h2>
+<p>The "brute force" version of almost any of these problems is the natural first draft: write a loop, do the obvious operation each iteration, don't think about the underlying data structure's complexity.</p>
+<p><strong>Idea:</strong> Solve the problem the most direct, literal way — loop through data, mutate a string or list with <code>+=</code>, check membership with <code>in</code> on a list, recompute anything you need fresh each time.</p>
+<p><strong>Algorithm:</strong>
+1. Initialize an empty accumulator (string, list, or counter).
+2. For each item, perform the operation directly against that accumulator.
+3. Repeat until done.</p>
+<p><strong>Advantages:</strong>
+- Obvious to write and to read.
+- Correct — it produces the right answer.
+- Fine for small inputs (tens to low hundreds of items).</p>
+<p><strong>Disadvantages:</strong>
+- Each operation may silently cost more than it looks like it does (e.g., <code>+=</code> on a string is O(n), not O(1)).
+- Costs compound across iterations, turning an O(n) <em>intent</em> into O(n²) <em>actual</em> behavior.
+- Doesn't scale — the same code that was instant in testing becomes unusable in production.</p>
+<p><strong>Time complexity:</strong> Often O(n²) in practice, even though the code reads like O(n).
+<strong>Space complexity:</strong> O(n), but with far more intermediate allocation than necessary (each recopy is a temporary object).</p>
+<h2>Optimal Solution</h2>
+<p>The optimal version isn't a single trick — it's applying the right primitive to each sub-problem. Here's the mapping:</p>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Root Cause</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>result += item</code> in a loop (string)</td>
+<td>Strings are immutable; each <code>+=</code> copies everything before it</td>
+<td>Collect into a list, <code>"".join(list)</code> once</td>
+</tr>
+<tr>
+<td><code>result += [item]</code> in a loop (list)</td>
+<td>Same copying problem, different container</td>
+<td>Use <code>.append()</code> / <code>.extend()</code></td>
+</tr>
+<tr>
+<td>Slow <code>item in collection</code></td>
+<td>Linear scan on a list</td>
+<td>Use a <code>set</code> or <code>dict</code> (hash-based O(1) lookup)</td>
+</tr>
+<tr>
+<td>Recomputing the same value every iteration</td>
+<td>Work that doesn't depend on the loop variable is redone anyway</td>
+<td>Hoist it out of the loop, compute once</td>
+</tr>
+<tr>
+<td>Slow attribute/variable access</td>
+<td>Global and <code>self.</code> lookups traverse more scope than a local variable</td>
+<td>Cache the value in a local variable before the loop</td>
+</tr>
+<tr>
+<td>Hand-written loop doing built-in work</td>
+<td>Every step pays Python's interpreter overhead</td>
+<td>Use <code>map</code>, comprehensions, <code>sum</code>, <code>sorted</code>, or NumPy — implemented in C</td>
+</tr>
+<tr>
+<td>Wrong container for the access pattern</td>
+<td>List = linear scan, dict/set = hash jump</td>
+<td>Pick dict/set when you need frequent lookups</td>
+</tr>
+<tr>
+<td>Repeated deep copies inside a loop</td>
+<td>Every copy walks and rebuilds the whole structure</td>
+<td>Build read-only data once, outside the loop</td>
+</tr>
+</tbody>
+</table>
+<p>The shared principle underneath all eight rows: <strong>move fixed-cost work outside the loop, and match the data structure to the operation you perform most.</strong></p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def build_report(logs: list[str]) -&gt; str:
+    &quot;&quot;&quot;Join unique log lines into a single report string efficiently.&quot;&quot;&quot;
+    seen: set[str] = set()      # O(1) membership checks
+    unique_lines: list[str] = []  # accumulate, don't concatenate
+
+    for line in logs:
+        if line not in seen:     # hash lookup, not linear scan
+            seen.add(line)
+            unique_lines.append(line)  # append, not +=
+
+    return &quot;\n&quot;.join(unique_lines)  # single join, not repeated copies
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>seen: set[str] = set()</code> — a set gives O(1) average-case membership checks, replacing the O(n) scan a list would require.</li>
+<li><code>unique_lines: list[str] = []</code> — a plain list used with <code>.append()</code>, avoiding any string recopying during the loop.</li>
+<li><code>if line not in seen</code> — this is the fast membership check; on a list this line alone would turn the whole function into O(n²).</li>
+<li><code>seen.add(line)</code> — O(1) insertion, keeping future lookups fast.</li>
+<li><code>unique_lines.append(line)</code> — O(1) amortized append, no copying of prior elements.</li>
+<li><code>"\n".join(unique_lines)</code> — builds the final string exactly once, instead of rebuilding it on every iteration like <code>+=</code> would.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Input: <code>logs = ["error A", "error B", "error A", "error C"]</code></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>line</th>
+<th>in seen?</th>
+<th>seen</th>
+<th>unique_lines</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>"error A"</td>
+<td>No</td>
+<td>{"error A"}</td>
+<td>["error A"]</td>
+</tr>
+<tr>
+<td>2</td>
+<td>"error B"</td>
+<td>No</td>
+<td>{"error A", "error B"}</td>
+<td>["error A", "error B"]</td>
+</tr>
+<tr>
+<td>3</td>
+<td>"error A"</td>
+<td>Yes</td>
+<td>(unchanged)</td>
+<td>(unchanged)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>"error C"</td>
+<td>No</td>
+<td>{"error A", "error B", "error C"}</td>
+<td>["error A", "error B", "error C"]</td>
+</tr>
+</tbody>
+</table>
+<p>Final <code>"\n".join(...)</code> produces:</p>
+<pre><code>error A
+error B
+error C
+</code></pre>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> O(n) — each log line is processed once, and both the set lookup/insert and list append are O(1) on average. The brute-force version with a list-based <code>seen</code> and string <code>+=</code> is effectively O(n²): O(n) for the membership scan times O(n) iterations, plus O(n) per string copy.</li>
+<li><strong>Space:</strong> O(n) — one set and one list, each holding at most n elements, plus the final joined string. This is unavoidable since the output must contain all unique lines.</li>
+<li><strong>Why this is correct:</strong> hash-based sets guarantee average O(1) lookup/insert because they compute a hash once and jump to a bucket, rather than comparing against every existing element.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p>If you don't need to preserve insertion order and just want unique lines with no report string, <code>set(logs)</code> alone does the deduplication in one line, at the cost of losing the original ordering (fixed in Python 3.7+ dicts, but not in plain sets). If memory is tighter than CPU time, a generator-based approach with <code>dict.fromkeys(logs)</code> (which does preserve order) can dedupe without materializing an intermediate set and list separately:</p>
+<pre><code class="language-python">&quot;\n&quot;.join(dict.fromkeys(logs))
+</code></pre>
+<p>This trades a slightly less obvious idiom for one fewer explicit container.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty input</strong> (<code>logs = []</code>) — the loop never executes; <code>join</code> on an empty list returns <code>""</code>, which is correct.</li>
+<li><strong>All duplicates</strong> (<code>["a", "a", "a"]</code>) — <code>seen</code> prevents any duplicate from reaching <code>unique_lines</code>; output is <code>"a"</code>.</li>
+<li><strong>Single element</strong> — works identically to the general case, just with one iteration.</li>
+<li><strong>Very large input</strong> (millions of lines) — this is exactly where the O(n) approach separates from the O(n²) brute-force version in real, measurable time.</li>
+<li><strong>Non-string elements</strong> — if <code>logs</code> contains non-hashable items (like lists), <code>set</code> membership checks will raise a <code>TypeError</code>; the function assumes hashable, string-like input.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Using <code>+=</code> to build a string inside a loop instead of collecting into a list and joining once.</li>
+<li>Using <code>+=</code> to grow a list instead of <code>.append()</code>/<code>.extend()</code>.</li>
+<li>Checking membership against a <code>list</code> when a <code>set</code> or <code>dict</code> would do the same job in constant time.</li>
+<li>Recomputing a value inside a loop that never changes between iterations.</li>
+<li>Relying on global variables or repeated <code>self.attr</code> lookups instead of caching into a local variable.</li>
+<li>Writing a manual loop for something a built-in (<code>sum</code>, <code>sorted</code>, <code>map</code>, list comprehension, NumPy) already does faster in C.</li>
+<li>Deep-copying data inside a loop when the data is never mutated and could be built once outside it.</li>
+<li>"Optimizing" based on a guess about where the code is slow, instead of profiling first.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>"Why is <code>list</code> membership checking O(n) but <code>set</code>/<code>dict</code> membership checking O(1) on average?"</li>
+<li>"What's the actual time complexity of building a string with <code>+=</code> in a loop, and why?"</li>
+<li>"How would you profile a Python function to find its actual bottleneck?"</li>
+<li>"When would a list still be the better choice over a set or dict, despite slower membership checks?"</li>
+<li>"Why are built-in functions like <code>sum()</code> or <code>sorted()</code> typically faster than an equivalent hand-written loop?"</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Two Sum (LeetCode #1)</strong> — the classic example of trading an O(n²) brute-force nested loop for an O(n) solution using a hash map for lookups.</li>
+<li><strong>Contains Duplicate (LeetCode #217)</strong> — directly tests whether you reach for a set instead of nested list comparisons.</li>
+<li><strong>Longest Substring Without Repeating Characters (LeetCode #3)</strong> — relies on set/dict membership checks inside a sliding window for efficiency.</li>
+<li><strong>Group Anagrams (LeetCode #49)</strong> — depends on choosing dict as the right structure for grouping instead of repeated list scans.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Slow Python code is rarely about "Python being slow" — it's almost always about doing more work per operation than the code appears to. Immutable strings punish <code>+=</code> in loops. Lists punish membership checks. Loops punish anything that could've been hoisted out or handed to a built-in. And no amount of intuition beats actually profiling before you optimize — measure first, fix the real bottleneck second.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with a live loop-vs-built-in speed comparison, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <strong>Fun with Learning Technology</strong>, a series built around making the fundamentals — algorithms, data structures, and the habits behind clean, efficient code — genuinely click, one problem at a time.</p>
+<h2>Call To Action</h2>
+<p>If this helped, drop a like on the video, subscribe on YouTube so you don't miss the next one, and subscribe to the Substack for the written breakdowns. Comments with your own "slow code" stories are always welcome — and if this saved you a debugging session, share it with someone who'd benefit.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>You wrote a loop over 100k items and it&#x27;s slow — first move?</summary><p>Profile before guessing (cProfile/timeit); don&#x27;t optimize blind, find which mistake actually applies.</p></details><details class='card2'><summary>String concat in a loop with += — cost and fix?</summary><p>O(n²) since each += copies the whole string; use &#x27;&#x27;.join(list) instead, O(n).</p></details><details class='card2'><summary>Growing a list wrong — what&#x27;s the antipattern?</summary><p>Inserting at index 0 repeatedly (O(n) each); append() is O(1) amortized, or use collections.deque for left-pushes.</p></details><details class='card2'><summary>&#x27;x in my_list&#x27; inside a hot loop — why bad, what&#x27;s the fix?</summary><p>List membership is O(n) scan; convert to a set/dict first for O(1) average lookup.</p></details><details class='card2'><summary>Recomputing len(x) or a function call every loop iteration — fix?</summary><p>Hoist invariant work outside the loop; compute once, reuse the cached value.</p></details><details class='card2'><summary>Global variable + dotted attribute lookup vs local var in a loop — why slower?</summary><p>Global/attribute access re-resolves each iteration; local variable lookup is a fast array index, so alias to a local first.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
