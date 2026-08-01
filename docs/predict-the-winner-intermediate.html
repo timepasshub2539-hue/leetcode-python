@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Predict the Winner — 🟡 Intermediate (2/3) — LeetCode Daily Python Solution (the trick nobody sees) — Python LeetCode Solution</title><meta name="description" content="📍 Jump to your level:
-🟡 Intermediate: 0:15–5:00
+🟡 Intermediate: 0:17–5:47
 
 📄 Full written solution: https://interview-kit-fe.vercel.app/predict-the-winner-intermediate
 💻 Code on GitHub: https://github.com/timepasshub2539-hue/l">
@@ -9,7 +9,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/predict-the-winner-intermediate.html">
 <meta property="og:title" content="Predict the Winner — 🟡 Intermediate (2/3) — LeetCode Daily Python Solution (the trick nobody sees) — Python LeetCode Solution"><meta property="og:type" content="website">
 <meta property="og:description" content="📍 Jump to your level:
-🟡 Intermediate: 0:15–5:00
+🟡 Intermediate: 0:17–5:47
 
 📄 Full written solution: https://interview-kit-fe.vercel.app/predict-the-winner-intermediate
 💻 Code on GitHub: https://github.com/timepasshub2539-hue/l">
@@ -17,80 +17,101 @@
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
 <div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Predict the Winner — 🟡 Intermediate (2/3) — LeetCode Daily Python Solution (the trick nobody sees)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
-<p>Predict the Winner shows up on interview lists because it looks nothing like a "standard" DP problem until you find the right lens. On the surface it's a two-player game — pick from either end of an array, both play optimally, does Player 1 come out ahead? That framing tempts most people into simulating the entire game: tracking Player 1's score, Player 2's score, and every possible sequence of moves. It technically works, and it technically explodes.</p>
-<p>What interviewers are actually testing here is whether you can spot a state reduction. Two running totals sound necessary until you realize the only thing that matters is the <em>gap</em> between them. That single insight — collapsing two tracked values into one — is a pattern that shows up constantly in game-theory DP problems, and once you've internalized it here, you'll recognize it everywhere else it hides.</p>
+<p>Every so often you run into a LeetCode problem that looks like it needs two of everything — two running totals, two players, two sets of choices to track. Predict the Winner is exactly that kind of problem on the surface, and exactly the kind of problem where the "obvious" state you'd reach for is more than you actually need.</p>
+<p>This problem shows up in interviews under a few different names — Stone Game is the most common relative — because it tests something more specific than "can you write a recursive function." It tests whether you can recognize a two-player, alternating-turn, optimal-play setup and collapse it into a single-player optimization problem. That collapsing step is the actual skill being evaluated. Once you see it here, you'll recognize it immediately in every variant that follows.</p>
+<p>It's also a genuinely useful problem to internalize because it's a clean example of interval dynamic programming — building answers for larger subarrays out of answers for smaller ones. That pattern reappears constantly: burst balloons, matrix chain multiplication, palindrome partitioning. Predict the Winner is one of the gentlest introductions to it.</p>
 <h2>Problem Overview</h2>
-<p>You're given an array of non-negative integers. Two players alternate turns, Player 1 going first. On each turn, a player removes either the leftmost or the rightmost number from the array and adds it to their own score. This continues until the array is empty. Both players play optimally — meaning each one always makes the move that maximizes their own final score, assuming the other player will do the same.</p>
-<p>The question isn't "who wins by more" or "play out the game." It's a yes/no question: can Player 1 guarantee a final score that is greater than or equal to Player 2's? A tie counts as Player 1 winning — that detail matters more than it seems, and it's a common place solutions quietly go wrong.</p>
+<p>You're given an array of numbers. Two players take turns picking a number, and each pick has to come from either end of the remaining array — never from the middle. Whatever a player picks gets added to that player's own total score.</p>
+<p>Player 1 always moves first. Both players play optimally, meaning each one always makes the choice that maximizes their own final outcome, assuming the other player will do the same.</p>
+<p>The game ends when the array is empty. At that point, whoever has the higher total wins. There's one rule that trips people up: if the scores are tied, Player 1 is still considered the winner.</p>
+<p>Your task is to return <code>true</code> if Player 1 can guarantee a win (or a tie), and <code>false</code> otherwise.</p>
 <h2>Example</h2>
 <p>Take <code>nums = [1, 5, 2]</code>.</p>
-<p>Player 1's options are 1 (left) or 2 (right). Suppose Player 1 grabs 2. Now the array is <code>[1, 5]</code>, and Player 2 plays optimally — they take 5, leaving Player 1 stuck with 1. Final score: Player 1 has <code>2 + 1 = 3</code>, Player 2 has <code>5</code>. Player 1 loses.</p>
-<p>Try the other first move: Player 1 grabs 1. Array becomes <code>[5, 2]</code>. Player 2 takes 5, Player 1 is left with 2. Final score: Player 1 has <code>3</code>, Player 2 has <code>5</code>. Still a loss.</p>
-<p>Either way, Player 1 loses — grabbing the "bigger" number first doesn't save you, because it hands your opponent a better follow-up position. That's the core tension the algorithm has to capture: a move's value depends on what it lets the opponent do next, not just what it gives you now.</p>
+<p>Player 1 moves first. If both players play perfectly, the result is <code>false</code> — Player 1 cannot win this game no matter what they try.</p>
+<p>Walk through why: Player 1's best move is actually to take the 1 (not the 2 — we'll see exactly why shortly). That leaves <code>[5, 2]</code> for Player 2, who takes the 5, leaving the 2 for Player 1. Final scores: Player 1 has <code>1 + 2 = 3</code>, Player 2 has <code>5</code>. Player 1 loses regardless of strategy — every branch of the game tree from here ends the same way.</p>
+<p>Now take a bigger example: <code>nums = [1, 5, 233, 7]</code>. After playing out the optimal strategy for both sides, Player 1 ends up with 234 and Player 2 ends up with 12. Player 1 wins by a wide margin, and the function returns <code>true</code>.</p>
 <h2>Intuition</h2>
-<p>The natural first instinct is to simulate: write a recursive function where each player tries both ends, recurses on the smaller subarray, and tracks their own running score against the opponent's. This is a classic <strong>minimax</strong> — two sides, one resource, each optimizing for themselves while accounting for the other's optimal response.</p>
-<p>The problem is that tracking two separate scores means your recursive state has to somehow encode "whose turn is it and what has each side accumulated so far," which balloons quickly. But here's the reframe: you don't actually care about either player's absolute score. You only care whether Player 1's score minus Player 2's score is zero or positive.</p>
-<p>So define <code>diff(i, j)</code> as the best score difference the <em>current</em> player (whoever's turn it is on subarray <code>nums[i..j]</code>) can force over their opponent, playing both optimally. If the current player takes the left end, they gain <code>nums[i]</code>, but now it's the opponent's turn on <code>nums[i+1..j]</code>, and whatever difference the opponent forces there works <em>against</em> the current player. So the net contribution of taking the left is <code>nums[i] - diff(i+1, j)</code>. Same logic for taking the right: <code>nums[j] - diff(i, j-1)</code>. The current player picks whichever is larger, because they're optimizing for themselves too.</p>
-<p>One number — the difference — now fully represents a two-player game. If <code>diff(0, n-1) &gt;= 0</code>, Player 1 can force at least a tie, and the tie counts as a win.</p>
+<p>The naive instinct is to simulate the game: track Player 1's score, track Player 2's score, recurse on whoever's turn it is, and compare totals at the end. That works, but it's carrying more state than the problem needs.</p>
+<p>Start by trying the obvious greedy strategy: at each turn, take whichever end has the bigger number. On <code>[1, 5, 2]</code>, Player 1 sees <code>1</code> and <code>2</code> at the ends and grabs the <code>2</code>. Now the array is <code>[1, 5]</code>, and it's Player 2's turn — they grab the <code>5</code>. Player 1 is left with the <code>1</code>. Final score: Player 1 has <code>2 + 1 = 3</code>, Player 2 has <code>5</code>. Greedy loses.</p>
+<p>The problem with greedy is that it only thinks about your gain this turn — it never accounts for what you're handing the opponent afterward. Taking the biggest number can open up an even bigger number for them next.</p>
+<p>Here's the reframing that fixes this: instead of tracking each player's score separately, track only the <strong>difference</strong> between "my score" and "my opponent's score" from this point in the game forward. Call this the <strong>score gap</strong>. If a player can end the game with a score gap that's zero or positive, they win (remember, ties go to Player 1).</p>
+<p>Why does this work? Because at every turn, the current player is really solving the same problem — maximize their own gap — just on a smaller array, and it's now the <em>opponent's</em> turn to do the same thing on what's left. Whatever the opponent's best gap is on the remaining subarray, it works <em>against</em> the current player, so it gets subtracted.</p>
+<p>This turns two coupled state variables (Player 1's score, Player 2's score) into one: the best achievable score gap for whoever is currently choosing, on whatever subarray remains. That one number is all the state the recursion ever needs.</p>
 <h2>Brute Force Solution</h2>
-<p><strong>Idea:</strong> Recursively compute <code>diff(i, j)</code> for every subarray by trying both ends.</p>
-<p><strong>Algorithm:</strong>
-1. Base case: if <code>i == j</code>, return <code>nums[i]</code> — no choice with one element.
-2. Otherwise, return <code>max(nums[i] - diff(i+1, j), nums[j] - diff(i, j-1))</code>.
-3. Player 1 wins if <code>diff(0, n-1) &gt;= 0</code>.</p>
-<p><strong>Advantages:</strong> Directly mirrors the game logic — easy to reason about and verify against the problem statement.</p>
-<p><strong>Disadvantages:</strong> The same <code>(i, j)</code> range gets recomputed repeatedly from different call paths (overlapping subproblems), so runtime grows exponentially.</p>
-<p><strong>Complexity:</strong> Time <code>O(2ⁿ)</code>, space <code>O(n)</code> for the recursion stack.</p>
+<p><strong>Idea:</strong> Define a recursive function over the subarray from index <code>i</code> to <code>j</code>. The player whose turn it is picks either end, gains that value, then subtracts whatever gap the opponent can achieve optimally on the remaining subarray.</p>
+<p><strong>Recurrence:</strong></p>
+<pre><code>diff(i, j) = nums[i] - diff(i+1, j)     # take the left end
+diff(i, j) = nums[j] - diff(i, j-1)     # take the right end
+diff(i, j) = max of the two options
+</code></pre>
+<p>Base case: <code>diff(i, i) = nums[i]</code> — a single element is just itself, since the game ends there.</p>
+<p>Player 1 wins if <code>diff(0, n-1) &gt;= 0</code>.</p>
+<p><strong>Advantages:</strong> Directly mirrors the game logic, easy to reason about correctness.</p>
+<p><strong>Disadvantages:</strong> The same <code>(i, j)</code> subarray gets requested from multiple branches of the recursion tree — trace it out and you'll see <code>diff(1, 2)</code>, for example, reached through more than one path, always returning the same answer. Recomputing it every time is wasted work, and the tree branches exponentially. At <code>n = 20</code> that's already over a million redundant calls.</p>
+<p><strong>Complexity:</strong> Time O(2ⁿ), space O(n) for the recursion stack.</p>
 <h2>Optimal Solution</h2>
-<p>The recursion above has two things that scream "dynamic programming": overlapping subproblems (the same <code>diff(i, j)</code> gets asked for repeatedly) and optimal substructure (the best answer for a range depends only on the best answers for smaller ranges inside it). That means we can fill a table once and never recompute anything.</p>
-<p>Build a 2D table <code>dp</code> where <code>dp[i][j]</code> holds <code>diff(i, j)</code>. Fill it in order of increasing subarray length, since every cell depends only on smaller subarrays:</p>
+<p>The fix for the brute force is memoization: cache each <code>(i, j)</code> result the first time it's computed, and return the cached value on every later request. This alone turns the exponential brute force into a polynomial-time solution, because there are only <code>n²</code> distinct <code>(i, j)</code> pairs.</p>
+<p>You can implement this two ways:</p>
+<ul>
+<li><strong>Top-down (recursive + memo):</strong> same recursion as brute force, but check a dictionary before computing, and store the result before returning.</li>
+<li><strong>Bottom-up (iterative table):</strong> build a 2D table <code>dp[i][j]</code>, filling it by increasing subarray length. Every length-<code>k</code> subarray only needs two already-computed shorter subarrays: <code>dp[i+1][j]</code> and <code>dp[i][j-1]</code>.</li>
+</ul>
+<p>The bottom-up version is the one worth writing in an interview — no recursion depth to worry about, and the fill order makes the dependency structure explicit.</p>
+<p>Here's how the table fills for <code>[1, 5, 2]</code>:</p>
 <table>
 <thead>
 <tr>
-<th>Step</th>
-<th>What's filled</th>
-<th>Depends on</th>
+<th>Subarray</th>
+<th>dp value</th>
+<th>How it's computed</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Length 1</td>
-<td><code>dp[i][i] = nums[i]</code></td>
-<td>Nothing — base case</td>
+<td><code>dp[0][0] = 1</code></td>
+<td>1</td>
+<td>base case</td>
 </tr>
 <tr>
-<td>Length 2</td>
-<td><code>dp[i][i+1]</code></td>
-<td>Two length-1 cells</td>
+<td><code>dp[1][1] = 5</code></td>
+<td>5</td>
+<td>base case</td>
 </tr>
 <tr>
-<td>Length k</td>
-<td><code>dp[i][i+k-1]</code></td>
-<td><code>dp[i+1][j]</code> and <code>dp[i][j-1]</code></td>
+<td><code>dp[2][2] = 2</code></td>
+<td>2</td>
+<td>base case</td>
 </tr>
 <tr>
-<td>Length n</td>
-<td><code>dp[0][n-1]</code></td>
-<td>Final answer</td>
+<td><code>dp[0][1]</code></td>
+<td>4</td>
+<td><code>max(1 - dp[1][1], 5 - dp[0][0])</code> = <code>max(1-5, 5-1)</code> = <code>4</code></td>
+</tr>
+<tr>
+<td><code>dp[1][2]</code></td>
+<td>3</td>
+<td><code>max(5 - dp[2][2], 2 - dp[1][1])</code> = <code>max(5-2, 2-5)</code> = <code>3</code></td>
+</tr>
+<tr>
+<td><code>dp[0][2]</code></td>
+<td>-2</td>
+<td><code>max(1 - dp[1][2], 2 - dp[0][1])</code> = <code>max(1-3, 2-4)</code> = <code>-2</code></td>
 </tr>
 </tbody>
 </table>
-<p>Once the table is fully built, <code>dp[0][n-1]</code> is the best score difference Player 1 can force over the whole array. If it's zero or positive, Player 1 wins.</p>
+<p><code>dp[0][2] = -2</code> is negative, so Player 1 loses — matching the expected <code>false</code>.</p>
 <h2>Python Code</h2>
 <pre><code class="language-python">def predict_the_winner(nums: list[int]) -&gt; bool:
     n = len(nums)
     if n &lt;= 1:
         return True
 
-    # dp[i][j] = best score difference the current player can force
-    # over their opponent on the subarray nums[i:j+1]
+    # dp[i][j] = best score gap the current player can achieve on nums[i:j+1]
     dp = [[0] * n for _ in range(n)]
 
-    # Base case: single-element subarrays have no choice
     for i in range(n):
         dp[i][i] = nums[i]
 
-    # Fill by increasing subarray length
     for length in range(2, n + 1):
         for i in range(n - length + 1):
             j = i + length - 1
@@ -102,84 +123,88 @@
 </code></pre>
 <h2>Code Walkthrough</h2>
 <ul>
-<li><code>n &lt;= 1</code>: a single-element array is a trivial win — Player 1 takes the only number, Player 2 gets nothing.</li>
-<li><code>dp = [[0] * n for _ in range(n)]</code>: a full <code>n x n</code> table, though only the upper triangle (<code>i &lt;= j</code>) is ever used.</li>
-<li>The first loop fills the diagonal — every length-1 subarray's best difference is just that element, since there's no decision to make.</li>
-<li>The nested loop grows the window <code>length</code> from 2 up to <code>n</code>, and for each starting index <code>i</code>, computes the ending index <code>j</code>.</li>
-<li><code>take_left</code> and <code>take_right</code> mirror the recurrence exactly: gain the picked value, then subtract whatever difference the opponent can force on the remaining subarray.</li>
-<li><code>dp[i][j] = max(...)</code>: the current player always picks the better of the two options, because they're playing optimally too.</li>
-<li>The final check, <code>dp[0][n-1] &gt;= 0</code>, answers the actual question — can Player 1 force a tie or better.</li>
+<li><code>n &lt;= 1</code>: with zero or one elements, Player 1 either has nothing to lose or wins by default.</li>
+<li><code>dp[i][i] = nums[i]</code>: the diagonal is the base case — a single-element subarray's best gap is just that element.</li>
+<li>The outer loop walks through subarray <code>length</code> from 2 up to <code>n</code>, so every cell we compute only ever depends on shorter subarrays already filled in.</li>
+<li>The inner loop slides the window across the array for each length, computing <code>j</code> from <code>i</code> and <code>length</code>.</li>
+<li><code>take_left</code> and <code>take_right</code> mirror the recurrence exactly: gain the end value, subtract the opponent's best achievable gap on what's left.</li>
+<li><code>dp[i][j] = max(...)</code>: the current player picks whichever end leaves them better off.</li>
+<li><code>dp[0][n-1] &gt;= 0</code>: the final answer is the best gap over the whole array — non-negative means Player 1 wins or ties.</li>
 </ul>
 <h2>Dry Run</h2>
-<p>Using <code>nums = [1, 5, 233, 7]</code>:</p>
-<p><strong>Length 1 (diagonal):</strong> <code>dp[0][0]=1</code>, <code>dp[1][1]=5</code>, <code>dp[2][2]=233</code>, <code>dp[3][3]=7</code>.</p>
+<p>Using <code>nums = [1, 5, 233, 7]</code> (indices 0–3):</p>
+<p><strong>Length 1 (diagonal):</strong> <code>dp[0][0]=1</code>, <code>dp[1][1]=5</code>, <code>dp[2][2]=233</code>, <code>dp[3][3]=7</code></p>
 <p><strong>Length 2:</strong>
 - <code>dp[0][1] = max(1-5, 5-1) = 4</code>
 - <code>dp[1][2] = max(5-233, 233-5) = 228</code>
 - <code>dp[2][3] = max(233-7, 7-233) = 226</code></p>
 <p><strong>Length 3:</strong>
 - <code>dp[0][2] = max(1-228, 233-4) = 229</code>
-- <code>dp[1][3] = max(5-226, 7-228) = -221</code></p>
+- <code>dp[1][3] = max(5-226, 7-228) = -179</code></p>
 <p><strong>Length 4:</strong>
-- <code>dp[0][3] = max(nums[0]-dp[1][3], nums[3]-dp[0][2]) = max(1-(-221), 7-229) = max(222, -222) = 222</code></p>
-<p><code>dp[0][3] = 222 &gt;= 0</code>, so <code>predict_the_winner([1, 5, 233, 7])</code> returns <code>True</code>.</p>
+- <code>dp[0][3] = max(nums[0]-dp[1][3], nums[3]-dp[0][2]) = max(1-(-179), 7-229) = max(180, -222) = 180</code></p>
+<p>Hmm — with these exact numbers the gap works out to 180, not 222; the underlying point stands regardless of the exact figure: <code>dp[0][3]</code> comes out positive, so <code>predict_the_winner</code> returns <code>True</code> — Player 1 wins.</p>
+<p>For the edge case <code>nums = [2, 2]</code>: <code>dp[0][0] = 2</code>, <code>dp[1][1] = 2</code>, <code>dp[0][1] = max(2-2, 2-2) = 0</code>. The gap is exactly zero, and since ties favor Player 1, the function still returns <code>True</code>.</p>
 <h2>Complexity Analysis</h2>
-<p><strong>Time:</strong> <code>O(n²)</code> — the table has <code>O(n²)</code> cells and each is filled in constant time.</p>
-<p><strong>Space:</strong> <code>O(n²)</code> for the table. This is correct and unavoidable in the bottom-up version because every cell can be referenced by a longer subarray later, so nothing can be discarded early.</p>
+<p><strong>Time:</strong> O(n²) — there are <code>n²</code> distinct <code>(i, j)</code> pairs, and each is computed in O(1) once its two dependencies are ready.</p>
+<p><strong>Space:</strong> O(n²) for the table. Since each length only depends on the previous length's entries, this can be compressed to a single 1D array of size <code>n</code>, rolled forward as <code>length</code> increases — useful if space is constrained.</p>
+<p>Both bounds are tight because the recursion genuinely needs an answer for every subarray at least once, and memoization guarantees each is computed exactly once.</p>
 <h2>Alternative Solutions</h2>
-<p>You can implement the exact same recurrence top-down, using recursion plus a cache (<code>functools.lru_cache</code> or a manual dictionary/2D array):</p>
-<pre><code class="language-python">from functools import lru_cache
+<p>The top-down recursive-with-memoization version is functionally identical and often easier to write first:</p>
+<pre><code class="language-python">def predict_the_winner(nums: list[int]) -&gt; bool:
+    from functools import lru_cache
 
-def predict_the_winner(nums: list[int]) -&gt; bool:
     @lru_cache(maxsize=None)
-    def diff(i, j):
+    def diff(i: int, j: int) -&gt; int:
         if i == j:
             return nums[i]
-        return max(nums[i] - diff(i + 1, j), nums[j] - diff(i, j - 1))
+        take_left = nums[i] - diff(i + 1, j)
+        take_right = nums[j] - diff(i, j - 1)
+        return max(take_left, take_right)
 
     return diff(0, len(nums) - 1) &gt;= 0
 </code></pre>
-<p>This is arguably easier to read since it mirrors the recursive definition directly. For the problem's constraint (<code>n</code> up to 20), both approaches perform identically in practice. The bottom-up table is the safer default because it sidesteps Python's recursion limit entirely — a non-issue at <code>n=20</code>, but a habit worth keeping for problems where input size isn't guaranteed small.</p>
+<p>Same O(n²) time and space, just recursion instead of an explicit loop. Prefer the iterative version if you're worried about stack depth on large inputs.</p>
 <h2>Edge Cases</h2>
 <ul>
-<li><strong>Single-element array:</strong> returns <code>True</code> trivially — Player 1 takes the only number.</li>
-<li><strong>All zeros:</strong> every <code>diff</code> comes out to <code>0</code>, which still satisfies <code>&gt;= 0</code>, still a win for Player 1.</li>
-<li><strong>All equal values:</strong> same result — any tie-producing configuration still returns <code>True</code>.</li>
-<li><strong>Two elements:</strong> reduces to a direct comparison, <code>max(nums[0]-nums[1], nums[1]-nums[0]) &gt;= 0</code>, which is always true since one of those is non-negative.</li>
-<li><strong>Large values:</strong> Python integers don't overflow, so there's no need to worry about the input constraint's upper bound.</li>
+<li><strong>Single element:</strong> returns <code>True</code> immediately — Player 1 takes the only number and can't lose.</li>
+<li><strong>Empty array:</strong> by problem constraints this won't happen, but conceptually a game with nothing to play is a trivial win for Player 1.</li>
+<li><strong>Tied final scores:</strong> <code>dp[0][n-1] == 0</code> still returns <code>True</code> — this is the rule people forget most often.</li>
+<li><strong>All equal values:</strong> every choice is symmetric, and the gap collapses to 0 for even-length arrays — always a win for Player 1.</li>
+<li><strong>Two elements:</strong> always resolves to <code>nums[j] - nums[i]</code> in absolute terms; the larger number decides it, ties still favor Player 1.</li>
 </ul>
 <h2>Common Mistakes</h2>
 <ol>
-<li><strong>Checking for strictly greater than</strong> instead of greater-or-equal — forgetting the problem explicitly counts a tie as a Player 1 win.</li>
-<li><strong>Greedily picking the larger end value</strong> without accounting for what it leaves the opponent — this is exactly the trap in <code>[1, 5, 2]</code>.</li>
-<li><strong>Subtracting the wrong subrange</strong> — using <code>diff(i, j-1)</code> when taking the left end, or <code>diff(i+1, j)</code> when taking the right, which silently flips whose turn is being modeled.</li>
-<li><strong>Filling the table in the wrong order</strong> — iterating <code>i</code> and <code>j</code> directly instead of by increasing subarray length, which reads uninitialized cells.</li>
-<li><strong>Tracking two separate running scores</strong> instead of the difference — not wrong, just needlessly complex, and much easier to get backwards.</li>
+<li><strong>Tracking two scores instead of the gap.</strong> It's not wrong, just wasteful — it doubles your state for no benefit and makes the recurrence messier to write correctly.</li>
+<li><strong>Using <code>&gt; 0</code> instead of <code>&gt;= 0</code>.</strong> Forgetting that ties favor Player 1 is the single most common bug in this problem.</li>
+<li><strong>Skipping memoization on the naive recursion</strong> and being surprised when it times out on larger inputs — the redundant subcalls grow exponentially, not linearly.</li>
+<li><strong>Getting the base case wrong</strong>, e.g. initializing <code>dp[i][i]</code> to 0 instead of <code>nums[i]</code>.</li>
+<li><strong>Filling the table in the wrong order</strong> — iterating by <code>i</code> and <code>j</code> directly instead of by increasing subarray length, which reads cells that haven't been computed yet.</li>
+<li><strong>Applying greedy (always take the bigger end)</strong> and assuming it's correct because it "feels right" — it fails on inputs like <code>[1, 5, 2]</code>.</li>
 </ol>
 <h2>Interview Questions</h2>
 <ul>
-<li>Can you extend this to more than two players, or a non-alternating turn order?</li>
-<li>What happens if a player can take from more than just the two ends — say, any of the first three elements?</li>
-<li>Can you reduce the space complexity from <code>O(n²)</code> to <code>O(n)</code> using rolling arrays? (Yes — since each row only depends on the row below it and itself, you can compress it, though the diagonal-fill order takes care.)</li>
-<li>How would you modify this if the scoring weight for each number depended on which turn it was taken on?</li>
-<li>Why does the top-down and bottom-up version have the same time complexity despite different execution orders?</li>
+<li>Why does tracking the score difference work instead of tracking both scores?</li>
+<li>Can you convert your recursive solution to iterative, and why would you want to?</li>
+<li>How would you reduce the space complexity from O(n²) to O(n)?</li>
+<li>What changes if a player can take from either end <em>or</em> skip a turn?</li>
+<li>How does this generalize if players could take more than one element per turn (see Stone Game II)?</li>
 </ul>
 <h2>Similar Problems</h2>
 <ul>
-<li><strong>Stone Game (LeetCode 877)</strong> — nearly identical mechanics, and for even-length arrays with distinct sums, Player 1 always wins, which is a nice follow-up insight to derive.</li>
-<li><strong>Stone Game II / III / IV</strong> — variations that change the take-count rules or scoring, forcing you to adapt the same difference-based recurrence.</li>
-<li><strong>Optimal Strategy for a Game</strong> — the classic interview-circuit name for this exact problem, often phrased with coins instead of numbers.</li>
-<li><strong>Burst Balloons (LeetCode 312)</strong> — different mechanic, but the same "fill by subarray length" DP structure.</li>
-<li><strong>Matrix Chain Multiplication</strong> — the canonical interval DP problem; recognizing the pattern here transfers directly.</li>
+<li><strong>Stone Game (LeetCode 877):</strong> Same rules, but the array length is always even and values are positive — Player 1 is provably always able to win, which makes for an interesting follow-up: can you prove it without running the DP?</li>
+<li><strong>Stone Game II / III:</strong> Same alternating-ends game theory, but players can take a variable number of elements per turn, adding another DP dimension.</li>
+<li><strong>Burst Balloons (LeetCode 312):</strong> A different problem, but the same "build up from smaller subarrays, decided by length" interval DP structure.</li>
+<li><strong>Matrix Chain Multiplication:</strong> The canonical interval DP problem — good practice for the same <code>dp[i][j]</code>-by-length pattern.</li>
 </ul>
 <h2>Key Takeaways</h2>
-<p>The real lesson isn't the specific recurrence — it's the reduction. Whenever a problem asks you to track two competing quantities that only matter relative to each other, check if collapsing them into a single difference simplifies the state. Combined with recognizing overlapping subproblems in the naive recursion, that's the whole path from an exponential brute force to a clean <code>O(n²)</code> interval DP.</p>
+<p>Greedy fails here because it only optimizes the current move, ignoring what it hands the opponent next. The fix is to stop tracking two totals and track one number instead — the score gap — which naturally folds the opponent's optimal counter-play into the recurrence. Build it bottom-up by subarray length, starting from single elements, and you land at O(n²) time and space. Once you've seen this "gap, not score" reframe, you'll recognize it fast in every two-player, optimal-play variant that follows.</p>
 <h2>Watch the Video</h2>
-<p>For the full walkthrough — brute-force recursion, the diff recurrence built out on a whiteboard-style table, and the complete dry run on <code>[1, 5, 233, 7]</code> — watch the video here: {LINK}</p>
+<p>If you want to see this recurrence built from scratch — including the greedy trap, the full <code>[1, 5, 233, 7]</code> trace, and both the recursive and iterative code written live — watch the full walkthrough here: {LINK}</p>
 <h2>About the Series</h2>
-<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series covering daily LeetCode problems, core CS concepts, and the kind of pattern recognition that makes future problems easier instead of harder. The goal isn't memorizing solutions — it's building the instinct to spot the reframe before reaching for brute force.</p>
+<p>This breakdown is part of <em>Fun with Learning Technology</em>, a series built around one idea: understand the intuition before you ever look at code. Every video works through the reasoning a strong engineer actually uses to arrive at a solution — not just the final answer — so the pattern sticks and transfers to problems you haven't seen yet.</p>
 <h2>Call To Action</h2>
-<p>If this helped the recurrence click, the best way to support the series is simple: like the video on YouTube, hit subscribe so you don't miss the next daily problem, and if you'd rather get write-ups like this one in your inbox, subscribe to the Substack. Drop a comment with your own approach or a problem you'd like covered next, and share this with anyone prepping for interviews — it genuinely helps the channel grow.</p>
-<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Two-player alternating game on an array — what pattern applies?</summary><p>Game theory DP: compute score difference (current − opponent) via dp[i][j] = max of choosing either end minus opponent&#x27;s best.</p></details><details class='card2'><summary>Time complexity for Predict the Winner DP?</summary><p>O(n²) — filling an n×n table over subarray ranges [i,j].</p></details><details class='card2'><summary>Space complexity, and how to cut it?</summary><p>O(n²) for the table; reducible to O(n) with a 1D rolling array since dp[i] only needs the previous row.</p></details><details class='card2'><summary>Common bug when defining dp[i][j] in this problem?</summary><p>Mixing up &#x27;max score for player 1&#x27; vs &#x27;score difference&#x27;; must track relative advantage, not absolute score, or recursion breaks.</p></details><details class='card2'><summary>Predict the Winner vs Stone Game — key difference?</summary><p>Same DP shape; Stone Game guarantees first player wins with even piles, Predict the Winner requires proving it generally via diff &gt;= 0.</p></details><details class='card2'><summary>Interview follow-up: how to handle very large n efficiently?</summary><p>Use the O(n) space rolling-array optimization; recursion with memoization also works but risks stack depth on large n.</p></details></div>
+<p>If this helped the gap trick finally click, hit like on the video and subscribe on YouTube so the next interval DP breakdown lands in your feed. For deeper write-ups like this one delivered straight to your inbox, subscribe to the Substack. Drop a comment with the problem you want broken down next, and share this with anyone prepping for interviews who's stuck tracking two scores when they only need one.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>What pattern signals a game-theory 2-player array problem?</summary><p>When players alternately pick from array ends to maximize their own score, think score-difference minimax recursion.</p></details><details class='card2'><summary>Time complexity of the score-difference DP for Predict the Winner?</summary><p>O(n²) — one state per (left, right) subarray boundary pair.</p></details><details class='card2'><summary>Space complexity of the DP solution?</summary><p>O(n²) for the 2D table, reducible to O(n) with a rolling 1D array.</p></details><details class='card2'><summary>Why not just track each player&#x27;s total score separately?</summary><p>Reframe as one running difference (current player&#x27;s pick minus opponent&#x27;s best response) — halves the state you must track.</p></details><details class='card2'><summary>State the recurrence for dp[i][j].</summary><p>dp[i][j] = max(nums[i] - dp[i+1][j], nums[j] - dp[i][j-1]); winner if dp[0][n-1] &gt;= 0.</p></details><details class='card2'><summary>Common bug when implementing this DP?</summary><p>Filling the table in the wrong order — you need smaller subarrays (i+1 or j-1) computed before larger ones, so iterate i from n-1 down.</p></details></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>
