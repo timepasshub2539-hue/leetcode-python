@@ -1,0 +1,266 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Speed Round Lesson: The Loop That Could Be 1 Step Or 1,000,000 — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/speed-challenge-guess-the-big-o-five-rounds
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/speed-challe">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/speed-challenge-guess-the-big-o-five-rounds.html">
+<meta property="og:title" content="Speed Round Lesson: The Loop That Could Be 1 Step Or 1,000,000 — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/speed-challenge-guess-the-big-o-five-rounds
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/speed-challe">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Speed Round Lesson: The Loop That Could Be 1 Step Or 1,000,000</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Why Big O Still Trips Up Experienced Developers</h2>
+<p>Every coding interview eventually asks the same question in disguise: "What's the time complexity of this?" It sounds simple. It isn't. Interviewers use Big O not to test whether you memorized a formula, but to see whether you can look at code and reason about how it behaves as the input grows from ten items to ten million.</p>
+<p>The dangerous part is that Big O has a handful of visual shortcuts that look reliable and aren't. A nested loop <em>looks</em> quadratic. A loop with a lookup inside it <em>looks</em> like it costs more than it does. Pattern-matching on the shape of the code instead of tracing what the code actually does is exactly how strong developers get tripped up in interviews — not because they don't understand Big O, but because they trust a shortcut that happens to be wrong for this particular snippet.</p>
+<p>This lesson walks through five short code examples, each designed to test a specific assumption. By the end, you'll have a reusable way to check your own guesses instead of relying on pattern recognition.</p>
+<h2>Problem Overview</h2>
+<p>The exercise is straightforward: for each of five code snippets, determine the time complexity — how the number of operations grows as the input size <code>n</code> increases. Some snippets look more expensive than they are. Some look cheaper. The goal isn't just labeling each one "O(n)" or "O(log n)" — it's understanding <em>why</em> that label is correct, and what specifically about the code produces that growth rate.</p>
+<p>Big O describes a growth curve, not a stopwatch reading. It answers: if I double the input, does the work double? Stay the same? Explode? That question is what every one of these five snippets is really asking.</p>
+<h2>Example</h2>
+<p>Take this snippet:</p>
+<pre><code class="language-python">def contains_target(items, target):
+    for item in items:
+        if item == target:
+            return True
+    return False
+</code></pre>
+<p>If <code>items</code> has 10 elements, worst case this checks 10 of them. If <code>items</code> has 10 million elements, worst case it checks 10 million. The work scales directly with input size — that's O(n), linear time.</p>
+<p>Now compare it to:</p>
+<pre><code class="language-python">def has_few_special_cases(items):
+    for item in items:
+        for flag in [&quot;error&quot;, &quot;warning&quot;, &quot;info&quot;]:
+            if item == flag:
+                return True
+    return False
+</code></pre>
+<p>This has a nested loop, so it looks quadratic. But the inner loop always iterates over exactly 3 fixed values, regardless of how large <code>items</code> gets. The real work is <code>3 * n</code>, and constants drop out of Big O notation — so this is still O(n), not O(n²).</p>
+<h2>Intuition</h2>
+<p>Experienced engineers don't read code and pattern-match to a complexity class. They ask one question repeatedly: <strong>as input grows, what actually grows with it?</strong></p>
+<p>A single loop over the input is a strong signal for linear time — but only if the work done per iteration is constant. A nested loop is a strong signal for quadratic time — but only if the inner loop's range depends on <code>n</code>. The moment you see a loop, don't count loops. Count what varies with input size and what's fixed.</p>
+<p>This is the intuition that separates confident Big O reasoning from anxious guessing: every loop, recursive call, or lookup either scales with the input or it doesn't. Trace that dependency, and the complexity falls out naturally.</p>
+<h2>Brute Force Solution: Pattern Matching by Shape</h2>
+<p>The naive approach — and the one interviewers are testing you against — is visual pattern matching:</p>
+<ul>
+<li>One loop → assume O(n)</li>
+<li>Nested loop → assume O(n²)</li>
+<li>Loop with something inside it → assume it's worse than a plain loop</li>
+<li>Recursion → assume it's expensive</li>
+</ul>
+<p><strong>Advantages:</strong> Fast, works most of the time, requires no deep analysis.</p>
+<p><strong>Disadvantages:</strong> Breaks the instant a snippet doesn't fit the common case — a capped inner loop, a bounded recursion depth, or a constant-time operation hiding inside a loop.</p>
+<p><strong>Time and space complexity of this "approach":</strong> O(1) mental effort, and that's exactly the problem — it isn't actually analyzing the code.</p>
+<h2>Optimal Solution: Trace the Real Work</h2>
+<p>The reliable method is to trace, for each loop or recursive call, whether its bound depends on <code>n</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Snippet</th>
+<th>Surface shape</th>
+<th>What actually varies with n</th>
+<th>True complexity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Single loop over items</td>
+<td>One loop</td>
+<td>Iterations = n</td>
+<td>O(n)</td>
+</tr>
+<tr>
+<td>Nested loop, inner loop fixed at 3</td>
+<td>Nested loops</td>
+<td>Outer = n, inner = constant</td>
+<td>O(n)</td>
+</tr>
+<tr>
+<td>Binary search on sorted array</td>
+<td>Loop that halves the range</td>
+<td>Halvings until 1 item left</td>
+<td>O(log n)</td>
+</tr>
+<tr>
+<td>Naive recursive Fibonacci</td>
+<td>Two recursive calls per call</td>
+<td>Call tree doubles each level</td>
+<td>O(2ⁿ)</td>
+</tr>
+<tr>
+<td>Loop with a hash map lookup inside</td>
+<td>Loop + lookup</td>
+<td>Outer = n, lookup = constant</td>
+<td>O(n)</td>
+</tr>
+</tbody>
+</table>
+<p>The pattern across all five: identify what scales with input, ignore what's fixed, and multiply out only the parts that actually grow.</p>
+<h2>Python Code</h2>
+<p>Here are clean implementations of all five patterns, with the reasoning embedded as comments where it isn't obvious from the code alone.</p>
+<pre><code class="language-python">def linear_scan(items, target):
+    &quot;&quot;&quot;O(n): one loop, one pass, work grows directly with input size.&quot;&quot;&quot;
+    for item in items:
+        if item == target:
+            return True
+    return False
+
+
+def bounded_inner_loop(items):
+    &quot;&quot;&quot;O(n): nested loops, but the inner loop is capped at 3 — not n.&quot;&quot;&quot;
+    flags = (&quot;error&quot;, &quot;warning&quot;, &quot;info&quot;)
+    for item in items:
+        for flag in flags:
+            if item == flag:
+                return True
+    return False
+
+
+def binary_search(sorted_items, target):
+    &quot;&quot;&quot;O(log n): each comparison eliminates half the remaining search space.&quot;&quot;&quot;
+    low, high = 0, len(sorted_items) - 1
+    while low &lt;= high:
+        mid = (low + high) // 2
+        if sorted_items[mid] == target:
+            return mid
+        elif sorted_items[mid] &lt; target:
+            low = mid + 1
+        else:
+            high = mid - 1
+    return -1
+
+
+def naive_fibonacci(n):
+    &quot;&quot;&quot;O(2^n): each call spawns two more calls, recomputing the same values repeatedly.&quot;&quot;&quot;
+    if n &lt;= 1:
+        return n
+    return naive_fibonacci(n - 1) + naive_fibonacci(n - 2)
+
+
+def loop_with_hash_lookup(items, seen_set):
+    &quot;&quot;&quot;O(n): the loop runs n times, but a set/dict lookup is O(1), not another scan.&quot;&quot;&quot;
+    for item in items:
+        if item in seen_set:
+            return item
+    return None
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><strong><code>linear_scan</code></strong>: A single <code>for</code> loop touches each element once. There's nothing inside the loop that itself depends on <code>n</code>, so total work scales 1:1 with input size.</li>
+<li><strong><code>bounded_inner_loop</code></strong>: The outer loop runs <code>n</code> times, but <code>flags</code> is always length 3. The nested structure is a visual trap — the true multiplier is a constant, not <code>n</code>.</li>
+<li><strong><code>binary_search</code></strong>: <code>low</code> and <code>high</code> narrow the search window by half on every iteration. The number of iterations needed to shrink <code>n</code> items down to 1 is <code>log₂(n)</code> — that's where the logarithm comes from.</li>
+<li><strong><code>naive_fibonacci</code></strong>: Each call branches into two more calls (<code>n-1</code> and <code>n-2</code>), forming a call tree that roughly doubles in size at every level, and critically, the same subproblems (like <code>fib(3)</code>) get recomputed many times over.</li>
+<li><strong><code>loop_with_hash_lookup</code></strong>: The <code>in</code> check against a <code>set</code> (or <code>dict</code>) is a hash lookup — average O(1) — not a nested scan through <code>seen_set</code>. The loop still runs <code>n</code> times, so total work stays linear.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Walking through <code>loop_with_hash_lookup</code> with <code>items = [4, 7, 2, 9]</code> and <code>seen_set = {2, 5, 9}</code>:</p>
+<ol>
+<li><code>item = 4</code> → is <code>4 in seen_set</code>? No. Continue.</li>
+<li><code>item = 7</code> → is <code>7 in seen_set</code>? No. Continue.</li>
+<li><code>item = 2</code> → is <code>2 in seen_set</code>? Yes. Return <code>2</code>.</li>
+</ol>
+<p>Three iterations, each doing one constant-time hash lookup. Even if <code>seen_set</code> had a million entries, each lookup would still cost roughly the same — because a hash table doesn't scan its contents, it computes a hash and jumps directly to a bucket. That's the entire trick behind why this snippet is O(n) and not O(n²).</p>
+<h2>Complexity Analysis</h2>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Time</th>
+<th>Space</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>linear_scan</code></td>
+<td>O(n)</td>
+<td>O(1)</td>
+<td>Single pass, no extra structures</td>
+</tr>
+<tr>
+<td><code>bounded_inner_loop</code></td>
+<td>O(n)</td>
+<td>O(1)</td>
+<td>Inner loop bounded by a constant (3), not n</td>
+</tr>
+<tr>
+<td><code>binary_search</code></td>
+<td>O(log n)</td>
+<td>O(1)</td>
+<td>Search space halves each iteration</td>
+</tr>
+<tr>
+<td><code>naive_fibonacci</code></td>
+<td>O(2ⁿ)</td>
+<td>O(n)</td>
+<td>Call tree doubles per level; space is the recursion call stack depth</td>
+</tr>
+<tr>
+<td><code>loop_with_hash_lookup</code></td>
+<td>O(n)</td>
+<td>O(n)</td>
+<td>Single pass with O(1) lookups; space is the size of <code>seen_set</code></td>
+</tr>
+</tbody>
+</table>
+<p>The space complexity of <code>naive_fibonacci</code> deserves a callout: even though it spawns an enormous number of calls, the <em>stack depth</em> at any moment is only <code>n</code> (one branch runs to completion before the other starts), so space is O(n) despite time being exponential.</p>
+<h2>Alternative Solutions</h2>
+<p>For <code>naive_fibonacci</code>, the standard fix is memoization — caching results of subproblems so <code>fib(3)</code> is computed once instead of thousands of times:</p>
+<pre><code class="language-python">from functools import lru_cache
+
+@lru_cache(maxsize=None)
+def fibonacci_memoized(n):
+    if n &lt;= 1:
+        return n
+    return fibonacci_memoized(n - 1) + fibonacci_memoized(n - 2)
+</code></pre>
+<p>This drops the complexity from O(2ⁿ) to O(n), at the cost of O(n) extra space for the cache. It's the single most common "here's how you'd optimize it" follow-up in interviews that start with naive Fibonacci.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty input</strong> (<code>items = []</code>): <code>linear_scan</code> and <code>loop_with_hash_lookup</code> return immediately — the loop body never executes, but the complexity classification doesn't change; O(n) still holds, it's just that <code>n = 0</code>.</li>
+<li><strong>Single-element array in binary search</strong>: <code>low</code> and <code>high</code> start equal, one comparison resolves it — still consistent with O(log n) since log₂(1) = 0.</li>
+<li><strong><code>n = 0</code> or <code>n = 1</code> in Fibonacci</strong>: base cases return directly with no recursion — important to handle explicitly or the recursion never terminates.</li>
+<li><strong>Duplicate values</strong> in <code>linear_scan</code>: doesn't change complexity — worst case is still a full scan if the target is missing or is the last element.</li>
+<li><strong>Very large <code>n</code> in naive Fibonacci</strong> (e.g., <code>n = 40+</code>): this is where the exponential growth becomes painfully visible in real execution time — a good sanity check that the complexity label is correct.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Assuming every nested loop is O(n²).</strong> Always check whether the inner loop's bound depends on <code>n</code> or is fixed.</li>
+<li><strong>Assuming a lookup inside a loop doubles the complexity.</strong> A hash map/set lookup is O(1) on average — it does not turn a loop into a second loop.</li>
+<li><strong>Forgetting hash lookups aren't always O(1).</strong> In the worst case (many hash collisions), a dict/set lookup can degrade to O(n) — rare in practice, but worth knowing exists.</li>
+<li><strong>Ignoring recomputation in recursive solutions.</strong> Naive Fibonacci isn't slow because recursion is slow — it's slow because it solves identical subproblems repeatedly without caching.</li>
+<li><strong>Confusing "the loop runs log n times" with "log n operations total."</strong> Binary search's log n refers to iteration count; the work per iteration is still O(1), so total complexity stays O(log n) — don't accidentally multiply it by something else.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>"How would you optimize the naive Fibonacci function?" → Memoization or bottom-up dynamic programming.</li>
+<li>"What's the space complexity of binary search?" → O(1) iterative, O(log n) if implemented recursively (due to call stack).</li>
+<li>"When does a hash map lookup NOT run in O(1)?" → Under heavy collisions or with a poorly distributed hash function.</li>
+<li>"Can you rewrite naive Fibonacci without recursion at all?" → Iterative bottom-up approach in O(n) time, O(1) space.</li>
+<li>"What's the worst-case complexity of <code>x in some_list</code> versus <code>x in some_set</code>?" → O(n) for a list, O(1) average for a set — this distinction alone explains snippet five.</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Two Sum (LeetCode 1)</strong> — same lesson: brute force is O(n²) with nested loops, but a hash map drops it to O(n), directly reinforcing why lookup-inside-loop patterns matter.</li>
+<li><strong>Search in Rotated Sorted Array (LeetCode 33)</strong> — extends the binary search intuition to a trickier halving condition.</li>
+<li><strong>Climbing Stairs (LeetCode 70)</strong> — the canonical "naive recursion vs. memoization vs. bottom-up DP" teaching problem, same shape as Fibonacci.</li>
+<li><strong>Contains Duplicate (LeetCode 217)</strong> — a direct real-world use of the "loop plus hash set" pattern from round five.</li>
+<li><strong>Fibonacci Number (LeetCode 509)</strong> — the exact problem behind round four, good for practicing all three approaches (naive, memoized, iterative).</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Big O measures growth rate, not exact operation counts.</li>
+<li>A nested loop isn't automatically quadratic — check what the inner loop's range actually depends on.</li>
+<li>A lookup inside a loop isn't automatically another loop — hash-based lookups are typically O(1).</li>
+<li>Binary search's log n comes from repeatedly halving the search space.</li>
+<li>Naive recursive Fibonacci is exponential because of unchecked branching and repeated recomputation — memoization is the fix.</li>
+<li>The reliable method is always the same: trace what actually scales with input, not what the code looks like at a glance.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This entire breakdown — with a 3-second guess-it-yourself format for each snippet — is available to watch here: {LINK}. Try guessing before the reveal; it's a fast way to stress-test your own Big O instincts.</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <strong>Fun with Learning Technology</strong>, a series built around fast, focused technical concepts explained the way a senior engineer would explain them to a teammate — no fluff, just the reasoning that actually matters in interviews and in production code.</p>
+<h2>Call To Action</h2>
+<p>If this helped sharpen how you think about time complexity, tap like on the video — it's a small signal that tells YouTube to show this to more developers working through the same interview prep. Subscribe for more speed rounds like this one, and if you want these lessons delivered straight to your inbox with extra depth, subscribe to the Substack. Drop your score out of five in the comments — no cheating — and share this with anyone prepping for coding interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When you see repeated halving of input, what pattern is it?</summary><p>Binary search / divide-and-conquer — trigger: input shrinks by a constant factor each step, not by a fixed amount.</p></details><details class='card2'><summary>Time complexity for a loop that halves the range each iteration?</summary><p>O(log n) — number of halvings before range hits 1.</p></details><details class='card2'><summary>Space complexity of naive recursive Fibonacci?</summary><p>O(n) — call stack depth equals n, even though it does no extra data structure work.</p></details><details class='card2'><summary>Trickiest bug when guessing Big-O for nested loops?</summary><p>Assuming O(n²) always — inner loop bound may depend on outer index or shrink, giving O(n log n) or O(n).</p></details><details class='card2'><summary>Naive recursive Fibonacci: time vs an iterative version?</summary><p>Naive recursion is O(2^n) (redundant branching); iterative/memoized version is O(n) time, showing exponential blowup from re-solving subproblems.</p></details><details class='card2'><summary>Interview follow-up: how do you spot a &#x27;trick round&#x27; Big-O question?</summary><p>Check what actually scales with n — a loop that looks nested but has a constant or shrinking bound isn&#x27;t automatically O(n²).</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
