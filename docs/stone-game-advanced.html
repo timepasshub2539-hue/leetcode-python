@@ -1,0 +1,208 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stone Game — 🔴 Advanced (3/3) — LeetCode Daily Python Solution (the gap trick nobody sees) — Python LeetCode Solution</title><meta name="description" content="📍 Jump to your level:
+🔴 Advanced: 0:16–6:20
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/stone-game-advanced
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/t">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/stone-game-advanced.html">
+<meta property="og:title" content="Stone Game — 🔴 Advanced (3/3) — LeetCode Daily Python Solution (the gap trick nobody sees) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📍 Jump to your level:
+🔴 Advanced: 0:16–6:20
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/stone-game-advanced
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/t">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Stone Game — 🔴 Advanced (3/3) — LeetCode Daily Python Solution (the gap trick nobody sees)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Stone Game shows up on interview lists constantly, and not because piles of rocks are inherently interesting. It shows up because it's the cleanest entry point into an entire family of problems: two players, a shrinking range of choices, and a guarantee that both sides play perfectly. Once you understand how to model this game, you understand <em>Predict the Winner</em>, <em>Stone Game 2</em>, <em>Stone Game 3</em>, and honestly a good chunk of competitive programming's game-theory section.</p>
+<p>What makes this problem worth an hour of real study instead of a quick memorize-and-move-on is that it has two completely different correct solutions, and interviewers use it to test different things depending on which one they want. The general solution is an interval DP that works no matter how the rules shift under you. The other is a one-line parity observation that only works because of two very specific constraints in this exact problem. Knowing both — and knowing when each one is the right answer — is the actual skill being tested here.</p>
+<h2>Problem Overview</h2>
+<p>You're given a row of piles of stones, always an even number of piles, each pile holding a positive number of stones. Alice and Bob alternate turns, Alice moving first. On each turn, a player removes an entire pile from either the left end or the right end of the remaining row — never from the middle. Both players are playing optimally, meaning each one is always trying to maximize their own total stones (equivalently, trying to end up ahead of the other).</p>
+<p>The total number of stones across all piles is guaranteed to be odd, which means a tie is mathematically impossible — someone has to end up strictly ahead. The question LeetCode asks: can Alice always guarantee a win, regardless of how the piles are arranged or how large the numbers are?</p>
+<p>The answer turns out to be yes, unconditionally, for every valid input satisfying those constraints. That's the part worth sitting with — not "Alice usually wins" or "Alice wins on average," but a proof that she cannot lose. A claim that strong needs a real proof, not an example.</p>
+<h2>Example</h2>
+<p>Take piles <code>[5, 3, 4, 5]</code>.</p>
+<p>Alice moves first and can take either the <code>5</code> on the left or the <code>5</code> on the right. Say she takes the left <code>5</code>. The row is now <code>[3, 4, 5]</code>, and it's Bob's turn.</p>
+<p>Bob, playing optimally, picks whichever end gives him the best long-term outcome — not necessarily the biggest number right now, since that could hand Alice a great option next. This is exactly why greedy "always take the bigger end" fails on this problem: a locally bigger pile can set up the opponent for an even bigger one two moves later.</p>
+<p>Second example, <code>[3, 7, 2, 3]</code>. The total is 15 (odd, as promised). Alice's optimal play here nets her 10 stones against Bob's 5 — a gap of 5 in Alice's favor, which we'll recompute properly once the DP table is built.</p>
+<h2>Intuition</h2>
+<p>The naive instinct is to simulate the game: try taking the left pile, recursively let the opponent respond optimally, try taking the right pile, recursively let the opponent respond optimally, and take whichever branch is better for the current player. That's correct, but it's also exponential, because the same subrange of piles gets reached through different move orders. Taking left-then-right and taking right-then-left both land you on the same remaining interval, and naive recursion recomputes that interval from scratch every time it's revisited.</p>
+<p>The next realization is the one that actually unlocks the problem: since the total number of stones is fixed for the entire game, tracking "my score" and "their score" as two separate running numbers is redundant information. All that matters is the <em>difference</em> between them. If you know your final gap over your opponent, you know the actual scores too, because they must sum to the fixed total. So instead of simulating two players accumulating two totals, you can collapse the whole game into a single scalar: the optimal gap the current mover can achieve over whoever moves after them.</p>
+<p>This reframing is what turns a two-player adversarial problem into a single-player optimization. There's no explicit "Bob minimizes, Alice maximizes" logic needed — both players are running the identical strategy of maximizing their own gap, because from each player's seat, they're always the current mover.</p>
+<p>The last piece is recognizing the shape of the state. Because pieces are only removed from the two ends, the remaining stones at any point in the game are always a contiguous subrange <code>piles[i..j]</code>. That's the signature of interval DP: the state isn't a prefix or a single index, it's a pair of endpoints describing a shrinking window.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Recursively simulate both players. At each subrange <code>[i, j]</code>, the current mover either takes <code>piles[i]</code> and lets the opponent play out <code>[i+1, j]</code>, or takes <code>piles[j]</code> and lets the opponent play out <code>[i, j-1]</code>. Pick whichever gives the better outcome for the mover.</p>
+<p><strong>Algorithm:</strong>
+1. Define <code>solve(i, j)</code> returning the optimal gap for whoever moves first on <code>piles[i..j]</code>.
+2. Base case: <code>i == j</code> means one pile left, the mover takes it, gap is <code>piles[i]</code>.
+3. Recursive case: <code>solve(i, j) = max(piles[i] - solve(i+1, j), piles[j] - solve(i, j-1))</code>.
+4. Alice wins if <code>solve(0, n-1) &gt; 0</code>.</p>
+<p><strong>Advantages:</strong> Directly mirrors the problem statement, easy to reason about and easy to get right on a whiteboard.</p>
+<p><strong>Disadvantages:</strong> Exponential blowup. The same <code>(i, j)</code> pair is reached via multiple move sequences, and without caching, every one of those paths gets recomputed independently.</p>
+<p><strong>Complexity:</strong> Time O(2^n) in the worst case, space O(n) for the recursion stack.</p>
+<h2>Optimal Solution</h2>
+<p>The fix is memoization or, equivalently, bottom-up tabulation over the same recurrence. Since <code>dp[i][j]</code> only depends on <code>dp[i+1][j]</code> and <code>dp[i][j-1]</code> — both strictly smaller intervals — any fill order that processes shorter intervals before longer ones is valid. The simplest such order is by increasing interval length.</p>
+<p>Here's why row-major order (looping <code>i</code> then <code>j</code> in the usual nested-loop style) is a trap: for a fixed <code>i</code>, as <code>j</code> increases, <code>dp[i][j]</code> needs <code>dp[i+1][j]</code>, which lives in a <em>later</em> row that hasn't been filled yet in that order. You'd be reading garbage or stale values. Filling by length guarantees every dependency is already computed, because both <code>dp[i+1][j]</code> and <code>dp[i][j-1]</code> describe strictly shorter subranges.</p>
+<p>A table for <code>[5, 3, 4, 5]</code>, filled diagonal by diagonal:</p>
+<table>
+<thead>
+<tr>
+<th>length</th>
+<th>i, j</th>
+<th>recurrence</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>(0,0)</td>
+<td>base</td>
+<td>5</td>
+</tr>
+<tr>
+<td>1</td>
+<td>(1,1)</td>
+<td>base</td>
+<td>3</td>
+</tr>
+<tr>
+<td>1</td>
+<td>(2,2)</td>
+<td>base</td>
+<td>4</td>
+</tr>
+<tr>
+<td>1</td>
+<td>(3,3)</td>
+<td>base</td>
+<td>5</td>
+</tr>
+<tr>
+<td>2</td>
+<td>(0,1)</td>
+<td>max(5-3, 3-5)</td>
+<td>2</td>
+</tr>
+<tr>
+<td>2</td>
+<td>(1,2)</td>
+<td>max(3-4, 4-3)</td>
+<td>1</td>
+</tr>
+<tr>
+<td>2</td>
+<td>(2,3)</td>
+<td>max(4-5, 5-4)</td>
+<td>1</td>
+</tr>
+<tr>
+<td>3</td>
+<td>(0,2)</td>
+<td>max(5-1, 4-2)</td>
+<td>4</td>
+</tr>
+<tr>
+<td>3</td>
+<td>(1,3)</td>
+<td>max(3-1, 5-1)</td>
+<td>4</td>
+</tr>
+<tr>
+<td>4</td>
+<td>(0,3)</td>
+<td>max(5-4, 5-4)</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p><code>dp[0][3] = 1 &gt; 0</code>, so Alice wins by a gap of 1 stone.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def stoneGame(piles: list[int]) -&gt; bool:
+    n = len(piles)
+    # dp[i][j] = optimal stone-count gap for whoever moves next on piles[i..j]
+    dp = [[0] * n for _ in range(n)]
+
+    for i in range(n):
+        dp[i][i] = piles[i]
+
+    for length in range(2, n + 1):  # n+1 so the full range (0, n-1) is included
+        for i in range(n - length + 1):
+            j = i + length - 1
+            dp[i][j] = max(piles[i] - dp[i + 1][j], piles[j] - dp[i][j - 1])
+
+    return dp[0][n - 1] &gt; 0
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>dp = [[0] * n for _ in range(n)]</code> allocates an <code>n x n</code> table; only the upper triangle (<code>j &gt;= i</code>) is ever used.</li>
+<li>The diagonal-seeding loop sets <code>dp[i][i] = piles[i]</code>: with one pile left, the mover just takes it, so the gap is that pile's full value.</li>
+<li>The outer loop iterates by <code>length</code>, not by row — this is the fill order that guarantees <code>dp[i+1][j]</code> and <code>dp[i][j-1]</code> are already populated before <code>dp[i][j]</code> needs them.</li>
+<li><code>range(n - length + 1)</code> bounds <code>i</code> so that <code>j = i + length - 1</code> never exceeds <code>n - 1</code>.</li>
+<li>The recurrence line is the entire algorithm: taking the left pile costs you <code>dp[i+1][j]</code>, the opponent's optimal gap once they become the mover — and their gain is your loss, hence the subtraction rather than addition. Taking the right pile is symmetric.</li>
+<li><code>range(2, n + 1)</code> — not <code>range(2, n)</code> — is the detail that's easy to get wrong; dropping the <code>+1</code> silently skips the full-range answer at <code>dp[0][n-1]</code> and returns a subresult instead, which is a bug that hides on easy inputs and only surfaces on adversarial ones.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Piles <code>[3, 7, 2, 3]</code>, total 15.</p>
+<p>Base cases: <code>dp[0][0]=3, dp[1][1]=7, dp[2][2]=2, dp[3][3]=3</code>.</p>
+<p>Length 2:
+- <code>dp[0][1] = max(3-7, 7-3) = 4</code>
+- <code>dp[1][2] = max(7-2, 2-7) = 5</code>
+- <code>dp[2][3] = max(2-3, 3-2) = 1</code></p>
+<p>Length 3:
+- <code>dp[0][2] = max(3 - dp[1][2], 2 - dp[0][1]) = max(3-5, 2-4) = -2</code>
+- <code>dp[1][3] = max(7 - dp[2][3], 3 - dp[1][2]) = max(7-1, 3-5) = 6</code></p>
+<p>Length 4:
+- <code>dp[0][3] = max(3 - dp[1][3], 3 - dp[0][2]) = max(3-6, 3-(-2)) = max(-3, 5) = 5</code></p>
+<p><code>dp[0][3] = 5 &gt; 0</code> — Alice wins with a gap of 5, matching the 10-vs-5 split from earlier.</p>
+<h2>Complexity Analysis</h2>
+<p>There are roughly <code>n^2 / 2</code> valid <code>(i, j)</code> pairs, and each takes O(1) work once its two dependencies exist. That gives <strong>O(n^2) time and O(n^2) space</strong>. The space bound is provably tight for the table as written, but reducible: since <code>dp[i][j]</code> only ever reads row <code>i+1</code> and its own row <code>i</code>, you can roll the table down to two active rows and get <strong>O(n) space</strong> if an interviewer pushes on it.</p>
+<h2>Alternative Solutions</h2>
+<p>A memoized top-down recursion (<code>functools.lru_cache</code> over <code>solve(i, j)</code>) achieves the identical O(n^2) time and space with less bookkeeping — no manual fill-order reasoning required, since recursion handles dependency ordering implicitly. It's a reasonable style preference; the tradeoff is Python recursion overhead versus a slightly more error-prone but faster iterative loop.</p>
+<p>The other alternative isn't really an alternative — it's a completely different proof. There's an invariant specific to this problem: Alice can always force herself into either "all even-indexed piles" or "all odd-indexed piles." After she takes one end, the remaining array's two ends are both the opposite parity from what she started with; whatever Bob takes, the new ends flip back to Alice's original parity. By induction, she can always keep taking from her chosen parity class every single turn. Since the total is odd, one parity class's sum must be strictly larger than the other's, so Alice picks that class and wins by simply returning <code>True</code> — O(1), no DP at all.</p>
+<p>This is a fun fact, not a substitute for the DP. It depends on <em>both</em> "even pile count" and "odd total" holding simultaneously. Change the pile count to odd, or change the objective as in Stone Game 3, and the invariant collapses entirely — the DP is what survives those changes.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Minimum size (<code>n = 2</code>):</strong> collapses to a single comparison — Alice takes whichever pile is bigger, since one move ends the game.</li>
+<li><strong>All equal pile values:</strong> still resolves correctly because the odd-total guarantee still forces a strict winner overall, even though individual pile comparisons look tied.</li>
+<li><strong>Large pile values:</strong> no overflow concerns in Python, but in a language with fixed-width integers, the subtraction in the recurrence can go negative, which is expected and must not be clamped.</li>
+<li><strong>Odd pile count (invalid per constraints, but worth raising):</strong> the parity proof breaks immediately, and the DP's strict <code>&gt; 0</code> check would need to become <code>&gt;= 0</code> with explicit tie-handling.</li>
+<li><strong>A variant where ties are possible:</strong> both the parity shortcut and the strict inequality fail; you'd need <code>&gt;=</code> and a real tie branch.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Row-major fill order.</strong> Looping <code>i</code> outer, <code>j</code> inner in the standard nested-loop pattern reads <code>dp[i+1][j]</code> before it's been computed for larger <code>j</code>. This doesn't crash — it silently returns wrong values, making it the hardest of these bugs to catch.</li>
+<li><strong>Tracking raw totals instead of the signed gap.</strong> This breaks the subtraction identity in the recurrence entirely, not just by a constant offset — the whole "opponent's gain is your loss" logic depends on working with a single signed difference.</li>
+<li><strong><code>range(2, n)</code> instead of <code>range(2, n+1)</code>.</strong> Silently drops the full-range answer at <code>dp[0][n-1]</code>, returning a subresult that often happens to still be positive on easy test cases.</li>
+<li><strong>Assuming greedy (always take the bigger end) works.</strong> It doesn't — a locally bigger pile can set up the opponent for a much bigger one on the next move.</li>
+<li><strong>Forgetting the parity trick is constraint-specific.</strong> Reaching for the O(1) shortcut on a variant like Stone Game 3, where the take-from-either-end symmetry is broken, gives a wrong answer with total confidence.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Can you prove why the diagonal (length-ascending) fill order is the only order guaranteed to work here?</li>
+<li>How would you reduce the space complexity from O(n^2) to O(n)?</li>
+<li>What changes in the recurrence if the game allows taking from either end <em>or</em> the middle?</li>
+<li>Can you state and prove the parity invariant without just asserting it?</li>
+<li>How does this problem's structure change in Stone Game 3, where a player can take one, two, or three piles from the front?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Predict the Winner (LeetCode 486):</strong> Identical recurrence and identical interval-DP structure — this is essentially the same problem under a different name.</li>
+<li><strong>Stone Game 2:</strong> Breaks the two-ended symmetry by allowing a variable number of piles to be taken from the front only, forcing a genuine state expansion beyond a simple interval.</li>
+<li><strong>Stone Game 3:</strong> Same front-only constraint as Stone Game 2 but capped at one, two, or three piles per turn — kills the two-pointer symmetry and requires a 1D DP over suffixes instead.</li>
+<li><strong>Burst Balloons (LeetCode 312):</strong> Different objective, same "interval DP where subranges depend on smaller subranges" backbone.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The real lesson isn't the stone-counting — it's the pattern-recognition skill of collapsing a two-player zero-sum game into a single-player optimization by tracking the <em>difference</em> instead of two separate scores. That reframe, plus recognizing when a state is a contiguous subrange rather than a prefix, is what makes interval DP click. And knowing that a slick O(1) shortcut exists alongside the general O(n^2) DP — and being able to say clearly which one survives rule changes — is exactly the kind of judgment an interviewer is listening for.</p>
+<h2>Watch the Video</h2>
+<p>If you want to see this table get built step by step, including both dry runs traced live and the parity proof walked through visually, check out the full video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series working through LeetCode's daily challenges and core computer science patterns one problem at a time — not just solving problems, but building the intuition to recognize their shape the next time they show up in a different costume.</p>
+<h2>Call To Action</h2>
+<p>If this helped the interval DP finally click, give the video a like on YouTube and subscribe for the rest of the daily problem breakdowns. For deeper dives and written companions to every video, subscribe to the Substack newsletter. Drop a comment with which part clicked (or didn't) — and if you know someone prepping for interviews, send this their way.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Stone Game endgame pattern: what&#x27;s the tell for interval DP?</summary><p>Optimal turn-based picks from a shrinking sequence with a running score gap → interval DP over subarrays.</p></details><details class='card2'><summary>Time complexity of the interval DP solution?</summary><p>O(n²) — one state per (left, right) pair, O(1) transition.</p></details><details class='card2'><summary>Space complexity, and how to shrink it?</summary><p>O(n²) for the full table; collapsible to O(n) by iterating gap-length and reusing one row.</p></details><details class='card2'><summary>Why does grid-style DP (fixed row/col order) fail here?</summary><p>State isn&#x27;t position-based, it&#x27;s a shrinking interval [i,j]; must fill by increasing interval length, not row-by-row.</p></details><details class='card2'><summary>What does dp[i][j] actually represent?</summary><p>The max score advantage (not raw stones) the current player can force from the slice piles[i..j].</p></details><details class='card2'><summary>Core recurrence at each interval step?</summary><p>dp[i][j] = max(piles[i] - dp[i+1][j], piles[j] - dp[i][j-1]) — take an end, subtract opponent&#x27;s best reply.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
