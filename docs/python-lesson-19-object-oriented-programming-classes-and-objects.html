@@ -1,0 +1,217 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>4 Lines Replace 100 Variables — Lesson 19 (Classes &amp; Objects) — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-19-object-oriented-programming-classes-and-objects
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/t">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-19-object-oriented-programming-classes-and-objects.html">
+<meta property="og:title" content="4 Lines Replace 100 Variables — Lesson 19 (Classes &amp; Objects) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-19-object-oriented-programming-classes-and-objects
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/t">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>4 Lines Replace 100 Variables — Lesson 19 (Classes &amp; Objects)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every developer hits the same wall early on: you're tracking a handful of related values — a dog's name and age, a user's email and balance, a car's speed and fuel level — and you're doing it with separate variables. It works for one dog. It's annoying for two. By the time you need ten dogs or a hundred users, it's not a system anymore, it's a memory test you're guaranteed to fail.</p>
+<p>This is exactly the problem classes exist to solve, and it's why "explain OOP" or "walk me through a class you designed" shows up constantly in coding interviews. Interviewers aren't testing whether you can recite the syntax — they're checking whether you understand <em>why</em> bundling data and behavior together is better than the alternative. If you can explain that reasoning clearly, you've demonstrated real engineering judgment, not memorization.</p>
+<p>This lesson builds that understanding from the ground up: what breaks with loose variables, how a class fixes it, and how <code>__init__</code> and <code>self</code> work together to give every object built from a blueprint its own independent identity.</p>
+<h2>Problem Overview</h2>
+<p>Say you're building a program that needs to track dogs — each with a name and an age. The obvious first move is to create variables for each dog:</p>
+<pre><code class="language-python">dog1_name = &quot;Rex&quot;
+dog1_age = 3
+
+dog2_name = &quot;Milo&quot;
+dog2_age = 5
+</code></pre>
+<p>This technically works. But look closely at what's actually holding <code>dog1_name</code> and <code>dog1_age</code> together as <em>one dog's data</em>. Nothing. There's no structure enforcing that relationship — just a naming convention you have to remember and apply consistently, forever, by hand.</p>
+<p>Now scale it up. Ten dogs means twenty variables, all named by a pattern you have to get right every single time: <code>dog3_name</code>, <code>dog3_age</code>, <code>dog4_name</code>, <code>dog4_age</code>... One hundred users in a real application means two hundred loose values with no enforced connection between them. This isn't a system — it's a guessing game, and guessing games produce bugs: typos in variable names, mismatched updates, data that silently drifts out of sync.</p>
+<p>The fix is to define a <strong>blueprint</strong> — a <code>class</code> — that describes what every dog <em>has</em> (its data) and what every dog <em>can do</em> (its behavior). Then each actual dog you create is an <strong>object</strong>: a real instance built from that blueprint, with its own values filled in.</p>
+<h2>Example</h2>
+<pre><code class="language-python">class Dog:
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+
+    def bark(self):
+        print(f&quot;{self.name} says woof!&quot;)
+
+
+rex = Dog(&quot;Rex&quot;, 3)
+milo = Dog(&quot;Milo&quot;, 5)
+
+print(rex.name, rex.age)    # Rex 3
+print(milo.name, milo.age)  # Milo 5
+
+rex.bark()   # Rex says woof!
+milo.bark()  # Milo says woof!
+</code></pre>
+<p>Walk through what happened. <code>rex</code> and <code>milo</code> were both built from the exact same <code>Dog</code> class, but they hold completely independent data. Changing <code>rex.age</code> later would have zero effect on <code>milo.age</code>. There's no naming convention to maintain, no risk of accidentally mixing up whose age belongs to whom — the object itself keeps that boundary intact.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer actually arrives at this solution, rather than being told to "use a class."</p>
+<p>Start by asking: what data belongs together? A dog's name and age aren't independent facts floating in space — they describe <em>one thing</em>. The moment you notice yourself naming variables with a shared prefix (<code>dog1_</code>, <code>dog2_</code>, <code>user_a_</code>), that prefix is a signal. You're manually simulating a grouping that the language already has a built-in tool for.</p>
+<p>The next question is: what can this thing <em>do</em>? A dog barks. A car accelerates. A user logs in. Behavior tied to a specific piece of data is a second signal that you're not looking at loose variables — you're looking at an <em>object</em>.</p>
+<p>Once you see both signals — related data, plus actions on that data — the blueprint falls out naturally. You write the class once, describing the shape every object of that type will have. Then <code>__init__</code> becomes the answer to "how does an object get its starting values the moment it's created," and <code>self</code> becomes the answer to "how does a method know <em>which</em> object's data to touch." Neither is arbitrary syntax — each solves a problem you'd hit immediately if it didn't exist.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Keep using separate, individually named variables for each entity, following a manual naming convention (<code>dog1_name</code>, <code>dog1_age</code>, <code>dog2_name</code>, ...).</p>
+<p><strong>Algorithm:</strong>
+1. For each new dog, create two new variables following the <code>dogN_name</code> / <code>dogN_age</code> pattern.
+2. Reference the correct pair by name whenever you need that dog's data.
+3. Manually keep the naming consistent everywhere the data is used.</p>
+<p><strong>Advantages:</strong>
+- No new concepts required — works with only basic variable assignment.
+- Fine for exactly one or two fixed, never-repeated entities.</p>
+<p><strong>Disadvantages:</strong>
+- Doesn't scale — the number of variables grows linearly and unmanageably with each new entity.
+- No structural link between related variables; the relationship exists only in the programmer's head.
+- Extremely error-prone: typos, copy-paste mistakes, and mismatched indices are easy to introduce and hard to catch.
+- Can't be passed around as a single unit — you'd have to pass every variable individually into any function that needs them.</p>
+<p><strong>Time complexity:</strong> O(1) to access a specific known variable, but O(n) <em>variables</em> to create and maintain for n entities — and no way to loop over them programmatically.
+<strong>Space complexity:</strong> O(n) for n entities, same as the class-based approach, but with much worse organization.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach is to define a <code>class</code> once, and let it generate as many independent objects as needed.</p>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>class Dog:</code></td>
+<td>Declares the blueprint — the template every dog object will follow.</td>
+</tr>
+<tr>
+<td><code>__init__(self, name, age)</code></td>
+<td>Runs automatically the instant a new <code>Dog</code> is created; sets up its starting state.</td>
+</tr>
+<tr>
+<td><code>self.name = name</code></td>
+<td>Stores <code>name</code> as data belonging to <em>this specific</em> object, not a shared/global value.</td>
+</tr>
+<tr>
+<td><code>self</code> (in general)</td>
+<td>A reference to "the object this method is currently running on."</td>
+</tr>
+<tr>
+<td><code>bark(self)</code></td>
+<td>A method — behavior attached to the object, able to read that object's own data.</td>
+</tr>
+</tbody>
+</table>
+<p>The key mechanical detail is what <code>self</code> actually is. When you call <code>Dog("Rex", 3)</code>, Python creates a new, empty object in memory, then calls <code>__init__</code> on it automatically — passing that new object in as the first argument, which the method receives as <code>self</code>. So <code>self.name = name</code> literally means: "on this particular object being built right now, set its <code>name</code> attribute." That's why <code>rex.name</code> and <code>milo.name</code> never collide — they're written onto two entirely separate objects, even though <code>__init__</code> ran the identical line of code for both.</p>
+<p>Methods work the same way. <code>rex.bark()</code> implicitly passes <code>rex</code> in as <code>self</code>, so inside <code>bark</code>, <code>self.name</code> resolves to <code>"Rex"</code>. Call <code>milo.bark()</code> and <code>self</code> becomes <code>milo</code> instead — same method code, different data, because <code>self</code> always points to whichever object is currently in use.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">class Dog:
+    &quot;&quot;&quot;Represents a single dog with a name and age.&quot;&quot;&quot;
+
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+
+    def bark(self):
+        print(f&quot;{self.name} says woof!&quot;)
+
+    def have_birthday(self):
+        self.age += 1
+
+
+if __name__ == &quot;__main__&quot;:
+    rex = Dog(&quot;Rex&quot;, 3)
+    milo = Dog(&quot;Milo&quot;, 5)
+
+    rex.bark()
+    milo.bark()
+
+    rex.have_birthday()
+    print(rex.age)   # 4
+    print(milo.age)  # 5, unaffected by rex's change
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>class Dog:</code> — declares the blueprint named <code>Dog</code>. No dog objects exist yet; this just defines the template.</li>
+<li><code>def __init__(self, name, age):</code> — a special method Python calls automatically every time <code>Dog(...)</code> is invoked to create a new object.</li>
+<li><code>self.name = name</code> / <code>self.age = age</code> — takes the values passed in and stores them as attributes <em>on the specific object being created</em>, accessible later as <code>object.name</code> and <code>object.age</code>.</li>
+<li><code>def bark(self):</code> — a method, which is just a function defined inside a class. It automatically receives the calling object as <code>self</code>.</li>
+<li><code>self.name</code> inside <code>bark</code> — reads the <code>name</code> attribute off whichever object called the method, without needing <code>name</code> passed in separately.</li>
+<li><code>rex = Dog("Rex", 3)</code> — creates a new object, triggering <code>__init__</code> with <code>self</code> bound to this new object, <code>name="Rex"</code>, <code>age=3</code>.</li>
+<li><code>rex.bark()</code> — Python translates this to <code>Dog.bark(rex)</code> under the hood, so <code>self</code> inside the method is <code>rex</code>.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Trace <code>rex = Dog("Rex", 3)</code> followed by <code>rex.bark()</code>:</p>
+<ol>
+<li>Python allocates a new, empty <code>Dog</code> object in memory.</li>
+<li>It calls <code>__init__(self=&lt;new object&gt;, name="Rex", age=3)</code>.</li>
+<li><code>self.name = "Rex"</code> writes <code>"Rex"</code> onto the new object's <code>name</code> attribute.</li>
+<li><code>self.age = 3</code> writes <code>3</code> onto the new object's <code>age</code> attribute.</li>
+<li>The fully initialized object is assigned to the variable <code>rex</code>.</li>
+<li><code>rex.bark()</code> calls <code>bark(self=rex)</code>.</li>
+<li>Inside <code>bark</code>, <code>self.name</code> looks up <code>rex</code>'s <code>name</code> attribute → <code>"Rex"</code>.</li>
+<li>Output: <code>Rex says woof!</code></li>
+</ol>
+<p>Repeating this for <code>milo = Dog("Milo", 5)</code> creates a second, entirely separate object — its own memory, its own <code>name</code> and <code>age</code> — with zero interaction with <code>rex</code>'s data.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> Creating an object is O(1) — <code>__init__</code> just assigns a fixed number of attributes regardless of how many other objects exist. Calling a method is also O(1) to dispatch.</li>
+<li><strong>Space:</strong> O(n) for n objects, since each stores its own independent copy of its attributes — same asymptotic space as the loose-variable approach, but attributes are grouped and addressable through one reference (<code>rex</code>) instead of scattered across n separate variable names.</li>
+<li><strong>Why this is correct:</strong> attribute storage is per-instance by design — Python allocates a distinct namespace for each object's <code>self</code>, which is precisely what guarantees <code>rex.age</code> and <code>milo.age</code> can never overwrite each other.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p>For simple data-only cases with no behavior, Python's <code>dataclasses</code> module can reduce boilerplate:</p>
+<pre><code class="language-python">from dataclasses import dataclass
+
+@dataclass
+class Dog:
+    name: str
+    age: int
+</code></pre>
+<p>This auto-generates <code>__init__</code> and a few other conveniences. It's a reasonable choice when a class is purely a data container. But the moment you need methods with real logic (like <code>bark</code> or <code>have_birthday</code>), a standard class is clearer and more explicit about what's happening — which matters most while you're still building the mental model of how objects work.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>No attributes passed:</strong> <code>__init__(self)</code> with no other parameters is valid — you just get an empty-but-functional object.</li>
+<li><strong>Missing required arguments:</strong> <code>Dog("Rex")</code> raises a <code>TypeError</code> if <code>age</code> has no default — Python enforces that <code>__init__</code>'s required parameters are supplied.</li>
+<li><strong>Mutable default values:</strong> never write <code>def __init__(self, tags=[])</code> — the same list object gets shared across every instance that doesn't pass its own <code>tags</code>, corrupting state across objects. Use <code>None</code> and assign a new list inside <code>__init__</code> instead.</li>
+<li><strong>Very large numbers of objects:</strong> works fine functionally, but for tens of thousands of lightweight objects, <code>__slots__</code> can reduce memory overhead — a later optimization, not a beginner concern.</li>
+<li><strong>Duplicate object values:</strong> two <code>Dog</code> objects with identical <code>name</code> and <code>age</code> are still different objects in memory; <code>rex == another_rex</code> is <code>False</code> by default unless you define <code>__eq__</code>.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting <code>self</code> as the first parameter</strong> in instance methods — Python passes the calling object automatically, and omitting <code>self</code> breaks the method signature.</li>
+<li><strong>Confusing the class with an object</strong> — <code>Dog</code> is the blueprint; <code>rex</code> is an actual dog. You can't call <code>Dog.bark()</code> without an instance to act on.</li>
+<li><strong>Using a class attribute when you meant an instance attribute</strong> — defining <code>age = 0</code> directly under <code>class Dog:</code> (outside <code>__init__</code>) creates one shared value across all instances, not a per-object one.</li>
+<li><strong>Mutable default arguments in <code>__init__</code></strong>, as covered above — a classic, hard-to-spot bug.</li>
+<li><strong>Not calling <code>__init__</code> mentally when reasoning about object creation</strong> — new learners often think attributes just "appear"; understanding that <code>__init__</code> runs automatically on every instantiation clears up a lot of confusion.</li>
+<li><strong>Overloading a class with unrelated responsibilities</strong> — if a <code>Dog</code> class starts managing file I/O or network calls, it's no longer modeling "a dog"; that's a design smell to watch for as programs grow.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What's the difference between a class and an object/instance?</li>
+<li>What does <code>self</code> actually refer to, and how does Python know what to pass as <code>self</code>?</li>
+<li>What happens if you forget to include <code>self</code> in a method definition?</li>
+<li>What's the difference between an instance attribute and a class attribute?</li>
+<li>Why is using a mutable default argument (like a list) in <code>__init__</code> dangerous?</li>
+<li>How would you make two <code>Dog</code> objects comparable with <code>==</code>?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 146 (LRU Cache)</strong> — commonly implemented as a class with internal state (a hash map and a linked list) managed through <code>self</code>, a direct extension of this lesson's ideas.</li>
+<li><strong>LeetCode 380 (Insert Delete GetRandom O(1))</strong> — requires designing a class that maintains internal data structures across multiple method calls.</li>
+<li><strong>LeetCode 355 (Design Twitter)</strong> — a larger object-oriented design problem involving multiple interacting classes, a natural next step after mastering single-class design.</li>
+<li><strong>Any "Design a ___" LeetCode problem</strong> — nearly all of them are testing whether you can model a real system as a class with clear attributes and methods, exactly the skill this lesson builds.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Loose variables don't scale — past two or three entities, naming conventions break down and bugs creep in.</li>
+<li>A class is a blueprint describing what an object <em>has</em> (attributes) and what it <em>can do</em> (methods).</li>
+<li><code>__init__</code> runs automatically on creation and sets up an object's starting state.</li>
+<li><code>self</code> is how a method knows <em>which</em> object's data to read and modify — it's the mechanism that keeps every object's data independent.</li>
+<li>One class can produce unlimited objects, each with its own data but sharing the same behavior.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with live coding and a step-by-step build of the <code>Dog</code> class, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <strong>Fun with Learning Technology</strong>, a series that builds real programming fluency one clear, practical lesson at a time — no fluff, no hand-waving, just the reasoning behind every concept so it actually sticks. Lesson 19 covers classes and objects; next up is inheritance, where one blueprint builds another.</p>
+<h2>Call To Action</h2>
+<p>If this clicked for you, the video walks through the same ideas visually — give it a watch and a like on YouTube, and subscribe so you don't miss Lesson 20 on inheritance. For the full written breakdown of every lesson, subscribe to the Substack newsletter. Got a question about <code>self</code> or <code>__init__</code>? Drop it in the comments — and if you know someone still fighting with <code>dog1_name</code> and <code>dog2_name</code>, send this their way.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Why replace many loose dog variables with a class?</summary><p>Separate variables don&#x27;t scale or stay linked; a class bundles related data and behavior into one reusable blueprint.</p></details><details class='card2'><summary>What does __init__ do in a class?</summary><p>Runs automatically when an object is created, setting up its starting instance attributes.</p></details><details class='card2'><summary>What is &#x27;self&#x27; inside a method?</summary><p>A reference to the specific object the method was called on, so it can read/change that object&#x27;s own data.</p></details><details class='card2'><summary>Do two objects from the same class share attribute values?</summary><p>No — each instance keeps its own separate copy of attributes set in __init__, even from one blueprint.</p></details><details class='card2'><summary>Common bug: forgetting &#x27;self&#x27; as first param in a method?</summary><p>Causes TypeError or wrong data access, since Python won&#x27;t auto-bind the instance without it.</p></details><details class='card2'><summary>Class vs instance: what&#x27;s the relationship?</summary><p>Class is the blueprint (defines structure/methods); instance is one concrete object built from it with its own data.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
