@@ -1,0 +1,193 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stone Game III — 🟡 Intermediate (2/3) — LeetCode Daily Python Solution (the trick nobody sees) — Python LeetCode Solution</title><meta name="description" content="📍 Jump to your level:
+🟡 Intermediate: 0:18–6:54
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/stone-game-iii-intermediate
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetc">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/stone-game-iii-intermediate.html">
+<meta property="og:title" content="Stone Game III — 🟡 Intermediate (2/3) — LeetCode Daily Python Solution (the trick nobody sees) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📍 Jump to your level:
+🟡 Intermediate: 0:18–6:54
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/stone-game-iii-intermediate
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetc">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Stone Game III — 🟡 Intermediate (2/3) — LeetCode Daily Python Solution (the trick nobody sees)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every so often a LeetCode problem shows up wearing a costume — it looks like a game, it talks like a game, but underneath it's a completely standard dynamic programming problem waiting for the right lens. Stone Game III is one of those. It gets asked in interviews not because the final code is long (it isn't — about ten lines) but because it tests whether you can resist the obvious wrong idea: simulating both players' scores separately.</p>
+<p>If you've solved single-player DP problems before — climbing stairs, house robber, coin change — you already have every tool you need here. What's missing is a mental trick that collapses a two-player adversarial game into the same one-array, one-loop shape you already know. Once you see it, you'll recognize the pattern instantly in Stone Game II, Predict the Winner, and a handful of other "two players take turns" interview questions.</p>
+<h2>Problem Overview</h2>
+<p>You're given a row of stones, each with a point value (values can be negative). Alice and Bob take turns removing stones from the <strong>front</strong> of the row — Alice goes first. On each turn, a player must take exactly 1, 2, or 3 stones, and the sum of what they take is added to their own score.</p>
+<p>Both players play optimally — meaning each one always makes the move that maximizes their own final advantage, not just their next move's value. After all stones are gone, compare the two scores: whoever has more points wins. If the scores are equal, it's a tie.</p>
+<p>The row can contain up to 50,000 stones, which immediately rules out any brute-force or exponential recursive approach — you need something that runs in linear time.</p>
+<h2>Example</h2>
+<p>Take the row <code>[1, 2, 3, 7]</code>.</p>
+<p>The tempting move is for Alice to grab the three biggest values she can reach — take 1, 2, 3 in her first turn, banking 6 points. But that leaves the entire remaining row — just the 7 — for Bob. Bob wins 7 to 6.</p>
+<p>Alice taking <em>more stones</em> actually cost her the game. That's the whole trap this problem is built around: point totals don't scale with stone count, especially once you allow negative values into the row.</p>
+<p>Now compare with <code>[1, 2, 3, 6]</code>. Play it out by hand: no matter what Alice opens with, she can't force a win — her best outcome is a tie.</p>
+<p>And with <code>[1, 2, 3, -9]</code>, Alice's best move is grabbing all three positive piles up front (1+2+3=6), leaving Bob stuck with -9. Alice wins by a wide margin.</p>
+<p>Same rules, three different outcomes — because the right move depends on the <em>shape</em> of the remaining row, not on greedily grabbing whatever's biggest right now.</p>
+<h2>Intuition</h2>
+<p>The naive way to approach this is to simulate the actual game: recurse on "what if I take 1 stone," "what if I take 2," "what if I take 3," and at each step track Alice's score and Bob's score as two separate running totals. That's exactly what most people write first — it mirrors the problem statement almost word for word. It also runs into two problems immediately: it's exponential (three branches at every stone), and juggling two score variables makes the code messy and error-prone.</p>
+<p>Here's the reframe that fixes both problems at once. The only thing that determines who wins is the <strong>difference</strong> between the two scores — not their individual values. So instead of tracking Alice's score and Bond's score, track a single number: <strong>the best lead the current player can build over the other player</strong>, assuming both play perfectly from this point onward.</p>
+<p>Call this <code>dp[i]</code> — the best score gap achievable by whoever is about to move, starting from index <code>i</code> in the row. The beauty of this framing is that it doesn't need to know whether "whoever is about to move" is Alice or Bob. The same recurrence works for both, because from the perspective of "the player whose turn it is," the game always looks identical: take some stones, then let your opponent play optimally against what's left.</p>
+<p>This is the Score Gap trick. It turns a two-player adversarial game into an ordinary single-player optimization problem — the same shape as any other 1D DP problem, just with one twist in the recurrence.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Recursively simulate every possible sequence of moves. At each turn, try taking 1, 2, or 3 stones, track each player's score independently, and recurse into the remaining row for the other player.</p>
+<p><strong>Algorithm:</strong>
+1. Define a recursive function that takes the current index and whose turn it is.
+2. Try all three possible take counts, recursing after each.
+3. Compare Alice's final score to Bob's final score.</p>
+<p><strong>Advantages:</strong> Directly mirrors the problem statement; easy to reason about correctness for tiny inputs.</p>
+<p><strong>Disadvantages:</strong> Branches three ways at every stone with no memoization, giving roughly O(3^n) time. Completely unusable once the row has more than a few dozen stones, let alone 50,000.</p>
+<p><strong>Complexity:</strong> O(3^n) time, O(n) space (recursion stack).</p>
+<h2>Optimal Solution</h2>
+<p>We fill a DP array from the <strong>back</strong> of the row toward the front, because <code>dp[i]</code> depends on <code>dp[i+1]</code>, <code>dp[i+2]</code>, and <code>dp[i+3]</code> — states that lie further along the row. That means the last stone's outcome has to be known before we can compute anything about the stones before it.</p>
+<p><strong>Setup:</strong> <code>dp</code> has <code>n + 1</code> slots — one per stone, plus one extra slot at index <code>n</code> representing the empty row, which is worth <code>0</code> (nobody left to take anything, gap is zero).</p>
+<p><strong>Recurrence:</strong> For each index <code>i</code>, walking backward from <code>n - 1</code> to <code>0</code>:</p>
+<pre><code>dp[i] = max over k in {1, 2, 3} of:
+    (sum of stones[i .. i+k-1]) - dp[i + k]
+</code></pre>
+<p>Read it like this: whatever the current player takes gets added straight to their advantage. Then, because the opponent gets to play the rest of the row optimally, <em>their</em> best gap gets subtracted — it works against us, since every point they gain is a point off our lead.</p>
+<table>
+<thead>
+<tr>
+<th>Index</th>
+<th>Stones taken</th>
+<th>Running sum</th>
+<th>Subtract dp[i+k]</th>
+<th>Candidate gap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>i</td>
+<td>1 stone</td>
+<td>stones[i]</td>
+<td>dp[i+1]</td>
+<td>sum − dp[i+1]</td>
+</tr>
+<tr>
+<td>i</td>
+<td>2 stones</td>
+<td>+stones[i+1]</td>
+<td>dp[i+2]</td>
+<td>sum − dp[i+2]</td>
+</tr>
+<tr>
+<td>i</td>
+<td>3 stones</td>
+<td>+stones[i+2]</td>
+<td>dp[i+3]</td>
+<td>sum − dp[i+3]</td>
+</tr>
+</tbody>
+</table>
+<p><code>dp[i]</code> takes the best (maximum) of those three candidates.</p>
+<p><strong>Final answer:</strong> <code>dp[0]</code> is Alice's best possible lead over Bob across the entire row, since she moves first.</p>
+<ul>
+<li><code>dp[0] &gt; 0</code> → Alice wins</li>
+<li><code>dp[0] &lt; 0</code> → Bob wins</li>
+<li><code>dp[0] == 0</code> → tie</li>
+</ul>
+<h2>Python Code</h2>
+<pre><code class="language-python">from typing import List
+
+
+def stone_game_iii(stone_values: List[int]) -&gt; str:
+    n = len(stone_values)
+    # dp[i] = best score gap the player to move can achieve from index i onward
+    # dp[n] = 0: empty row, no gap to fight over
+    dp = [0] * (n + 1)
+
+    for i in range(n - 1, -1, -1):
+        best = float(&quot;-inf&quot;)
+        running_take = 0
+        for k in range(1, 4):  # take 1, 2, or 3 stones
+            if i + k - 1 &gt;= n:
+                break
+            running_take += stone_values[i + k - 1]
+            best = max(best, running_take - dp[i + k])
+        dp[i] = best
+
+    if dp[0] &gt; 0:
+        return &quot;Alice&quot;
+    if dp[0] &lt; 0:
+        return &quot;Bob&quot;
+    return &quot;Tie&quot;
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>dp = [0] * (n + 1)</code> — one slot per stone plus the empty-row sentinel at index <code>n</code>, which stays <code>0</code>.</li>
+<li><code>for i in range(n - 1, -1, -1)</code> — the backward loop. Every <code>dp[i]</code> depends on positions ahead of <code>i</code>, so those must already be filled before we compute <code>dp[i]</code>.</li>
+<li><code>running_take</code> — accumulates the value of the stones taken in this candidate move (1, then 2, then 3 stones) without recomputing a sum from scratch each time.</li>
+<li><code>if i + k - 1 &gt;= n: break</code> — guards against reading past the end of the row when fewer than 3 stones remain.</li>
+<li><code>best - dp[i + k]</code> — the core of the trick: what you gained minus what your opponent can gain afterward.</li>
+<li><code>dp[i] = best</code> — store the best achievable gap for whoever is to move from index <code>i</code>.</li>
+<li>The final <code>if/elif/else</code> on <code>dp[0]</code> reads the sign straight into the winner.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Row: <code>[1, 2, 3, 7]</code>, so <code>n = 4</code>.</p>
+<ul>
+<li><code>dp[4] = 0</code> (empty row)</li>
+<li><code>dp[3]</code>: only option is taking the 1 stone at index 3 → <code>7 - dp[4] = 7 - 0 = 7</code>. <code>dp[3] = 7</code></li>
+<li><code>dp[2]</code>: take 1 (value 3) → <code>3 - dp[3] = 3 - 7 = -4</code>. Take 2 (3+7=10) → <code>10 - dp[4] = 10</code>. Best = <code>10</code>. <code>dp[2] = 10</code></li>
+<li><code>dp[1]</code>: take 1 (2) → <code>2 - dp[2] = 2 - 10 = -8</code>. Take 2 (2+3=5) → <code>5 - dp[3] = 5 - 7 = -2</code>. Take 3 (2+3+7=12) → <code>12 - dp[4] = 12</code>. Best = <code>12</code>. <code>dp[1] = 12</code></li>
+<li><code>dp[0]</code>: take 1 (1) → <code>1 - dp[1] = 1 - 12 = -11</code>. Take 2 (1+2=3) → <code>3 - dp[2] = 3 - 10 = -7</code>. Take 3 (1+2+3=6) → <code>6 - dp[3] = 6 - 7 = -1</code>. Best = <code>-1</code>. <code>dp[0] = -1</code></li>
+</ul>
+<p><code>dp[0] = -1</code> is negative, so <strong>Bob wins</strong> — matching what we saw by hand: Alice grabs 6 points, Bob takes the 7, Bob wins by 1.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> O(n) — the outer loop runs once per stone, and the inner loop is capped at 3 iterations regardless of <code>n</code>, so the total work is linear.</li>
+<li><strong>Space:</strong> O(n) — one DP array of size <code>n + 1</code>. This can be trimmed to O(1) with a sliding window of the last 3 values, but O(n) is already comfortably fast enough for the 50,000-stone constraint and much easier to read.</li>
+</ul>
+<p>Both bounds are correct because every <code>dp[i]</code> is computed exactly once and only reads values that are already finalized (indices <code>i+1</code> through <code>i+3</code>), so there's no redundant recomputation anywhere in the loop.</p>
+<h2>Alternative Solutions</h2>
+<p><strong>Top-down recursion with memoization</strong> is a reasonable alternative: recurse from index <code>i</code>, cache the result in a dictionary or array, and let Python handle the backward dependency implicitly through the call stack. It reads a bit closer to the plain English rules of the game, since you're not manually reasoning about fill order.</p>
+<p>The tradeoff is recursion depth. With rows up to 50,000 stones, a naive recursive solution risks hitting Python's recursion limit, and function call overhead makes it noticeably slower than the iterative version in practice. For this specific problem, the bottom-up loop is the one to ship — it has the same time and space complexity with none of the recursion-limit risk.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Single stone (<code>n = 1</code>):</strong> Alice takes it, no computation needed — <code>dp[0]</code> correctly resolves to <code>stones[0] - dp[1] = stones[0]</code>.</li>
+<li><strong>All negative values:</strong> The DP still finds the ending that loses the least; there's no assumption anywhere that values are positive.</li>
+<li><strong>Exact tie:</strong> If both players' optimal play lands on equal scores, <code>dp[0]</code> comes out to exactly <code>0</code>, and the code correctly returns a tie rather than defaulting to either player.</li>
+<li><strong>Empty row handled implicitly:</strong> <code>dp[n] = 0</code> is what makes the very first backward step correct — skipping this slot is a common bug (see below).</li>
+<li><strong>Large input (n = 50,000):</strong> Because this is a single backward loop with no recursion, it scales safely to the full constraint with no stack risk.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Tracking Alice's and Bob's scores separately.</strong> This forces you to maintain two arrays or two variables for a game that only ever cares about their <em>difference</em> — unnecessary complexity that also makes memoization harder to reason about.</li>
+<li><strong>Sizing the DP array to exactly <code>n</code> instead of <code>n + 1</code>.</strong> Forgetting the extra slot for the empty row breaks the very first backward step, since <code>dp[n]</code> needs to exist and equal <code>0</code>.</li>
+<li><strong>Assuming taking more stones is always better.</strong> This breaks the moment a large value sits just out of reach, or a negative value shows up in the row you're about to hand your opponent.</li>
+<li><strong>Filling the DP array left to right.</strong> Since <code>dp[i]</code> depends on <code>dp[i+1]</code>, <code>dp[i+2]</code>, <code>dp[i+3]</code>, filling forward reads uninitialized future states.</li>
+<li><strong>Forgetting to bounds-check when fewer than 3 stones remain.</strong> Without the <code>i + k - 1 &gt;= n</code> guard, the loop reads past the end of the stones list near the tail of the row.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Why does subtracting <code>dp[i+k]</code> correctly model an adversarial opponent, rather than just adding their best score?</li>
+<li>How would you reduce the space complexity from O(n) to O(1)?</li>
+<li>What changes if a player can take between 1 and <code>k</code> stones instead of a fixed 1–3?</li>
+<li>How would you also return the actual sequence of moves, not just the winner?</li>
+<li>Why is top-down recursion with memoization risky here, and how would you convert it to iterative form generically?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Stone Game II (LeetCode 1140)</strong> — same score-gap trick, but the number of stones you can take grows as the game progresses, making the recurrence state-dependent on a <code>M</code> parameter.</li>
+<li><strong>Predict the Winner (LeetCode 486)</strong> — the two-ended version of this same idea; only one stone can be taken per turn, from either end.</li>
+<li><strong>Stone Game (LeetCode 877)</strong> — the original, simpler version where players always take exactly one stone from either end.</li>
+<li><strong>House Robber (LeetCode 198)</strong> — not a two-player game, but shares the "decide now, subtract/account for what happens next" backward-DP shape.</li>
+<li><strong>Predict the Winner variants generally</strong> — any "two players alternate optimal choices from a shared resource" problem tends to reduce to this same score-gap reformulation.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Stone Game III isn't hard because the code is long — it's ten lines. It's hard because the obvious first instinct (simulate both scores) is exponential and messy, while the right instinct (track just the gap) turns it into ordinary single-player DP. Fill backward, one number per index, best lead achievable from taking 1, 2, or 3 stones. Read the sign at <code>dp[0]</code> and you already know the winner. Score Gap DP — once you see it here, you'll spot it in the next game-theory DP problem immediately.</p>
+<h2>Watch the Video</h2>
+<p>For the full backward-DP build, including the greedy trap at the start and a live trace through real numbers, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series that walks through LeetCode daily challenges, system design fundamentals, and everyday software engineering concepts — built for developers who want to actually understand the "why" behind a solution, not just memorize the pattern.</p>
+<h2>Call To Action</h2>
+<p>If this walkthrough helped the trick click, give the video a like on YouTube and subscribe for the next daily problem breakdown. Subscribe to the Substack for the written companion to every video, drop a comment if there's a problem you want covered next, and share this with anyone prepping for coding interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Stone Game III: what pattern do you reach for?</summary><p>DP with lookahead — dp[i] = max score current player can force from pile i onward, trying take 1/2/3.</p></details><details class='card2'><summary>Time complexity of the Stone Game III DP?</summary><p>O(n) — one pass right-to-left, constant work (3 choices) per index.</p></details><details class='card2'><summary>Space complexity, and how to cut it further?</summary><p>O(n) for the dp array; can drop to O(1) with a 3-slot rolling window since dp[i] only needs the next 3 values.</p></details><details class='card2'><summary>Trickiest bug when coding this DP?</summary><p>Storing raw pile sum instead of score DIFFERENCE (current player&#x27;s edge); forgetting the difference flips sign each recursive call.</p></details><details class='card2'><summary>Stone Game III vs simple &#x27;take biggest pile&#x27; greedy?</summary><p>Greedy fails — taking the biggest pile ignores what it hands the opponent next; DP evaluates all 3 take-counts against optimal opponent play.</p></details><details class='card2'><summary>Interview follow-up: why 1/2/3 stones, not simulate every full game?</summary><p>Simulating every turn sequence is exponential; DP collapses it to one state per starting index since only 3 next-moves matter.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>

@@ -1,0 +1,215 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stone Game III — 🔴 Advanced (3/3) — LeetCode Daily Python Solution (why greedy loses) — Python LeetCode Solution</title><meta name="description" content="📍 Jump to your level:
+🔴 Advanced: 0:18–7:06
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/stone-game-iii-advanced
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-pyth">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/stone-game-iii-advanced.html">
+<meta property="og:title" content="Stone Game III — 🔴 Advanced (3/3) — LeetCode Daily Python Solution (why greedy loses) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📍 Jump to your level:
+🔴 Advanced: 0:18–7:06
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/stone-game-iii-advanced
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-pyth">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Stone Game III — 🔴 Advanced (3/3) — LeetCode Daily Python Solution (why greedy loses)</h1><span class='badge' style='background:#fb923c22;color:#fb923c'>💰 Greedy</span><article><h2>Introduction</h2>
+<p>Stone Game III looks like a simple turn-taking game until you try to solve it with intuition alone — and that's exactly why it shows up in interviews. It belongs to a small, important family of problems (Stone Game I, II, VII, and Predict the Winner) that all test the same underlying skill: recognizing when a problem is a <strong>minimax game</strong> rather than a straightforward optimization.</p>
+<p>Most candidates start by reaching for greedy logic — take the biggest pile, take the highest-value chunk, maximize the immediate sum. All of these fail on Stone Game III, and they fail in a way that looks reasonable right up until you test it against a counterexample. Interviewers use this problem specifically because it separates people who pattern-match "take the biggest number" from people who understand that in a two-player game, every move has to account for what it hands the opponent.</p>
+<p>If you can internalize the trick here — tracking the score <strong>gap</strong> instead of two separate scores — you'll recognize it instantly the next time it shows up wearing a different move set.</p>
+<h2>Problem Overview</h2>
+<p>Alice and Bob play a game with a row of stones, each with an integer value (which can be negative). Starting with Alice, players alternate turns. On each turn, a player takes <strong>1, 2, or 3 stones</strong> from the front of the remaining row and adds their values to their own score.</p>
+<p>The game ends when no stones remain. Compare the two final scores:</p>
+<ul>
+<li>If Alice's total is strictly greater, Alice wins.</li>
+<li>If Bob's total is strictly greater, Bob wins.</li>
+<li>If they're equal, it's a tie.</li>
+</ul>
+<p>Both players play <strong>optimally</strong> — they always make the move that gives them the best possible outcome, assuming the other player will do the same. You need to determine who wins.</p>
+<h2>Example</h2>
+<p><strong>Input:</strong> <code>stoneValue = [1, 2, 3, 7]</code></p>
+<p>If Alice greedily grabs the 7 first, Bob is left with <code>[1, 2, 3]</code> and simply takes all three, scoring 6 to Alice's 7 — close, but let's check the actual optimal play. Alice's real best move is to take all three front stones (<code>1 + 2 + 3 = 6</code>), leaving Bob with just <code>[7]</code>. Bob is forced to take it, ending 6 to 7 — Bob wins by 1 in that branch. Working through every branch with the DP recurrence below, Alice's true optimal move turns out to make her win by a wide margin, ending near 7 vs 0 in her favor once the full recursion is respected instead of hand-waved.</p>
+<p><strong>Input:</strong> <code>stoneValue = [1, 2, 3, -9]</code></p>
+<p>Here the poisoned tail stone (-9) makes the correct strategy obvious in hindsight: absorb the whole prefix and force Bob to take the -9. The DP naturally produces a large negative gap in Bob's favor being avoided — Alice wins decisively, and the code doesn't need any special-casing to detect the negative value. The sign just falls out of the sums.</p>
+<h2>Intuition</h2>
+<p>Start from the failure. Suppose you try: "always take the pile with the highest single value." On <code>[1, 2, 3, 7]</code>, that means grab the 7 immediately. But that hands Bob <code>[1, 2, 3]</code> — a set Bob can now sweep entirely. Greedy scored a local win and lost the game. Try prefix-sum greedy (take whichever of the next 1, 2, or 3 stones has the largest sum) — same failure mode. Any heuristic that scores a move by what <em>you</em> gain, without accounting for what you leave <em>the opponent</em>, breaks on this problem.</p>
+<p>That tells you something important: this isn't "maximize your score," it's "maximize your score minus your opponent's best response." That reframing is the whole solution.</p>
+<p>Here's the key insight that makes it efficient: track the <strong>score differential</strong>, not two separate running scores. Since <code>final(Alice) − final(Bob)</code> is the only thing that determines the winner, and it's invariant to whose "turn" it technically is, the state collapses from a pair (Alice's score, Bob's score) down to a single number — the gap for whoever is moving right now.</p>
+<p>Define <code>dp[i]</code> as the best score differential the <em>current mover</em> can achieve, starting from index <code>i</code> to the end of the row, assuming both players play perfectly from here on. Every player, on their turn, wants to maximize their own gain minus whatever gap they hand back to the opponent one level down. That's it — no player identity needs to be tracked at all.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Simulate every possible sequence of moves. At each state, try taking 1, 2, or 3 stones, track both players' running scores and whose turn it is, and recurse.</p>
+<p><strong>Algorithm:</strong>
+1. Recursive function <code>play(i, aliceScore, bobScore, isAliceTurn)</code>.
+2. Base case: if <code>i</code> reaches the end, compare scores.
+3. Otherwise, try taking 1, 2, or 3 stones, add to the current player's score, recurse on <code>i + k</code>.
+4. Return whichever branch benefits the current player.</p>
+<p><strong>Advantages:</strong> Conceptually simple, directly mirrors the problem statement.</p>
+<p><strong>Disadvantages:</strong> At every index there are 3 choices, so this branches into roughly <code>3^n</code> calls. It also tracks two scores and a turn flag — extra state that turns out to be entirely redundant.</p>
+<p><strong>Time complexity:</strong> O(3ⁿ) — exponential, unusable for <code>n</code> up to 5×10⁴.
+<strong>Space complexity:</strong> O(n) recursion depth, but the real cost is the exponential call count.</p>
+<h2>Optimal Solution</h2>
+<p>The redundancy in brute force is this: two different <code>(aliceScore, bobScore)</code> pairs at the same index <code>i</code>, with the same <em>difference</em>, lead to identical future decisions. So instead of tracking two scores, track one: the differential.</p>
+<p>Define:</p>
+<pre><code>dp[i] = best score gap the mover can achieve from index i onward
+</code></pre>
+<p>At index <code>i</code>, the mover can take 1, 2, or 3 stones. If they take <code>k</code> stones, they gain <code>prefixSum(i, i+k)</code>, and the opponent becomes the mover at <code>i + k</code> with their own best gap <code>dp[i + k]</code>. Since that opponent's gap is <em>against</em> the current player, it needs to be <strong>subtracted</strong>:</p>
+<pre><code>dp[i] = max over k in {1, 2, 3} of ( sum(stones[i : i+k]) - dp[i + k] )
+</code></pre>
+<p>Dependencies only point forward — <code>dp[i]</code> depends on <code>dp[i+1]</code>, <code>dp[i+2]</code>, <code>dp[i+3]</code> — so there are no cycles. That means you can fill the table <strong>right to left</strong>, and each <code>dp[i]</code> is ready by the time you need it.</p>
+<p>The base case: <code>dp[n] = 0</code> (no stones left, gap is zero). And critically, the running "best of the three choices" must start at <code>float('-inf')</code>, not <code>0</code> — with negative stone values, a real optimal gap can itself be negative, and seeding at 0 would silently discard valid negative answers.</p>
+<p>At the end, <code>dp[0]</code> is the final answer: the guaranteed score differential Alice achieves over Bob under perfect play from both sides.</p>
+<ul>
+<li><code>dp[0] &gt; 0</code> → Alice wins</li>
+<li><code>dp[0] &lt; 0</code> → Bob wins</li>
+<li><code>dp[0] == 0</code> → Tie</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Index i</th>
+<th>Stones available</th>
+<th>Best move</th>
+<th>dp[i]</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4 (end)</td>
+<td>—</td>
+<td>—</td>
+<td>0</td>
+</tr>
+<tr>
+<td>3</td>
+<td>[7]</td>
+<td>take 1</td>
+<td>7</td>
+</tr>
+<tr>
+<td>2</td>
+<td>[3,7]</td>
+<td>take 1 or 2</td>
+<td>max(3-7, 10-0) = 10</td>
+</tr>
+<tr>
+<td>1</td>
+<td>[2,3,7]</td>
+<td>take 3</td>
+<td>max(2-10, 5-7, 12-0) = 12</td>
+</tr>
+<tr>
+<td>0</td>
+<td>[1,2,3,7]</td>
+<td>take k</td>
+<td>max(1-12, 3-10, 6-7) = -1</td>
+</tr>
+</tbody>
+</table>
+<p>(This trace shows the earlier "grab the 7" temptation collapsing: every option at <code>i=0</code> loses ground, and the sharpest one — taking all three front stones — only loses by 1, matching the actual optimal split of the pile.)</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from typing import List
+
+
+def stone_game_iii(stone_value: List[int]) -&gt; str:
+    n = len(stone_value)
+    # dp[i] = best score differential the mover can achieve from index i onward
+    dp = [0] * (n + 1)
+
+    for i in range(n - 1, -1, -1):
+        best = float('-inf')  # must be -inf: a valid gap can be negative
+        take_sum = 0
+        for k in range(1, 4):
+            if i + k - 1 &gt;= n:
+                break
+            take_sum += stone_value[i + k - 1]
+            best = max(best, take_sum - dp[i + k])
+        dp[i] = best
+
+    if dp[0] &gt; 0:
+        return &quot;Alice&quot;
+    if dp[0] &lt; 0:
+        return &quot;Bob&quot;
+    return &quot;Tie&quot;
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>dp = [0] * (n + 1)</code> — one extra slot for the empty-suffix base case, <code>dp[n] = 0</code>.</li>
+<li>The outer loop runs <code>i</code> from <code>n - 1</code> down to <code>0</code>: this is the "right to left" fill the dependency graph requires.</li>
+<li><code>best = float('-inf')</code> — the seed that avoids silently clipping negative optimal gaps.</li>
+<li>The inner loop tries <code>k = 1, 2, 3</code>, accumulating <code>take_sum</code> incrementally instead of recomputing a prefix sum each time.</li>
+<li><code>i + k - 1 &gt;= n</code> guards against reading past the end of the array when fewer than 3 stones remain.</li>
+<li><code>take_sum - dp[i + k]</code> is the role-swap step: <code>dp[i + k]</code> is the <em>next</em> mover's best gap, so subtracting it turns their advantage into our deficit.</li>
+<li>After the loop, <code>dp[0]</code> holds the final answer, and the sign alone decides the winner — no simulation needed.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using <code>stoneValue = [1, 2, 3, 7]</code> (n = 4):</p>
+<ul>
+<li><code>dp[4] = 0</code> (base case)</li>
+<li><code>i = 3</code>: only stone is <code>[7]</code>. <code>take_sum = 7</code>, <code>best = 7 - dp[4] = 7</code>. <code>dp[3] = 7</code></li>
+<li><code>i = 2</code>: stones <code>[3, 7]</code>.</li>
+<li>k=1: <code>take_sum=3</code>, <code>3 - dp[3] = 3 - 7 = -4</code></li>
+<li>k=2: <code>take_sum=10</code>, <code>10 - dp[4] = 10 - 0 = 10</code></li>
+<li><code>dp[2] = 10</code></li>
+<li><code>i = 1</code>: stones <code>[2, 3, 7]</code>.</li>
+<li>k=1: <code>2 - dp[2] = 2 - 10 = -8</code></li>
+<li>k=2: <code>5 - dp[3] = 5 - 7 = -2</code></li>
+<li>k=3: <code>12 - dp[4] = 12 - 0 = 12</code></li>
+<li><code>dp[1] = 12</code></li>
+<li><code>i = 0</code>: stones <code>[1, 2, 3, 7]</code>.</li>
+<li>k=1: <code>1 - dp[1] = 1 - 12 = -11</code></li>
+<li>k=2: <code>3 - dp[2] = 3 - 10 = -7</code></li>
+<li>k=3: <code>6 - dp[3] = 6 - 7 = -1</code></li>
+<li><code>dp[0] = -1</code></li>
+</ul>
+<p><code>dp[0] = -1 &lt; 0</code> → <strong>Bob wins</strong> by 1, confirming that grabbing the pile with 7 upfront is a trap, and even the best available line for Alice on this input still comes up 1 short.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(3n) → O(n). Each of the <code>n</code> positions does a bounded inner loop of at most 3 iterations — the branching factor is fixed by the problem's move set, not by input size.</p>
+<p><strong>Space:</strong> O(n) for the <code>dp</code> array. No recursion stack is used, so there's no hidden depth cost either.</p>
+<p>Both bounds are tight: you must look at every suffix once (<code>n</code> positions), and each position genuinely needs to compare exactly 3 options — there's no way to skip a position or fold the choice count further without changing the move set itself.</p>
+<h2>Alternative Solutions</h2>
+<p><strong>Memoized top-down recursion</strong> has identical asymptotics — O(n) time, O(n) space — but it's strictly worse in practice here. With <code>n</code> up to 5×10⁴, the recursion depth exceeds Python's default recursion limit. Even after raising it with <code>sys.setrecursionlimit</code>, function-call overhead makes the recursive version measurably slower than the flat bottom-up loop. Bottom-up wins on both correctness-by-default and speed, not just style.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Single stone (<code>n = 1</code>):</strong> <code>dp[0]</code> equals that stone's value directly — the mover takes it, game over. This is the base case every other state ultimately reduces to.</li>
+<li><strong>All stones equal:</strong> Often produces a tie, but only check via the DP — don't assume symmetry guarantees it.</li>
+<li><strong>All negative values:</strong> The recurrence handles this identically, because it was never "maximize score," it was always "maximize score minus opponent's best response." Optimal play here means minimizing your own loss, and the math doesn't need to branch on sign.</li>
+<li><strong>Exactly 2 or 3 stones total:</strong> The inner loop's boundary check (<code>i + k - 1 &gt;= n</code>) prevents out-of-range reads when fewer than 3 stones remain.</li>
+<li><strong>Large arrays near n = 5×10⁴:</strong> Confirms why O(n) with no recursion stack is required — this is the input size where the brute-force and even naive memoized-recursive approaches fall over.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Seeding <code>best</code> at 0 instead of <code>float('-inf')</code>.</strong> Passes every positive-value test, then silently produces a wrong answer the moment the true optimal gap is negative.</li>
+<li><strong>Subtracting <code>dp[i + k - 1]</code> instead of <code>dp[i + k]</code>.</strong> Taking <code>k</code> stones from index <code>i</code> covers <code>i</code> through <code>i + k - 1</code>; the opponent's suffix starts at <code>i + k</code>, not one before it. This off-by-one is the single most common bug when implementing this cold.</li>
+<li><strong>Adding an explicit turn flag or separate score tracking.</strong> If you find yourself doing this, you've picked the wrong state representation — the differential DP needs neither.</li>
+<li><strong>Trying to compute this left-to-right.</strong> Since <code>dp[i]</code> depends on <code>dp[i+1..i+3]</code>, only a right-to-left fill is valid.</li>
+<li><strong>Falling back to greedy heuristics</strong> (biggest pile, biggest prefix sum) because they pass a few visible test cases, without checking against an adversarial counterexample like <code>[1, 2, 3, 7]</code>.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Why does tracking one differential value replace tracking two separate scores?</li>
+<li>What breaks if you initialize <code>best</code> to 0 instead of negative infinity?</li>
+<li>How would the recurrence change if players could take up to <code>k</code> stones for larger <code>k</code>?</li>
+<li>Can this be solved iteratively without an array, using O(1) space?</li>
+<li>How does this generalize to picking from either end of the row (a deque) instead of only the front?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Stone Game II</strong> — relaxes the fixed take-set (1–3) to a growing window <code>M</code>, requiring a 2D state <code>(i, M)</code> and a different technique to stay efficient.</li>
+<li><strong>Stone Game VII</strong> — same alternating-turn skeleton, different payoff structure (removing from either end, scoring by remaining sum).</li>
+<li><strong>Predict the Winner</strong> — the same score-differential DP, but stones can be taken from <em>either</em> end of a deque, so the state grows from a single index to an interval <code>(i, j)</code>.</li>
+<li><strong>Stone Game I</strong> — the deque-picking base case of this family, solvable even more simply due to parity properties.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Greedy fails here because it optimizes a single move in isolation, ignoring what it hands the opponent — that's the signature of a minimax problem, not a straightforward optimization. The fix is to stop tracking two players' scores and instead track the score <em>differential</em>, which collapses the state space from a pair down to one number per index. Once you see that reduction, the DP falls out naturally: <code>dp[i] = max(take_sum - dp[i+k])</code>, filled right to left, with <code>dp[0]</code> as the proven answer — no simulation required.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with both traces animated side by side — the near-miss on <code>[1, 2, 3, 7]</code> and the decisive win on <code>[1, 2, 3, -9]</code> — watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series working through the LeetCode daily challenge with a focus on the reasoning behind each solution — not just the final code. Advanced entries like this one dig into the family of related problems and the transferable pattern underneath, so the trick you learn today generalizes the next time it shows up in a different disguise.</p>
+<h2>Call To Action</h2>
+<p>If this walkthrough helped the DP click, give the video a like on YouTube and subscribe for the rest of the daily challenge series. For deeper written breakdowns like this one delivered straight to your inbox, subscribe to the Substack. Drop a comment with your own dry run on a different input, and share this with anyone prepping for interviews who's still reaching for greedy on game-theory problems.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Two-player optimal split game, alternating turns: which pattern?</summary><p>Game-theory DP with score differential — track (my score - opponent&#x27;s best response), not absolute totals.</p></details><details class='card2'><summary>Stone Game III: time complexity?</summary><p>O(n·k) where k=3 fixed choices per position, so effectively O(n) — one pass, three lookahead options each.</p></details><details class='card2'><summary>Stone Game III: space complexity?</summary><p>O(n) for the DP array; can shrink to O(1) with a rolling window of last 3 values since only nearby states matter.</p></details><details class='card2'><summary>Common bug when coding the greedy &#x27;take biggest pile&#x27; approach?</summary><p>Greedy fails — taking the biggest pile now can starve you of better combos later; must use DP over all three take-counts.</p></details><details class='card2'><summary>Stone Game III DP vs brute-force simulation — key difference?</summary><p>Brute force retries every turn sequence exponentially; DP memoizes best net score from each starting index, cutting to linear work.</p></details><details class='card2'><summary>Interview follow-up: how do you reconstruct dp[i] from dp[i+1..i+3]?</summary><p>dp[i] = max over take=1..3 of (sum of taken stones − dp[i+take]), since opponent plays optimally against the remainder.</p></details></div><h2 class='ph1' style='font-size:1.4rem'>Similar problems</h2><div class='grid'><a class='card' href='stone-game-intermediate.html'><div class='body'><h3>Stone Game — 🟡 Intermediate (2/3) — LeetCode Daily Python Solution (the interval trick)</h3><span class='badge' style='background:#fb923c22;color:#fb923c'>💰 Greedy</span></div></a><a class='card' href='smallest-palindromic-rearrangement-i-advanced.html'><div class='body'><h3>This Greedy Trick Solves Smallest Palindromic Rearrangement in O(n)</h3><span class='badge' style='background:#fb923c22;color:#fb923c'>💰 Greedy</span></div></a><a class='card' href='smallest-subsequence-of-distinct-characters.html'><div class='body'><h3>Smallest Subsequence of Distinct Characters — LeetCode Daily Python Solution (the greedy stack trick nobody sees)</h3><span class='badge' style='background:#fb923c22;color:#fb923c'>💰 Greedy</span></div></a></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
