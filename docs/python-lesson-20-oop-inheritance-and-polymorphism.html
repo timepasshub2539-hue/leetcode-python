@@ -1,0 +1,241 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 20: This Bug Waits Until Your 5th Class to Bite You — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-20-oop-inheritance-and-polymorphism
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-20-oop-inheritance-and-polymorphism.html">
+<meta property="og:title" content="Lesson 20: This Bug Waits Until Your 5th Class to Bite You — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-20-oop-inheritance-and-polymorphism
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson 20: This Bug Waits Until Your 5th Class to Bite You</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every developer writes this bug at least once, and almost nobody notices it the first time. You write a <code>Dog</code> class. It works. You write a <code>Cat</code> class right after, and because it's basically the same shape, you copy <code>Dog</code>, rename a few things, and move on. It feels efficient. It is efficient — for about four classes.</p>
+<p>Then you add a <code>Bird</code>. Then a <code>Fish</code>. Then a <code>Snake</code>. Now you have five classes that all repeat the same <code>__init__</code> method, the same attribute setup, the same boilerplate. And here's the part that actually costs you time: the day you need to change how an animal stores its name, you don't make one edit. You make five, in five different files, and if you miss even one, you've introduced a bug that won't show up in testing — it'll show up in production, three weeks from now, on the one class nobody remembered to update.</p>
+<p>This is exactly the problem inheritance was designed to solve, and it's also one of the most commonly tested concepts in coding interviews — not because interviewers love object-oriented theory, but because how you handle shared structure across related classes tells them a lot about how you'll handle a real codebase. Understanding inheritance, method overriding, <code>super()</code>, and duck typing isn't academic. It's the difference between a codebase that scales cleanly to twenty classes and one that becomes unmaintainable at five.</p>
+<h2>Problem Overview</h2>
+<p>Here's the situation in plain terms: you have several classes that represent different kinds of the same underlying concept — different animals, different shapes, different payment methods, it doesn't matter. Each of these classes needs some shared setup (like storing a name) and some behavior that's unique to each one (like how it makes a sound).</p>
+<p>The naive approach is to write each class independently, copying the shared parts. The correct approach is to identify what's actually shared, pull it into one common class, and let every specific class build on top of that common class instead of duplicating it. On top of that, each class still needs a way to say "I'm mostly like the others, except for this one behavior" — and Python needs a way to treat all of these different classes uniformly when you just want to call a shared action on any of them, regardless of their exact type.</p>
+<h2>Example</h2>
+<p>Let's say you're modeling animals in a small game or simulation. You want:</p>
+<ul>
+<li>Every animal to have a <code>name</code>.</li>
+<li>Every animal to have its own <code>make_sound()</code> behavior.</li>
+<li>A way to loop over a list of different animals and just call <code>make_sound()</code> on each, without caring what specific type each one is.</li>
+</ul>
+<pre><code class="language-python">animals = [Dog(&quot;Rex&quot;), Cat(&quot;Whiskers&quot;), Bird(&quot;Tweety&quot;)]
+
+for animal in animals:
+    print(animal.make_sound())
+</code></pre>
+<p>Expected output:</p>
+<pre><code>Rex says Woof!
+Whiskers says Meow!
+Tweety says Tweet!
+</code></pre>
+<p>Notice what's happening here: the loop doesn't know or care that it's holding a <code>Dog</code>, a <code>Cat</code>, and a <code>Bird</code>. It just calls <code>make_sound()</code> on whatever object it has, and each object responds in its own way. That behavior — same method call, different result depending on the object — is the entire payoff of this lesson.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer actually arrives at this design, step by step, without jumping straight to code.</p>
+<p>Step one: notice duplication. If you're writing the same <code>__init__</code> logic in <code>Dog</code>, <code>Cat</code>, <code>Bird</code>, <code>Fish</code>, and <code>Snake</code>, that's a signal, not a coincidence. Five near-identical blocks of code mean there's a shared concept hiding underneath all of them — in this case, "a thing that has a name."</p>
+<p>Step two: name the shared concept. Give it its own class. Call it <code>Animal</code>. This class holds only what's truly common — the name, the basic setup — and nothing that varies.</p>
+<p>Step three: connect the specific classes to the shared one. <code>Dog</code>, <code>Cat</code>, and <code>Bird</code> don't redefine the name logic. They declare that they <em>are</em> animals, and they automatically get everything <code>Animal</code> already knows how to do. This is inheritance: <code>class Dog(Animal):</code> reads as "Dog is a kind of Animal."</p>
+<p>Step four: handle the parts that differ. Not every animal makes the same sound, so each subclass defines its own version of <code>make_sound()</code>. Python always uses the most specific version it can find for a given object — this is called overriding, and it's what lets <code>Dog</code> and <code>Cat</code> share structure while still behaving differently where it matters.</p>
+<p>Step five: handle the parts that differ <em>and</em> build on the shared part. If <code>Dog</code> needs extra setup — say, a <code>breed</code> — you don't want to retype the name-storing logic. Instead, you call the parent's setup first with <code>super().__init__(...)</code>, then add your extra piece. You're extending, not replacing.</p>
+<p>Step six: realize you don't always need any of this. If all you actually need is "call this method on whatever object you're given," Python doesn't require that object to inherit from anything. It just checks whether the method exists. That's duck typing, and it's worth knowing precisely because it tells you when <em>not</em> to reach for inheritance.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Write each class fully independently. <code>Dog</code>, <code>Cat</code>, <code>Bird</code>, <code>Fish</code>, <code>Snake</code> each define their own <code>__init__</code> and their own <code>make_sound</code>, with no shared parent.</p>
+<pre><code class="language-python">class Dog:
+    def __init__(self, name):
+        self.name = name
+
+    def make_sound(self):
+        return f&quot;{self.name} says Woof!&quot;
+
+
+class Cat:
+    def __init__(self, name):
+        self.name = name
+
+    def make_sound(self):
+        return f&quot;{self.name} says Meow!&quot;
+</code></pre>
+<p><strong>Algorithm:</strong> Copy the class template, rename the class, change the return string in <code>make_sound</code>, repeat for every animal.</p>
+<p><strong>Advantages:</strong>
+- Extremely simple to read for a single class in isolation.
+- No need to understand inheritance at all.</p>
+<p><strong>Disadvantages:</strong>
+- Every shared change (e.g., validating that <code>name</code> isn't empty) must be made in every class.
+- Easy to introduce silent inconsistencies — one class quietly drifts from the others.
+- Doesn't scale. Five classes is annoying; twenty is unmanageable.</p>
+<p><strong>Time complexity:</strong> O(1) per method call — this isn't an algorithmic problem, it's a maintenance problem, and that's exactly why it matters.
+<strong>Space complexity:</strong> O(n) in duplicated code, where n is the number of classes — the real cost here isn't runtime memory, it's engineering time.</p>
+<h2>Optimal Solution</h2>
+<p>Pull the shared logic into a single parent class, and let every specific class inherit from it.</p>
+<pre><code>            Animal
+           /   |   \
+        Dog   Cat   Bird
+</code></pre>
+<p><code>Animal</code> defines the trunk — the <code>__init__</code> that stores <code>name</code>. <code>Dog</code>, <code>Cat</code>, and <code>Bird</code> are branches. They automatically carry whatever <code>Animal</code> defines, without rewriting it. Each branch only needs to define what makes it different: its own <code>make_sound</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Defines <code>__init__</code>?</th>
+<th>Defines <code>make_sound</code>?</th>
+<th>Gets <code>name</code> from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Animal</td>
+<td>Yes</td>
+<td>No (base default)</td>
+<td>itself</td>
+</tr>
+<tr>
+<td>Dog</td>
+<td>No</td>
+<td>Yes</td>
+<td>Animal</td>
+</tr>
+<tr>
+<td>Cat</td>
+<td>No</td>
+<td>Yes</td>
+<td>Animal</td>
+</tr>
+<tr>
+<td>Bird</td>
+<td>No</td>
+<td>Yes</td>
+<td>Animal</td>
+</tr>
+</tbody>
+</table>
+<p>When <code>Dog</code> needs something extra, like a <code>breed</code>, it doesn't rewrite the name-storing logic — it calls <code>super().__init__(name)</code> to run the parent's setup first, then adds its own piece on top.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">class Animal:
+    &quot;&quot;&quot;Shared base for anything that has a name and can make a sound.&quot;&quot;&quot;
+
+    def __init__(self, name):
+        self.name = name
+
+    def make_sound(self):
+        return f&quot;{self.name} makes a sound.&quot;
+
+
+class Dog(Animal):
+    def __init__(self, name, breed=None):
+        super().__init__(name)  # reuse the parent's setup
+        self.breed = breed
+
+    def make_sound(self):
+        return f&quot;{self.name} says Woof!&quot;
+
+
+class Cat(Animal):
+    def make_sound(self):
+        return f&quot;{self.name} says Meow!&quot;
+
+
+class Bird(Animal):
+    def make_sound(self):
+        return f&quot;{self.name} says Tweet!&quot;
+
+
+class Person:
+    &quot;&quot;&quot;Not related to Animal at all — duck typing in action.&quot;&quot;&quot;
+
+    def __init__(self, name):
+        self.name = name
+
+    def make_sound(self):
+        return f&quot;{self.name} says Quack! (I'm just pretending)&quot;
+
+
+def make_it_sound(thing):
+    &quot;&quot;&quot;Works on anything with a make_sound method, regardless of ancestry.&quot;&quot;&quot;
+    return thing.make_sound()
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>class Animal:</code> defines the shared base. It holds the <code>__init__</code> logic every animal needs.</li>
+<li><code>def __init__(self, name): self.name = name</code> stores the name once, in exactly one place.</li>
+<li><code>class Dog(Animal):</code> — the parenthesis is what makes <code>Dog</code> a subclass of <code>Animal</code>. It inherits everything <code>Animal</code> defines.</li>
+<li><code>super().__init__(name)</code> inside <code>Dog.__init__</code> calls <code>Animal</code>'s setup first, so <code>Dog</code> doesn't need to retype the name-storing logic. It then adds <code>self.breed</code>, which is unique to <code>Dog</code>.</li>
+<li><code>Cat</code> and <code>Bird</code> don't define <code>__init__</code> at all — they inherit it directly from <code>Animal</code>.</li>
+<li>Each subclass overrides <code>make_sound()</code> with its own version. Python always resolves to the closest, most specific definition for the object's actual type.</li>
+<li><code>Person</code> inherits from nothing related to <code>Animal</code>, but still defines <code>make_sound()</code>.</li>
+<li><code>make_it_sound(thing)</code> doesn't check <code>thing</code>'s type at all — it just calls <code>thing.make_sound()</code>. This works identically whether <code>thing</code> is a <code>Dog</code> or a <code>Person</code>, because Python only cares whether the method exists.</li>
+</ul>
+<h2>Dry Run</h2>
+<pre><code class="language-python">animals = [Dog(&quot;Rex&quot;, breed=&quot;Labrador&quot;), Cat(&quot;Whiskers&quot;), Bird(&quot;Tweety&quot;)]
+
+for animal in animals:
+    print(make_it_sound(animal))
+
+print(make_it_sound(Person(&quot;Alex&quot;)))
+</code></pre>
+<p>Walking through this:
+1. <code>Dog("Rex", breed="Labrador")</code> calls <code>Dog.__init__</code>, which calls <code>super().__init__("Rex")</code>, setting <code>self.name = "Rex"</code> via <code>Animal</code>, then sets <code>self.breed = "Labrador"</code>.
+2. <code>Cat("Whiskers")</code> has no <code>__init__</code> of its own, so Python walks up to <code>Animal.__init__</code> and sets <code>self.name = "Whiskers"</code>.
+3. The loop calls <code>make_it_sound(animal)</code> for each object. Python looks up <code>make_sound</code> on each object's actual class — <code>Dog.make_sound</code>, <code>Cat.make_sound</code>, <code>Bird.make_sound</code> — not on <code>Animal</code>.
+4. Output: <code>Rex says Woof!</code>, <code>Whiskers says Meow!</code>, <code>Tweety says Tweet!</code>.
+5. <code>Person("Alex")</code> isn't an <code>Animal</code> at all. <code>make_it_sound</code> doesn't check that — it just calls <code>.make_sound()</code>, which succeeds because <code>Person</code> happens to define it. Output: <code>Alex says Quack! (I'm just pretending)</code>.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> O(1) per <code>make_sound()</code> call — Python's method resolution order looks up the method on the object's class, which is a dictionary lookup, not a linear scan.</li>
+<li><strong>Space:</strong> O(1) additional space per object beyond its own attributes — inheritance doesn't duplicate the parent's code into each subclass; it's shared once on the class itself.</li>
+<li>These are correct because inheritance in Python is implemented as a lookup chain (the MRO), not as a copy operation — the parent class's code exists exactly once in memory, regardless of how many subclasses use it.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p>An alternative to inheritance here is composition combined with duck typing: instead of a class hierarchy, each object just implements whatever methods are needed, with no shared parent at all. This works well when the "shared" behavior is thin or when classes don't actually share meaningful state — only behavior. Inheritance wins when there's real shared state and setup logic (like <code>name</code>) that would otherwise be duplicated. Duck typing wins when you don't need shared state at all, just a shared method signature — as shown by <code>Person</code> fitting into <code>make_it_sound</code> without inheriting from <code>Animal</code>.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty or missing name:</strong> <code>Animal("")</code> — the base class doesn't validate this, so an empty string silently becomes a valid name. Add validation in <code>Animal.__init__</code> if this matters.</li>
+<li><strong>Subclass forgets to override <code>make_sound</code>:</strong> it silently falls back to <code>Animal.make_sound</code>, which may produce a generic, unintended message instead of an error.</li>
+<li><strong>Calling <code>super().__init__()</code> with the wrong arguments:</strong> raises a <code>TypeError</code> immediately, which is actually a good thing — it fails loudly instead of silently.</li>
+<li><strong>An object with no <code>make_sound</code> method at all passed into <code>make_it_sound</code>:</strong> raises <code>AttributeError</code> at call time, not before — duck typing has no compile-time safety net.</li>
+<li><strong>Deep inheritance chains (Animal → Mammal → Dog):</strong> <code>super()</code> still resolves correctly, but debugging which class actually defines a given method gets harder as the chain grows.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Forgetting to call <code>super().__init__()</code> in a subclass that also needs the parent's setup, resulting in missing attributes like <code>name</code>.</li>
+<li>Copy-pasting <code>__init__</code> into every subclass instead of inheriting it — the exact bug this lesson is built around.</li>
+<li>Overriding a method and accidentally changing its signature, breaking any code that calls it polymorphically.</li>
+<li>Reaching for inheritance when duck typing would be simpler — creating a rigid hierarchy for objects that only need to share one method, not shared state.</li>
+<li>Assuming Python checks class types before calling a method — it doesn't, which means <code>isinstance</code> checks are sometimes unnecessary defensive code.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What's the difference between overriding a method and overloading it in Python?</li>
+<li>What does <code>super()</code> actually return, and why does it matter in multiple inheritance?</li>
+<li>How does Python decide which method to call when a class inherits from more than one parent?</li>
+<li>What is duck typing, and when would you choose it over inheritance?</li>
+<li>Can you explain polymorphism using this Animal example, without using the word "polymorphism"?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Implement a Shape hierarchy (Circle, Square, Triangle) with an <code>area()</code> method</strong> — same pattern: shared interface, different implementation per subclass.</li>
+<li><strong>Design a payment system (CreditCard, PayPal, Bank Transfer)</strong> — tests the same shared-setup-plus-overridden-behavior structure in a more realistic domain.</li>
+<li><strong>Abstract base classes with <code>abc.ABC</code></strong> — a natural next step once you understand overriding, since it lets you <em>force</em> subclasses to implement a method.</li>
+<li><strong>Multiple inheritance / diamond problem</strong> — directly foreshadowed at the end of this lesson, and a common follow-up interview question.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>If you're copy-pasting a class, you're probably missing a shared parent class.</li>
+<li><code>class Child(Parent):</code> is the entire mechanism behind inheritance — Child gets everything Parent defines.</li>
+<li>Overriding lets a subclass replace a specific method while keeping everything else inherited.</li>
+<li><code>super().__init__()</code> lets you extend a parent's setup instead of duplicating it.</li>
+<li>Duck typing means Python checks capability, not ancestry — sometimes that's all you need, and inheritance is overkill.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This entire walkthrough — the bug, the fix, and the family tree diagram — is demonstrated live in the video. Watch it here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <strong>Fun with Learning Technology</strong>, a series built around one idea: real engineering intuition comes from tracing bugs and rebuilding the fix from scratch, not from memorizing syntax. Each episode picks a concept that quietly breaks codebases once they grow past a handful of files, and rebuilds it the way an experienced engineer actually would.</p>
+<h2>Call To Action</h2>
+<p>If this helped untangle inheritance for you, give the video a like on YouTube and subscribe so you don't miss the next one — we're covering multiple inheritance next. Subscribe to the Substack for the full written breakdown of every episode. Drop a comment if something felt off, unclear, or if there's a concept you want covered next. Share this with anyone still copy-pasting classes.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When 5th subclass repeats same setup code, what pattern fixes it?</summary><p>Inheritance: pull shared state/behavior into a base class, subclasses inherit and extend it.</p></details><details class='card2'><summary>Why does copy-pasting logic across classes &#x27;bite you later&#x27;?</summary><p>One shared bug must now be fixed in every copy; miss one and behavior silently diverges.</p></details><details class='card2'><summary>What does calling super() in an overridden method actually do?</summary><p>Runs the parent class&#x27;s version first, so you extend behavior instead of fully replacing it.</p></details><details class='card2'><summary>Same method call, different result across subclasses — what&#x27;s this called?</summary><p>Polymorphism: each subclass&#x27;s overridden method runs, chosen by the object&#x27;s actual class at runtime.</p></details><details class='card2'><summary>Duck typing vs inheritance-based polymorphism — key difference?</summary><p>Duck typing needs no shared base class at all; Python calls the method if the object simply has it.</p></details><details class='card2'><summary>Common override bug: forgetting super().__init__() — what breaks?</summary><p>Parent&#x27;s attributes/setup never run, so inherited methods silently fail on missing state.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>

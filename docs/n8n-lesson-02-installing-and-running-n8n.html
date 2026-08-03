@@ -1,0 +1,233 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 2: 10 Seconds vs 10 Minutes — Every Way to Install n8n — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/n8n-lesson-02-installing-and-running-n8n
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/n8n-lesson-02-i">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/n8n-lesson-02-installing-and-running-n8n.html">
+<meta property="og:title" content="Lesson 2: 10 Seconds vs 10 Minutes — Every Way to Install n8n — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/n8n-lesson-02-installing-and-running-n8n
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/n8n-lesson-02-i"><meta property="og:image" content="https://i.ytimg.com/vi/_R8zbhGmixE/hqdefault.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson 2: 10 Seconds vs 10 Minutes — Every Way to Install n8n</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/_R8zbhGmixE' allowfullscreen></iframe></div><article><h2>Introduction</h2>
+<p>Every automation tool has a moment where a single setup decision quietly shapes everything that comes after it, and for n8n, that moment is installation. It looks like a formality — pick a path, click a few buttons, get to the canvas — but the choice you make here determines whether your workflows are backed up automatically, whether you're responsible for patching a server, and whether your work survives a restart.</p>
+<p>This matters for developers specifically because n8n sits at the intersection of infrastructure and application logic. Unlike a SaaS tool where hosting is invisible, n8n gives you the option to run it yourself, which means you inherit real ops decisions: where data lives, how containers persist state, and what happens when a process restarts. If you've worked with Docker before, none of this will surprise you. If you haven't, this is a low-stakes place to learn habits that apply far beyond n8n — volume mounts, environment-variable configuration, and the container-as-ephemeral-storage mental model show up constantly in backend and DevOps work.</p>
+<p>Getting this right the first time also saves you from the single most common beginner mistake with self-hosted n8n: building out real workflows in a container, restarting it, and watching everything disappear. That's not a hypothetical — it's exactly what happens when you skip one flag.</p>
+<h2>Problem Overview</h2>
+<p>n8n gives you three practical ways to get an instance running:</p>
+<ol>
+<li><strong>n8n Cloud</strong> — a fully managed instance you don't administer at all.</li>
+<li><strong>npx n8n</strong> — a zero-install way to run n8n locally using Node's package runner.</li>
+<li><strong>Docker</strong> — a containerized instance you run yourself, ideally with persistent storage attached.</li>
+</ol>
+<p>The "problem" to solve isn't technical difficulty — none of these are hard to start. The real problem is picking the right one for your situation and understanding the one operational detail (data persistence) that determines whether your work is safe. Get this wrong, and you don't get a friendly error message. You get an empty canvas where your workflows used to be.</p>
+<h2>Example</h2>
+<p>Here's what each path actually looks like in practice.</p>
+<p><strong>Cloud:</strong></p>
+<pre><code>Sign up → n8n provisions an instance → you land on the owner-account screen
+</code></pre>
+<p>No terminal, no server, no config files. Output: a working instance in seconds.</p>
+<p><strong>npx (local, ephemeral):</strong></p>
+<pre><code class="language-bash">npx n8n
+</code></pre>
+<p>Output: n8n downloads (first run only), starts a local server, and opens on <code>localhost:5678</code>. Close the terminal or reset your machine, and depending on your setup, you may need to re-fetch state — there's no dedicated persistent volume unless you configure one.</p>
+<p><strong>Docker (local, persistent):</strong></p>
+<pre><code class="language-bash">docker run -it --rm \
+  --name n8n \
+  -p 5678:5678 \
+  -v n8n_data:/home/node/.n8n \
+  docker.n8n.io/n8nio/n8n
+</code></pre>
+<p>Output: same local instance as npx, but the <code>-v n8n_data:/home/node/.n8n</code> flag maps n8n's internal data directory to a Docker volume that lives outside the container. Restart, rebuild, or even delete the container, and <code>n8n_data</code> still holds your workflows, credentials, and owner account.</p>
+<p>Remove that <code>-v</code> flag, and the exact same command becomes a trap: everything works perfectly until you stop the container, at which point all of it is gone.</p>
+<h2>Intuition</h2>
+<p>Before touching any command, it helps to think about <em>where state lives</em> in each option, because that's the only variable that actually matters here.</p>
+<p>With Cloud, the provider owns the storage layer entirely. You're not choosing where data lives — that decision was made for you, and it's designed to persist by default. This is why Cloud has no "gotcha": persistence isn't a step you can forget, it's baked into the product.</p>
+<p>With self-hosting, you take on that responsibility. And containers, by design, are meant to be disposable — that's the entire point of the technology. A container is supposed to be identical every time you start it, which means anything written inside it during runtime is, by default, temporary. Docker only remembers what you explicitly tell it to remember, via a <strong>volume</strong> — a storage location that exists independently of any one container's lifecycle.</p>
+<p>Once you see it that way, the mental model simplifies: Docker isn't "riskier" than Cloud, it's just explicit about a tradeoff that Cloud hides from you. The engineer's job is to notice that tradeoff exists and configure around it, rather than to avoid self-hosting altogether. That's the whole intuition — a volume isn't an optional nice-to-have, it's the mechanism that turns "container" into "server."</p>
+<h2>Brute Force Solution</h2>
+<p>If we're borrowing the "brute force vs optimal" framing from algorithm problems, the brute-force approach to installing n8n is: <strong>run Docker without thinking about storage.</strong></p>
+<p><strong>Idea:</strong> <code>docker run</code> the n8n image, get it working, start building workflows.</p>
+<p><strong>Algorithm:</strong>
+1. Pull and run the n8n Docker image.
+2. Open the browser, create the owner account, build workflows.
+3. Stop the container at some point (intentionally or via a crash, reboot, or <code>docker system prune</code>).</p>
+<p><strong>Advantages:</strong>
+- Fastest possible command to type — nothing extra to configure.
+- Works flawlessly for the entire session, so the flaw isn't visible until it's too late.</p>
+<p><strong>Disadvantages:</strong>
+- Total data loss on container removal. Your owner account, credentials, and every workflow you built live only inside the container's writable layer.
+- No way to upgrade the n8n image without losing everything, since upgrading typically means recreating the container.
+- No backup path — there's nothing to back up, because nothing was ever written outside the container.</p>
+<p><strong>Complexity (in setup-and-recovery terms):</strong>
+- Time to get running: O(1) — one command.
+- Time to recover after data loss: undefined — the data doesn't exist anymore. There is no recovery.</p>
+<p>This is the classic brute-force pattern: it looks correct because it produces the right output initially, and the failure only shows up on a case you didn't test — namely, restarting the container.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal setup is the same Docker command with one addition: a volume mount that redirects n8n's data directory to persistent storage.</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Brute force (no <code>-v</code>)</th>
+<th>Optimal (with <code>-v</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Owner account</td>
+<td>Stored in container</td>
+<td>Stored in volume</td>
+</tr>
+<tr>
+<td>Credentials &amp; encryption key</td>
+<td>Stored in container</td>
+<td>Stored in volume</td>
+</tr>
+<tr>
+<td>Workflows</td>
+<td>Stored in container</td>
+<td>Stored in volume</td>
+</tr>
+<tr>
+<td>Survives <code>docker rm</code>?</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Survives image upgrade?</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+</tbody>
+</table>
+<p>The fix costs nothing extra in complexity — it's the same command, plus one flag — which is what makes skipping it such an unforced error. n8n stores everything it needs (owner account, credentials, encryption key, workflow definitions) under <code>/home/node/.n8n</code> inside the container. Point a named volume at that path, and Docker keeps that directory alive independently of the container's lifecycle. You can stop the container, delete it, pull a new image version, and start a fresh container against the same volume — your data reattaches as if nothing happened.</p>
+<p>If you choose Cloud instead, none of this applies — the provider's storage layer already does the equivalent of "always mount a volume," so there's no decision to make.</p>
+<h2>Python Code</h2>
+<p>The video and lesson are Docker/CLI-focused rather than Python-focused, but here's a small, genuinely useful utility: a script that checks whether a running n8n Docker container has a volume mounted, so you can catch the missing-<code>-v</code> mistake before you lose anything.</p>
+<pre><code class="language-python">&quot;&quot;&quot;Warn if a running n8n Docker container has no persistent volume mounted.&quot;&quot;&quot;
+import json
+import subprocess
+import sys
+
+N8N_DATA_PATH = &quot;/home/node/.n8n&quot;
+
+
+def get_container_mounts(container_name: str) -&gt; list[dict]:
+    &quot;&quot;&quot;Return the Mounts section from `docker inspect` for a container.&quot;&quot;&quot;
+    result = subprocess.run(
+        [&quot;docker&quot;, &quot;inspect&quot;, container_name],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    data = json.loads(result.stdout)
+    return data[0][&quot;Mounts&quot;]
+
+
+def has_persistent_data_volume(mounts: list[dict]) -&gt; bool:
+    &quot;&quot;&quot;Check whether n8n's data directory is backed by a named volume.&quot;&quot;&quot;
+    return any(
+        mount[&quot;Destination&quot;] == N8N_DATA_PATH and mount[&quot;Type&quot;] == &quot;volume&quot;
+        for mount in mounts
+    )
+
+
+def main(container_name: str = &quot;n8n&quot;) -&gt; None:
+    mounts = get_container_mounts(container_name)
+    if has_persistent_data_volume(mounts):
+        print(f&quot;OK: '{container_name}' has a persistent volume at {N8N_DATA_PATH}&quot;)
+    else:
+        print(
+            f&quot;WARNING: '{container_name}' has no volume mounted at {N8N_DATA_PATH}. &quot;
+            &quot;Restarting or removing this container will erase all workflows.&quot;
+        )
+        sys.exit(1)
+
+
+if __name__ == &quot;__main__&quot;:
+    container = sys.argv[1] if len(sys.argv) &gt; 1 else &quot;n8n&quot;
+    main(container)
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>get_container_mounts</code> shells out to <code>docker inspect</code>, which returns a JSON document describing the container, including a <code>Mounts</code> array — every filesystem mapping between host/volume and container.</li>
+<li><code>has_persistent_data_volume</code> scans that array for an entry where the container-side path (<code>Destination</code>) matches n8n's known data directory and the mount <code>Type</code> is <code>"volume"</code> (as opposed to a temporary, container-local path).</li>
+<li><code>main</code> prints a clear pass/fail message and exits with a non-zero status on failure, so this can be dropped into a CI check or a pre-deploy script without extra glue code.</li>
+<li>The container name defaults to <code>"n8n"</code> but is overridable via a CLI argument, matching the <code>--name n8n</code> used in the Docker run command above.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Run the check against the brute-force container (no <code>-v</code> flag):</p>
+<pre><code>$ python check_n8n_volume.py n8n
+</code></pre>
+<p><code>docker inspect n8n</code> returns a <code>Mounts</code> array that's empty or contains no entry for <code>/home/node/.n8n</code>. <code>has_persistent_data_volume</code> returns <code>False</code>. Output:</p>
+<pre><code>WARNING: 'n8n' has no volume mounted at /home/node/.n8n. Restarting or removing this container will erase all workflows.
+</code></pre>
+<p>Exit code <code>1</code>.</p>
+<p>Now run it against the optimal container (<code>-v n8n_data:/home/node/.n8n</code>):</p>
+<p><code>Mounts</code> contains <code>{"Type": "volume", "Name": "n8n_data", "Destination": "/home/node/.n8n", ...}</code>. The check finds a match, returns <code>True</code>. Output:</p>
+<pre><code>OK: 'n8n' has a persistent volume at /home/node/.n8n
+</code></pre>
+<p>Exit code <code>0</code>.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> O(m), where m is the number of mounts on the container — typically single digits, so effectively constant time in practice. Docker's inspect call itself is the dominant cost, and it's a single API round-trip.</li>
+<li><strong>Space:</strong> O(m) to hold the parsed mounts list; negligible for any realistic container configuration.</li>
+<li>This is correct because a container's mount list is fixed at creation time and fully described by <code>docker inspect</code> — there's no partial or lazy state to account for.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<ul>
+<li><strong><code>docker-compose</code> with a named volume in <code>docker-compose.yml</code></strong> — functionally identical to the <code>-v</code> flag, but declarative and reproducible. Preferable once you're managing more than a single container, since the volume configuration lives in version control instead of a one-off shell command.</li>
+<li><strong>Bind mount to a host directory</strong> (<code>-v /home/user/n8n-data:/home/node/.n8n</code>) instead of a named Docker volume — gives you direct filesystem access to inspect or back up the data manually, at the cost of being less portable across machines.</li>
+<li><strong>n8n Cloud</strong> — sidesteps the entire persistence question by design, at the cost of losing infrastructure control and, depending on your plan, some configurability.</li>
+</ul>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Running Docker without any volume flag at all</strong> — the primary failure mode covered above; total data loss on container removal.</li>
+<li><strong>Mounting the wrong path</strong> (e.g., <code>/root/.n8n</code> instead of <code>/home/node/.n8n</code>) — the volume exists and looks correctly configured, but n8n never writes to it, so data loss still occurs silently.</li>
+<li><strong>Losing the owner account credentials</strong> — since the account isn't recoverable via any cloud-based "forgot password" flow on self-hosted instances, losing them alongside a wiped volume means starting over completely.</li>
+<li><strong>Running multiple <code>npx n8n</code> sessions expecting shared state</strong> — each invocation is independent unless you've explicitly configured shared storage; don't assume continuity across terminal sessions.</li>
+<li><strong>Switching Docker image versions without checking the volume schema</strong> — rare, but worth confirming compatibility notes before major version jumps if you're maintaining a long-lived instance.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Running Docker without the <code>-v</code> flag, assuming Docker persists data by default (it doesn't).</li>
+<li>Confusing <code>npx n8n</code>'s convenience with Docker's persistence — they solve different problems.</li>
+<li>Treating the owner account as recoverable, when it's tied entirely to the instance's local data.</li>
+<li>Not knowing which environment variables control port and encryption key, then troubleshooting blind when something doesn't start.</li>
+<li>Choosing Cloud or Docker based on habit rather than actual need for control, then fighting the platform's constraints later.</li>
+<li>Mounting a volume to the wrong container path, giving a false sense of security.</li>
+<li>Deleting a container with <code>docker rm</code> without first checking whether a volume was attached.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What's the functional difference between a Docker volume and a bind mount?</li>
+<li>Why are containers designed to be ephemeral by default, and what design principle does that reflect?</li>
+<li>How would you migrate a self-hosted n8n instance to a new server without losing data?</li>
+<li>What are the tradeoffs between managed (Cloud) and self-hosted deployments for a small team?</li>
+<li>How do environment variables factor into twelve-factor app configuration, and why does n8n use them for settings?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Setting up any self-hosted app with Docker (Postgres, Redis, Grafana)</strong> — the same volume-mount discipline applies almost universally to stateful containers.</li>
+<li><strong>Configuring environment-based settings in a Node.js or Python app</strong> — the pattern of reading config from env vars instead of a UI settings panel is common across backend tooling.</li>
+<li><strong>Comparing managed vs. self-hosted database services (RDS vs. self-managed Postgres)</strong> — the same control-vs-convenience tradeoff shows up at the infrastructure level.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Cloud trades control for convenience; self-hosting trades convenience for control — neither is universally correct.</li>
+<li><code>npx n8n</code> is for quick, disposable exploration, not for anything you intend to keep.</li>
+<li>Docker is the right self-hosted choice, but only with a volume mount — without it, you're one restart away from losing everything.</li>
+<li>n8n's configuration lives in environment variables, not a hidden settings menu — know the key ones (port, encryption key) before you need them.</li>
+<li>The owner account is created once, locally, and isn't recoverable through any cloud mechanism — treat it and its underlying data with the same care as a database credential.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This lesson is easiest to follow along with visually — watch the full walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This is part of <strong>Fun with Learning Technology</strong>, a daily series that breaks down real developer tools and concepts — one focused lesson at a time, no fluff, no filler. Each lesson builds on the last, so if you're new here, it's worth starting from Lesson 1.</p>
+<h2>Call To Action</h2>
+<p>If this lesson saved you from a setup mistake, drop a like on the video — it's the clearest signal that the format is working. Follow to catch tomorrow's lesson, where we start building an actual workflow on that empty canvas. Subscribe to the Substack for the written breakdown of every lesson, and if something felt unclear or you want a specific topic covered next, leave a comment — that feedback shapes what gets made.</p>
+<hr /></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/_R8zbhGmixE' target='_blank'>▶ Watch on YouTube</a></div><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>n8n Cloud vs self-hosted: which needs zero setup?</summary><p>n8n Cloud — managed, no server/env config; self-hosted (npm/Docker) needs you to run and maintain it.</p></details><details class='card2'><summary>Two ways to self-host n8n?</summary><p>npm install/run directly on your machine, or run via Docker container — same app, different deployment method.</p></details><details class='card2'><summary>npm vs Docker for self-hosting: main tradeoff?</summary><p>npm is simpler for local trying-out; Docker isolates env/deps and matches production but adds container overhead.</p></details><details class='card2'><summary>Common gotcha when self-hosting n8n via Docker?</summary><p>Data (workflows, credentials) vanishes on restart unless you mount a persistent volume for n8n&#x27;s data folder.</p></details><details class='card2'><summary>Where does n8n read its runtime settings from?</summary><p>Environment variables (and a local config/user folder) — not a GUI settings page, so misconfigured env vars silently change behavior.</p></details><details class='card2'><summary>What&#x27;s the first thing n8n asks after first run?</summary><p>To create the owner account (admin login) before landing on the workflow editor.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
