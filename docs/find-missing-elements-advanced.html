@@ -1,0 +1,194 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Find Missing Elements — 🔴 Advanced (3/3) — LeetCode Daily Python Solution (the trick nobody sees) — Python LeetCode Solution</title><meta name="description" content="📍 Jump to your level:
+🔴 Advanced: 0:20–5:10
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/find-missing-elements-advanced
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetco">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/find-missing-elements-advanced.html">
+<meta property="og:title" content="Find Missing Elements — 🔴 Advanced (3/3) — LeetCode Daily Python Solution (the trick nobody sees) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📍 Jump to your level:
+🔴 Advanced: 0:20–5:10
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/find-missing-elements-advanced
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetco">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Find Missing Elements — 🔴 Advanced (3/3) — LeetCode Daily Python Solution (the trick nobody sees)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Missing-number problems show up constantly in interviews because they test something more valuable than "do you know a hash set." They test whether you can spot a hidden structural property in the data and exploit it to shrink your memory footprint. The problem in this video — find every missing element in a contiguous range — has an obvious O(n) time, O(n) space solution that almost everyone reaches for immediately. The interesting version of this problem asks you to keep the O(n) time but drop the extra space entirely.</p>
+<p>If you've ever hit "find all duplicates in an array" or "find the missing number in 1 to n" on LeetCode, this is the same family. Learning the trick once means you can recognize and reuse it across a whole class of problems: missing auto-increment IDs in a database, dropped sequence numbers in a network stream, holes in a bitmap. That generality is exactly why it's worth understanding deeply instead of memorizing.</p>
+<h2>Problem Overview</h2>
+<p>You're given an array of unique integers. Originally, those integers formed a complete, contiguous range — every value between some minimum and some maximum was present. Then a few values from the interior of that range were removed. The smallest and largest values are guaranteed to still be in the array; only middle values can be missing.</p>
+<p>Your task: return, in sorted order, every value that's missing from that original range. If nothing is missing, return an empty list.</p>
+<p>Two things make this different from a generic "find missing number" problem:
+- The array isn't sorted 1..n starting at a fixed offset — it can start at any <code>lo</code> and end at any <code>hi</code>.
+- Multiple values could theoretically be missing, not just one.</p>
+<h2>Example</h2>
+<pre><code>nums = [1, 4, 2, 5]
+</code></pre>
+<p>The values present span from 1 to 5. Walking through 1, 2, 3, 4, 5, everything is there except 3. So the output is:</p>
+<pre><code>[3]
+</code></pre>
+<p>A sparser example:</p>
+<pre><code>nums = [5, 1]
+</code></pre>
+<p>Here the range is also 1 to 5, but only the endpoints are present. Every interior value — 2, 3, 4 — is missing:</p>
+<pre><code>[2, 3, 4]
+</code></pre>
+<p>And a case where nothing is missing:</p>
+<pre><code>nums = [7, 8, 6, 9]
+</code></pre>
+<p>The range spans 6 to 9, and all four values are present. Output:</p>
+<pre><code>[]
+</code></pre>
+<h2>Intuition</h2>
+<p>The naive instinct is: for every value in the range, check whether it's in <code>nums</code>. That check is a membership test, and without extra structure, a membership test against a list is O(n) — so checking every value in the range makes the whole thing O(n²). The standard fix is to build a hash set from <code>nums</code> first, so each membership check becomes O(1). That gets you O(n) time, but it costs O(n) extra space for the set.</p>
+<p>Here's the observation that unlocks the O(1)-extra-space version: because the numbers form a contiguous range, there's a <em>perfect, collision-free mapping</em> between a value and a position. If the range starts at <code>lo</code>, then value <code>num</code> always maps to index <code>num - lo</code>. No hash function, no bucket, no probing — position <em>is</em> identity.</p>
+<p>That means you don't need a separate structure to record "have I seen this value." You can record it directly at the corresponding index of a tracker array, using the <em>sign</em> of the number stored there as a visited flag. Initialize <code>tracker[i] = lo + i</code>, so at rest, every slot's value tells you what number belongs there. When you process a value from <code>nums</code>, you flip the sign of the tracker slot at <code>num - lo</code> to negative. At the end, any slot still positive represents a value that was never touched by <code>nums</code> — meaning it's missing.</p>
+<p>One detail matters: take <code>abs()</code> of the value at that slot before negating it. Without that, touching an already-negative slot a second time would flip it back positive, silently erasing a mark. Since the problem guarantees uniqueness, no value can route to the same slot twice — but the guard costs nothing and protects you if that assumption ever gets relaxed.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> For each value between <code>lo</code> and <code>hi</code>, check whether it appears in <code>nums</code>.</p>
+<p><strong>Algorithm:</strong>
+1. Determine <code>lo = min(nums)</code> and <code>hi = max(nums)</code>.
+2. For each <code>v</code> from <code>lo</code> to <code>hi</code>, check <code>v in nums</code>.
+3. Collect every <code>v</code> where the check fails.</p>
+<p><strong>Advantages:</strong> Trivial to write, no risk of off-by-one bugs, obviously correct.</p>
+<p><strong>Disadvantages:</strong> Each membership check scans the whole array, so this is quadratic.</p>
+<p><strong>Complexity:</strong> O(n²) time, O(1) extra space (ignoring the output list).</p>
+<p>A quick middle-ground improvement: build a <code>set(nums)</code> first, then each membership check is O(1). That gets you to O(n) time but costs O(n) extra space — this is the version most people write first and stop at.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach keeps O(n) time but reduces the <em>auxiliary</em> space to effectively zero, because the structure you mark in is the same structure you return as output.</p>
+<p><strong>Step 1 — Build the tracker.</strong>
+Create an array of size <code>hi - lo + 1</code>, where <code>tracker[i] = lo + i</code>. This is important: size it as <code>hi - lo + 1</code>, not <code>hi - lo</code> — using the wrong size silently drops the last element instead of raising an error.</p>
+<p><strong>Step 2 — Mark pass.</strong>
+For every value <code>num</code> in <code>nums</code>, compute its slot index as <code>num - lo</code>. Take the absolute value of whatever is currently in <code>tracker[num - lo]</code>, then negate it. This marks that slot as "seen" regardless of whether it was touched before.</p>
+<p><strong>Step 3 — Sweep pass.</strong>
+Walk through <code>tracker</code>. Any slot that is still positive was never marked — its value is missing from <code>nums</code>. Collect these into the output list.</p>
+<p>Because <code>tracker</code> was built in increasing order and you're filtering it in place, the output comes out sorted for free — no separate sort step needed.</p>
+<p><strong>Walkthrough table for <code>nums = [5, 1]</code>, range 1–5:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Index</th>
+<th>Initial value</th>
+<th>After marking 5 and 1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>1</td>
+<td>-1</td>
+</tr>
+<tr>
+<td>1</td>
+<td>2</td>
+<td>2 (untouched → missing)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>3</td>
+<td>3 (untouched → missing)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>4</td>
+<td>4 (untouched → missing)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>5</td>
+<td>-5</td>
+</tr>
+</tbody>
+</table>
+<p>Positive survivors: <code>[2, 3, 4]</code> — exactly the missing values.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def find_missing_elements(nums: list[int]) -&gt; list[int]:
+    &quot;&quot;&quot;Return every missing value in the contiguous range [min(nums), max(nums)].&quot;&quot;&quot;
+    lo, hi = min(nums), max(nums)
+    tracker = list(range(lo, hi + 1))
+
+    for num in nums:
+        idx = num - lo
+        tracker[idx] = -abs(tracker[idx])
+
+    return [value for value in tracker if value &gt; 0]
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>lo, hi = min(nums), max(nums)</code> — establishes the boundaries of the expected range. These are guaranteed to be present in <code>nums</code>.</li>
+<li><code>tracker = list(range(lo, hi + 1))</code> — builds the tracker so <code>tracker[i] = lo + i</code>. Position encodes value; this is the perfect hash.</li>
+<li><code>idx = num - lo</code> — the change of basis that shifts any range to start at index 0, regardless of what <code>lo</code> actually is.</li>
+<li><code>tracker[idx] = -abs(tracker[idx])</code> — marks the slot as visited. <code>abs()</code> first guarantees that touching a slot twice leaves it negative rather than flipping it back to positive.</li>
+<li><code>[value for value in tracker if value &gt; 0]</code> — the sweep pass. Anything still positive was never marked, meaning it's missing. Order is preserved automatically because <code>tracker</code> was built in increasing order.</li>
+</ul>
+<h2>Dry Run</h2>
+<p><code>nums = [7, 8, 6, 9]</code></p>
+<ul>
+<li><code>lo = 6</code>, <code>hi = 9</code></li>
+<li><code>tracker = [6, 7, 8, 9]</code></li>
+<li>Process 7 → idx 1 → <code>tracker[1] = -7</code></li>
+<li>Process 8 → idx 2 → <code>tracker[2] = -8</code></li>
+<li>Process 6 → idx 0 → <code>tracker[0] = -6</code></li>
+<li>Process 9 → idx 3 → <code>tracker[3] = -9</code></li>
+<li>Final tracker: <code>[-6, -7, -8, -9]</code> — nothing positive.</li>
+</ul>
+<p>Result: <code>[]</code>. Full coverage of the range naturally produces an empty output with no special-casing.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(n). The mark pass is one linear scan of <code>nums</code>; the sweep pass is one linear scan of <code>tracker</code>, whose size is bounded by <code>hi - lo + 1</code>.</p>
+<p><strong>Space:</strong> O(n) for <code>tracker</code> — but <code>tracker</code> <em>is</em> the output buffer, just with sign bits repurposed as visited flags. There's arguably zero space beyond what any correct solution needs to return the answer, since you'd need an array of that size to hold the result regardless.</p>
+<p><strong>Why the tracker doesn't beat the hash-set version on big-O:</strong> Both approaches are O(n) time and O(n) space. The tracker's advantage is constant factor — no hash computation, no collision handling — not asymptotic class. For most production code, the plain <code>set()</code> version is more obviously correct and the difference is marginal. Reach for the tracker version when you're in a tight loop or a memory-constrained environment where every allocation counts.</p>
+<h2>Alternative Solutions</h2>
+<p><strong>Hash set approach:</strong></p>
+<pre><code class="language-python">def find_missing_elements_set(nums: list[int]) -&gt; list[int]:
+    lo, hi = min(nums), max(nums)
+    seen = set(nums)
+    return [v for v in range(lo, hi + 1) if v not in seen]
+</code></pre>
+<p>Same O(n) time, O(n) space. More readable, easier to reason about at a glance, and the natural first answer in an interview. Prefer the tracker version only when you want to demonstrate the in-place technique or when memory truly matters.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong><code>n = 2</code> (just <code>lo</code> and <code>hi</code>):</strong> Works with no special path — the loop just marks both endpoints and nothing else exists to check.</li>
+<li><strong>Full range with nothing missing:</strong> Every tracker slot flips negative; output is <code>[]</code> with no special casing needed.</li>
+<li><strong>Duplicate values (if uniqueness weren't guaranteed):</strong> The <code>abs()</code> guard prevents a duplicate touch from un-marking a slot. The problem guarantees uniqueness so this can't trigger here, but it's worth knowing why the guard exists.</li>
+<li><strong>Wrong offset assumption:</strong> Hardcoding an offset of 1 instead of computing <code>lo</code> dynamically breaks the moment the range doesn't start at 0 or 1.</li>
+<li><strong>Off-by-one tracker size:</strong> Sizing <code>tracker</code> as <code>hi - lo</code> instead of <code>hi - lo + 1</code> silently truncates the last element.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting <code>abs()</code> before negating</strong> — causes duplicate values to silently cancel their own mark.</li>
+<li><strong>Hardcoding the range offset</strong> instead of computing <code>lo</code> from the input, which breaks on any range not starting at 0 or 1.</li>
+<li><strong>Sizing the tracker incorrectly</strong> (<code>hi - lo</code> instead of <code>hi - lo + 1</code>), which truncates the last slot without raising any error.</li>
+<li><strong>Sorting the output unnecessarily</strong> — the tracker is already in increasing order, so a comparison-based sort just wastes O(n log n) for nothing.</li>
+<li><strong>Reaching for a set by default in a memory-constrained context</strong> without realizing the array itself can double as the hash structure.</li>
+<li><strong>Confusing this with "find all duplicates in an array"</strong> — the mechanism (sign flipping on index) is identical, but the target of the sweep pass (missing vs. duplicate) is inverted, and mixing them up produces the wrong filter condition.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What happens to this algorithm if <code>nums</code> isn't guaranteed unique?</li>
+<li>Can you find all <em>duplicates</em> instead of all <em>missing</em> values using the same tracker technique? What changes in the sweep pass?</li>
+<li>How would you handle negative numbers in the range?</li>
+<li>Can this be adapted to work in a streaming context where you don't have the full array up front?</li>
+<li>What's the tradeoff between the tracker approach and a <code>set()</code> in terms of both correctness confidence and interview communication?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Find the Duplicate Number</strong> — uses the same index-as-hash idea but flags a <em>repeated</em> touch instead of an absent one.</li>
+<li><strong>Find All Duplicates in an Array</strong> — nearly identical mechanism; the sweep pass collects negative slots instead of positive ones.</li>
+<li><strong>First Missing Positive</strong> — a tighter variant of the same family, constrained to positions within <code>[1, n]</code>.</li>
+<li><strong>Missing Number</strong> — the single-missing-value special case of this exact problem.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>When your data occupies a bounded, contiguous range, the array index itself is a free, collision-free hash function. You can encode "have I seen this" as a property of the array's own contents — via sign, via swapping, via any reversible marking — instead of allocating a separate structure. The technique doesn't change the asymptotic class versus a hash set, but it removes the auxiliary allocation entirely, which matters in memory-constrained or performance-critical contexts. Recognizing when a domain has this bounded-range property is the transferable skill — it shows up far beyond this one problem.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough — including the exact mistake made the first time this was coded, and a live dry run of both <code>nums = [5, 1]</code> and <code>nums = [7, 8, 6, 9]</code> — watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This is part of <em>Fun with Learning Technology</em>, a series built around teaching real software engineering intuition — not just memorized solutions. Every video works through the reasoning an experienced engineer actually goes through: why the brute force is tempting, where it breaks down, and how to spot the structural property that unlocks something better. The goal is to build pattern recognition that transfers across problems, not just get one specific LeetCode question checked off.</p>
+<h2>Call To Action</h2>
+<p>If this walkthrough helped the trick click, drop a like on the video and subscribe on YouTube so the next one in the series lands in your feed. For deeper written breakdowns like this one, subscribe to the Substack. And if you've hit a variant of this problem in an interview or on the job, share it in the comments — real war stories are the best test cases.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>What pattern turns array values into indices to find missing/duplicate numbers?</summary><p>Index-as-hash (bijection). Trigger: array holds numbers in range [1..n] or [0..n-1] and you need missing/duplicate values.</p></details><details class='card2'><summary>Time complexity of the index-marking approach?</summary><p>O(n) — one pass to mark, one pass to collect, no nested scans.</p></details><details class='card2'><summary>Space complexity of index-marking vs hash set?</summary><p>O(1) extra space (marks reuse the input array itself) vs O(n) for a hash set.</p></details><details class='card2'><summary>Trickiest bug when marking indices in-place?</summary><p>Forgetting to use abs(nums[i]) before indexing, since earlier marks may have flipped the sign already.</p></details><details class='card2'><summary>How does marking a visited index work mechanically?</summary><p>Negate (or offset) the value at index |nums[i]|-1; unvisited slots stay positive, revealing missing numbers.</p></details><details class='card2'><summary>Index-marking vs hash set: when prefer hash set instead?</summary><p>When values aren&#x27;t a clean 1..n range or the array can&#x27;t be mutated — hash set trades O(n) space for flexibility.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
