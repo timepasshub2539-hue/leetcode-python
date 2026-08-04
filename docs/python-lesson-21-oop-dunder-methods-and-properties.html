@@ -1,0 +1,245 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson 21: Why Does print(obj) Show Garbage? — Python LeetCode Solution</title><meta name="description" content="Your print(obj) output looks like garbage until you learn __repr__ — and that&#x27;s just the start. This lesson covers the dunder method dispatch system behind ==, len(), +, and operator overloading, then">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-21-oop-dunder-methods-and-properties.html">
+<meta property="og:title" content="Lesson 21: Why Does print(obj) Show Garbage? — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="Your print(obj) output looks like garbage until you learn __repr__ — and that&#x27;s just the start. This lesson covers the dunder method dispatch system behind ==, len(), +, and operator overloading, then">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson 21: Why Does print(obj) Show Garbage?</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>If you've ever printed a custom Python object and gotten back something like <code>&lt;__main__.Point object at 0x7f8b2c0a3d90&gt;</code>, you've run into one of the first genuinely confusing moments in learning object-oriented Python. It's not a bug. It's Python telling you, honestly, that it has no idea how you want this object represented — because you never told it.</p>
+<p>This matters more than it looks like it should. Interviewers care about it because it tests whether you understand what's happening underneath Python's syntax, not just whether you can write a <code>for</code> loop. Every time you use <code>print()</code>, <code>==</code>, <code>len()</code>, or <code>+</code> on a built-in type, you're relying on a contract that type honors. When you write your own classes, nothing honors that contract unless you write it yourself. Understanding dunder methods is the difference between writing classes that feel bolted-on and classes that feel like they belong in the language.</p>
+<p>This lesson also covers two decorators, <code>@property</code> and <code>@classmethod</code>, that solve a related problem: how do you expose computed values and alternate ways of building objects without cluttering your API with extra method calls and awkward constructors? Together, these tools are what separate a class that "works" from a class that reads like it was designed.</p>
+<h2>Problem Overview</h2>
+<p>Suppose you're modeling a <code>Point</code> with <code>x</code> and <code>y</code> coordinates. Out of the box, Python gives you almost nothing useful:</p>
+<ul>
+<li><code>print(point)</code> shows a memory address instead of coordinates.</li>
+<li><code>point1 == point2</code> returns <code>False</code> even when the coordinates match, because Python is comparing object identity, not value.</li>
+<li><code>len(point)</code> fails outright — Python has no idea what "length" means for a point.</li>
+<li><code>point1 + point2</code> fails too, because <code>+</code> is undefined for objects Python doesn't recognize.</li>
+</ul>
+<p>None of this is a limitation of Python. It's a design choice: Python doesn't guess what equality, length, or addition should mean for your custom type. Instead, it exposes a set of hooks — dunder methods — that you implement to opt in to that behavior. The task is to learn which hook maps to which built-in behavior, and then use <code>@property</code> and <code>@classmethod</code> to make the resulting class feel clean to use.</p>
+<h2>Example</h2>
+<pre><code class="language-python">class Point:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+p1 = Point(3, 4)
+p2 = Point(3, 4)
+
+print(p1)          # &lt;__main__.Point object at 0x...&gt;
+print(p1 == p2)     # False
+</code></pre>
+<p><code>print(p1)</code> shows a memory address because Python falls back to the default object representation when no <code>__repr__</code> is defined. <code>p1 == p2</code> is <code>False</code> because the default <code>__eq__</code> checks whether <code>p1</code> and <code>p2</code> are the same object in memory — they're not, even though their coordinates match. Once we add <code>__repr__</code> and <code>__eq__</code>, both of these start behaving the way most developers expect on first contact with the class.</p>
+<h2>Intuition</h2>
+<p>The mental model that unlocks all of this is simple: <strong>built-in syntax is sugar for method calls.</strong> <code>print(obj)</code> doesn't have special knowledge of your class — it calls <code>repr(obj)</code>, which calls <code>obj.__repr__()</code>. <code>a == b</code> calls <code>a.__eq__(b)</code>. <code>len(obj)</code> calls <code>obj.__len__()</code>. <code>a + b</code> calls <code>a.__add__(b)</code>.</p>
+<p>An experienced engineer doesn't memorize this list — they internalize the pattern: <em>whenever I use an operator or a built-in function on an object, Python is looking for a specifically named method on that object's class.</em> If the method exists, Python calls it. If it doesn't, Python either falls back to a default (as with <code>__repr__</code>) or raises an error (as with <code>__add__</code>).</p>
+<p>This reframes the whole problem. You're not implementing "printing" or "equality" — you're implementing a method with a name Python already knows to look for. Once that clicks, extending any custom class to support any built-in behavior stops being a lookup task and becomes a design decision: does this object's notion of equality make sense as coordinate comparison, or as something else?</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Write ordinary named methods — <code>describe()</code>, <code>equals(other)</code>, <code>size()</code>, <code>add(other)</code> — and call them explicitly instead of relying on operators.</p>
+<pre><code class="language-python">class Point:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def describe(self):
+        return f&quot;Point({self.x}, {self.y})&quot;
+
+    def equals(self, other):
+        return self.x == other.x and self.y == other.y
+
+    def add(self, other):
+        return Point(self.x + other.x, self.y + other.y)
+</code></pre>
+<p><strong>Advantages:</strong> Works immediately, no special knowledge of Python's data model required.</p>
+<p><strong>Disadvantages:</strong> The object doesn't compose with the rest of the language. <code>print(p1)</code> still shows garbage unless you remember to call <code>p1.describe()</code>. <code>p1 == p2</code> still returns <code>False</code>. Anyone using your class has to learn your custom method names instead of relying on Python conventions they already know. It also breaks interoperability — code that generically calls <code>len()</code> or <code>+</code> on objects (sorting, aggregation, generic algorithms) simply won't work with your type.</p>
+<p><strong>Complexity:</strong> Each operation is O(1) for <code>Point</code>, same as the dunder version — the cost here isn't runtime, it's usability and integration.</p>
+<h2>Optimal Solution</h2>
+<p>Implement the dunder methods that correspond to the behavior you want, so built-in syntax "just works."</p>
+<table>
+<thead>
+<tr>
+<th>Syntax</th>
+<th>Calls</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>print(obj)</code> / <code>str(obj)</code></td>
+<td><code>__str__</code> (falls back to <code>__repr__</code>)</td>
+<td>Human-readable / debug string</td>
+</tr>
+<tr>
+<td><code>repr(obj)</code></td>
+<td><code>__repr__</code></td>
+<td>Unambiguous debug representation</td>
+</tr>
+<tr>
+<td><code>a == b</code></td>
+<td><code>__eq__</code></td>
+<td>Value-based equality</td>
+</tr>
+<tr>
+<td><code>len(obj)</code></td>
+<td><code>__len__</code></td>
+<td>Size/count</td>
+</tr>
+<tr>
+<td><code>a + b</code></td>
+<td><code>__add__</code></td>
+<td>Combination</td>
+</tr>
+<tr>
+<td><code>obj[i]</code></td>
+<td><code>__getitem__</code></td>
+<td>Indexing</td>
+</tr>
+</tbody>
+</table>
+<p>The order matters: define <code>__repr__</code> first, since Python uses it as the fallback for <code>str()</code> when <code>__str__</code> is missing. Then layer in <code>__eq__</code>, <code>__len__</code>, and <code>__add__</code> only for the behaviors that make sense for your type — not every class needs all of them.</p>
+<p>For computed, read-only-feeling attributes (like a circle's area from its radius), use <code>@property</code> instead of a plain method — this lets callers write <code>circle.area</code> instead of <code>circle.get_area()</code>, while the value is still computed on demand. Pairing a property with a setter lets you validate input at the point of assignment, catching bad data immediately instead of letting it corrupt state three calls later. And for alternate ways to construct an object (e.g., building a <code>Point</code> from a tuple), use <code>@classmethod</code>, which receives the class (<code>cls</code>) instead of an instance (<code>self</code>), so it can build and return a new object without touching <code>__init__</code>'s signature.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">import math
+
+
+class Point:
+    &quot;&quot;&quot;A 2D point that behaves like a native Python type.&quot;&quot;&quot;
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def __repr__(self):
+        return f&quot;Point({self.x}, {self.y})&quot;
+
+    def __eq__(self, other):
+        if not isinstance(other, Point):
+            return NotImplemented
+        return self.x == other.x and self.y == other.y
+
+    def __add__(self, other):
+        if not isinstance(other, Point):
+            return NotImplemented
+        return Point(self.x + other.x, self.y + other.y)
+
+    @property
+    def magnitude(self):
+        &quot;&quot;&quot;Distance from the origin, computed fresh each access.&quot;&quot;&quot;
+        return math.hypot(self.x, self.y)
+
+    @classmethod
+    def origin(cls):
+        &quot;&quot;&quot;Alternate constructor: build a Point at (0, 0).&quot;&quot;&quot;
+        return cls(0, 0)
+
+    @classmethod
+    def from_tuple(cls, coords):
+        &quot;&quot;&quot;Alternate constructor: build a Point from an (x, y) tuple.&quot;&quot;&quot;
+        x, y = coords
+        return cls(x, y)
+
+
+class Circle:
+    &quot;&quot;&quot;A circle with a validated radius and a computed area.&quot;&quot;&quot;
+
+    def __init__(self, radius):
+        self.radius = radius  # goes through the setter below
+
+    @property
+    def radius(self):
+        return self._radius
+
+    @radius.setter
+    def radius(self, value):
+        if value &lt; 0:
+            raise ValueError(&quot;radius cannot be negative&quot;)
+        self._radius = value
+
+    @property
+    def area(self):
+        return math.pi * self._radius ** 2
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>__repr__</code> returns a string that mirrors how you'd construct the object — this is the debug view, aimed at you, the programmer.</li>
+<li><code>__eq__</code> first checks <code>isinstance(other, Point)</code> and returns <code>NotImplemented</code> (not <code>False</code>) if the comparison doesn't make sense — this lets Python fall back gracefully instead of asserting a wrong answer.</li>
+<li><code>__add__</code> follows the same defensive pattern, then returns a <em>new</em> <code>Point</code> rather than mutating either operand, matching how <code>+</code> behaves on numbers and strings.</li>
+<li><code>magnitude</code> is a <code>@property</code>, so <code>p.magnitude</code> reads like an attribute but recomputes <code>math.hypot(self.x, self.y)</code> every time it's accessed — no stale cached value to worry about.</li>
+<li><code>origin</code> and <code>from_tuple</code> are <code>@classmethod</code>s. They receive <code>cls</code>, the class itself, so they can build and return instances without hardcoding <code>Point(...)</code> — this matters if <code>Point</code> is ever subclassed, since <code>cls</code> will resolve to the subclass.</li>
+<li>In <code>Circle</code>, <code>radius</code> is implemented as a property with a setter. <code>__init__</code> assigns <code>self.radius = radius</code>, which routes through the setter and validates the value before it's stored in <code>self._radius</code>.</li>
+<li><code>area</code> is a read-only property (no setter), since it's derived entirely from <code>radius</code> and should never be set directly.</li>
+</ul>
+<h2>Dry Run</h2>
+<pre><code class="language-python">p1 = Point(3, 4)
+p2 = Point(3, 4)
+p3 = p1 + p2
+
+print(p1)          # Point(3, 4)        -&gt; __repr__ used
+print(p1 == p2)     # True               -&gt; __eq__ compares x and y
+print(p3)          # Point(6, 8)        -&gt; __add__ built a new Point
+print(p1.magnitude) # 5.0                -&gt; sqrt(3**2 + 4**2)
+
+c = Circle(5)
+print(c.area)       # 78.53981633974483 -&gt; computed from radius
+
+c.radius = -1        # raises ValueError, caught before it's stored
+</code></pre>
+<p><code>p1 == p2</code> walks into <code>__eq__</code>, checks <code>isinstance</code>, then compares <code>3 == 3 and 4 == 4</code>, returning <code>True</code>. <code>p1 + p2</code> walks into <code>__add__</code>, builds <code>Point(3+3, 4+4)</code>, and returns <code>Point(6, 8)</code>. <code>c.radius = -1</code> walks into the setter, hits the <code>if value &lt; 0</code> guard, and raises before <code>self._radius</code> is ever touched — the invalid value never enters the object's state.</p>
+<h2>Complexity Analysis</h2>
+<p>Every dunder method here (<code>__repr__</code>, <code>__eq__</code>, <code>__add__</code>) does a fixed, constant amount of work — comparing or combining a small, fixed number of attributes — so each is <strong>O(1) time, O(1) space</strong>. This holds regardless of how many <code>Point</code> objects exist, since none of these methods touch a collection. The <code>magnitude</code> property is also O(1), since <code>math.hypot</code> operates on two scalars. These are correct complexity claims because none of the operations scale with input size — they scale with the number of attributes on the class, which is fixed at class-definition time.</p>
+<h2>Alternative Solutions</h2>
+<p>For classes with many fields, <code>@dataclass</code> (from the <code>dataclasses</code> module) generates <code>__init__</code>, <code>__repr__</code>, and <code>__eq__</code> automatically based on field annotations:</p>
+<pre><code class="language-python">from dataclasses import dataclass
+
+@dataclass
+class Point:
+    x: int
+    y: int
+</code></pre>
+<p>This gives you correct <code>__repr__</code> and <code>__eq__</code> for free, and is the right choice when your class is mostly a data container. It's worth knowing dunder methods by hand anyway, because <code>@dataclass</code> doesn't generate <code>__add__</code>, <code>__len__</code>, or custom validation logic — for anything beyond straightforward field storage, you're back to implementing the hooks yourself.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Comparing to a different type:</strong> <code>p1 == "not a point"</code> should return <code>False</code>, not raise — handled by the <code>isinstance</code> check returning <code>NotImplemented</code>.</li>
+<li><strong>Adding incompatible types:</strong> <code>p1 + 5</code> should fail clearly, not silently produce garbage — same <code>NotImplemented</code> pattern.</li>
+<li><strong>Radius of exactly 0:</strong> should be valid (a degenerate circle), so the setter check must be <code>&lt; 0</code>, not <code>&lt;= 0</code>.</li>
+<li><strong>Missing <code>__str__</code>:</strong> confirm that <code>str(obj)</code> and <code>print(obj)</code> correctly fall back to <code>__repr__</code> when <code>__str__</code> isn't defined.</li>
+<li><strong>Mutating after construction:</strong> setting <code>circle.radius</code> after creation should go through the same validation as <code>__init__</code>, since both route through the property setter.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Defining <code>__str__</code> but not <code>__repr__</code> — debugging tools (like the interactive shell and <code>repr()</code> in containers) still show the ugly default.</li>
+<li>Forgetting <code>isinstance</code> checks in <code>__eq__</code>, causing crashes or wrong results when compared against unrelated types.</li>
+<li>Returning <code>False</code> instead of <code>NotImplemented</code> from <code>__eq__</code> for unsupported types, which breaks Python's ability to try the other object's <code>__eq__</code> as a fallback.</li>
+<li>Mutating <code>self</code> inside <code>__add__</code> instead of returning a new object, which silently breaks code that expects <code>+</code> to be non-destructive.</li>
+<li>Skipping validation in a property setter early in a project "to add later," which lets invalid state slip in and surface as a bug far from where it was created.</li>
+<li>Using <code>@staticmethod</code> when <code>@classmethod</code> was needed, especially for alternate constructors — a <code>staticmethod</code> factory hardcodes the class name and breaks with subclassing.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What's the difference between <code>__str__</code> and <code>__repr__</code>, and when does Python use one over the other?</li>
+<li>Why should <code>__eq__</code> return <code>NotImplemented</code> instead of <code>False</code> for unrelated types?</li>
+<li>What's the difference between <code>@classmethod</code> and <code>@staticmethod</code>, and when would you choose each?</li>
+<li>Why does defining <code>__eq__</code> without <code>__hash__</code> make an object unhashable, and when does that matter?</li>
+<li>How would you make a custom class support indexing with <code>obj[i]</code>?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Design a data structure supporting O(1) operations</strong> — often requires implementing <code>__getitem__</code>, <code>__setitem__</code>, or <code>__contains__</code> to make a custom class behave like a built-in container.</li>
+<li><strong>LRU Cache (LeetCode 146)</strong> — commonly implemented as a class where clean <code>__repr__</code> and encapsulated state (via properties) make debugging far easier.</li>
+<li><strong>Design HashMap / Design Twitter</strong> — both benefit from <code>__eq__</code> and <code>__hash__</code> when custom objects are used as dictionary keys or set members.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Python's built-in behavior — printing, comparing, measuring length, adding — is not magic; it's a dispatch table of dunder methods your class can opt into. <code>__repr__</code> should be the first one you write, since everything else falls back to it. <code>@property</code> lets you expose computed or validated values through plain attribute syntax, and <code>@classmethod</code> gives you alternate, readable ways to construct objects. Once you understand this map, any class you write can feel as native as Python's own built-in types.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with live coding, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <em>Fun with Learning Technology</em>, a series focused on building real intuition for how programming languages and tools work under the hood — not just memorizing syntax, but understanding why it behaves the way it does, so it sticks.</p>
+<h2>Call To Action</h2>
+<p>If this helped clarify how Python's dunder methods actually work, give the video a like on YouTube and subscribe for the rest of the series. For deeper write-ups like this one delivered directly to your inbox, subscribe to the Substack. Drop a comment with any Python quirk you'd like explained next, and share this with anyone prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When == doesn&#x27;t work right for custom objects, what&#x27;s the fix?</summary><p>Define __eq__; default is identity comparison, so equal-looking objects compare False without it.</p></details><details class='card2'><summary>Time complexity of calling len(obj) via __len__?</summary><p>O(1) if you store a count/length attribute; O(n) if __len__ recomputes by scanning.</p></details><details class='card2'><summary>Space cost of adding dunder methods to a class?</summary><p>O(1) extra — dunders are just methods, no per-instance overhead beyond normal attributes.</p></details><details class='card2'><summary>Common bug with @property setters?</summary><p>Forgetting to store to a differently-named private attr (e.g. self._x), causing infinite recursion calling the setter itself.</p></details><details class='card2'><summary>__repr__ vs __str__: when is each used?</summary><p>__repr__ is the fallback for both and meant for debugging/unambiguous repr; __str__ is user-facing display text.</p></details><details class='card2'><summary>Interview follow-up: why prefer @classmethod over __init__ overloading?</summary><p>classmethod gives named alternate constructors (e.g. from_string) without cluttering __init__ with conditional logic.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
