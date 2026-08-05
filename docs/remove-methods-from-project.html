@@ -1,0 +1,183 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3310. Remove Methods From Project | LeetCode Daily Python Solution (two passes, zero extra tools) — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/remove-methods-from-project
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/remove-methods-from-project
+">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/remove-methods-from-project.html">
+<meta property="og:title" content="3310. Remove Methods From Project | LeetCode Daily Python Solution (two passes, zero extra tools) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/remove-methods-from-project
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/remove-methods-from-project
+">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>3310. Remove Methods From Project | LeetCode Daily Python Solution (two passes, zero extra tools)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every large codebase has a version of this problem hiding in it. A function gets flagged as broken, and the real question is never "how do I delete this one function" — it's "how much of the system does this function's blast radius actually cover, and is any of that blast radius something other code still relies on." That second half is the part people skip, and it's exactly what LeetCode 3310, Remove Methods From Project, is testing.</p>
+<p>This problem shows up in interviews because it's really two classic ideas stitched together: graph reachability (find everything downstream of a starting node) and a safety check on that result (make sure nothing outside the group depends on it). Individually, both are things most engineers can do in their sleep. Together, in a 20-30 minute interview window, they trip people up because it's tempting to stop after step one and declare victory.</p>
+<p>Once you've worked through this problem, you'll recognize the pattern immediately in real systems: removing a broken microservice and its transitive dependents, deleting a package and everything that imports it, or pruning dead code in a build graph. The mechanics are identical — flood outward from the source, then check the perimeter before you commit to deleting anything.</p>
+<h2>Problem Overview</h2>
+<p>You're given <code>n</code> methods, numbered <code>0</code> to <code>n - 1</code>, and an integer <code>k</code> identifying a method that has a bug. You're also given <code>invocations</code>, a list of pairs <code>[a, b]</code> where each pair means "method <code>a</code> calls method <code>b</code>."</p>
+<p>Because method <code>k</code> is buggy, every method it calls — directly or transitively — is considered suspicious too, since a broken method can corrupt anything downstream of it. Your job is to return the list of methods that remain safe to keep after removing <code>k</code> and its suspicious dependents.</p>
+<p>There's one catch: you can only actually remove the suspicious group if nothing outside that group calls into it. If some healthy method still depends on a method inside the suspicious set, removing the group would break that healthy method, so in that case you remove nothing at all and return every method unchanged.</p>
+<h2>Example</h2>
+<p>Suppose <code>n = 5</code> and <code>k = 1</code>, with:</p>
+<pre><code>invocations = [[0, 1], [0, 2], [1, 2], [3, 4]]
+</code></pre>
+<p>Reading each pair as caller → callee: method 0 calls 1 and 2, method 1 calls 2, and method 3 calls 4 (an unrelated pair off on its own).</p>
+<p>Starting from <code>k = 1</code>: method 1 calls method 2, so <code>{1, 2}</code> is suspicious. Method 0 is not suspicious itself, but it calls method 1, which is suspicious — that's an incoming edge from outside the group. Because of that edge, we can't remove anything. The answer is <code>[0, 1, 2, 3, 4]</code>, every method, untouched.</p>
+<p>Change the starting point to <code>k = 3</code>. Method 3 only calls method 4, so <code>{3, 4}</code> is suspicious. No other method calls into 3 or 4. Nothing blocks the removal, so the answer is <code>[0, 1, 2]</code> — everything except the suspicious group.</p>
+<p>The difference between these two examples is the entire problem: reachability finds the candidates, but the incoming-edge check decides whether you're allowed to act on them.</p>
+<h2>Intuition</h2>
+<p>Start by separating the problem into two questions, because trying to solve them at once is where confusion creeps in.</p>
+<p><strong>Question one: what's suspicious?</strong> This is pure forward reachability. Starting at <code>k</code>, anything you can reach by following "calls" edges is suspicious — <code>k</code> itself, plus everything it calls, plus everything those calls call, and so on. This is a textbook flood fill: seed a frontier with <code>k</code>, expand outward one hop at a time, and stop when there's nothing new left to visit.</p>
+<p><strong>Question two: is it safe to remove?</strong> This is where the problem stops being a pure traversal exercise. A method being suspicious doesn't mean it's isolated — other, perfectly healthy methods might still call into the suspicious group from outside. If you deleted the group anyway, those healthy methods would be left calling into nothing. So before removing anything, you scan every edge in the graph and ask: does this edge start outside the suspicious set and end inside it? If even one edge does, the whole group is off-limits — not just parts of it, all of it — because you can't cleanly separate "used" from "buggy" once there's a live dependency crossing the boundary.</p>
+<p>The key mental shift is realizing these are two separate passes over the graph, not one combined check. First you flood outward to find who's suspicious. Only after that set is finalized do you look at the graph a second time, checking every edge for the reverse case — someone healthy pointing in.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> For every method, run a full traversal to determine whether it's reachable from <code>k</code>. Then, for that same suspicious set, iterate over every invocation pair and check if it crosses into the group from outside.</p>
+<p><strong>Algorithm:</strong>
+1. Build an adjacency list from <code>invocations</code>.
+2. Run DFS/BFS from <code>k</code> to compute the suspicious set — this part isn't actually "brute force" different from the optimal approach, since flood fill is already the right tool.
+3. For the incoming-edge check, loop over every <code>[a, b]</code> pair and test membership in the suspicious set with a linear scan through a list instead of a set.</p>
+<p><strong>Advantages:</strong> Conceptually simple, easy to reason about correctness.</p>
+<p><strong>Disadvantages:</strong> If membership checks use lists instead of hash sets, each check costs O(size of suspicious set) instead of O(1), pushing the total complexity toward O(n × e) in the worst case — far too slow once <code>n</code> and the edge count approach 100,000, which the constraints allow.</p>
+<p><strong>Complexity:</strong> Time O(n × e) with naive membership checks, Space O(n + e) for the graph.</p>
+<p>The fix is almost free: swap the list for a set. That single change turns this "brute force" version into the optimal one, which is why this problem doesn't really have a meaningfully different slow solution — the brute force mistake is a data structure choice, not an algorithmic one.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal solution is the same two-phase idea, done with O(1) membership checks throughout.</p>
+<p><strong>Phase 1 — Build the graph.</strong> For every <code>[a, b]</code> in <code>invocations</code>, append <code>b</code> to <code>graph[a]</code>'s call list. This gives you, for any method, the exact list of methods it calls directly.</p>
+<p><strong>Phase 2 — Flood fill from k.</strong> Use a set called <code>suspicious</code> and a stack, both seeded with <code>k</code>. Pop a method off the stack, look at everything it calls via <code>graph</code>, and for each callee not already in <code>suspicious</code>, add it to the set and push it onto the stack. Repeat until the stack is empty. When it's empty, <code>suspicious</code> contains exactly the connected group reachable from <code>k</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Stack</th>
+<th>Suspicious set</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Start</td>
+<td><code>[k]</code></td>
+<td><code>{k}</code></td>
+</tr>
+<tr>
+<td>Pop k, push its callees</td>
+<td><code>[callees of k]</code></td>
+<td><code>{k, callees of k}</code></td>
+</tr>
+<tr>
+<td>Pop each callee, push new callees</td>
+<td>...</td>
+<td>grows until no new nodes found</td>
+</tr>
+<tr>
+<td>Stack empty</td>
+<td><code>[]</code></td>
+<td>final suspicious set</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Phase 3 — Check incoming edges.</strong> Iterate over every <code>[a, b]</code> in <code>invocations</code> once. If <code>b</code> is in <code>suspicious</code> and <code>a</code> is not, you've found a healthy method calling into the suspicious group — removal is blocked, so return every method from <code>0</code> to <code>n - 1</code> unchanged.</p>
+<p><strong>Phase 4 — Build the result.</strong> If no blocking edge was found, return every method from <code>0</code> to <code>n - 1</code> that is not in <code>suspicious</code>.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def remove_methods(n: int, k: int, invocations: list[list[int]]) -&gt; list[int]:
+    # Build the call graph: method -&gt; list of methods it calls
+    graph = [[] for _ in range(n)]
+    for caller, callee in invocations:
+        graph[caller].append(callee)
+
+    # Phase 1: flood fill from k to find every suspicious method
+    suspicious = {k}
+    stack = [k]
+    while stack:
+        method = stack.pop()
+        for callee in graph[method]:
+            if callee not in suspicious:
+                suspicious.add(callee)
+                stack.append(callee)
+
+    # Phase 2: block removal if any healthy method calls into the group
+    for caller, callee in invocations:
+        if callee in suspicious and caller not in suspicious:
+            return list(range(n))
+
+    # Phase 3: everything outside the suspicious set survives
+    return [method for method in range(n) if method not in suspicious]
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>graph = [[] for _ in range(n)]</code> — one adjacency list slot per method, built once so lookups during the flood fill are O(1).</li>
+<li>The first loop populates <code>graph</code> by appending each <code>callee</code> to its <code>caller</code>'s list — this is just re-expressing the edge list as an adjacency list.</li>
+<li><code>suspicious = {k}</code> and <code>stack = [k]</code> — a set for instant membership checks, a stack (not recursion) so a long dependency chain can't blow Python's recursion limit.</li>
+<li>The <code>while stack</code> loop is standard iterative DFS: pop a method, examine its direct callees, and push any unseen ones onto the stack after marking them.</li>
+<li>The second loop over <code>invocations</code> is the safety check — it's a separate, full pass over every edge, checking specifically for edges that enter the suspicious set from outside it.</li>
+<li>Returning <code>list(range(n))</code> on a blocked removal means "nothing changes" — every method survives, including <code>k</code>.</li>
+<li>The final list comprehension filters out the suspicious set only when removal was never blocked.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Take <code>n = 5</code>, <code>k = 0</code>, <code>invocations = [[0, 1], [0, 2], [1, 2], [3, 4]]</code> (using the first example's edges but starting from 0 this time).</p>
+<p><strong>Build graph:</strong> <code>graph[0] = [1, 2]</code>, <code>graph[1] = [2]</code>, <code>graph[3] = [4]</code>, <code>graph[2] = graph[4] = []</code>.</p>
+<p><strong>Flood fill:</strong> <code>suspicious = {0}</code>, <code>stack = [0]</code>.
+- Pop <code>0</code>. Callees <code>1, 2</code> are new → <code>suspicious = {0, 1, 2}</code>, <code>stack = [1, 2]</code>.
+- Pop <code>2</code>. No callees. <code>stack = [1]</code>.
+- Pop <code>1</code>. Callee <code>2</code> already in <code>suspicious</code>. <code>stack = []</code>.</p>
+<p>Final <code>suspicious = {0, 1, 2}</code>.</p>
+<p><strong>Incoming edge check:</strong> Scan <code>[0,1]</code>, <code>[0,2]</code>, <code>[1,2]</code> — callers <code>0</code> and <code>1</code> are both already inside <code>suspicious</code>, so no blocking edge. <code>[3,4]</code> — callee <code>4</code> isn't in <code>suspicious</code> at all, irrelevant.</p>
+<p><strong>Result:</strong> No block found, so return methods not in <code>{0, 1, 2}</code> → <code>[3, 4]</code>.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time: O(n + e)</strong>, where <code>e</code> is the number of invocations. Building the graph is O(e). The flood fill visits each node at most once and each edge at most once (a node only enters the stack the first time it's discovered), so that's O(n + e). The incoming-edge check is one pass over all edges, O(e). Building the final list is O(n). Everything sums to O(n + e).</p>
+<p><strong>Space: O(n + e)</strong> for the adjacency list, the suspicious set, and the stack, all of which are bounded by the number of nodes and edges.</p>
+<p>These bounds are tight because you fundamentally cannot solve this problem without looking at every method and every edge at least once — there's no shortcut around examining the full input.</p>
+<h2>Alternative Solutions</h2>
+<p>You can write the flood fill recursively instead of with an explicit stack:</p>
+<pre><code class="language-python">def dfs(method, graph, suspicious):
+    suspicious.add(method)
+    for callee in graph[method]:
+        if callee not in suspicious:
+            dfs(callee, graph, suspicious)
+</code></pre>
+<p>It reads slightly cleaner, but with <code>n</code> up to 100,000, a long linear chain of calls (<code>0 → 1 → 2 → ... → 99999</code>) can exceed Python's default recursion limit and crash. The stack-based version has identical time and space complexity but never hits that ceiling, so it's the safer default here — this is one of the rare cases where the "less elegant" version is unambiguously the right call.</p>
+<p>BFS with a queue instead of a stack works identically well; the traversal order doesn't matter for this problem, only that every reachable node gets visited exactly once.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>k calls nothing:</strong> <code>suspicious = {k}</code> only. If nothing points into <code>k</code>, it's removed cleanly by itself.</li>
+<li><strong>No invocations at all:</strong> The incoming-edge check loop never runs, so nothing can block removal — <code>k</code> and anything it (vacuously) calls just gets removed.</li>
+<li><strong>The graph has a cycle back through k:</strong> If every method ends up reachable from <code>k</code> (a fully connected or cyclic graph), <code>suspicious</code> ends up being all <code>n</code> methods, and the result is an empty list — everything is suspicious, nothing outside exists to point back in.</li>
+<li><strong>Duplicate invocation pairs:</strong> Duplicates just get added to <code>graph[caller]</code> more than once; they don't change correctness, though a defensive implementation could dedupe them for a small constant-factor speedup.</li>
+<li><strong>k is unreachable from anything but has huge fan-out:</strong> The flood fill still correctly captures the whole downstream set regardless of how large it is; complexity scales with the number of edges touched, not with <code>n</code> alone.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Skipping the incoming-edge check entirely</strong> and always removing the suspicious set — this passes on graphs where nothing calls back in, then silently fails the moment a healthy caller exists.</li>
+<li><strong>Removing only part of the suspicious group</strong> when a blocking edge is found, instead of blocking the removal completely. The rule is all-or-nothing: one bad edge cancels the entire operation.</li>
+<li><strong>Using plain recursion for the traversal</strong> without considering <code>n</code> up to 100,000 — a deep call chain will hit Python's recursion limit.</li>
+<li><strong>Forgetting that k itself is suspicious</strong>, not just what it calls — some implementations start the suspicious set empty and only add k's callees, missing k.</li>
+<li><strong>Checking membership with a list instead of a set</strong>, turning an O(n + e) solution into something quadratic under the hood without any visible change to the algorithm's structure.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you extend this to handle multiple simultaneously buggy starting methods?</li>
+<li>What changes if the graph is undirected instead of directed?</li>
+<li>How would you modify this to also report <em>why</em> removal was blocked — i.e., return the specific blocking edge?</li>
+<li>Could you solve the incoming-edge check without a second full pass over <code>invocations</code>? (You can fold it into the flood fill if you also track reverse edges, but it doesn't improve asymptotic complexity.)</li>
+<li>How does this generalize to strongly connected components in a general dependency graph?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 802 (Find Eventual Safe States)</strong> — also about reachability and separating "safe" nodes from a computed unsafe set.</li>
+<li><strong>LeetCode 207 / 210 (Course Schedule I &amp; II)</strong> — dependency graph traversal with cycle detection, same adjacency-list-plus-DFS backbone.</li>
+<li><strong>LeetCode 1319 (Number of Operations to Make Network Connected)</strong> — connected component counting, same flood-fill mechanics.</li>
+<li><strong>LeetCode 947 (Most Stones Removed with Same Row or Column)</strong> — reachability groups determine what can safely be removed, a close conceptual cousin.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Reachability alone answers "what's connected to the source," but real deletion problems almost always add a second question: "does anything outside still depend on this group." Solve those as two clean, separate passes — flood fill first, then a perimeter check — rather than trying to merge them into one clever loop. And whenever <code>n</code> can get large, default to iterative traversal over recursion; it costs nothing and removes an entire class of crash.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with the graph drawn out live, both the stack and recursive DFS versions compared side by side, and the quick quizzes at the end to test yourself, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This is part of Fun with Learning Technology, a series that takes the interview problems that trip people up and breaks them down until the pattern actually clicks — not just for this one problem, but for the next ten that look like it.</p>
+<h2>Call To Action</h2>
+<p>If this walkthrough helped, the biggest support is a like on the video and a subscribe so future breakdowns land in your feed. For deeper dives and written companions to every problem, subscribe to the Substack. And if something in this explanation could be clearer, or you want a specific problem covered next, drop it in the comments — that feedback shapes what gets made next.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>What pattern does &#x27;Remove Methods From Project&#x27; signal?</summary><p>Graph deletion via BFS/DFS reachability — when you see &#x27;remove dependents of a broken node&#x27;, think graph traversal from a source.</p></details><details class='card2'><summary>Time complexity for building graph + traversal here?</summary><p>O(n + k) — n nodes, k edges, each visited/built once via adjacency list.</p></details><details class='card2'><summary>Space complexity of the solution?</summary><p>O(n + k) for adjacency list plus O(n) for visited/queue set.</p></details><details class='card2'><summary>Trickiest edge case in this problem?</summary><p>Edges pointing to already-removed nodes or cycles — must track visited to avoid re-processing or infinite loops.</p></details><details class='card2'><summary>Reachability-from-source graph deletion vs standard topological sort?</summary><p>Here you mark everything reachable from the buggy node for removal, not order all nodes by dependency.</p></details><details class='card2'><summary>Interview follow-up: what if edges were undirected?</summary><p>Reachability set could balloon to unrelated methods — you&#x27;d need directed edges to isolate only true dependents.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
