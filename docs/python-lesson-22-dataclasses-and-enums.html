@@ -1,0 +1,217 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Python Lesson 22: @dataclass Cuts 15 Lines to 2 — Here&#x27;s the Trick — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-22-dataclasses-and-enums
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesson-22-">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-22-dataclasses-and-enums.html">
+<meta property="og:title" content="Python Lesson 22: @dataclass Cuts 15 Lines to 2 — Here&#x27;s the Trick — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-22-dataclasses-and-enums
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesson-22-">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 22: @dataclass Cuts 15 Lines to 2 — Here&#x27;s the Trick</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every Python developer eventually writes the same class over and over: a handful of fields, a constructor to assign them, a <code>__repr__</code> so print statements are readable, and an <code>__eq__</code> so two instances with the same data compare equal. It's maybe fifteen lines, none of it interesting, and all of it easy to get subtly wrong.</p>
+<p>This pattern shows up constantly in coding interviews too. Whenever a problem needs a small container — a point, a node, a cart item, a config object — interviewers want to see whether you reach for verbose boilerplate or whether you know the tool built for exactly this job. That tool is <code>@dataclass</code>, and it's been in the standard library since Python 3.7. No pip install, no new syntax to memorize — just a decorator that reads your type hints and writes the repetitive methods for you.</p>
+<p>This lesson also covers <code>Enum</code>, because the two show up together constantly. <code>@dataclass</code> solves the "too much typing" problem. <code>Enum</code> solves a different, sneakier problem: fields that are supposed to hold one of a few fixed values but are actually just strings, which means a typo compiles fine and fails silently. Understanding both — and when to reach for each — is a small investment that pays off in almost every Python codebase you'll touch.</p>
+<h2>Problem Overview</h2>
+<p>Suppose you're modeling a shopping cart. Each cart has an <code>id</code> and a list of <code>items</code>. Written the ordinary way, you need:</p>
+<ul>
+<li>An <code>__init__</code> that assigns <code>self.id = id</code> and <code>self.items = items</code></li>
+<li>A <code>__repr__</code> so <code>print(cart)</code> shows something useful instead of <code>&lt;Cart object at 0x7f...&gt;</code></li>
+<li>An <code>__eq__</code> so two carts with identical contents are considered equal instead of only being equal if they're the same object in memory</li>
+</ul>
+<p>None of these methods do anything clever. They're pure mechanical translation from "these are my fields" to "here's the code that uses them." That repetition is exactly what <code>@dataclass</code> automates: it looks at your type-annotated class body and generates <code>__init__</code>, <code>__repr__</code>, and <code>__eq__</code> for you at class-creation time.</p>
+<h2>Example</h2>
+<p>Here's the manual version:</p>
+<pre><code class="language-python">class Cart:
+    def __init__(self, id: int, items: list):
+        self.id = id
+        self.items = items
+
+    def __repr__(self):
+        return f&quot;Cart(id={self.id!r}, items={self.items!r})&quot;
+
+    def __eq__(self, other):
+        if not isinstance(other, Cart):
+            return NotImplemented
+        return (self.id, self.items) == (other.id, other.items)
+</code></pre>
+<p>And here's the same class with <code>@dataclass</code>:</p>
+<pre><code class="language-python">from dataclasses import dataclass
+
+@dataclass
+class Cart:
+    id: int
+    items: list
+</code></pre>
+<pre><code class="language-python">c1 = Cart(1, [&quot;book&quot;])
+c2 = Cart(1, [&quot;book&quot;])
+
+print(c1)        # Cart(id=1, items=['book'])
+print(c1 == c2)  # True
+</code></pre>
+<p><code>c1</code> and <code>c2</code> are two separate objects in memory, but they print their field values and compare equal field-by-field — exactly the behavior we wrote by hand above, generated automatically from two lines of type-annotated fields.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer arrives at this without needing to be told "use dataclass." You notice a pattern: this class has no real behavior. It doesn't compute anything, validate anything, or coordinate with other objects — it just <em>holds data</em>. Any class shaped like that is going to need the same three methods, every time, and the implementation of those methods is 100% derivable from the field list alone. If a computer can derive something purely from information you already typed (the field names and their types), you shouldn't be typing it a second time by hand.</p>
+<p>That's the whole insight behind <code>@dataclass</code>: your class body, with type hints, already contains everything needed to generate <code>__init__</code>, <code>__repr__</code>, and <code>__eq__</code>. The decorator just does the mechanical translation you'd otherwise do yourself, and it does it without typos.</p>
+<p>The corollary insight, which takes a bit more experience to notice, is that <code>@dataclass</code> only solves the <em>shape</em> problem, not the <em>correctness</em> problem. It guarantees your fields get assigned and compared correctly. It says nothing about whether the values you put in those fields are the right values — which is where <code>Enum</code> earns its place later in this lesson.</p>
+<h2>Brute Force Solution</h2>
+<p>"Brute force" here isn't an algorithm — it's the manual class from the Example section. It's worth naming explicitly because it's the default most developers reach for without thinking, and understanding its costs is what makes the optimal solution obvious.</p>
+<p><strong>Idea:</strong> Write <code>__init__</code>, <code>__repr__</code>, and <code>__eq__</code> by hand for every data-holding class.</p>
+<p><strong>Advantages:</strong>
+- Full control — you can add custom validation or formatting inline
+- No dependency on any language feature beyond core Python
+- Transparent to newcomers who haven't seen <code>@dataclass</code> yet</p>
+<p><strong>Disadvantages:</strong>
+- Linear boilerplate growth: every new field means editing three methods, not one
+- Easy to forget to update <code>__repr__</code> or <code>__eq__</code> when you add a field, silently leaving stale behavior
+- More surface area for typos and copy-paste mistakes
+- Obscures the actual shape of the data behind implementation noise</p>
+<p><strong>Complexity:</strong> Writing it is O(n) in the number of fields, same as the dataclass version — the cost isn't algorithmic, it's maintenance and error surface, which is invisible to a Big-O analysis but very real in a codebase that changes over time.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach is <code>@dataclass</code>, plus two refinements that matter in real code: <code>field(default_factory=...)</code> for mutable defaults, and <code>frozen=True</code> for immutability.</p>
+<p><strong>Step 1 — Replace the manual class with <code>@dataclass</code>.</strong> As shown above, this alone removes <code>__init__</code>, <code>__repr__</code>, and <code>__eq__</code>.</p>
+<p><strong>Step 2 — Handle mutable defaults correctly.</strong> If you try this:</p>
+<pre><code class="language-python">@dataclass
+class Cart:
+    id: int
+    items: list = []   # DON'T DO THIS
+</code></pre>
+<p>Python raises an error at class definition time for mutable defaults like <code>[]</code> — dataclass specifically guards against this, because the underlying problem is a classic Python trap: a single list object would be shared across every instance that doesn't pass its own <code>items</code>. Mutate one cart's list, and every other cart silently changes too.</p>
+<p>The fix is <code>default_factory</code>, which tells dataclass to call a function to build a fresh object for each new instance:</p>
+<pre><code class="language-python">from dataclasses import dataclass, field
+
+@dataclass
+class Cart:
+    id: int
+    items: list = field(default_factory=list)
+</code></pre>
+<p>Now every <code>Cart()</code> gets its own brand-new list.</p>
+<p><strong>Step 3 — Make it immutable where that matters.</strong> Some data, once created, should never change — a config value passed around your app is the classic example. Add <code>frozen=True</code>:</p>
+<pre><code class="language-python">@dataclass(frozen=True)
+class Config:
+    api_key: str
+    timeout: int
+</code></pre>
+<p>Any attempt to reassign a field (<code>config.timeout = 30</code>) now raises <code>FrozenInstanceError</code> instead of silently mutating shared state somewhere unexpected.</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>What it protects against</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>@dataclass</code></td>
+<td>Boilerplate errors in <code>__init__</code>/<code>__repr__</code>/<code>__eq__</code></td>
+</tr>
+<tr>
+<td><code>default_factory</code></td>
+<td>Shared mutable state across instances</td>
+</tr>
+<tr>
+<td><code>frozen=True</code></td>
+<td>Accidental reassignment after creation</td>
+</tr>
+</tbody>
+</table>
+<h2>Python Code</h2>
+<pre><code class="language-python">from dataclasses import dataclass, field
+from enum import Enum, auto
+
+
+class Status(Enum):
+    PENDING = auto()
+    ACTIVE = auto()
+    DONE = auto()
+
+
+@dataclass
+class Cart:
+    id: int
+    items: list = field(default_factory=list)
+    status: Status = Status.PENDING
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>class Status(Enum):</code> defines a fixed, named set of valid values. <code>Enum</code> is the standard-library base class for this.</li>
+<li><code>auto()</code> assigns increasing integer values (1, 2, 3...) automatically, so you don't hand-maintain numbering that means nothing anyway.</li>
+<li><code>@dataclass</code> on <code>Cart</code> generates <code>__init__</code>, <code>__repr__</code>, and <code>__eq__</code> from the three annotated fields below it.</li>
+<li><code>id: int</code> is a required field with no default — callers must supply it.</li>
+<li><code>items: list = field(default_factory=list)</code> gives every <code>Cart</code> its own empty list, rather than one shared list object.</li>
+<li><code>status: Status = Status.PENDING</code> defaults every new cart to the <code>PENDING</code> state, using the enum member rather than a raw string.</li>
+</ul>
+<h2>Dry Run</h2>
+<pre><code class="language-python">c = Cart(id=101)
+print(c)
+# Cart(id=101, items=[], status=&lt;Status.PENDING: 1&gt;)
+
+c.status = Status.ACTIVE
+print(c.status is Status.ACTIVE)   # True — enums are singletons
+
+c2 = Cart(id=101)
+c2.items.append(&quot;mouse&quot;)
+print(c.items)   # [] — proves the lists are NOT shared
+</code></pre>
+<p>Walking through it: <code>Cart(id=101)</code> triggers the generated <code>__init__</code>, which assigns <code>id</code>, calls <code>list()</code> fresh for <code>items</code>, and sets <code>status</code> to the enum default. Printing uses the generated <code>__repr__</code>. Reassigning <code>status</code> works because this <code>Cart</code> isn't frozen. The <code>is</code> comparison returns <code>True</code> because <code>Status.ACTIVE</code> is a singleton — every reference to it is the same object in memory, so identity comparison is cheap and always correct. Finally, mutating <code>c2.items</code> leaves <code>c.items</code> untouched, confirming <code>default_factory</code> did its job.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> Field assignment, comparison, and printing are all O(n) in the number of fields — identical to the hand-written version, since dataclass just generates that same code for you.</li>
+<li><strong>Space:</strong> O(n) per instance for the fields themselves; no extra overhead compared to a manually written class. Enum members are created once at class-definition time and reused (singleton), so they cost nothing per instance.</li>
+<li><strong>Why correct:</strong> The generated <code>__eq__</code> compares fields as a tuple, which is exactly the field-by-field equality you'd write by hand — but it's regenerated automatically if you add or remove a field, so it can't silently drift out of sync the way hand-written code can.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p><strong>Dictionary (<code>{"id": 101, "items": []}</code>)</strong> — no fixed shape, so a typo like <code>"cart_total"</code> vs <code>"card_total"</code> fails silently instead of raising an error, and there's no editor autocomplete or type checking.</p>
+<p><strong><code>namedtuple</code></strong> — fixed shape like a dataclass, but tuples are immutable by default and updating a field means constructing a whole new instance (<code>cart._replace(items=[...])</code>), which is clunkier for objects that legitimately need to change.</p>
+<p><strong>Plain class (brute force above)</strong> — full control, but linear boilerplate and drift risk as shown earlier.</p>
+<p><code>@dataclass</code> sits in the sweet spot: named, typed fields your editor checks, with the option to stay mutable or opt into <code>frozen=True</code> when you need it.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty input</strong> — <code>Cart(id=1)</code> with no <code>items</code> argument correctly gets a fresh empty list via <code>default_factory</code>, not a shared one.</li>
+<li><strong>Duplicate values</strong> — two carts with identical field values are <code>==</code> even though they're different objects, because equality is field-based, not identity-based.</li>
+<li><strong>Frozen instance mutation</strong> — assigning to a field on a <code>frozen=True</code> instance raises <code>FrozenInstanceError</code> rather than corrupting state.</li>
+<li><strong>Enum typo</strong> — <code>Status.ACTIV</code> (misspelled) raises <code>AttributeError</code> immediately; there is no way to silently create an invalid status this way.</li>
+<li><strong>Type-hint bypass</strong> — assigning a raw string like <code>status = "active"</code> instead of <code>Status.ACTIVE</code> succeeds at runtime, because dataclass and Enum don't enforce types — only a static type checker (like mypy) catches this before it ships.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Using a mutable literal as a default</strong> (<code>items: list = []</code>) instead of <code>field(default_factory=list)</code> — dataclass will raise an error specifically to stop you from doing this.</li>
+<li><strong>Forgetting <code>frozen=True</code></strong> on data meant to be immutable, then debugging a mystery mutation somewhere downstream.</li>
+<li><strong>Using raw strings for fixed states</strong> instead of <code>Enum</code>, which lets typos pass silently until they fail in production.</li>
+<li><strong>Assuming <code>@dataclass</code> enforces types at runtime</strong> — it doesn't. It trusts your type hints and your editor's checker, not your actual input values.</li>
+<li><strong>Reaching for <code>@dataclass</code> on classes with real behavior</strong> — if a class has significant logic beyond holding and comparing data, forcing it into a dataclass shape can obscure intent rather than clarify it.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How does <code>@dataclass</code> decide what to put in the generated <code>__init__</code>?</li>
+<li>Why does Python refuse a mutable default like <code>[]</code> directly on a dataclass field, and what does <code>default_factory</code> do differently?</li>
+<li>What does <code>frozen=True</code> actually change under the hood, and what exception does violating it raise?</li>
+<li>Why are two <code>Enum.ACTIVE</code> references the same object, and why does that matter for comparisons?</li>
+<li>Does <code>@dataclass</code> validate types at runtime? What would you add if you needed that?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Design Cache with LRU Eviction (LeetCode 146)</strong> — often modeled with a small dataclass-style node holding key/value/pointers.</li>
+<li><strong>Design a Parking System (LeetCode 1603)</strong> — a natural fit for <code>Enum</code> to represent fixed vehicle-size categories instead of raw integers or strings.</li>
+<li><strong>Design Underground System (LeetCode 1396)</strong> — benefits from a small immutable dataclass to represent a check-in record.</li>
+</ul>
+<p>These are related because they all require modeling a small, fixed-shape unit of data cleanly — exactly the situation <code>@dataclass</code> and <code>Enum</code> are built for.</p>
+<h2>Key Takeaways</h2>
+<ul>
+<li><code>@dataclass</code> reads your type hints and generates <code>__init__</code>, <code>__repr__</code>, and <code>__eq__</code> for you — reach for it the moment a class is just holding data.</li>
+<li>Use <code>field(default_factory=...)</code> for any mutable default; a literal mutable default is a shared-state bug waiting to happen.</li>
+<li><code>frozen=True</code> turns accidental mutation into an immediate error instead of silent corruption.</li>
+<li><code>Enum</code> replaces fragile strings with a closed, self-documenting set of valid values — a misspelled member fails loudly, immediately.</li>
+<li>Neither tool enforces types at runtime — that protection comes from your editor's type checker, not the language itself.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This lesson is easier to absorb watching it happen live — the class shrinking from fifteen lines down to two, and the enum typo failing in real time. Watch the full walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This is part of <strong>Fun with Learning Technology</strong>, a series that takes real, everyday code problems — the kind that show up in interviews and in production — and breaks down not just the solution but the reasoning that gets you there. Each lesson aims to build lasting intuition, not just a memorized snippet.</p>
+<h2>Call To Action</h2>
+<p>If this saved you from writing boilerplate you didn't know you could skip, give the video a like on YouTube and subscribe for the rest of the series. For deeper written breakdowns like this one, subscribe to the Substack newsletter. Drop a comment with a boilerplate pattern that's bitten you before — it might be the next lesson.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When should you reach for @dataclass on a class?</summary><p>When a class is mostly fields + init + repr + eq — @dataclass generates those from type-hinted attributes.</p></details><details class='card2'><summary>How does @dataclass know which attributes become fields?</summary><p>From class-level type-hinted assignments (name: type); plain attributes without annotations are ignored.</p></details><details class='card2'><summary>Why avoid a plain dict instead of a dataclass?</summary><p>Dict has no fixed schema, no type hints, no attribute access, and typos in keys fail silently at runtime.</p></details><details class='card2'><summary>What does frozen=True do and what bug does it catch?</summary><p>Makes instances immutable — reassigning a field raises FrozenInstanceError, catching accidental post-init mutation.</p></details><details class='card2'><summary>Dataclass field vs Enum member — when to use Enum?</summary><p>Use Enum when a field&#x27;s valid values are a small fixed set of named choices, not arbitrary data.</p></details><details class='card2'><summary>Interview: why are Enum members singletons, not just strings?</summary><p>Enum members are identity-comparable (is) and restrict values to the defined set, preventing invalid string values.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
