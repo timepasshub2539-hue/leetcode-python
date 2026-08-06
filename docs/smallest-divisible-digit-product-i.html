@@ -1,0 +1,156 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3345. Smallest Divisible Digit Product I | LeetCode Daily Python Solution (never more than 9 steps) — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/smallest-divisible-digit-product-i
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/smallest-divisible-di">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/smallest-divisible-digit-product-i.html">
+<meta property="og:title" content="3345. Smallest Divisible Digit Product I | LeetCode Daily Python Solution (never more than 9 steps) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/smallest-divisible-digit-product-i
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/smallest-divisible-di">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>3345. Smallest Divisible Digit Product I | LeetCode Daily Python Solution (never more than 9 steps)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every so often a LeetCode problem shows up wearing a disguise. It reads like it wants heavy math — factorization, digit DP, some clever number-theory identity. LeetCode 3345, Smallest Divisible Digit Product I, is one of those problems. The moment you actually sit with it, the disguise falls off, and what's left is a simple linear scan with one elegant observation that keeps it fast.</p>
+<p>This problem is worth learning for a specific reason: it tests whether you can recognize when brute force is actually fine, not because you're being lazy, but because you can prove a bound on how far it has to run. That's a real interview skill. Interviewers love asking "isn't this just brute force?" and watching whether you can answer with a number instead of a shrug. By the end of this article, you'll be able to answer that question for this problem in one sentence.</p>
+<p>This is also a great problem for practicing digit manipulation in Python — converting numbers to strings, walking through characters, and using the modulo operator correctly. Those are small mechanical skills, but they show up constantly across the "digit problems" family on LeetCode.</p>
+<h2>Problem Overview</h2>
+<p>You're given two integers, <code>n</code> and <code>t</code>. You need to find the smallest integer that is greater than or equal to <code>n</code> such that when you multiply all of its digits together, the resulting product is divisible by <code>t</code>.</p>
+<p>In other words: start scanning from <code>n</code> upward. For each candidate number, multiply its digits into a single product. The first candidate whose digit product is evenly divisible by <code>t</code> (remainder zero) is your answer.</p>
+<p>There's no requirement to skip <code>n</code> itself — if <code>n</code> already satisfies the condition, <code>n</code> is the answer.</p>
+<h2>Example</h2>
+<p>Let's say <code>n = 15</code> and <code>t = 3</code>.</p>
+<ul>
+<li>Check 15: digits are <code>1</code> and <code>5</code>. Product = <code>1 × 5 = 5</code>. Is <code>5</code> divisible by <code>3</code>? No (<code>5 % 3 = 2</code>).</li>
+<li>Check 16: digits are <code>1</code> and <code>6</code>. Product = <code>1 × 6 = 6</code>. Is <code>6</code> divisible by <code>3</code>? Yes (<code>6 % 3 = 0</code>).</li>
+</ul>
+<p>Answer: <strong>16</strong>.</p>
+<p>Each output is just the running digit product tested with modulo — a remainder check, nothing fancier.</p>
+<h2>Intuition</h2>
+<p>Picture a bouncer at a club door, counting people in one at a time until the headcount hits exactly the number the fire code allows. That's the exact shape of this problem: scan forward, one candidate at a time, until a condition clicks true. It's the same underlying pattern used to generate the next valid license plate, or to throttle a counter until it satisfies some rule.</p>
+<p>The naive instinct is to worry: what if <code>t</code> is large and unlucky, and we have to scan for a very long time before finding a digit product that cooperates? This is where the real insight of the problem lives.</p>
+<p>Look at any ten consecutive integers — say 21 through 30. Exactly one of them ends in zero. The moment a number ends in <code>0</code>, its digit product is <code>0</code>, because zero times anything is zero. And zero is divisible by every integer from 1 to 10 (which covers the constraint range for <code>t</code> in this problem). Call this the <strong>Zero Safety Net</strong>.</p>
+<p>That means no matter how unlucky you get with <code>n</code> and <code>t</code>, you are guaranteed to find a valid answer within the next 9 numbers, because the 10th number in any consecutive run has a trailing zero. This single observation converts a search that looks unbounded into one with a hard, small ceiling.</p>
+<p>Once you see the Zero Safety Net, the algorithm writes itself: start at <code>n</code>, check the digit product, and if it fails, move to <code>n + 1</code>. Repeat. You will never need more than ten checks.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Starting at <code>n</code>, compute the digit product of each candidate and test it against <code>t</code> using modulo. Increment and repeat until a candidate passes.</p>
+<p><strong>Algorithm:</strong>
+1. Set <code>candidate = n</code>.
+2. Compute the digit product of <code>candidate</code>.
+3. If <code>digit_product % t == 0</code>, return <code>candidate</code>.
+4. Otherwise, increment <code>candidate</code> and go to step 2.</p>
+<p><strong>Advantages:</strong>
+- Extremely simple to write and reason about.
+- No edge-case handling needed beyond the loop itself.</p>
+<p><strong>Disadvantages:</strong>
+- At first glance it looks unbounded, which can make it feel risky to write under interview pressure without proving a bound.</p>
+<p><strong>Time complexity:</strong> O(1) — bounded by the Zero Safety Net (see below), each check touches at most a couple of digits.
+<strong>Space complexity:</strong> O(1) — no auxiliary data structures.</p>
+<p>This "brute force" is actually the optimal solution here, because the Zero Safety Net caps it. There isn't a smarter algorithm to reach for — recognizing the bound <em>is</em> the optimization.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal solution is the same loop as above, but understanding <em>why</em> it's optimal is the point.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Start at <code>n</code>.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Convert the number to its digits and multiply them into a running product (starting at 1).</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Check <code>product % t == 0</code>.</td>
+</tr>
+<tr>
+<td>4</td>
+<td>If true, return the candidate. If false, move to the next integer.</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Guaranteed to terminate within 9 increments thanks to a trailing-zero candidate.</td>
+</tr>
+</tbody>
+</table>
+<p>There's no need to precompute factorizations of <code>t</code> or reason about which digits divide <code>t</code> — the trailing-zero guarantee makes all of that unnecessary for this version of the problem. (A follow-up variant of this problem removes <code>n</code> entirely and asks you to <em>construct</em> the smallest number from scratch — that one genuinely needs digit factorization, but this one doesn't.)</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def smallest_number(n: int, t: int) -&gt; int:
+    candidate = n
+    while True:
+        product = 1
+        for digit_char in str(candidate):
+            product *= int(digit_char)
+        if product % t == 0:
+            return candidate
+        candidate += 1
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>candidate = n</code>: we start the search exactly at <code>n</code>, since <code>n</code> itself may already be a valid answer.</li>
+<li><code>while True</code>: the Zero Safety Net guarantees this loop exits within 10 iterations, so an unconditional loop is safe here.</li>
+<li><code>product = 1</code>: initialized to 1, not 0, because we're multiplying. Starting at 0 would make every product 0 and every check pass — a classic bug.</li>
+<li><code>for digit_char in str(candidate)</code>: converting the number to a string lets us iterate over its digits one character at a time.</li>
+<li><code>product *= int(digit_char)</code>: each digit character is converted back to an integer and folded into the running product.</li>
+<li><code>if product % t == 0</code>: the modulo operator checks the remainder. A remainder of zero means the product divides evenly by <code>t</code>.</li>
+<li><code>candidate += 1</code>: if the check fails, move to the next integer and try again.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Let's trace <code>n = 29</code>, <code>t = 5</code>.</p>
+<ul>
+<li><code>candidate = 29</code>: digits are <code>2</code> and <code>9</code>. Product = <code>2 × 9 = 18</code>. <code>18 % 5 = 3</code> — not zero. Move on.</li>
+<li><code>candidate = 30</code>: digits are <code>3</code> and <code>0</code>. Product = <code>3 × 0 = 0</code>. <code>0 % 5 = 0</code> — success.</li>
+</ul>
+<p>Return <strong>30</strong>. Notice the trailing zero in 30 is what guaranteed a hit — this is the Zero Safety Net in action.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time complexity: O(1).</strong> The loop runs at most 10 times because of the Zero Safety Net, and each iteration only processes the digits of a number bounded by the input constraints — a fixed, small amount of work. Since neither the iteration count nor the per-iteration work grows with the input size, the whole operation is constant time.</p>
+<p><strong>Space complexity: O(1).</strong> We only track a running product and a candidate integer — no arrays, no recursion stack, no auxiliary storage that scales with input.</p>
+<h2>Alternative Solutions</h2>
+<p>You could precompute the digit product incrementally as the last digit rolls over (since only the last digit changes as you increment by 1, except at multiples of ten). This would save recomputing the entire product each time. In practice, this isn't worth doing here — the loop already runs at most 10 times, so the "optimization" saves a trivial amount of work while adding real complexity and bug surface. This is a case where the simpler brute-force loop is the correct engineering choice, not just the easy one.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong><code>n</code> already satisfies the condition:</strong> e.g., <code>n = 10</code>, <code>t = 2</code> — digit product is <code>0</code>, immediately divisible. Must check <code>n</code> itself, not <code>n + 1</code>.</li>
+<li><strong><code>t = 1</code>:</strong> any digit product is divisible by 1, so the answer is always <code>n</code> itself.</li>
+<li><strong><code>n</code> contains a zero digit already:</strong> the digit product is <code>0</code>, which is divisible by any <code>t</code>, so the answer is <code>n</code>.</li>
+<li><strong>Large <code>t</code> relative to digit range:</strong> doesn't matter — the Zero Safety Net still caps the search at 9 steps past <code>n</code>.</li>
+<li><strong>Single-digit <code>n</code>:</strong> the loop still works correctly since <code>str(n)</code> still has one character to iterate over.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Initializing <code>product</code> to 0 instead of 1.</strong> This is the big one — it makes every digit product read as 0, so every candidate looks valid immediately, and you can't tell a real answer from broken logic.</li>
+<li><strong>Initializing <code>product</code> outside the while loop.</strong> If you don't reset it to 1 at the start of each candidate check, the product keeps compounding across attempts instead of representing a single number's digits.</li>
+<li><strong>Starting the search at <code>n + 1</code> instead of <code>n</code>.</strong> This skips the case where <code>n</code> is already the answer.</li>
+<li><strong>Forgetting to convert digit characters back to integers.</strong> Multiplying string characters directly will throw a type error or produce incorrect results.</li>
+<li><strong>Assuming the search could run indefinitely and adding unnecessary bounds or fallback logic.</strong> The Zero Safety Net already guarantees termination within 10 steps — extra safeguards are just noise.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>"How do you know this loop terminates quickly? Can you prove a bound?" (This is the core question the problem is testing.)</li>
+<li>"What's the digit product of a number containing a zero digit, and why does that matter here?"</li>
+<li>"How would this change if <code>t</code> could be much larger, say up to 100?" (The Zero Safety Net argument would need re-examination since not every <code>t</code> up to 100 divides 0's factors the same way — actually zero is divisible by <em>any</em> integer, so the bound still holds regardless of <code>t</code>'s size.)</li>
+<li>"Can you solve the reverse problem — construct the smallest number with a digit product divisible by <code>t</code>, without being given a starting <code>n</code>?" (This is LeetCode's follow-up variant, which needs digit factorization instead of scanning.)</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 3346 (Smallest Divisible Digit Product II):</strong> the sequel — you must construct the smallest valid number from scratch instead of scanning from <code>n</code>, using factorization of <code>t</code> into single digits.</li>
+<li><strong>LeetCode 1291 (Sequential Digits):</strong> another digit-manipulation problem that rewards converting numbers to strings and iterating characters.</li>
+<li><strong>LeetCode 400 (Nth Digit):</strong> builds the same muscle of reasoning about digits positionally rather than as a single integer.</li>
+<li><strong>LeetCode 1969 (Minimum Non-Zero Product of the Array Elements):</strong> a different flavor of "product of digits/values" reasoning under a divisibility-like constraint.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The core lesson here isn't the code — it's the reasoning that justifies the code. Brute force looks scary until you can bound it. The Zero Safety Net — the guarantee that a trailing zero appears within any run of ten consecutive integers — turns an apparently unbounded scan into a provably constant-time algorithm. Whenever you notice a "reset" value guaranteed to appear nearby in your search space, stop worrying about worst-case scenarios and simulate forward with confidence.</p>
+<h2>Watch the Video</h2>
+<p>Prefer to see this solved live, including a full dry run and a quick quiz to test your understanding? Watch the complete walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <em>Fun with Learning Technology</em>, a series dedicated to taking LeetCode problems apart until they stop being scary. Each episode picks a problem, strips away the intimidating framing, and rebuilds the solution from first principles — with an emphasis on the intuition an experienced engineer uses to find the answer, not just the final code.</p>
+<h2>Call To Action</h2>
+<p>If this walkthrough helped the problem click, consider liking the video on YouTube and subscribing to the channel — it's a small channel, and every subscribe genuinely helps it grow. For deeper dives and written companions to every video, subscribe to the Substack newsletter. And drop a comment with your answer to the quick quiz, or let us know what problem you'd like broken down next.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Pattern: search min N with digit-based check over tiny fixed range?</summary><p>Brute-force bounded search — trigger: answer is guaranteed within a small constant range (1-9), so just iterate and test.</p></details><details class='card2'><summary>Time complexity of checking candidates 1 through 9?</summary><p>O(1) — at most 9 candidates checked, each check does constant digit-product work.</p></details><details class='card2'><summary>Space complexity of this approach?</summary><p>O(1) — only a few integer variables (candidate, product, digits), no extra structures.</p></details><details class='card2'><summary>Trickiest edge case / common bug here?</summary><p>Digit &#x27;0&#x27; makes the product 0, which is divisible by anything — must special-case or it breaks the &#x27;divisible&#x27; logic.</p></details><details class='card2'><summary>Bounded linear scan vs binary search — when to pick which?</summary><p>Bounded scan when the valid range is tiny (≤10); binary search when range is large but answer is monotonic.</p></details><details class='card2'><summary>Interview follow-up: why not just increment n and check divisibility directly?</summary><p>Works but scans is unbounded upward; framing it as checking digit products of 1-9 first shows you spotted the bound.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
