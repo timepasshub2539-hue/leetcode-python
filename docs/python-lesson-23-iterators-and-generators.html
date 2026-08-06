@@ -1,0 +1,228 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Python Lesson 23: One range(1_000_000_000) Line, Zero Memory Used — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-23-iterators-and-generators
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesson-">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-23-iterators-and-generators.html">
+<meta property="og:title" content="Python Lesson 23: One range(1_000_000_000) Line, Zero Memory Used — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-23-iterators-and-generators
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesson-">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 23: One range(1_000_000_000) Line, Zero Memory Used</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'>🧩 Dynamic Programming</span><article><h2>Introduction</h2>
+<p>Every Python developer writes <code>for x in my_list:</code> before they've ever heard the word "iterator." That's by design — Python hides a whole protocol behind that syntax so beginners don't have to think about it. But the moment you're handling large datasets, streaming files, or building a data pipeline, that hidden machinery stops being optional trivia and starts being the difference between code that runs and code that crashes your machine.</p>
+<p>This also happens to be one of the most common areas interviewers probe when they want to know if a candidate actually understands Python, versus just being able to use it. "What's the difference between an iterable and an iterator?" and "How would you handle a dataset too large to fit in memory?" are staple questions, and generators are almost always the expected answer to the second one.</p>
+<p>Understanding this topic isn't about memorizing <code>__iter__</code> and <code>__next__</code>. It's about understanding <em>why</em> Python was designed to compute values lazily in the first place, and knowing when that laziness helps you and when it's just unnecessary indirection.</p>
+<h2>Problem Overview</h2>
+<p>Here's the core question we're answering: if you ask Python for a huge sequence of numbers, why does one approach run instantly with almost no memory footprint, while a nearly identical-looking approach can freeze or crash your machine?</p>
+<p>Concretely:</p>
+<pre><code class="language-python">range(1_000_000_000)          # instant, negligible memory
+list(range(1_000_000_000))    # can exhaust memory on a typical laptop
+</code></pre>
+<p>Both describe "a billion numbers." Only one of them actually creates a billion numbers right now. The rest of this article is about understanding that distinction from the ground up — starting with what a <code>for</code> loop is actually doing when you're not looking.</p>
+<h2>Example</h2>
+<p>Let's make the abstract concrete before touching any theory.</p>
+<pre><code class="language-python">numbers = [10, 20, 30]
+
+for n in numbers:
+    print(n)
+</code></pre>
+<p>Output:</p>
+<pre><code>10
+20
+30
+</code></pre>
+<p>Nothing surprising here — but this innocent loop is secretly doing three distinct things: asking the list for an iterator, repeatedly asking that iterator for the next value, and catching a signal that tells it when to stop. We'll expose each of those steps manually next.</p>
+<h2>Intuition</h2>
+<p>Think about how an experienced engineer would explain a <code>for</code> loop to a machine that has no shorthand for "loop over this."</p>
+<p>They wouldn't say "go through the list." They'd say something closer to: "Get me something that can hand out values from this list one at a time. Ask it for a value. Do something with it. Ask again. Keep asking until it tells you there's nothing left."</p>
+<p>That's it. That's the entire mental model. A <code>for</code> loop is not a primitive operation — it's syntactic sugar over a two-step handshake:</p>
+<ol>
+<li>Call <code>iter()</code> on the thing you're looping over. This returns an <strong>iterator</strong> — an object that knows how to produce values one at a time and remembers where it left off.</li>
+<li>Call <code>next()</code> on that iterator repeatedly. Each call either returns the next value, or raises <code>StopIteration</code> when there's nothing left, which the <code>for</code> loop silently catches to end the loop.</li>
+</ol>
+<p>The key distinction that trips people up: a list is <strong>iterable</strong> (it knows how to produce an iterator via <code>__iter__</code>), but a list is not itself the iterator doing the work. The iterator is a separate object with its own memory of position.</p>
+<p>A good analogy: a list is the deli counter's number roll. The iterator is the ticket dispenser — it doesn't hold every number at once, it just remembers which number it handed out last and produces the next one on demand.</p>
+<p>Once you see the loop this way, the memory question answers itself. If producing "the next value" doesn't require having <em>all</em> the values already computed, you never need to store them all. That's the entire insight behind <code>range()</code>, generators, and every lazy-evaluation trick in Python.</p>
+<h2>Brute Force Solution</h2>
+<p>The "brute force" here isn't an algorithm in the traditional sense — it's the naive approach to representing a large sequence: build the whole thing up front.</p>
+<p><strong>Idea:</strong> Compute every value in the sequence immediately and store it in a list.</p>
+<pre><code class="language-python">data = list(range(1_000_000_000))
+</code></pre>
+<p><strong>Algorithm:</strong>
+1. Allocate memory for a list.
+2. Compute each value in the range.
+3. Store all of them before returning control to the caller.</p>
+<p><strong>Advantages:</strong>
+- Simple to reason about — the data is just <em>there</em>.
+- Supports random access (<code>data[500_000]</code>) and repeated iteration for free.
+- Works fine for small-to-medium sequences.</p>
+<p><strong>Disadvantages:</strong>
+- Every value must exist in memory simultaneously, even if you only ever touch each one once.
+- Doesn't scale to huge or infinite sequences.
+- Wastes time computing values you may never use.</p>
+<p><strong>Complexity:</strong>
+- Time: O(n) to build the list.
+- Space: O(n) — this is the actual problem. A billion integers, even at Python's per-object overhead, is enough to exhaust RAM on a typical machine.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach is to never materialize the full sequence — only compute a value the instant it's asked for, and immediately forget it afterward. This is what <code>range()</code> does natively, and it's the same principle behind hand-written iterators and generators.</p>
+<p>There are two ways to build this behavior yourself:</p>
+<p><strong>1. A hand-built iterator</strong>, implementing the protocol explicitly:</p>
+<pre><code class="language-python">class CountUp:
+    def __init__(self, start, end):
+        self.current = start
+        self.end = end
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.current &gt;= self.end:
+            raise StopIteration
+        value = self.current
+        self.current += 1
+        return value
+</code></pre>
+<p><strong>2. A generator function</strong>, using <code>yield</code> to get the same behavior with far less code:</p>
+<pre><code class="language-python">def count_up(start, end):
+    current = start
+    while current &lt; end:
+        yield current
+        current += 1
+</code></pre>
+<p>Calling <code>count_up(0, 3)</code> doesn't run any code — it returns a generator object, paused before the first line, like a video paused at frame zero. Only when you call <code>next()</code> does execution actually proceed, running until it hits <code>yield</code>, handing back a value, and freezing exactly there. The next <code>next()</code> call resumes execution right after that <code>yield</code>, not from the top of the function.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gen = count_up(0, 3)</code></td>
+<td>Generator object created, nothing executed yet</td>
+</tr>
+<tr>
+<td><code>next(gen)</code></td>
+<td>Runs to first <code>yield</code>, returns <code>0</code>, pauses</td>
+</tr>
+<tr>
+<td><code>next(gen)</code></td>
+<td>Resumes after <code>yield</code>, returns <code>1</code>, pauses</td>
+</tr>
+<tr>
+<td><code>next(gen)</code></td>
+<td>Resumes, returns <code>2</code>, pauses</td>
+</tr>
+<tr>
+<td><code>next(gen)</code></td>
+<td>Loop condition fails, raises <code>StopIteration</code></td>
+</tr>
+</tbody>
+</table>
+<p>Because nothing is computed until asked for, and nothing is retained after being yielded, memory use stays constant regardless of how large — or infinite — the sequence is.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def count_up(start: int, end: int):
+    &quot;&quot;&quot;Yield integers from start up to (but not including) end, one at a time.&quot;&quot;&quot;
+    current = start
+    while current &lt; end:
+        yield current
+        current += 1
+
+
+def evens_generator_expression(limit: int):
+    # Generator expression: computes nothing until iterated
+    return (n for n in range(limit) if n % 2 == 0)
+
+
+if __name__ == &quot;__main__&quot;:
+    gen = count_up(0, 5)
+    print(list(gen))  # [0, 1, 2, 3, 4]
+
+    evens = evens_generator_expression(10)
+    print(list(evens))  # [0, 2, 4, 6, 8]
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>def count_up(start, end):</code> — because the function body contains <code>yield</code>, calling this returns a generator object, not a value. No code inside runs yet.</li>
+<li><code>current = start</code> — this line only executes the first time <code>next()</code> is called on the generator.</li>
+<li><code>while current &lt; end:</code> — the loop condition is re-checked every time the generator resumes.</li>
+<li><code>yield current</code> — this is the pause point. Execution stops here and control returns to the caller, but every local variable (<code>current</code>, in this case) stays alive in memory for when it resumes.</li>
+<li><code>current += 1</code> — runs <em>after</em> the generator is resumed with another <code>next()</code> call, not immediately after the <code>yield</code>.</li>
+<li><code>evens_generator_expression</code> — the round-bracket version of a list comprehension. <code>(n for n in range(limit) if n % 2 == 0)</code> builds nothing; it's a promise to compute values on demand, identical in spirit to the generator function above but expressed in one line.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Trace <code>count_up(0, 3)</code> step by step:</p>
+<ol>
+<li><code>gen = count_up(0, 3)</code> → generator object created, paused before <code>current = start</code>.</li>
+<li><code>next(gen)</code> → runs <code>current = 0</code>, checks <code>0 &lt; 3</code> (true), yields <code>0</code>, pauses.</li>
+<li><code>next(gen)</code> → resumes after yield, runs <code>current += 1</code> → <code>current = 1</code>, checks <code>1 &lt; 3</code> (true), yields <code>1</code>, pauses.</li>
+<li><code>next(gen)</code> → resumes, <code>current = 2</code>, checks <code>2 &lt; 3</code> (true), yields <code>2</code>, pauses.</li>
+<li><code>next(gen)</code> → resumes, <code>current = 3</code>, checks <code>3 &lt; 3</code> (false), loop exits, function returns, <code>StopIteration</code> raised.</li>
+</ol>
+<p>At no point does the generator hold more than one value in memory — <code>current</code> is the only state it carries.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>List-based approach:</strong>
+- Time: O(n) to build.
+- Space: O(n) — every value exists simultaneously in memory.</p>
+<p><strong>Generator-based approach:</strong>
+- Time: O(n) total if you consume every value — same total work, just spread out over time.
+- Space: <strong>O(1)</strong> — only the current position and a handful of local variables are kept, regardless of how many values the sequence contains.</p>
+<p>This is why <code>range(1_000_000_000)</code> is instant: <code>range</code> objects don't generate values until indexed or iterated, and they store only <code>start</code>, <code>stop</code>, and <code>step</code> — three integers, not a billion.</p>
+<h2>Alternative Solutions</h2>
+<p><strong><code>itertools</code> module:</strong> For more advanced lazy sequences (infinite counting, chaining, filtering, batching), <code>itertools.count()</code>, <code>itertools.islice()</code>, and friends give you the same O(1)-memory behavior as hand-written generators, with a well-tested C implementation underneath. If you're reaching for a custom generator that just counts, filters, or chains, check <code>itertools</code> first — it's almost always faster and more concise.</p>
+<p><strong>Plain lists:</strong> Still the right choice when the data is small, needs random access, or must be iterated more than once. Generators are single-use — once exhausted, they're done, and there's no rewinding. Don't reach for laziness by default; reach for it when the size, streaming nature, or single-use pattern of the data actually calls for it.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty range:</strong> <code>count_up(5, 5)</code> — the <code>while</code> condition fails immediately, the generator yields nothing, and the very first <code>next()</code> call raises <code>StopIteration</code>.</li>
+<li><strong>Reversed bounds:</strong> <code>count_up(5, 0)</code> behaves the same as empty — <code>5 &lt; 0</code> is false, so nothing is yielded. If descending order is intended, the step logic needs to be written explicitly; it won't happen automatically.</li>
+<li><strong>Exhausted generator reused:</strong> Calling <code>next()</code> again after <code>StopIteration</code> has already been raised once will raise it again — a generator cannot be reset or rewound. You need a fresh call to the generator function.</li>
+<li><strong>Iterating a generator twice:</strong> <code>for x in gen: ...</code> followed by a second <code>for x in gen: ...</code> on the <em>same</em> object will produce nothing the second time, since the generator is already exhausted. This surprises people coming from list-based code.</li>
+<li><strong>Very large but not infinite range with <code>range()</code>:</strong> <code>range()</code> handles this natively and efficiently — it's the built-in demonstration of O(1) memory over an arbitrarily large sequence.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Confusing iterable and iterator.</strong> Assuming a list itself has state like "current position" — it doesn't; the iterator returned by <code>iter(list)</code> does.</li>
+<li><strong>Trying to <code>len()</code> a generator.</strong> Generators don't know their total size in advance in the general case, so <code>len()</code> raises <code>TypeError</code>.</li>
+<li><strong>Reusing an exhausted generator.</strong> Expecting a second loop over the same generator object to work, when it's already been fully consumed.</li>
+<li><strong>Wrapping small, already-materialized data in a generator "for efficiency."</strong> This adds complexity with zero memory benefit if the data is small and reused.</li>
+<li><strong>Forgetting that local state persists across <code>yield</code>.</strong> Assuming variables reset between <code>next()</code> calls, when in fact they're preserved exactly as they were when the generator paused.</li>
+<li><strong>Using a list comprehension when a generator expression would do</strong>, inside something like <code>sum(...)</code> or <code>any(...)</code>, where the full list is never needed — <code>sum([x for x in range(n)])</code> builds an unnecessary list; <code>sum(x for x in range(n))</code> doesn't.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What's the difference between an iterable and an iterator?</li>
+<li>What exception ends a <code>for</code> loop internally, and why don't you see it?</li>
+<li>How would you implement a custom iterator class from scratch?</li>
+<li>What's the difference between <code>return</code> and <code>yield</code> in a function?</li>
+<li>When would you choose a generator over a list, and when would a list still be better?</li>
+<li>Can a generator be iterated more than once? Why or why not?</li>
+<li>How does <code>range()</code> achieve constant memory usage for huge ranges?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 284 (Peeking Iterator)</strong> — directly tests understanding of the iterator protocol and how to look ahead without breaking <code>next()</code>'s state.</li>
+<li><strong>LeetCode 173 (Binary Search Tree Iterator)</strong> — requires implementing <code>__next__</code> and <code>hasNext</code> with O(1) amortized time, a real-world use of custom iterators.</li>
+<li><strong>LeetCode 341 (Flatten Nested List Iterator)</strong> — combines lazy evaluation with recursive structures, a natural extension of generator thinking.</li>
+<li><strong>LeetCode 251 (Flatten 2D Vector)</strong> — another custom iterator implementation exercise, good for practicing <code>__iter__</code>/<code>__next__</code> by hand.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Every <code>for</code> loop is <code>iter()</code> followed by repeated <code>next()</code> calls, ending on a caught <code>StopIteration</code>.</li>
+<li>An iterable produces an iterator; the iterator is the thing that actually remembers position and produces values.</li>
+<li><code>yield</code> turns a function into a generator: it pauses at each <code>yield</code> and resumes exactly there on the next call, preserving all local state in between.</li>
+<li>Generator expressions give you the same laziness as generator functions, in list-comprehension syntax with parentheses instead of brackets.</li>
+<li>Lists compute and store everything up front; generators compute one value at a time and remember none of the past ones — that's the entire memory story.</li>
+<li>Use generators for huge, streaming, or single-pass data. Use lists when the data is small or needs to be iterated more than once.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This entire walkthrough is demonstrated live, including hand-tracing a generator pausing and resuming step by step — watch it here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <strong>Fun with Learning Technology</strong>, a series built around taking the tools developers use every day — loops, data structures, language features — and opening them up to see exactly how they work underneath. The goal isn't just to show <em>what</em> to write, but to build the intuition for <em>why</em> it works, so the next unfamiliar problem feels less unfamiliar.</p>
+<h2>Call To Action</h2>
+<p>If this made the iterator protocol click, leave a like on the video — it's the easiest way to tell me the pacing and depth are working. Subscribe on YouTube for the rest of the series, and subscribe to the Substack for the written breakdowns that go even deeper than the videos. Drop a comment with what you'd like explained next, and share this with anyone prepping for interviews or just trying to actually understand Python instead of memorizing syntax.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Generator with 1B numbers doesn&#x27;t crash memory—why?</summary><p>Yields one value at a time instead of building the full list; O(1) memory vs O(n) for a list.</p></details><details class='card2'><summary>What does &#x27;for x in obj&#x27; secretly call?</summary><p>iter(obj) to get an iterator, then repeated next() until StopIteration is raised.</p></details><details class='card2'><summary>Iterable vs Iterator: what&#x27;s the difference?</summary><p>Iterable has __iter__ (can produce an iterator); Iterator has __next__ and __iter__, tracks its own position, exhausts after one pass.</p></details><details class='card2'><summary>Common bug: reusing a generator/iterator a second time?</summary><p>It&#x27;s already exhausted—empty results, no error. Iterators are single-use; recreate the generator to iterate again.</p></details><details class='card2'><summary>yield vs return in a function?</summary><p>return ends the function once; yield pauses execution, saves state, and resumes from that point on the next next() call.</p></details><details class='card2'><summary>Generator expression vs list comprehension?</summary><p>Generator expr (x for x in y) is lazy, O(1) memory; list comp [x for x in y] builds the whole list eagerly, O(n) memory.</p></details></div><h2 class='ph1' style='font-size:1.4rem'>Similar problems</h2><div class='grid'><a class='card' href='minimum-number-of-pushes-to-type-word-i-advanced.html'><div class='body'><h3>This LeetCode Problem Has an Exact Formula (No DP Needed)</h3><span class='badge' style='background:#4f9cf922;color:#4f9cf9'>🧩 Dynamic Programming</span></div></a><a class='card' href='find-the-number-of-subsequences-with-equal-gcd.html'><div class='body'><h3>Count Subsequence Pairs With Equal GCD — DP Explained Step by Step</h3><span class='badge' style='background:#4f9cf922;color:#4f9cf9'>🧩 Dynamic Programming</span></div></a></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
