@@ -1,0 +1,215 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>n8n Lesson 5: Why Does This Node Run Three Times, Not Once? — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/n8n-lesson-05-understanding-the-data-structure-items
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/n8n">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/n8n-lesson-05-understanding-the-data-structure-items.html">
+<meta property="og:title" content="n8n Lesson 5: Why Does This Node Run Three Times, Not Once? — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/n8n-lesson-05-understanding-the-data-structure-items
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/n8n">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>n8n Lesson 5: Why Does This Node Run Three Times, Not Once?</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>If you've spent any time building n8n workflows, you've probably hit this moment: you wire up a node, run the workflow, and it fires three, five, or ten times when you expected it to run once. Nothing in the UI screams an explanation at you. The workflow just... loops. Silently.</p>
+<p>This isn't a bug, and it isn't random. It's a direct consequence of one data structure that every single node in n8n passes to the next — the items array. Once you understand this one shape, node looping stops being mysterious and starts being predictable.</p>
+<p>This matters even if you've never touched a line of backend code. n8n is built on top of ideas that show up constantly in real software engineering: arrays, objects, iteration, and the difference between "one record" and "a collection of records." Understanding items arrays here is a gentle, practical introduction to concepts that any developer eventually needs — the same concepts behind API responses, database query results, and list-processing code in Python or JavaScript. Learn it in n8n's visual context, and it transfers directly.</p>
+<h2>Problem Overview</h2>
+<p>Every node in n8n receives data from the node before it, does something with that data, and passes the result to the next node. The question is: what exactly gets passed?</p>
+<p>The answer is always the same regardless of which node you're using — HTTP Request, Set, Code, Google Sheets, whatever. Data moves as a list called an <strong>items array</strong>. Each entry in that list is one "item," and each item is wrapped in a small, consistent structure:</p>
+<ul>
+<li>a <code>json</code> key holding the actual data for that item</li>
+<li>an optional <code>binary</code> key holding a file, if one is attached</li>
+</ul>
+<p>That's the entire contract. No matter how complex your workflow gets, every node is really just receiving a list of these wrapped objects and handing back another list of them.</p>
+<p>The behavior that trips people up: if a node receives an items array with three entries, the <em>next</em> node runs its internal logic once per item — three separate executions, not one. This isn't a special "loop mode" you opt into. It's just how n8n walks the array, one item at a time, by default.</p>
+<h2>Example</h2>
+<p>Imagine a workflow step that outputs three customer records after a database query. The items array looks like this conceptually:</p>
+<pre><code class="language-json">[
+  { &quot;json&quot;: { &quot;name&quot;: &quot;Asha&quot;, &quot;email&quot;: &quot;asha@example.com&quot; } },
+  { &quot;json&quot;: { &quot;name&quot;: &quot;Devon&quot;, &quot;email&quot;: &quot;devon@example.com&quot; } },
+  { &quot;json&quot;: { &quot;name&quot;: &quot;Priya&quot;, &quot;email&quot;: &quot;priya@example.com&quot; } }
+]
+</code></pre>
+<p>Three entries in the array. When this list flows into the next node — say, a node that sends a welcome email — that node runs three times: once with Asha's data, once with Devon's, once with Priya's. Each run only sees its own item; it doesn't automatically see the other two unless you explicitly aggregate them.</p>
+<p>If your workflow had returned a single customer instead, the array would have one entry, and the next node would run exactly once. The count of items <em>is</em> the count of executions. That's the whole rule.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer thinks about this, without needing to memorize n8n's internals: any time you see a list-shaped structure feeding into a processing step, assume the processing step runs once per element unless told otherwise. This is just how iteration works in every language — a <code>for</code> loop over a list runs its body once per element. n8n's canvas hides the loop, but the loop is still there.</p>
+<p>The trap is assuming there's only ever one item, because during testing there usually is. You build the workflow with one sample row, everything looks fine, and the mental model that forms is "this node gets one thing." Then production traffic sends three, five, or a hundred records, and any expression written with the "one item" assumption either grabs the wrong entry or throws an error with no clear explanation.</p>
+<p>The fix in your thinking is simple: before writing an expression, ask "how many items could actually be here?" not "how many items am I testing with?" Then verify it directly by clicking the node and reading its output panel, which shows the live items array with a toggle between a readable table view and the raw JSON view.</p>
+<p>There's a second, subtler layer: a node's <strong>input</strong> and <strong>output</strong> can look completely different. A node might receive one shape of data and hand forward something restructured — new keys added, values renamed, an extra wrapper layer introduced. Checking both tabs, not just one, is how you catch exactly where and how data changed shape as it moved through your workflow.</p>
+<h2>Brute Force Solution</h2>
+<p>There isn't really a "brute force vs optimal" algorithm here in the traditional sense — this is a conceptual/data-modeling problem, not a computational one. But there is a brute-force <em>habit</em>, and it's worth naming because it's what most beginners default to.</p>
+<p><strong>Idea:</strong> Write expressions and configure nodes assuming a single item is always present, and only investigate the items array when something breaks.</p>
+<p><strong>Algorithm:</strong>
+1. Build the workflow with one sample record.
+2. Write expressions like you're accessing a single object.
+3. Run it, see it work, ship it.
+4. When production sends multiple items and something fails, start debugging from scratch.</p>
+<p><strong>Advantages:</strong> Fast to build initially. Feels intuitive if you're new to the concept.</p>
+<p><strong>Disadvantages:</strong> Breaks silently or loudly the moment real data has more than one row. Debugging happens under pressure, after the workflow is already "done." No systematic way to predict node behavior before running it.</p>
+<p><strong>Complexity:</strong> Not applicable in Big-O terms, but in practical terms: debugging cost scales with how late you discover the assumption was wrong — which, with this approach, is usually production.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach is a habit, not a code change: verify the shape of your data before writing logic against it.</p>
+<p><strong>Step-by-step:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Click the node you're about to configure</td>
+<td>Opens the output panel with live data</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Toggle to JSON view</td>
+<td>Shows the raw items array, not a flattened table that can hide structure</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Count the items</td>
+<td>Tells you exactly how many times the next node will execute</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Check the <code>json</code> key contents</td>
+<td>This is where your actual fields live</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Check for a <code>binary</code> key</td>
+<td>Tells you if a file is attached and needs separate handling</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Compare the node's Input tab to its Output tab</td>
+<td>Reveals exactly where and how the data was reshaped</td>
+</tr>
+</tbody>
+</table>
+<p>Doing this before writing an expression means you're never guessing. You know the array length, you know the field names, and you know whether the next node will run once or many times — before you hit "execute" and find out the hard way.</p>
+<h2>Python Code</h2>
+<p>n8n itself is visual, but the mental model maps directly onto ordinary Python, which is useful both for understanding it and for talking about it in an interview context.</p>
+<pre><code class="language-python">from typing import Any
+
+
+def process_items(items: list[dict[str, Any]]) -&gt; list[dict[str, Any]]:
+    &quot;&quot;&quot;
+    Mirrors how an n8n node processes an items array:
+    runs once per item, returns a new items array.
+    &quot;&quot;&quot;
+    results = []
+    for item in items:
+        data = item[&quot;json&quot;]
+        binary = item.get(&quot;binary&quot;)  # optional, may not exist
+
+        # Per-item transformation logic goes here
+        transformed = {
+            &quot;name&quot;: data[&quot;name&quot;].upper(),
+            &quot;email&quot;: data[&quot;email&quot;],
+        }
+
+        new_item: dict[str, Any] = {&quot;json&quot;: transformed}
+        if binary:
+            new_item[&quot;binary&quot;] = binary
+
+        results.append(new_item)
+
+    return results
+
+
+if __name__ == &quot;__main__&quot;:
+    sample_items = [
+        {&quot;json&quot;: {&quot;name&quot;: &quot;asha&quot;, &quot;email&quot;: &quot;asha@example.com&quot;}},
+        {&quot;json&quot;: {&quot;name&quot;: &quot;devon&quot;, &quot;email&quot;: &quot;devon@example.com&quot;}},
+        {&quot;json&quot;: {&quot;name&quot;: &quot;priya&quot;, &quot;email&quot;: &quot;priya@example.com&quot;}},
+    ]
+
+    output = process_items(sample_items)
+
+    assert len(output) == len(sample_items)
+    assert output[0][&quot;json&quot;][&quot;name&quot;] == &quot;ASHA&quot;
+    assert &quot;binary&quot; not in output[0]
+
+    print(f&quot;Processed {len(output)} items — node would run {len(sample_items)} times in n8n.&quot;)
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>items: list[dict[str, Any]]</code> — the parameter shape mirrors n8n's items array: a list of dicts, each with a <code>json</code> key and optional <code>binary</code> key.</li>
+<li><code>for item in items</code> — this loop <em>is</em> the "node runs once per item" behavior, made explicit instead of hidden behind a UI.</li>
+<li><code>item["json"]</code> — required key; every item has one. Accessing it directly is safe.</li>
+<li><code>item.get("binary")</code> — optional key; using <code>.get()</code> instead of <code>[]</code> avoids a <code>KeyError</code> when no file is attached, matching the "optional binary key" rule.</li>
+<li><code>new_item</code> construction — only attaches <code>binary</code> if it existed on the input, so items without files don't gain a spurious empty key.</li>
+<li>The <code>assert</code> block at the bottom is a minimal self-check: it confirms the output count matches the input count (proving one-output-per-item) and confirms the binary key isn't fabricated.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Input: three items — Asha, Devon, Priya — each with only a <code>json</code> key, no <code>binary</code>.</p>
+<ol>
+<li>Loop iteration 1: <code>data = {"name": "asha", "email": "asha@example.com"}</code>, <code>binary = None</code>. Transformed name becomes <code>"ASHA"</code>. <code>new_item</code> gets only a <code>json</code> key.</li>
+<li>Loop iteration 2: same process for Devon → <code>"DEVON"</code>.</li>
+<li>Loop iteration 3: same process for Priya → <code>"PRIYA"</code>.</li>
+<li><code>results</code> now holds three items, structurally identical to the input but with uppercased names.</li>
+<li>Assertions pass: <code>len(output) == 3</code>, first item's name is <code>"ASHA"</code>, no <code>binary</code> key present.</li>
+</ol>
+<p>This is exactly what you'd see in n8n's output panel after a Set or Code node processes those three records — three items in, three items out, one transformation applied per item.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(n), where n is the number of items in the array. Each item is visited exactly once, and the per-item work (dict construction) is O(1). This is correct because there's no nested iteration over other items — each transformation only depends on its own item's data.</p>
+<p><strong>Space:</strong> O(n) for the output list, since we build a new item per input item rather than mutating in place. This matches how n8n itself works — nodes generally produce a fresh items array rather than mutating the array in place, which keeps the input/output tabs meaningfully different and inspectable.</p>
+<h2>Alternative Solutions</h2>
+<p>An alternative is to aggregate all items into a single item before processing — using n8n's "Aggregate" node or equivalent Python code like <code>all_data = [item["json"] for item in items]</code> passed as one item. This trades "runs once per item" for "runs once total, with all data available at once."</p>
+<p><strong>When to use aggregation instead:</strong> when your logic needs to compare items against each other (e.g., "find the highest value across all records") rather than transform each independently. The per-item default is right for transformations; aggregation is right for cross-item logic.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty items array:</strong> zero items in means the next node runs zero times — it's simply skipped, not run with empty data. In the Python version, <code>process_items([])</code> returns <code>[]</code> with no errors.</li>
+<li><strong>Single item:</strong> works identically to any other count; the "loop" just has one iteration, which is why testing with one row hides the real behavior.</li>
+<li><strong>Duplicate data across items:</strong> n8n doesn't deduplicate automatically — two items with identical <code>json</code> content still count as two separate items and trigger two executions.</li>
+<li><strong>Missing <code>binary</code> key:</strong> must be handled with <code>.get()</code> (or the node-level equivalent), not direct indexing, or you'll get a <code>KeyError</code> on items without attachments.</li>
+<li><strong>Very large item counts:</strong> thousands of items mean thousands of node executions; this is where performance and rate limits (e.g., calling an external API per item) become a real design concern.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Writing an expression assuming a single item, then being surprised when production sends multiple.</li>
+<li>Never toggling to JSON view — the table view can visually flatten structure and hide the wrapper shape.</li>
+<li>Assuming input and output are the same at every node, and not checking both tabs when debugging.</li>
+<li>Treating the <code>binary</code> key as always present and accessing it without a safe/optional check.</li>
+<li>Not noticing that zero items means the downstream node is skipped entirely, and mistaking that for a bug.</li>
+<li>Forgetting that identical-looking items are still counted separately — no automatic deduplication.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you explain the difference between processing a list once vs. once per element, and why does that distinction matter for performance?</li>
+<li>What's the tradeoff between per-item processing and aggregating first, in terms of API calls or side effects?</li>
+<li>How would you defensively handle an optional field in a data structure (like the <code>binary</code> key here) without raising an exception?</li>
+<li>Given a list of objects, how would you detect and remove duplicates before processing them?</li>
+<li>How does this items-array pattern relate to how REST APIs typically return collections of resources?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode "Two Sum" and other array-iteration problems</strong> — same core skill of reasoning about "what happens per element" versus "across all elements."</li>
+<li><strong>LeetCode "Flatten Nested List Iterator"</strong> — directly relevant to understanding wrapped, nested data structures like the <code>json</code>/<code>binary</code> wrapper.</li>
+<li><strong>LeetCode "Group Anagrams"</strong> — good practice for aggregation-style thinking, the alternative approach discussed above.</li>
+<li><strong>Any "process a batch of records" interview question</strong> — the per-item vs. batch distinction shows up constantly in real backend and data engineering work.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Everything that flows through n8n is an items array — a list where each entry is a <code>json</code> object with an optional <code>binary</code> attachment.</li>
+<li>A node runs once per item it receives; array length equals execution count.</li>
+<li>Input and output tabs can differ significantly — always check both when debugging.</li>
+<li>Verify data shape via the output panel before writing expressions, not after something breaks.</li>
+<li>This pattern isn't n8n-specific — it's ordinary list iteration, the same concept behind loops in any programming language.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough — including tracing one field through three connected nodes and seeing the table/JSON toggle live — watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <em>Fun with Learning Technology</em>, a series that opens the hood on tools developers and non-developers use every day but rarely get explained from first principles. Each lesson takes one concept — like the items array here — and builds a clear, lasting mental model around it, whether you're coming from a coding background or not.</p>
+<h2>Call To Action</h2>
+<p>If this cleared up why your n8n workflow keeps running more times than you expected, the video walks through it visually and is worth a watch on YouTube — a like helps it reach more people learning the same thing. Subscribe on YouTube and subscribe to the Substack for the next lesson, where we'll actually transform these items ourselves. Drop a comment with your guess on the five-item, if-condition question from the video, and share this with anyone stuck debugging a workflow that "runs too many times."</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>n8n item structure: what&#x27;s the trigger to think &#x27;items array&#x27;?</summary><p>Any time data moves between nodes — n8n always passes a JSON array of items, never a bare object.</p></details><details class='card2'><summary>What&#x27;s inside one n8n item?</summary><p>A `json` key (and optional `binary` key) holding the actual field data for that single record.</p></details><details class='card2'><summary>Where do you actually inspect input/output per node?</summary><p>Click the node, then the input/output panels (table or JSON view) in the node&#x27;s execution preview pane.</p></details><details class='card2'><summary>Bug: workflow ran fine on 1 item, broke on 3. Why?</summary><p>Code assumed a single item/object instead of looping over the items array — classic &#x27;assuming one item&#x27; trap.</p></details><details class='card2'><summary>Table view vs JSON view in n8n node inspector?</summary><p>Table view shows items as rows/fields for quick scanning; JSON view shows raw nested structure — same data, two lenses.</p></details><details class='card2'><summary>Interview: why might a node run three times unexpectedly?</summary><p>It&#x27;s processing three items from the array, once per item — not a bug, that&#x27;s n8n&#x27;s default per-item execution.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>

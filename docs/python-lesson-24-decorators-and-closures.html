@@ -1,0 +1,254 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Python Lesson 24: One functools Line Fixes Your Broken Decorator — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-24-decorators-and-closures
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesson-2">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-24-decorators-and-closures.html">
+<meta property="og:title" content="Python Lesson 24: One functools Line Fixes Your Broken Decorator — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-24-decorators-and-closures
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesson-2">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 24: One functools Line Fixes Your Broken Decorator</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every developer eventually writes the same five lines of code in three different places. Maybe it's logging, maybe it's timing, maybe it's a permission check. You copy it, paste it, and tell yourself you'll refactor it later. Later rarely comes, and now that logic lives in ten places instead of one.</p>
+<p>Decorators solve exactly this problem, and they show up constantly in real Python code: <code>@staticmethod</code>, <code>@app.route</code>, <code>@lru_cache</code>, <code>@property</code>, <code>@pytest.fixture</code>. If you've written Python for more than a week, you've used decorators without necessarily knowing what they do underneath the <code>@</code> symbol.</p>
+<p>They also show up constantly in interviews, not always as a dedicated question, but as a signal. When an interviewer asks you to add logging, caching, or retry logic to an existing function without modifying it, they're testing whether you understand this pattern. Knowing decorators cold means you don't fumble that moment.</p>
+<p>This lesson builds a decorator completely from scratch, no shortcuts, so the <code>@</code> syntax stops being magic and becomes something you could have invented yourself.</p>
+<h2>Problem Overview</h2>
+<p>Here's the situation: you have several unrelated functions, and every one of them needs the same extra behavior wrapped around it. In our case, that behavior is timing, how long a function takes to run.</p>
+<p>The naive approach is to paste timing code inside every function that needs it. That works until you need to change how the timing is formatted, or add a fourth function, or a tenth. At that point you're maintaining the same logic in multiple places, and any inconsistency between them is a bug waiting to happen.</p>
+<p>The goal is to write the timing behavior exactly once, and attach it to any function, existing or future, without modifying that function's actual code. That's the job a decorator does.</p>
+<p>To get there, we need two ideas most Python developers use but rarely stop to name: functions as values, and closures.</p>
+<h2>Example</h2>
+<p>Imagine three functions in a project: one processes a file, one queries a database, and one sends an email. All three currently have manual timing code pasted inside them:</p>
+<pre><code class="language-python">import time
+
+def process_file(path):
+    start = time.time()
+    # ... actual work ...
+    print(f&quot;Took {time.time() - start:.4f}s&quot;)
+
+def query_database(query):
+    start = time.time()
+    # ... actual work ...
+    print(f&quot;Took {time.time() - start:.4f}s&quot;)
+
+def send_email(to, subject):
+    start = time.time()
+    # ... actual work ...
+    print(f&quot;Took {time.time() - start:.4f}s&quot;)
+</code></pre>
+<p>By the end of this lesson, all three functions will look like this instead:</p>
+<pre><code class="language-python">@timer
+def send_email(to, subject):
+    # ... actual work ...
+</code></pre>
+<p>One line, <code>@timer</code>, and the timing behavior is attached without touching the body of <code>send_email</code> at all.</p>
+<h2>Intuition</h2>
+<p>The first mental shift is realizing that a function in Python isn't a special, fixed block of code. It's a value, exactly like an integer or a string. That means you can:</p>
+<ul>
+<li>store it in a variable,</li>
+<li>pass it as an argument to another function,</li>
+<li>return it from a function.</li>
+</ul>
+<p>That third point is the one that makes decorators possible. If a function can return another function, you can write a function whose entire job is to take a function in and hand back an improved version of it.</p>
+<p>The second piece is closures. Normally, when a function finishes running, its local variables disappear. But if that function defines and returns an inner function, and that inner function references one of those local variables, Python keeps the variable alive. The inner function carries it around like a private backpack, even after the outer function has already finished.</p>
+<pre><code class="language-python">def make_multiplier(n):
+    def multiplier(x):
+        return x * n
+    return multiplier
+
+double = make_multiplier(2)
+triple = make_multiplier(3)
+
+print(double(5))  # 10
+print(triple(5))  # 15
+</code></pre>
+<p><code>make_multiplier</code> finishes executing the moment it returns. But <code>double</code> still remembers <code>n = 2</code>, and <code>triple</code> still remembers <code>n = 3</code>, forever. That's a closure: a function bundled together with the environment it was created in.</p>
+<p>Once you see that, a decorator is a small logical leap. It's a function that:</p>
+<ol>
+<li>takes another function in as an argument,</li>
+<li>defines a wrapper function around it (a closure that remembers the original function),</li>
+<li>returns that wrapper.</li>
+</ol>
+<p>The wrapper can run code before calling the original function, after it, or both, all without changing a single line inside the original.</p>
+<h2>Brute Force Solution</h2>
+<p>The "brute force" version of solving this problem is what we started with: paste the timing code into every function that needs it.</p>
+<p><strong>Idea:</strong> manually duplicate the cross-cutting logic inside every function body.</p>
+<p><strong>Algorithm:</strong>
+1. Record the start time at the top of the function.
+2. Run the function's actual logic.
+3. Compute and print the elapsed time before returning.</p>
+<p><strong>Advantages:</strong>
+- No new concepts required, easy to write.
+- Explicit, nothing hidden.</p>
+<p><strong>Disadvantages:</strong>
+- Violates DRY; the same code exists in N places.
+- Changing the timing format means editing N functions.
+- Easy to forget when adding a new function, timing silently disappears from the new one.
+- Mixes unrelated concerns (business logic and timing) inside the same function body.</p>
+<p><strong>Time complexity:</strong> unaffected, the timing code itself is O(1) overhead per call.
+<strong>Space complexity:</strong> O(1), but the maintenance cost scales linearly with the number of functions, which is the real problem here.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal solution centralizes the timing logic in exactly one place: a decorator function.</p>
+<p>Here's the structure, step by step:</p>
+<ol>
+<li><strong><code>timer(func)</code></strong> is the decorator. It receives the real function, <code>func</code>, as its argument.</li>
+<li>Inside <code>timer</code>, we define <code>wrapper(*args, **kwargs)</code>, a closure that remembers <code>func</code>.</li>
+<li><code>wrapper</code> starts a clock, calls <code>func</code> with whatever arguments it was given, prints the elapsed time, and returns whatever <code>func</code> returned.</li>
+<li><code>timer</code> returns <code>wrapper</code> instead of <code>func</code>.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>timer(send_email)</code> is called</td>
+<td><code>func</code> is now <code>send_email</code></td>
+</tr>
+<tr>
+<td><code>wrapper</code> is defined</td>
+<td>It closes over <code>func</code>, remembering <code>send_email</code></td>
+</tr>
+<tr>
+<td><code>timer</code> returns <code>wrapper</code></td>
+<td><code>send_email</code> (the name) now points at <code>wrapper</code></td>
+</tr>
+<tr>
+<td><code>send_email(...)</code> is called</td>
+<td>Actually calls <code>wrapper(...)</code>, which times and calls the real <code>send_email</code></td>
+</tr>
+</tbody>
+</table>
+<p>The <code>@timer</code> syntax above a function definition is not new behavior, it's shorthand. Writing:</p>
+<pre><code class="language-python">@timer
+def send_email(to, subject):
+    ...
+</code></pre>
+<p>is exactly equivalent to writing:</p>
+<pre><code class="language-python">def send_email(to, subject):
+    ...
+
+send_email = timer(send_email)
+</code></pre>
+<p>The <code>@</code> symbol just performs that reassignment automatically, right after the function is defined.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">import functools
+import time
+
+
+def timer(func):
+    &quot;&quot;&quot;Log how long `func` takes to run.&quot;&quot;&quot;
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        elapsed = time.perf_counter() - start
+        print(f&quot;{func.__name__} took {elapsed:.4f}s&quot;)
+        return result
+    return wrapper
+
+
+@timer
+def send_email(to, subject):
+    &quot;&quot;&quot;Send an email to `to` with the given `subject`.&quot;&quot;&quot;
+    time.sleep(0.1)  # simulate network latency
+    print(f&quot;Email sent to {to}&quot;)
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>def timer(func):</code> — the decorator itself. It accepts one argument: the function being decorated.</li>
+<li><code>def wrapper(*args, **kwargs):</code> — the inner closure. <code>*args, **kwargs</code> let it accept any combination of positional and keyword arguments, so <code>timer</code> works on any function signature, not just one specific one.</li>
+<li><code>start = time.perf_counter()</code> — <code>perf_counter</code> is preferred over <code>time.time()</code> for measuring elapsed durations because it's monotonic and higher-resolution.</li>
+<li><code>result = func(*args, **kwargs)</code> — this is the closure at work. <code>wrapper</code> still has access to <code>func</code>, the original function, even though <code>timer</code> already finished executing.</li>
+<li><code>elapsed = time.perf_counter() - start</code> — compute the duration after the real work is done.</li>
+<li><code>return result</code> — critical: the wrapper must return whatever the original function returned, otherwise every decorated function silently starts returning <code>None</code>.</li>
+<li><code>return wrapper</code> — <code>timer</code> hands back the closure, not the original function.</li>
+<li><code>@functools.wraps(func)</code> — placed directly above <code>wrapper</code>'s definition, this copies <code>func.__name__</code>, <code>func.__doc__</code>, and other metadata onto <code>wrapper</code>. Without it, <code>send_email.__name__</code> would print <code>"wrapper"</code> and <code>help(send_email)</code> would show <code>wrapper</code>'s (empty) docstring instead of the real one.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Call <code>send_email("a@b.com", "Hi")</code>:</p>
+<ol>
+<li>Because of the decorator, this is really calling <code>wrapper("a@b.com", "Hi")</code>.</li>
+<li><code>start</code> is recorded.</li>
+<li><code>func(*args, **kwargs)</code> runs the real <code>send_email</code> body: sleeps 0.1s, prints <code>"Email sent to a@b.com"</code>.</li>
+<li><code>result</code> is <code>None</code> (the real function has no explicit return).</li>
+<li><code>elapsed</code> is computed, roughly <code>0.1</code> seconds.</li>
+<li><code>wrapper</code> prints <code>"send_email took 0.1002s"</code>.</li>
+<li><code>wrapper</code> returns <code>result</code>, which is <code>None</code>.</li>
+<li>Because of <code>functools.wraps</code>, <code>send_email.__name__</code> is still <code>"send_email"</code>, and <code>send_email.__doc__</code> is still <code>"Send an email to..."</code>.</li>
+</ol>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time complexity:</strong> O(1) overhead added per call, on top of whatever the wrapped function's own complexity is. The decorator doesn't change the algorithmic complexity of the underlying function; it just adds a constant amount of work (a couple of timer reads and a print).</li>
+<li><strong>Space complexity:</strong> O(1) additional space per decorated function, the closure stores one reference (<code>func</code>), regardless of how large the function's own state is.</li>
+<li>These are correct because the wrapper does a fixed, small amount of extra work regardless of input size, it never scales with the arguments passed to the decorated function.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p>A common alternative is a <strong>class-based decorator</strong>, where <code>__call__</code> replaces the closure:</p>
+<pre><code class="language-python">class Timer:
+    def __init__(self, func):
+        functools.update_wrapper(self, func)
+        self.func = func
+
+    def __call__(self, *args, **kwargs):
+        start = time.perf_counter()
+        result = self.func(*args, **kwargs)
+        print(f&quot;{self.func.__name__} took {time.perf_counter() - start:.4f}s&quot;)
+        return result
+</code></pre>
+<p>This works identically but stores state on <code>self</code> instead of in a closure. It's worth knowing for interviews, but for a stateless decorator like this one, the closure-based function version is simpler and more idiomatic. Class-based decorators tend to earn their complexity when you need to track state across many calls (like a call counter) in a way that reads more naturally as object attributes.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Function with no arguments:</strong> <code>*args, **kwargs</code> handles this fine, they're just empty.</li>
+<li><strong>Function that raises an exception:</strong> as written, <code>wrapper</code> will let the exception propagate up, since <code>func(*args, **kwargs)</code> isn't wrapped in a try block. This means no timing is printed if the function fails, worth deciding deliberately depending on requirements.</li>
+<li><strong>Function that returns <code>None</code>:</strong> already handled correctly, <code>wrapper</code> returns whatever <code>func</code> returns, including <code>None</code>.</li>
+<li><strong>Decorating a method on a class:</strong> works, since <code>self</code> just becomes the first positional argument captured by <code>*args</code>.</li>
+<li><strong>Stacking multiple decorators:</strong> each decorator wraps the result of the one below it, order matters, and <code>functools.wraps</code> at every layer keeps <code>__name__</code> accurate at each level.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting to return the result</strong> inside <code>wrapper</code>, silently turning every decorated function into one that always returns <code>None</code>.</li>
+<li><strong>Forgetting <code>functools.wraps</code></strong>, causing <code>__name__</code> and <code>__doc__</code> to point at <code>wrapper</code> instead of the real function, which breaks tooling, documentation generators, and debugging.</li>
+<li><strong>Not accepting <code>*args, **kwargs</code></strong>, which makes the decorator only work on functions with one specific signature.</li>
+<li><strong>Confusing decorator execution time with call time.</strong> The decorator (<code>timer(func)</code>) runs once, at definition time. The wrapper runs every time the decorated function is called. Mixing these up leads to confusion about when side effects happen.</li>
+<li><strong>Forgetting decorators execute top-to-bottom, bottom-up when stacked.</strong> <code>@a</code> <code>@b</code> on top of <code>def f</code> means <code>f = a(b(f))</code>, not <code>b(a(f))</code>.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What does the <code>@</code> syntax actually expand to?</li>
+<li>Why does a wrapped function lose its <code>__name__</code> and docstring, and how do you fix it?</li>
+<li>Write a decorator that only allows a function to run if a condition is true.</li>
+<li>What's the difference between a decorator with arguments (like <code>@app.route("/path")</code>) and one without?</li>
+<li>How would you write a decorator that caches results, without using <code>functools.lru_cache</code>?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Implement <code>functools.lru_cache</code> from scratch</strong> — reinforces closures and mutable state captured across calls.</li>
+<li><strong>Write a retry decorator</strong> — same closure pattern, applied to exception handling instead of timing.</li>
+<li><strong>Write a decorator that accepts arguments</strong> (<code>@repeat(times=3)</code>) — requires an extra layer of nesting beyond what's covered here.</li>
+<li><strong>Implement a rate limiter as a decorator</strong> — combines closures with time tracking, similar to this lesson's core mechanic.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Functions in Python are values: they can be stored, passed, and returned like any other object.</li>
+<li>A closure is a function that remembers variables from the scope it was created in, even after that scope has finished executing.</li>
+<li>A decorator is a function that takes a function in, wraps it in a closure, and returns the wrapper.</li>
+<li>The <code>@</code> syntax is shorthand for <code>func = decorator(func)</code>, nothing more.</li>
+<li><code>functools.wraps</code> preserves the original function's identity (<code>__name__</code>, <code>__doc__</code>), and skipping it is one of the most common, most avoidable mistakes in Python.</li>
+<li>Decorators you already use daily, <code>@staticmethod</code>, <code>@app.route</code>, <code>@lru_cache</code>, are all built on this exact pattern.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>If you'd rather see this built step by step on screen, including the exact moment the identity trap shows up, watch the full lesson here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <strong>Fun with Learning Technology</strong>, a series focused on building real intuition for the ideas behind Python, data structures, and coding interview problems, one concept at a time, without skipping the reasoning that makes it stick.</p>
+<h2>Call To Action</h2>
+<p>If this made decorators click, give the video a like on YouTube and subscribe so the next lesson lands in your feed. For deeper written breakdowns like this one, subscribe to the Substack. And if there's a Python concept you want unpacked this way, drop it in the comments, this series runs on that feedback.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>What&#x27;s the tell that you need a decorator here?</summary><p>Want to add behavior (logging, timing, caching, auth) around a function without touching its body — wrap it, don&#x27;t rewrite it.</p></details><details class='card2'><summary>What does a closure add to time/space cost?</summary><p>O(1) time to call; O(k) extra space per closure for the k free variables captured in the enclosing scope.</p></details><details class='card2'><summary>How does a closure &#x27;remember&#x27; a value after its enclosing function returns?</summary><p>The inner function keeps a reference to the enclosing scope&#x27;s variable via __closure__ cells, not a copy — scope stays alive as long as needed.</p></details><details class='card2'><summary>Trickiest bug when writing a decorator from scratch?</summary><p>Forgetting *args/**kwargs on the wrapper, or losing the original function&#x27;s __name__/__doc__ — breaks introspection and tools like help().</p></details><details class='card2'><summary>@my_decorator vs my_decorator(func) — what&#x27;s the difference?</summary><p>None functionally; @ is pure syntax sugar that reassigns func = my_decorator(func) at definition time.</p></details><details class='card2'><summary>Why does functools.wraps matter, and what does it fix?</summary><p>Without it, wrapper shadows func&#x27;s metadata (name, docstring, signature); functools.wraps(func) copies that onto the wrapper.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
