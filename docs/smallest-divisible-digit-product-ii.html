@@ -1,0 +1,260 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3348. Smallest Divisible Digit Product II | LeetCode Daily Python Solution (why -1 is the answer) — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/smallest-divisible-digit-product-ii
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/smallest-divisible-d">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/smallest-divisible-digit-product-ii.html">
+<meta property="og:title" content="3348. Smallest Divisible Digit Product II | LeetCode Daily Python Solution (why -1 is the answer) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/smallest-divisible-digit-product-ii
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/smallest-divisible-d"><meta property="og:image" content="https://i.ytimg.com/vi/n-rt_RBYEFU/hqdefault.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>3348. Smallest Divisible Digit Product II | LeetCode Daily Python Solution (why -1 is the answer)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/n-rt_RBYEFU' allowfullscreen></iframe></div><article><h2>Introduction</h2>
+<p>Some LeetCode problems test whether you know a data structure. Others test whether you can walk away from an obvious-looking approach the moment it stops scaling. LeetCode 3348, Smallest Divisible Digit Product II, is firmly in the second camp.</p>
+<p>The setup sounds harmless: build the smallest valid number of a given length whose digits multiply to something divisible by a target. Then the constraints twist the knife — the length of the number can run up to 200,000 digits. Any solution that tries to construct or reason about the actual number as a numeric value is dead before it starts. There is no integer type, no library, no clever bit trick that holds a 200,000-digit number in a way you can search over.</p>
+<p>This is exactly the kind of problem interviewers like, because it rewards a specific instinct: when a problem talks about a product, and the product only matters through divisibility, the actual product is a red herring. What matters is composition — how many of each prime factor is hiding inside it. That reframing is the whole solution, and once you've internalized it, you'll recognize the same shape in interview digit-DP rounds, batch-scheduling systems, and number-theory tooling in the wild.</p>
+<p>This walkthrough builds that instinct from scratch, then turns it into clean, production-quality Python.</p>
+<h2>Problem Overview</h2>
+<p>You're given two things: an integer <code>n</code>, and a target integer <code>t</code>. You need to construct the smallest <code>n</code>-digit string, using only digits 1 through 9 (no zeros allowed, since a zero would kill the whole product), such that the product of all its digits is divisible by <code>t</code>.</p>
+<p>If no such number exists, return <code>-1</code>.</p>
+<p>That's the entire problem. No starting number to compare against, no upper bound to respect beyond the digit count — just: build the smallest qualifying string of the given length, or prove it's impossible.</p>
+<h2>Example</h2>
+<p>Take <code>n = 2</code>, <code>t = 6</code>.</p>
+<p>We need a 2-digit number, no zeros, where the digit product is divisible by 6. Try <code>16</code>: digits are 1 and 6, product is <code>1 × 6 = 6</code>, and 6 is divisible by 6. That's valid, and since we tried the smallest possible first digit (1) and it worked, <code>16</code> is the answer.</p>
+<p>Contrast that with <code>n = 2</code>, <code>t = 16</code>. If you greedily place <code>1</code> first because it's the smallest digit, you're left needing a single digit that alone equals 16 — impossible, since digits only go up to 9. So you back up and try <code>2</code> first: now the second digit needs to contribute 8, and <code>2 × 8 = 16</code> works. Answer: <code>28</code>.</p>
+<p>That second example is the whole crux of the problem: picking the smallest digit at each position isn't safe unless you first confirm the remaining positions can still finish the job.</p>
+<h2>Intuition</h2>
+<p>Here's the thinking path an experienced engineer takes on this problem.</p>
+<p>First instinct: brute force. Generate digit strings, check the product, stop at the first valid one. This instantly falls apart once you notice <code>n</code> can be 200,000 — there is no way to enumerate or even represent that search space.</p>
+<p>Second instinct: greedy digit placement, smallest digit first, position by position. This is closer, but as shown above, blind greedy breaks — placing a "safe-looking" small digit can strand you with no way to finish.</p>
+<p>Third insight, and the one that actually cracks the problem: divisibility by <code>t</code> has nothing to do with the actual numeric value of the product. It only depends on whether the product contains enough copies of each of <code>t</code>'s prime factors. And here's the lucky part — every digit from 1 to 9 factors <em>only</em> into 2, 3, 5, and 7:</p>
+<table>
+<thead>
+<tr>
+<th>Digit</th>
+<th>Prime factors</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>none</td>
+</tr>
+<tr>
+<td>2</td>
+<td>2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>3</td>
+</tr>
+<tr>
+<td>4</td>
+<td>2²</td>
+</tr>
+<tr>
+<td>5</td>
+<td>5</td>
+</tr>
+<tr>
+<td>6</td>
+<td>2 × 3</td>
+</tr>
+<tr>
+<td>7</td>
+<td>7</td>
+</tr>
+<tr>
+<td>8</td>
+<td>2³</td>
+</tr>
+<tr>
+<td>9</td>
+<td>3²</td>
+</tr>
+</tbody>
+</table>
+<p>So instead of tracking a product (which can be astronomically large), you track four small counters: how many more 2s, 3s, 5s, and 7s you still need. Every digit becomes a tiny 4-number vector that you add to a running total. The moment those four counters are met, you're done — regardless of how many digits are left, since you can pad with digit 1 (which contributes nothing) at the front... except greedy placement doesn't work that way. The real trick is knowing, at every position, whether <em>some</em> combination of the remaining digits can still cover the leftover need. That's what a reachability table gives you.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Generate every valid <code>n</code>-digit number in increasing order, compute the digit product, check divisibility by <code>t</code>, return the first match.</p>
+<p><strong>Algorithm:</strong>
+1. Start at the smallest <code>n</code>-digit number with no zero digits.
+2. Compute the product of its digits.
+3. If divisible by <code>t</code>, return it. Otherwise, increment and repeat.</p>
+<p><strong>Advantages:</strong> Trivial to write, obviously correct.</p>
+<p><strong>Disadvantages:</strong> Completely infeasible for large <code>n</code>. The search space is <code>9^n</code> numbers in the worst case. For <code>n</code> in the thousands, this is a number of candidates larger than anything you could enumerate in the lifetime of the universe.</p>
+<p><strong>Time complexity:</strong> O(9^n) in the worst case.
+<strong>Space complexity:</strong> O(n) to hold a candidate number.</p>
+<p>This isn't a "slow but correct" baseline you tolerate — it's disqualified outright by the constraints.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach has three phases.</p>
+<p><strong>Phase 1 — Factor <code>t</code> into a target vector.</strong> Divide <code>t</code> by 2 repeatedly, counting how many times it divides evenly, then do the same for 3, 5, and 7. This produces a target tuple <code>(need_2, need_3, need_5, need_7)</code>. If anything remains after peeling off those four primes, <code>t</code> has a prime factor no digit can ever supply (like 11, or 13), so the answer is immediately <code>-1</code>.</p>
+<p><strong>Phase 2 — Build a reachability table.</strong> Each digit 1–9 maps to its own small vector of prime exponents (from the table above). Starting from the zero vector (no digits placed), build up, layer by layer, every combination of exponents reachable using up to <code>k</code> digits, for <code>k = 1, 2, 3, ...</code>. To keep this table from exploding, cap every counter at the target the moment it's met — once you need no more 2s, adding more 2s doesn't create a new state. Because of that cap, the table's size is bounded by <code>(need_2+1) × (need_3+1) × (need_5+1) × (need_7+1)</code>, which stays small regardless of how big <code>t</code> or <code>n</code> get. Once a new layer produces exactly the same set of reachable states as the previous layer, the table has saturated — building further layers is pointless, since every subsequent layer will look identical.</p>
+<p><strong>Phase 3 — Reconstruct greedily from left to right.</strong> At each position, try digits 1 through 9 in increasing order. For a candidate digit, subtract its vector from the current leftover need (clamped at zero), and check whether the table entry for "digits remaining after this one" can <em>cover</em> that reduced leftover — meaning some reachable combination meets or exceeds every component of what's still needed. The first digit that passes this check is placed, and you move to the next position.</p>
+<p>The key subtlety: this is a <em>covering</em> check, not an exact-match check. A digit is fine to keep even if it overshoots the requirement in some prime — you only fail if it's impossible to reach the requirement at all with what's left.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from itertools import product as iproduct
+
+PRIMES = (2, 3, 5, 7)
+
+# Precompute each digit's exponent vector over (2, 3, 5, 7)
+def digit_vector(d):
+    counts = [0, 0, 0, 0]
+    for i, p in enumerate(PRIMES):
+        while d % p == 0:
+            d //= p
+            counts[i] += 1
+    return tuple(counts)
+
+DIGIT_VECS = {d: digit_vector(d) for d in range(1, 10)}
+
+
+def factor_target(t):
+    need = []
+    for p in PRIMES:
+        count = 0
+        while t % p == 0:
+            t //= p
+            count += 1
+        need.append(count)
+    if t != 1:
+        return None  # leftover prime factor -&gt; impossible
+    return tuple(need)
+
+
+def cap(vec, target):
+    return tuple(min(v, target[i]) for i, v in enumerate(vec))
+
+
+def build_reach_table(target, n):
+    # reach[k] = set of vectors reachable using exactly k digits (capped at target)
+    reach = [{(0, 0, 0, 0)}]
+    for k in range(1, n + 1):
+        prev = reach[-1]
+        nxt = set(prev)  # padding with digit 1 keeps old states reachable too
+        for vec in prev:
+            for dv in DIGIT_VECS.values():
+                nxt.add(cap(tuple(a + b for a, b in zip(vec, dv)), target))
+        if nxt == prev:
+            reach.append(prev)
+            break
+        reach.append(nxt)
+    # pad remaining layers with the saturated set
+    while len(reach) &lt;= n:
+        reach.append(reach[-1])
+    return reach
+
+
+def covers(vec, need):
+    return all(v &gt;= r for v, r in zip(vec, need))
+
+
+def smallest_divisible_digit_product(n, t):
+    target = factor_target(t)
+    if target is None:
+        return -1
+
+    reach = build_reach_table(target, n)
+
+    if not any(covers(v, target) for v in reach[n]):
+        return -1
+
+    need = target
+    result = []
+    for pos in range(n):
+        remaining_after = n - pos - 1
+        reachable_remaining = reach[remaining_after]
+        for d in range(1, 10):
+            dv = DIGIT_VECS[d]
+            new_need = cap(tuple(max(0, r - v) for r, v in zip(need, dv)), target)
+            if any(covers(vec, new_need) for vec in reachable_remaining):
+                result.append(str(d))
+                need = new_need
+                break
+
+    return &quot;&quot;.join(result)
+
+
+if __name__ == &quot;__main__&quot;:
+    assert smallest_divisible_digit_product(2, 6) == &quot;16&quot;
+    assert smallest_divisible_digit_product(2, 16) == &quot;28&quot;
+    assert smallest_divisible_digit_product(1, 11) == -1
+    assert smallest_divisible_digit_product(1, 1) == &quot;1&quot;
+    print(&quot;all checks passed&quot;)
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>digit_vector(d)</code> breaks a single digit into how many 2s, 3s, 5s, and 7s it contributes. This is precomputed once for digits 1–9 into <code>DIGIT_VECS</code>, since it never changes.</li>
+<li><code>factor_target(t)</code> peels the four relevant primes out of <code>t</code>. Anything left over after that means <code>t</code> has a prime factor no digit can ever supply, so we bail out with <code>None</code>.</li>
+<li><code>cap(vec, target)</code> clips each component of a vector at the corresponding target value — this is what keeps the reachability table small no matter how large <code>n</code> or <code>t</code> get.</li>
+<li><code>build_reach_table</code> grows the set of reachable vectors one digit at a time. It stops early the moment a new layer equals the previous one (saturation), and pads the rest with copies since nothing new can appear after that point.</li>
+<li><code>covers(vec, need)</code> checks whether a reachable combination meets or exceeds every component of what's still required — this is the "covering" check, not an exact match.</li>
+<li>The main function first confirms feasibility using the fully-built table, then walks left to right, trying digits 1–9 and keeping the first one whose leftover need can still be finished by whatever combinations are reachable in the remaining positions.</li>
+</ul>
+<h2>Dry Run</h2>
+<p><code>n = 2</code>, <code>t = 6</code> → target = <code>(1, 1, 0, 0)</code> (one 2, one 3).</p>
+<ul>
+<li><code>reach[0] = {(0,0,0,0)}</code></li>
+<li><code>reach[1]</code>: from <code>(0,0,0,0)</code>, adding each digit's vector (capped at target) gives <code>{(0,0,0,0), (1,0,0,0), (0,1,0,0), (1,1,0,0), ...}</code> — includes <code>(1,1,0,0)</code> because digit 6 contributes exactly that.</li>
+<li>Feasibility check on <code>reach[2]</code> passes.</li>
+</ul>
+<p>Position 0, need = <code>(1,1,0,0)</code>, <code>remaining_after = 1</code>, so we check against <code>reach[1]</code>.
+- Try digit 1: <code>new_need = (1,1,0,0)</code>. Does <code>reach[1]</code> contain something covering <code>(1,1,0,0)</code>? Yes — <code>(1,1,0,0)</code> itself (from digit 6) is in <code>reach[1]</code>. Keep digit 1.</p>
+<p>Position 1, need = <code>(1,1,0,0)</code>, <code>remaining_after = 0</code>, check against <code>reach[0] = {(0,0,0,0)}</code>.
+- Try digits 1–5: none reduce <code>(1,1,0,0)</code> down to something <code>(0,0,0,0)</code> can cover.
+- Try digit 6: vector <code>(1,1,0,0)</code>, <code>new_need = (0,0,0,0)</code>. <code>(0,0,0,0)</code> covers <code>(0,0,0,0)</code>. Keep digit 6.</p>
+<p>Result: <code>"16"</code>, matching the expected answer.</p>
+<h2>Complexity Analysis</h2>
+<p>Let <code>S</code> be the size of the capped state space: <code>(need_2+1) × (need_3+1) × (need_5+1) × (need_7+1)</code>.</p>
+<ul>
+<li><strong>Building the reach table:</strong> each layer processes at most <code>S</code> states against 9 digits, and there are at most <code>O(log t)</code> layers before saturation (since the table can only grow until it hits its bounded size, and it stops the instant it stops growing). So this phase is <code>O(S × 9 × layers)</code>, dominated by a small constant since <code>S</code> is capped by the factorization of <code>t</code>.</li>
+<li><strong>Reconstruction:</strong> <code>n</code> positions, each trying up to 9 digits, each check scanning up to <code>S</code> reachable states. That's <code>O(n × 9 × S)</code>.</li>
+</ul>
+<p>Since <code>S</code> depends only on <code>t</code> (and is capped, never growing with <code>n</code>), the whole algorithm scales linearly in <code>n</code> — a world away from brute force's exponential blowup. This is exactly why counting exponents instead of tracking the literal product is the unlock: the state space stays tiny no matter how long the number gets.</p>
+<h2>Alternative Solutions</h2>
+<p>You can express the same idea recursively with memoization: a function <code>solve(position, need)</code> that tries each digit, recurses on <code>solve(position + 1, need - digit_vector)</code>, and caches results keyed by <code>(position, need)</code>. It reads a little more naturally as "try a choice, recurse on the rest."</p>
+<p>The catch: for <code>n</code> up to 200,000, that's 200,000 levels of recursion depth, which blows Python's call stack (and most languages' default stack size) well before it produces an answer. The iterative table-building approach sidesteps this entirely by working level by level instead of frame by frame. For this problem, the recursive version is the "nicer to read, wrong to ship" option.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong><code>t = 1</code>:</strong> The target vector is <code>(0,0,0,0)</code>, already satisfied by zero digits. The smallest valid answer is just <code>n</code> copies of digit <code>1</code>.</li>
+<li><strong><code>t</code> has a prime factor outside {2,3,5,7}</strong> (e.g., 11, 13, 22): caught immediately in <code>factor_target</code>, returns <code>-1</code> without touching the reachability table.</li>
+<li><strong><code>n</code> too small to reach the target:</strong> even after the table fully saturates, if no combination in <code>reach[n]</code> covers the target, return <code>-1</code>. This covers cases like <code>n = 1, t = 16</code> — a single digit can never contribute four 2s.</li>
+<li><strong>Very large <code>t</code> with a huge prime factor</strong> (e.g., 999983): if that prime isn't 2, 3, 5, or 7, it's rejected instantly regardless of its size — the factoring loop just doesn't touch it.</li>
+<li><strong>Duplicated prime-power signatures:</strong> two different values of <code>t</code> that reduce to the same target tuple <code>(need_2, need_3, need_5, need_7)</code> share the same reachability table and same reconstruction logic — the algorithm doesn't care about <code>t</code>'s original size, only its signature.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Skipping the leftover-factor check</strong> after dividing out 2, 3, 5, 7 — this causes the code to search forever for a target that's mathematically unreachable.</li>
+<li><strong>Requiring an exact match</strong> between the leftover need and a reachable vector, instead of a covering check — this throws away perfectly valid digits that overshoot the requirement.</li>
+<li><strong>Letting counters grow uncapped</strong> past the target value, which bloats the reachability table with states that are functionally identical to already-tracked ones.</li>
+<li><strong>Placing digits greedily without checking feasibility first</strong>, assuming the smallest digit is always safe — it isn't, as the <code>n=2, t=16</code> example shows.</li>
+<li><strong>Writing a naive recursive solution without recognizing the recursion depth limit</strong>, which works on small test cases but crashes on the actual constraint of up to 200,000 digits.</li>
+<li><strong>Forgetting that digit 1 contributes nothing</strong>, and mishandling it as a special case instead of letting it fall out naturally from its zero vector.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you extend this to require the result be ≥ a given starting number, not just any <code>n</code>-digit number?</li>
+<li>Why does capping counters at the target not change correctness, only performance?</li>
+<li>Could this approach be adapted if digits could be 0–9 instead of 1–9? What breaks?</li>
+<li>How would you prove the reachability table must saturate within a bounded number of layers?</li>
+<li>What's the time complexity if <code>t</code> were allowed to have arbitrary prime factors instead of just 2, 3, 5, 7?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 1808 - Maximize Number of Nice Divisors</strong> — another problem where reasoning about exponents/factorization beats reasoning about the actual number.</li>
+<li><strong>LeetCode 2427 - Number of Common Factors</strong> — direct practice with prime factorization and divisor counting.</li>
+<li><strong>LeetCode 264 - Ugly Number II</strong> — builds numbers from a restricted set of prime factors (2, 3, 5), similar counter-based construction.</li>
+<li><strong>LeetCode 902 - Numbers At Most N Given Digit Set</strong> — shares the "construct the smallest/count valid numbers digit by digit" reconstruction pattern.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>When a problem asks about a product's divisibility, don't reason about the product — reason about the prime exponents that make it up. Factor the target into its prime-power signature, turn every digit into its own small exponent vector, build a bounded reachability table once, and reconstruct the answer greedily, always checking that the remainder can still finish before committing to a digit. That combination turns an exponential brute-force search into a solution that scales linearly with the number of digits.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with the dry runs worked out on screen and the reader-predict segments, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <em>Fun with Learning Technology</em>, a series built around teaching the thinking that gets you to the answer — not just handing you a working solution. Each episode picks apart a coding interview problem, algorithm, or engineering concept and rebuilds the intuition from the ground up, so the pattern sticks and transfers to problems you haven't seen yet.</p>
+<h2>Call To Action</h2>
+<p>If this helped the trick click for you, drop a like on the video — it tells YouTube to show this kind of breakdown to more developers working through the same problem. Subscribe on YouTube for more interview-focused walkthroughs, and subscribe to the Substack newsletter for deeper dives that don't fit in video form. Comment with your own approach or a problem you'd like broken down next, and share this with anyone grinding through daily LeetCode challenges.</p>
+<hr /></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/n-rt_RBYEFU' target='_blank'>▶ Watch on YouTube</a></div><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Pattern: multiply digits, need product divisible by N — what&#x27;s the tell?</summary><p>Digit product divisibility → factorize target into prime powers (2,3,5,7), track needed exponents via DP/greedy, not brute-force enumeration.</p></details><details class='card2'><summary>Time complexity of the prime-power DP approach here?</summary><p>Roughly O(digits × exponent-state-space), since each digit position transitions across a bounded table of (count of 2s,3s,5s,7s needed).</p></details><details class='card2'><summary>Space complexity for the reachability/DP table?</summary><p>O(product of max exponent bounds for each prime factor) — small constant-size table, not O(n) in digit count.</p></details><details class='card2'><summary>Trickiest edge case with 200,000-digit inputs?</summary><p>Digit 0 anywhere kills the whole product instantly — must handle as a hard reset/invalid state, not just a factor of zero.</p></details><details class='card2'><summary>This prime-power DP vs. brute-force digit multiplication — key difference?</summary><p>Brute-force recomputes huge products per digit (overflow, slow); prime-power DP tracks only exponent counts, staying O(1) per step.</p></details><details class='card2'><summary>Follow-up: why can&#x27;t you just take the product mod N directly?</summary><p>Divisibility by N needs exact prime factor coverage, not modular residue — mod alone loses info about which prime powers are still missing.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
