@@ -1,0 +1,203 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Find the Lexicographically Smallest Valid Sequence — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/find-the-lexicographically-smallest-valid-sequence
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/find-">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/find-the-lexicographically-smallest-valid-sequence.html">
+<meta property="og:title" content="Find the Lexicographically Smallest Valid Sequence — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/find-the-lexicographically-smallest-valid-sequence
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/find-">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Find the Lexicographically Smallest Valid Sequence</h1><span class='badge' style='background:#a770ef22;color:#a770ef'>🕸️ Graphs</span><article><h2>Introduction</h2>
+<p>Most interviewers don't actually care whether you've memorized LeetCode 3302. They care whether you can spot a <em>shape</em>. This problem — find the lexicographically smallest sequence of indices from one string that spells another string, give or take one mismatch — belongs to a family that shows up constantly in real systems: spell checkers, fuzzy search, diff tools, even DNA sequence comparison where a single mutation shouldn't disqualify a match. The moment you recognize "match a sequence while tolerating exactly one error," a specific toolkit clicks into place: two pointers, a feasibility check, and one precomputed array that turns an expensive repeated question into a single lookup.</p>
+<p>That's what makes this problem worth sitting with. It's not a trick question with a clever one-liner. It's a template for an entire category of "almost matches" problems, and once you've built it once, you'll recognize it everywhere.</p>
+<h2>Problem Overview</h2>
+<p>You're given two strings, <code>word1</code> and <code>word2</code>. You need to choose a strictly increasing sequence of indices from <code>word1</code> — as few as possible... actually, the length is fixed at <code>len(word2)</code>, since you need to eventually produce <code>len(word2)</code> positions. What varies is <em>which</em> indices you choose, and among all valid choices, you want the one that is lexicographically smallest when compared as a list of indices (meaning: prefer smaller indices earlier, as early as possible).</p>
+<p>The sequence is valid if, when you read the characters at those indices from <code>word1</code> in order, the result either:
+- exactly equals <code>word2</code>, or
+- differs from <code>word2</code> in exactly one position (or zero — meaning the "allowed mismatch" is optional, not mandatory).</p>
+<p>If no such sequence exists, return an empty list.</p>
+<p>The key constraint that makes this interesting: you only get to "spend" one mismatch. Everything else must line up exactly.</p>
+<h2>Example</h2>
+<p>Let <code>word1 = "vbcca"</code> and <code>word2 = "abc"</code>.</p>
+<ul>
+<li>Position 0: <code>word1[0] = 'v'</code>, <code>word2[0] = 'a'</code> — mismatch. Spend the swap here.</li>
+<li>Position 1: <code>word1[1] = 'b'</code>, <code>word2[1] = 'b'</code> — free match.</li>
+<li>Position 2: <code>word1[2] = 'c'</code>, <code>word2[2] = 'c'</code> — free match.</li>
+</ul>
+<p>Result: <code>[0, 1, 2]</code>. We spent our one allowed mismatch immediately at position 0, because delaying it would have meant either missing the <code>a</code> entirely or picking a later, larger index — and larger indices make the sequence lexicographically worse.</p>
+<p>A second example: <code>word1 = "bacdc"</code>, <code>word2 = "abc"</code>.</p>
+<ul>
+<li>Position 0: <code>'b'</code> vs <code>'a'</code> — mismatch, but check feasibility first (explained below). Not safe yet, skip.</li>
+<li>Position 1: <code>'a'</code> vs <code>'a'</code> — free match. Take index 1.</li>
+<li>Position 2: <code>'c'</code> vs <code>'b'</code> — mismatch. Feasibility check passes here. Spend the swap. Take index 2.</li>
+<li>Position 3: <code>'d'</code> vs <code>'c'</code> — we still need <code>'c'</code>, but <code>word1[3] = 'd'</code> doesn't match, and we already used our swap. Skip.</li>
+<li>Position 4: <code>'c'</code> vs <code>'c'</code> — free match. Take index 4.</li>
+</ul>
+<p>Result: <code>[1, 2, 4]</code>.</p>
+<h2>Intuition</h2>
+<p>Picture reading two books with one finger on each page, moving forward in lockstep. Every time the pages agree, take the index for free — there's no reason to hesitate, since a free match never costs you anything and never risks the sequence being too long to finish. Free matches are always correct to take immediately, because delaying a free match only pushes your progress on <code>word2</code> later, making the final sequence lexicographically larger.</p>
+<p>The interesting decision happens on a mismatch. You have exactly one "get out of jail" pass. Do you spend it now, or hold out for a better spot?</p>
+<p>Here's the insight: since you want the <em>smallest</em> indices, and you're walking forward, spending the mismatch as early as possible is always at least as good as spending it later — provided it's still <em>safe</em> to do so. "Safe" means: after spending it here, can the rest of <code>word1</code> still supply every remaining character of <code>word2</code>? If yes, spend it immediately. If no, walking further left in <code>word1</code> isn't an option (you can only move forward), so you skip this character and try the next one.</p>
+<p>That "can the rest still finish" question needs to be free to ask, because in the worst case you'll ask it at nearly every position. Asking it by scanning ahead each time is what makes the brute-force approach slow. Instead, build a <strong>suffix count array</strong>: walking <code>word1</code> backward, precompute, for each starting index <code>i</code>, how many trailing characters of <code>word2</code> could still be matched using <code>word1[i:]</code>. Once that's built, the feasibility question is just: "does the suffix count at <code>i+1</code> cover everything I still need of <code>word2</code>?" — a single comparison.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> At every mismatch encountered while walking forward, tentatively spend the swap there, then check — by scanning the rest of <code>word1</code> — whether the remaining letters of <code>word2</code> can still be completed. If yes, commit; if no, keep looking.</p>
+<p><strong>Algorithm:</strong>
+1. Walk <code>word1</code> with a pointer into <code>word2</code>.
+2. On a match, take it for free.
+3. On a mismatch, if the swap hasn't been used, scan ahead from the next index to see if the rest of <code>word2</code> can still be finished.
+4. If it can, spend the swap and continue; otherwise move past this character.</p>
+<p><strong>Advantages:</strong> Conceptually simple, easy to reason about correctness.</p>
+<p><strong>Disadvantages:</strong> The "can it still finish" scan can run at almost every position, and each scan itself takes up to O(m) time (where <code>m = len(word2)</code>), so the whole approach becomes O(n · m) in the worst case.</p>
+<p><strong>Time complexity:</strong> O(n · m)
+<strong>Space complexity:</strong> O(1) beyond the output list</p>
+<h2>Optimal Solution</h2>
+<p>The fix is to stop re-deriving the same answer over and over. Build the suffix count array once, in O(n) time, and every feasibility check afterward becomes O(1).</p>
+<p><strong>Building the suffix array:</strong></p>
+<p>Size it <code>n + 1</code>, where <code>n = len(word1)</code>. The last slot (<code>suffix[n]</code>) means "nothing left to match" and is always 0. Walking backward from <code>i = n - 1</code> down to <code>0</code>:</p>
+<pre><code>suffix[i] = suffix[i + 1] + 1   if word1[i] == word2[suffix[i + 1]] is reachable
+suffix[i] = suffix[i + 1]       otherwise
+</code></pre>
+<p>More precisely: <code>suffix[i]</code> represents how many characters of <code>word2</code>, counted from the end, could still be matched starting from <code>word1[i:]</code>. It grows by one exactly when <code>word1[i]</code> equals the character of <code>word2</code> that would extend the matchable tail.</p>
+<table>
+<thead>
+<tr>
+<th>index in word1</th>
+<th>b</th>
+<th>a</th>
+<th>c</th>
+<th>d</th>
+<th>c</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>suffix count</td>
+<td>1</td>
+<td>2</td>
+<td>3</td>
+<td>3</td>
+<td>3</td>
+</tr>
+</tbody>
+</table>
+<p>(Reading <code>word1 = "bacdc"</code> against <code>word2 = "abc"</code> — walking backward, position 4's <code>c</code> extends the tail to 1, position 3's <code>d</code> doesn't extend it further, position 2's <code>c</code> extends it to... the exact bookkeeping is easiest to see in code below.)</p>
+<p><strong>The forward walk:</strong></p>
+<p>Walk <code>word1</code> with a pointer <code>j</code> into <code>word2</code> and a <code>swapped</code> flag.</p>
+<ul>
+<li>If <code>word1[i] == word2[j]</code>: take index <code>i</code> for free, advance <code>j</code>.</li>
+<li>Else if <code>not swapped</code> and <code>suffix[i + 1] &gt;= len(word2) - j - 1</code>: this position can absorb the mismatch and everything after it can still finish — spend the swap, take index <code>i</code>, advance <code>j</code>, set <code>swapped = True</code>.</li>
+<li>Else: skip this character of <code>word1</code>.</li>
+<li>Stop once <code>j == len(word2)</code>.</li>
+</ul>
+<p>If the walk ends without finishing <code>word2</code>, return <code>[]</code>.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def valid_sequence(word1: str, word2: str) -&gt; list[int]:
+    n, m = len(word1), len(word2)
+
+    # suffix[i] = how many trailing characters of word2 can still be
+    # matched using word1[i:], scanning forward from word1[i].
+    suffix = [0] * (n + 1)
+    j = m - 1
+    for i in range(n - 1, -1, -1):
+        suffix[i] = suffix[i + 1]
+        if j &gt;= 0 and word1[i] == word2[j]:
+            suffix[i] += 1
+            j -= 1
+
+    result = []
+    j = 0
+    swapped = False
+
+    for i in range(n):
+        if j == m:
+            break
+        if word1[i] == word2[j]:
+            result.append(i)
+            j += 1
+        elif not swapped and suffix[i + 1] &gt;= m - j - 1:
+            result.append(i)
+            j += 1
+            swapped = True
+
+    return result if j == m else []
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>suffix[i + 1]</code> is computed before <code>suffix[i]</code> because we walk backward — each position depends only on the one after it.</li>
+<li><code>j</code> during the backward pass tracks how far into <code>word2</code>, from the end, we've matched so far. When <code>word1[i]</code> matches the next needed character (<code>word2[j]</code>), we extend the tail and decrement <code>j</code>.</li>
+<li>In the forward walk, <code>word2 - j - 1</code> is how many characters of <code>word2</code> would still remain <em>after</em> using this position to absorb the mismatch. Comparing that against <code>suffix[i + 1]</code> (what's achievable from the rest of <code>word1</code>) is the whole feasibility check.</li>
+<li><code>swapped</code> ensures we only ever spend the one allowed mismatch once.</li>
+<li>The loop breaks early once <code>word2</code> is fully matched — nothing after that matters for the answer.</li>
+</ul>
+<h2>Dry Run</h2>
+<p><code>word1 = "bacdc"</code>, <code>word2 = "abc"</code> (<code>n = 5, m = 3</code>).</p>
+<p><strong>Backward pass</strong> (target sequence to match, right to left: <code>c</code>, <code>b</code>, <code>a</code>):</p>
+<ul>
+<li><code>i=4</code>: <code>word1[4]='c'</code> matches <code>word2[2]='c'</code> → <code>suffix[4] = suffix[5] + 1 = 1</code>, <code>j</code> moves to 1.</li>
+<li><code>i=3</code>: <code>word1[3]='d'</code>, needs <code>word2[1]='b'</code> → no match → <code>suffix[3] = suffix[4] = 1</code>.</li>
+<li><code>i=2</code>: <code>word1[2]='c'</code>, needs <code>word2[1]='b'</code> → no match → <code>suffix[2] = suffix[3] = 1</code>.</li>
+<li><code>i=1</code>: <code>word1[1]='a'</code>, needs <code>word2[1]='b'</code> → no match → <code>suffix[1] = suffix[2] = 1</code>.</li>
+<li><code>i=0</code>: <code>word1[0]='b'</code>, needs <code>word2[1]='b'</code> → match → <code>suffix[0] = suffix[1] + 1 = 2</code>, <code>j</code> moves to 0.</li>
+</ul>
+<p><code>suffix = [2, 1, 1, 1, 1, 0]</code>.</p>
+<p><strong>Forward pass:</strong></p>
+<ul>
+<li><code>i=0</code>: <code>'b'</code> vs <code>word2[0]='a'</code> — mismatch. Check: <code>suffix[1] = 1 &gt;= 3 - 0 - 1 = 2</code>? No. Skip.</li>
+<li><code>i=1</code>: <code>'a'</code> vs <code>'a'</code> — free match. Take 1, <code>j=1</code>.</li>
+<li><code>i=2</code>: <code>'c'</code> vs <code>word2[1]='b'</code> — mismatch. Check: <code>suffix[3] = 1 &gt;= 3 - 1 - 1 = 1</code>? Yes. Spend swap. Take 2, <code>j=2</code>, <code>swapped=True</code>.</li>
+<li><code>i=3</code>: <code>'d'</code> vs <code>word2[2]='c'</code> — mismatch, already swapped. Skip.</li>
+<li><code>i=4</code>: <code>'c'</code> vs <code>'c'</code> — free match. Take 4, <code>j=3</code>. Loop ends (<code>j == m</code>).</li>
+</ul>
+<p>Result: <code>[1, 2, 4]</code> — matches the earlier hand-traced example.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> O(n + m) — one backward pass to build the suffix array, one forward pass to build the answer. No nested scanning.</li>
+<li><strong>Space:</strong> O(n) for the suffix array, plus O(m) for the output in the worst case.</li>
+</ul>
+<p>This is correct because every feasibility check that used to require an O(m) scan in the brute force now resolves in O(1) via a precomputed value — the total work done across the backward pass is bounded by <code>n</code>, and the forward pass is bounded by <code>n</code> as well.</p>
+<h2>Alternative Solutions</h2>
+<p>A dynamic programming formulation (state = position in <code>word1</code>, position in <code>word2</code>, swap used or not) also works and is a natural first instinct given the "one allowed error" phrasing. It's correct but unnecessary here — the greedy property (always prefer the earliest safe match) holds because the problem is asking for the lexicographically smallest index sequence, and DP would add O(n·m) states without buying anything the greedy doesn't already get in linear time.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong><code>word2</code> longer than <code>word1</code>:</strong> impossible to match even with the swap — should return <code>[]</code>. The algorithm naturally handles this since <code>j</code> will never reach <code>m</code>.</li>
+<li><strong><code>word1 == word2</code>:</strong> no swap needed at all; every position is a free match.</li>
+<li><strong>All characters in <code>word1</code> identical, <code>word2</code> needs variety:</strong> as shown in the video's quiz (<code>word1 = "aaaaaa"</code>, <code>word2 = "aaabc"</code>), free matches run out and the swap can't manufacture two missing distinct characters — returns <code>[]</code>.</li>
+<li><strong>Empty <code>word2</code>:</strong> trivially valid with an empty sequence (<code>[]</code>), since there's nothing to match — worth confirming against the exact problem constraints, as some variants disallow empty <code>word2</code>.</li>
+<li><strong>Mismatch needed at the very last character:</strong> the suffix check at that point should reduce to comparing against <code>suffix[n] = 0</code>, i.e., "nothing left to match after this" — the algorithm handles it without special-casing.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Spending the swap on the first mismatch without checking feasibility.</strong> This strands the walk exactly like the naive greedy in the video — it grabs the free <code>a</code> and then has no way to recover the <code>b</code>.</li>
+<li><strong>Rescanning <code>word1</code> for every feasibility check instead of precomputing the suffix array</strong>, which silently degrades performance to quadratic on large inputs.</li>
+<li><strong>Off-by-one errors in the suffix array size or indexing</strong> — forgetting the extra <code>n+1</code>th slot that represents "nothing left to match" breaks the base case.</li>
+<li><strong>Allowing the swap to be spent more than once</strong> by forgetting to gate the mismatch branch on the <code>swapped</code> flag.</li>
+<li><strong>Comparing suffix counts against the wrong remaining length</strong> — using <code>m - j</code> instead of <code>m - j - 1</code> (since the current position at a mismatch already accounts for one character of <code>word2</code>).</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you extend this to allow <em>k</em> mismatches instead of exactly one?</li>
+<li>What's the lexicographically smallest sequence if the problem instead wanted the <em>largest</em> set of indices, or the smallest sequence length rather than fixed length?</li>
+<li>Can you do this without extra space, or is O(n) space unavoidable given the suffix array approach?</li>
+<li>How does this pattern relate to the classic "is subsequence" problem, and where does it diverge?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 392 (Is Subsequence)</strong> — the zero-mismatch version of this exact problem; a good warm-up before tackling the one-swap variant.</li>
+<li><strong>LeetCode 792 (Number of Matching Subsequences)</strong> — same subsequence-matching mechanics, different objective.</li>
+<li><strong>LeetCode 727 (Minimum Window Subsequence)</strong> — another two-pointer-plus-precomputation pattern over subsequences.</li>
+<li><strong>Edit Distance (LeetCode 72)</strong> — the general "allow k errors" family this problem is a constrained special case of.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The pattern is: take every free match immediately, and only spend a limited "exception budget" when a precomputed check proves the rest can still finish. Precompute once, from the back, so that a question you'll ask repeatedly during a forward pass costs O(1) each time instead of O(m). This shape — one error budget, one feasibility gauge — generalizes far beyond this single LeetCode problem.</p>
+<h2>Watch the Video</h2>
+<p>For the full build — code written piece by piece, a hand-traced dry run, a predict-before-reveal challenge, and a head-to-head complexity comparison against brute force — watch the full walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This article is part of <strong>Fun with Learning Technology</strong>, a series that takes one coding problem a day and actually understands it — the intuition, the failure modes, and the reasoning behind the optimal approach — rather than memorizing a solution to pattern-match against.</p>
+<h2>Call To Action</h2>
+<p>If this breakdown helped, watch the full video on YouTube and hit subscribe for daily problem walkthroughs. Subscribe to the Substack for the written version delivered straight to your inbox. Drop a comment with your own approach or a problem you'd like covered next, and share this with someone prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Pattern: swap sequence must be lexicographically smallest with limited edits. Trigger?</summary><p>Greedy &#x27;one swap&#x27; pattern: when you see &#x27;smallest sequence with ≤1 fix allowed&#x27;, think leftmost-mismatch greedy swap.</p></details><details class='card2'><summary>Time complexity of the One Swap Greedy solution?</summary><p>O(n), single left-to-right pass tracking mismatches and one candidate swap.</p></details><details class='card2'><summary>Space complexity of the One Swap Greedy approach?</summary><p>O(1) extra (besides output array) — just a few counters/flags, no auxiliary structures.</p></details><details class='card2'><summary>Trickiest edge case in this problem?</summary><p>Using the swap too early on a mismatch that would&#x27;ve resolved itself, wasting your one allowed fix and failing the finish-check.</p></details><details class='card2'><summary>One Swap Greedy vs brute-force try-every-swap: key difference?</summary><p>Greedy checks feasibility (&#x27;can it still finish?&#x27;) incrementally in one pass; brute force retries all O(n) swaps, costing O(n²).</p></details><details class='card2'><summary>Interview follow-up: how do you verify a candidate swap still lets the sequence finish validly?</summary><p>Continue the scan after swapping; if any further mismatch appears, that swap point was invalid — track validity with a running check, not a restart.</p></details></div><h2 class='ph1' style='font-size:1.4rem'>Similar problems</h2><div class='grid'><a class='card' href='short-comparison-191129-916.html'><div class='body'><h3>REST vs GraphQL vs gRPC: which one should you actually pick? #shorts</h3><span class='badge' style='background:#a770ef22;color:#a770ef'>🕸️ Graphs</span></div></a></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
