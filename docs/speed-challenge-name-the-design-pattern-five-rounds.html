@@ -1,0 +1,389 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson: 5 Rounds, 1 Catch — Why Proxy Fools Everyone in Round 5 — Python LeetCode Solution</title><meta name="description" content="Five rounds, five design patterns, one clock. Test yourself against Strategy, Observer, State, Decorator, and Proxy before each reveal.
+You&#x27;ll learn to spot the smell of a pattern in real code, not ju">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/speed-challenge-name-the-design-pattern-five-rounds.html">
+<meta property="og:title" content="Lesson: 5 Rounds, 1 Catch — Why Proxy Fools Everyone in Round 5 — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="Five rounds, five design patterns, one clock. Test yourself against Strategy, Observer, State, Decorator, and Proxy before each reveal.
+You&#x27;ll learn to spot the smell of a pattern in real code, not ju">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson: 5 Rounds, 1 Catch — Why Proxy Fools Everyone in Round 5</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every experienced engineer has had this moment: you open a pull request, scroll through a class you've never seen before, and something about its shape feels <em>familiar</em>. You've seen this structure before — an object holding another object, calling one method on it, and somehow producing wildly different behavior depending on what got handed in. You can't quite name it, but you know it's a pattern.</p>
+<p>That instinct is worth more than memorizing a glossary of pattern names. Interviewers know this too — when a coding interview drifts into system design or object-oriented design territory, they're rarely asking "define the Strategy pattern." They're handing you a messy requirement and watching whether you reach for the right shape of solution without being told which one to use.</p>
+<p>This article walks through five of the most common design patterns — Strategy, Observer, State, Decorator, and Proxy — the way you'd actually encounter them: as a chunk of code you have to read cold and classify. Along the way we'll build the one habit that matters more than any dictionary of pattern definitions: learning to ask "who's actually in control here?"</p>
+<p>By the end, you'll have a fast, repeatable way to tell these five patterns apart — including the one pairing that trips up almost every developer, even ones who've been writing object-oriented code for years.</p>
+<h2>Problem Overview</h2>
+<p>Design patterns exist because certain problems show up again and again in software, and over the decades the industry converged on a handful of reusable shapes for solving them. The catch is that most engineers learn patterns from static definitions — "Strategy encapsulates interchangeable algorithms" — and then fail to recognize the same pattern sitting right in front of them in a real codebase, because real code doesn't come labeled.</p>
+<p>The five patterns in this article split into two families:</p>
+<ul>
+<li><strong>Behavioral patterns</strong> (Strategy, Observer, State) are about how objects communicate and who controls the flow of decisions.</li>
+<li><strong>Structural patterns</strong> (Decorator, Proxy) are about how objects are composed and wrapped around each other.</li>
+</ul>
+<p>The goal isn't to recite definitions. It's to notice a small number of concrete "tells" in the code — who hands in the behavior, who's listening, who replaces what, and why something is being wrapped — and use those tells to name the pattern in seconds.</p>
+<h2>Example</h2>
+<p>Let's ground this in one running example: a payment processor.</p>
+<p><strong>Naive version (no pattern):</strong></p>
+<pre><code class="language-python">class PaymentProcessor:
+    def pay(self, method, amount):
+        if method == &quot;credit_card&quot;:
+            print(f&quot;Charging ${amount} to credit card&quot;)
+        elif method == &quot;paypal&quot;:
+            print(f&quot;Charging ${amount} via PayPal&quot;)
+        elif method == &quot;crypto&quot;:
+            print(f&quot;Charging ${amount} via crypto wallet&quot;)
+</code></pre>
+<p>Every time the business adds a new payment method, you reopen this class and add another branch. This is the shape design patterns exist to eliminate.</p>
+<p><strong>Pattern version:</strong></p>
+<pre><code class="language-python">class PaymentProcessor:
+    def __init__(self, strategy):
+        self.strategy = strategy
+
+    def pay(self, amount):
+        self.strategy.pay(amount)
+</code></pre>
+<p>Now <code>PaymentProcessor</code> has no idea what kind of payment method it's dealing with. It just holds an object and calls <code>.pay()</code> on it. Swap in a <code>CreditCardStrategy</code> or a <code>PayPalStrategy</code> and the entire behavior changes — with zero edits to <code>PaymentProcessor</code> itself.</p>
+<p>That contrast — hardcoded branching versus an object that delegates to whatever it's handed — is the seed for everything that follows.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer actually arrives at these patterns, instead of pulling one off a shelf.</p>
+<p>You almost never start by thinking "I should use Strategy here." You start by noticing a smell: a class is doing too much branching based on type, or a class is tightly coupled to something it shouldn't know about, or a piece of behavior needs to change at runtime without editing source code. The pattern is the <em>destination</em>, not the <em>starting point</em>.</p>
+<p>The single most useful question, across all five patterns in this article, is:</p>
+<blockquote>
+<p><strong>Who is really in control?</strong></p>
+</blockquote>
+<ul>
+<li>If an outside caller hands in the behavior as an object → <strong>Strategy</strong>.</li>
+<li>If one object is shouting an update to a crowd of listeners it doesn't know or care about → <strong>Observer</strong>.</li>
+<li>If an object hands control to <em>itself</em>, replacing its own internal state → <strong>State</strong>.</li>
+<li>If objects are wrapped in layers, each one adding new behavior → <strong>Decorator</strong>.</li>
+<li>If objects are wrapped in layers, but the wrapper's job is to <em>gatekeep</em> access rather than add behavior → <strong>Proxy</strong>.</li>
+</ul>
+<p>Notice that Strategy and State look almost identical on paper — both involve a class holding a reference to another object and delegating a call to it. Same with Decorator and Proxy — both involve wrapping. The patterns aren't distinguished by structure alone. They're distinguished by <em>intent and direction of control</em>, which is exactly why textbook definitions fail people in practice: they describe the shape, not the intent.</p>
+<h2>Brute Force Solution</h2>
+<p>Before any pattern gets involved, most developers write the "brute force" version: a single class with conditional branches for every case, as shown in the naive <code>PaymentProcessor</code> above.</p>
+<p><strong>Idea:</strong> One class knows about every variant and picks behavior with <code>if</code>/<code>elif</code> or a lookup table.</p>
+<p><strong>Algorithm:</strong>
+1. Receive a type indicator (a string, enum, or flag).
+2. Branch on that indicator.
+3. Execute the matching logic inline.</p>
+<p><strong>Advantages:</strong>
+- Fast to write for two or three cases.
+- Everything lives in one file — easy to read top to bottom when small.</p>
+<p><strong>Disadvantages:</strong>
+- Violates the Open/Closed Principle — every new case means editing existing, tested code.
+- Branches multiply combinatorially once more than one axis of variation exists (payment method × currency × region, for example).
+- Hard to unit test in isolation — you're always testing the whole class.</p>
+<p><strong>Time complexity:</strong> O(n) per call in the worst case, where n is the number of branches, since it may need to check each condition in order.
+<strong>Space complexity:</strong> O(1) beyond the branching class itself.</p>
+<p>This isn't wrong for small, stable cases — but it's the version every pattern in this article exists to replace once change becomes frequent.</p>
+<h2>Optimal Solution</h2>
+<p>The "optimal" solution isn't one pattern — it's picking the <em>right</em> pattern for the <em>actual</em> axis of variation in your problem. Here's the decision table that captures all five:</p>
+<table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Question it answers</th>
+<th>Who controls the swap</th>
+<th>Structure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Strategy</td>
+<td>Which algorithm should run?</td>
+<td>The caller, from outside</td>
+<td>Holds one interchangeable object</td>
+</tr>
+<tr>
+<td>Observer</td>
+<td>Who needs to know about this event?</td>
+<td>The subject, broadcasting</td>
+<td>Holds a list of listeners</td>
+</tr>
+<tr>
+<td>State</td>
+<td>What should this object do next?</td>
+<td>The object itself</td>
+<td>Holds one object that replaces itself</td>
+</tr>
+<tr>
+<td>Decorator</td>
+<td>What extra behavior should wrap this?</td>
+<td>The caller, by nesting wrappers</td>
+<td>Chain of wrappers adding behavior</td>
+</tr>
+<tr>
+<td>Proxy</td>
+<td>Should the real object even be touched?</td>
+<td>The wrapper, gatekeeping</td>
+<td>One wrapper controlling access</td>
+</tr>
+</tbody>
+</table>
+<p>Walking through the five rounds from the video:</p>
+<p><strong>Round 1 — Strategy.</strong> A <code>PaymentProcessor</code> takes a strategy object in its constructor and calls one method on it. The caller decides which strategy to plug in. Think of a universal charger: the socket never changes, you just plug in a different adapter.</p>
+<p><strong>Round 2 — Observer.</strong> A <code>NewsFeed</code> keeps a list of subscribers and loops through all of them when a story publishes. Nobody asked it to run one specific algorithm — it's broadcasting to a crowd that only needs to expose an <code>update()</code> method.</p>
+<p><strong>Round 3 — State (the trap round).</strong> An <code>Order</code> holds a <code>status</code> object, and calling <code>next()</code> hands control to that status object, which decides what the new status should be. This looks identical to Strategy in code — an object delegating through another object. The difference is <em>who picks the replacement</em>. In Strategy, the caller injects it from outside. In State, the current state object swaps itself out from the inside.</p>
+<p><strong>Round 4 — Decorator.</strong> A <code>Coffee</code> object gets wrapped by <code>Milk</code>, then <code>Sugar</code>, then <code>Whip</code>. Each wrapper holds a reference to the object just inside it and adds its own cost before delegating down the chain.</p>
+<p><strong>Round 5 — Proxy (the catch).</strong> A class wraps a real repository — structurally identical to Decorator. But it's not stacking new behavior on top. It's deciding <em>whether the real object even gets touched</em> — for example, checking a cache before hitting the database. Same shape as Decorator, completely different intent.</p>
+<h2>Python Code</h2>
+<p>Here's clean, runnable code for all five, using the payment/order/coffee/repository examples from the video.</p>
+<pre><code class="language-python">from abc import ABC, abstractmethod
+
+
+# --- Round 1: Strategy ---
+class PaymentStrategy(ABC):
+    @abstractmethod
+    def pay(self, amount: float) -&gt; None:
+        ...
+
+
+class CreditCardStrategy(PaymentStrategy):
+    def pay(self, amount: float) -&gt; None:
+        print(f&quot;Charged ${amount:.2f} to credit card&quot;)
+
+
+class PayPalStrategy(PaymentStrategy):
+    def pay(self, amount: float) -&gt; None:
+        print(f&quot;Charged ${amount:.2f} via PayPal&quot;)
+
+
+class PaymentProcessor:
+    def __init__(self, strategy: PaymentStrategy):
+        self.strategy = strategy
+
+    def pay(self, amount: float) -&gt; None:
+        self.strategy.pay(amount)
+
+
+# --- Round 2: Observer ---
+class Subscriber(ABC):
+    @abstractmethod
+    def update(self, story: str) -&gt; None:
+        ...
+
+
+class EmailSubscriber(Subscriber):
+    def __init__(self, name: str):
+        self.name = name
+
+    def update(self, story: str) -&gt; None:
+        print(f&quot;Emailing {self.name}: {story}&quot;)
+
+
+class NewsFeed:
+    def __init__(self):
+        self.subscribers: list[Subscriber] = []
+
+    def subscribe(self, subscriber: Subscriber) -&gt; None:
+        self.subscribers.append(subscriber)
+
+    def publish(self, story: str) -&gt; None:
+        for subscriber in self.subscribers:
+            subscriber.update(story)
+
+
+# --- Round 3: State ---
+class OrderState(ABC):
+    @abstractmethod
+    def next(self, order: &quot;Order&quot;) -&gt; None:
+        ...
+
+
+class Placed(OrderState):
+    def next(self, order: &quot;Order&quot;) -&gt; None:
+        print(&quot;Order shipped&quot;)
+        order.state = Shipped()
+
+
+class Shipped(OrderState):
+    def next(self, order: &quot;Order&quot;) -&gt; None:
+        print(&quot;Order delivered&quot;)
+        order.state = Delivered()
+
+
+class Delivered(OrderState):
+    def next(self, order: &quot;Order&quot;) -&gt; None:
+        print(&quot;Order already delivered&quot;)
+
+
+class Order:
+    def __init__(self):
+        self.state: OrderState = Placed()
+
+    def advance(self) -&gt; None:
+        self.state.next(self)
+
+
+# --- Round 4: Decorator ---
+class Beverage(ABC):
+    @abstractmethod
+    def cost(self) -&gt; float:
+        ...
+
+
+class Coffee(Beverage):
+    def cost(self) -&gt; float:
+        return 2.00
+
+
+class Milk(Beverage):
+    def __init__(self, wrapped: Beverage):
+        self.wrapped = wrapped
+
+    def cost(self) -&gt; float:
+        return self.wrapped.cost() + 0.50
+
+
+class Sugar(Beverage):
+    def __init__(self, wrapped: Beverage):
+        self.wrapped = wrapped
+
+    def cost(self) -&gt; float:
+        return self.wrapped.cost() + 0.25
+
+
+# --- Round 5: Proxy ---
+class Repository(ABC):
+    @abstractmethod
+    def get(self, key: str) -&gt; str:
+        ...
+
+
+class RealRepository(Repository):
+    def get(self, key: str) -&gt; str:
+        print(f&quot;Hitting the database for {key}&quot;)
+        return f&quot;data-for-{key}&quot;
+
+
+class CachingProxy(Repository):
+    def __init__(self, real_repo: Repository):
+        self.real_repo = real_repo
+        self.cache: dict[str, str] = {}
+
+    def get(self, key: str) -&gt; str:
+        if key not in self.cache:
+            self.cache[key] = self.real_repo.get(key)
+        else:
+            print(f&quot;Cache hit for {key}&quot;)
+        return self.cache[key]
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><strong><code>PaymentProcessor.__init__</code></strong> takes any <code>PaymentStrategy</code> — the caller decides the algorithm at construction time, not the class itself.</li>
+<li><strong><code>NewsFeed.publish</code></strong> iterates a list of subscribers it knows nothing about beyond the <code>update()</code> contract — this is the broadcast shape unique to Observer.</li>
+<li><strong><code>Order.advance</code></strong> delegates to <code>self.state.next(self)</code>, and inside each <code>next()</code>, the state object reassigns <code>order.state</code> to a <em>new</em> state object — the object replacing itself, not being replaced from outside.</li>
+<li><strong><code>Milk</code>/<code>Sugar</code></strong> each hold a <code>wrapped</code> reference and add their own cost before returning — this is the layering that defines Decorator.</li>
+<li><strong><code>CachingProxy.get</code></strong> has the exact same shape as a decorator (<code>self.real_repo</code>, delegate the call) but the <code>if key not in self.cache</code> check is the tell: it's deciding <em>whether</em> to touch the real object at all.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Take the Decorator chain: <code>Whip(Sugar(Milk(Coffee())))</code>.</p>
+<ol>
+<li>Call <code>.cost()</code> on the outermost <code>Whip</code> wrapper.</li>
+<li><code>Whip</code> calls <code>.cost()</code> on <code>Sugar</code>, planning to add its own fee after.</li>
+<li><code>Sugar</code> calls <code>.cost()</code> on <code>Milk</code>, planning to add <code>0.25</code> after.</li>
+<li><code>Milk</code> calls <code>.cost()</code> on <code>Coffee</code>, planning to add <code>0.50</code> after.</li>
+<li><code>Coffee.cost()</code> returns <code>2.00</code> directly — the base case.</li>
+<li><code>Milk</code> receives <code>2.00</code>, adds <code>0.50</code> → returns <code>2.50</code>.</li>
+<li><code>Sugar</code> receives <code>2.50</code>, adds <code>0.25</code> → returns <code>2.75</code>.</li>
+<li><code>Whip</code> receives <code>2.75</code>, adds its own fee (say <code>0.75</code>) → returns <code>3.50</code>.</li>
+</ol>
+<p>The call cascades all the way down to the base object, then bubbles back up, picking up cost at every layer — that's the "runtime chain" the video points to.</p>
+<h2>Complexity Analysis</h2>
+<table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Time</th>
+<th>Space</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Strategy</td>
+<td>O(1) dispatch</td>
+<td>O(1) extra</td>
+<td>One indirection call, no branching</td>
+</tr>
+<tr>
+<td>Observer</td>
+<td>O(n) per publish</td>
+<td>O(n) subscribers</td>
+<td>Must notify every listener</td>
+</tr>
+<tr>
+<td>State</td>
+<td>O(1) per transition</td>
+<td>O(1) extra</td>
+<td>One reassignment, no branching</td>
+</tr>
+<tr>
+<td>Decorator</td>
+<td>O(k) per call, k = wrapper depth</td>
+<td>O(k) call stack</td>
+<td>Each layer delegates once</td>
+</tr>
+<tr>
+<td>Proxy (caching)</td>
+<td>O(1) amortized after first call</td>
+<td>O(n) cached keys</td>
+<td>Cache lookup replaces repeated real calls</td>
+</tr>
+</tbody>
+</table>
+<p>These are correct because none of the patterns introduce searching or branching proportional to the number of <em>variants</em> — that's precisely the cost the brute-force <code>if</code>/<code>elif</code> chain pays and these patterns eliminate.</p>
+<h2>Alternative Solutions</h2>
+<p>For <strong>Strategy</strong>, a plain function reference (or <code>functools.partial</code>) can replace a full class hierarchy in Python, since functions are first-class objects — often simpler than defining a <code>PaymentStrategy</code> ABC for two or three variants.</p>
+<p>For <strong>Observer</strong>, Python's <code>dataclasses</code> combined with the standard library offers no built-in pub/sub, but frameworks (Django signals, <code>blinker</code>) implement Observer at scale — worth reaching for once you have many publishers and subscribers rather than hand-rolling the list.</p>
+<p>For <strong>Proxy</strong>, Python's <code>functools.lru_cache</code> is effectively a caching proxy applied as a decorator on a function rather than a class — same intent, less boilerplate, when you don't need class-based state.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty subscriber list (Observer):</strong> <code>publish()</code> should simply do nothing — no error, no special-casing.</li>
+<li><strong>State with no valid transition:</strong> <code>Delivered.next()</code> should either be a no-op or raise a clear exception rather than silently corrupting state.</li>
+<li><strong>Decorator with zero wrappers:</strong> calling <code>.cost()</code> on a bare <code>Coffee()</code> should return the base cost with no errors — decorators must be optional, not required.</li>
+<li><strong>Proxy cache miss on every key:</strong> if keys are always unique, the "cache" degrades to O(n) space with no time savings — worth monitoring in production.</li>
+<li><strong>Strategy swapped mid-use:</strong> if <code>self.strategy</code> is reassigned between calls, make sure nothing depends on the <em>previous</em> strategy's internal state.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Confusing State and Strategy</strong> because both hold a delegate object — check who assigns the replacement, not what the code looks like.</li>
+<li><strong>Using Observer without unsubscribe logic</strong>, causing memory leaks when subscribers should have been removed.</li>
+<li><strong>Building a Decorator chain that isn't interchangeable</strong> — if <code>Milk</code> requires a <code>Coffee</code> specifically instead of any <code>Beverage</code>, you've lost the pattern's flexibility.</li>
+<li><strong>Treating Proxy as free</strong> — a caching proxy needs cache invalidation, or it will silently serve stale data.</li>
+<li><strong>Overusing Strategy for two static options</strong> — if the behavior never changes at runtime, a simple <code>if</code> statement is clearer than a class hierarchy.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>"How would you refactor this <code>if</code>/<code>elif</code> chain to avoid touching it every time a new case is added?"</li>
+<li>"What's the structural difference between Decorator and Proxy, and why does it matter in production code?"</li>
+<li>"Walk me through how you'd add logging to an existing object without modifying its class."</li>
+<li>"When would you choose Observer over a simple callback list?"</li>
+<li>"How do State and Strategy differ if their class diagrams look identical?"</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Command pattern</strong> — related to Strategy in that it encapsulates an action as an object, but focuses on queuing/undoing operations rather than swapping algorithms.</li>
+<li><strong>Chain of Responsibility</strong> — related to Decorator's wrapping structure, but each link decides whether to handle or pass along a request, not to add fixed behavior.</li>
+<li><strong>Factory Method</strong> — often paired with Strategy, since something has to decide <em>which</em> strategy object to construct in the first place.</li>
+<li><strong>Pub/Sub systems (e.g., message queues)</strong> — the distributed-systems version of Observer at scale.</li>
+<li><strong>Mediator pattern</strong> — like Observer, but centralizes communication through a single mediator object instead of direct broadcasting.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Patterns are best recognized by intent, not memorized by name.</li>
+<li>The single question "who's really in control?" separates Strategy from State and Decorator from Proxy — the two pairings that look identical on paper.</li>
+<li>Strategy: behavior handed in from outside. Observer: one object broadcasting to many. State: an object replacing itself from within. Decorator: wrapping to add behavior. Proxy: wrapping to control access.</li>
+<li>Real codebases don't always draw a hard line between Decorator and Proxy — what matters more is that your team agrees on what the wrapper is for.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This entire breakdown started as a five-round challenge — if you want to test your own instincts against the clock before reading the reveals, watch the full video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This article is part of <strong>Fun with Learning Technology</strong>, a series built around one idea: understanding <em>how</em> something works beats memorizing <em>that</em> it works. Instead of listing pattern definitions, each episode puts you in the position of reading real code and reasoning your way to the answer — the same skill you'll actually use in a code review or an interview.</p>
+<h2>Call To Action</h2>
+<p>If this helped the patterns click, the video walks through all five rounds with the reveals timed for you to guess first — give it a watch and like it if it's useful. Subscribe on YouTube for more of these code-smell breakdowns, and subscribe to the Substack for deeper written dives that don't fit in a ten-minute video. Drop a comment with which round tricked you — Round 3 and Round 5 catch almost everyone.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>5 quick reveals: Strategy, Observer, State, and 2 more — trigger?</summary><p>Interchangeable algorithms=Strategy; publish/subscribe=Observer; behavior changes with internal mode=State.</p></details><details class='card2'><summary>Time complexity of identifying a pattern from a code snippet?</summary><p>O(1) per round — fixed-size snippet, constant lookup against known pattern signatures.</p></details><details class='card2'><summary>Space complexity for a pattern-recognition round?</summary><p>O(1) — no extra data structures, just comparing snippet shape to memorized templates.</p></details><details class='card2'><summary>Trickiest bug: confusing State pattern with Strategy pattern?</summary><p>Both swap behavior via composition; State changes itself internally on transitions, Strategy is set externally and stays fixed.</p></details><details class='card2'><summary>Observer vs Mediator — both involve multiple objects reacting to events?</summary><p>Observer is one-to-many broadcast from a subject; Mediator centralizes communication between peers via one hub object.</p></details><details class='card2'><summary>Interview follow-up: how would you refactor a giant if/else chain choosing behavior?</summary><p>Extract each branch into its own class implementing a common interface, then inject the chosen one — that&#x27;s Strategy.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>

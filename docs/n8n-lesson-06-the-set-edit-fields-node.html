@@ -1,0 +1,221 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>n8n Lesson 6: The Silent Typo That Breaks Nothing (And Everything) — Python LeetCode Solution</title><meta name="description" content="Learn the Set (Edit Fields) node in n8n: adding fields, renaming and changing types, and the &#x27;Keep Only Set Fields&#x27; toggle that reshapes your item.
+See Manual Mode vs JSON Mode side by side, and how t">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/n8n-lesson-06-the-set-edit-fields-node.html">
+<meta property="og:title" content="n8n Lesson 6: The Silent Typo That Breaks Nothing (And Everything) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="Learn the Set (Edit Fields) node in n8n: adding fields, renaming and changing types, and the &#x27;Keep Only Set Fields&#x27; toggle that reshapes your item.
+See Manual Mode vs JSON Mode side by side, and how t">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>n8n Lesson 6: The Silent Typo That Breaks Nothing (And Everything)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>If you've spent any time building automations, you already know the real danger isn't the workflow that crashes — it's the one that keeps running while quietly producing wrong data. That's exactly the trap in today's lesson. We're looking at the Set node in n8n, officially labeled "Edit Fields" in the UI, and specifically at a typo that doesn't throw an error, doesn't fail a run, and doesn't show up in any log. It just silently creates a new field and leaves the one you actually wanted untouched.</p>
+<p>This matters for anyone working with automation platforms, and it maps directly onto concepts every backend engineer already knows: schema normalization, data shape consistency, and the difference between a validation error and a silent no-op. If you've ever debugged a null value that "should" have been there, you've lived this exact bug in a different codebase. Understanding how n8n handles field names — and why it doesn't validate them — will save you the hour I lost the first time I hit this.</p>
+<p>We'll also cover the mechanics you need before that story makes sense: Manual mode vs JSON mode, how to add and rename fields, how types affect downstream filters, and the "Keep Only Set Fields" toggle that reshapes an entire item.</p>
+<h2>Problem Overview</h2>
+<p>Here's the situation in plain terms. You're pulling data from an API, and the response looks like this:</p>
+<pre><code class="language-json">{
+  &quot;user_name&quot;: &quot;grace&quot;,
+  &quot;userAge&quot;: &quot;34&quot;,
+  &quot;debug_flag&quot;: true
+}
+</code></pre>
+<p>Three problems jump out immediately if you're building anything downstream that depends on consistent field names and types:</p>
+<ol>
+<li>The name field is called <code>user_name</code> instead of <code>name</code> — every other part of your workflow expects <code>name</code>.</li>
+<li>There's no <code>email</code> field at all — you need to derive or add one.</li>
+<li>A <code>debug_flag</code> snuck in — noise that shouldn't reach production logic.</li>
+</ol>
+<p>You need a way to reshape this item into something predictable, without writing custom JavaScript or regex, and without touching the nodes that come after it. That's the exact job of the Set node.</p>
+<h2>Example</h2>
+<p>Let's say your API keeps handing you inconsistent field names. Today it's <code>user_name</code>, tomorrow it might be <code>full_name</code>. Your goal is a clean, predictable output:</p>
+<p><strong>Input item:</strong></p>
+<pre><code class="language-json">{
+  &quot;user_name&quot;: &quot;grace&quot;,
+  &quot;userAge&quot;: &quot;34&quot;,
+  &quot;debug_flag&quot;: true
+}
+</code></pre>
+<p><strong>Desired output item:</strong></p>
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;grace&quot;,
+  &quot;age&quot;: 34,
+  &quot;greeting&quot;: &quot;Hey grace, welcome back!&quot;
+}
+</code></pre>
+<p>Walking through what changed:
+- <code>user_name</code> was renamed to <code>name</code>.
+- <code>userAge</code> was renamed to <code>age</code> <strong>and</strong> converted from text to a number — without this, a filter like "age greater than 18" would silently fail because you'd be comparing a number to a string.
+- <code>debug_flag</code> was dropped entirely, because "Keep Only Set Fields" was switched on.
+- <code>greeting</code> is new, built from an expression that reads the <code>name</code> field on the same item — so it updates automatically no matter what name comes in.</p>
+<h2>Intuition</h2>
+<p>Here's the mental model that makes the rest of this click: an item in n8n isn't a fixed record with a schema. It's just JSON, and you're allowed to reshape it at any point in the workflow. The next node doesn't know or care that your data started life as <code>user_name</code> with a debug flag attached — it only sees whatever shape you hand it when it arrives.</p>
+<p>An experienced engineer treats this the same way they'd treat an adapter layer at a system boundary. When you integrate with a third-party API, you don't let that API's naming conventions leak through your entire codebase — you normalize at the edge, once, and everything downstream stays clean. The Set node is that adapter layer for n8n. It answers a single question at each field: what do I call this, what type is it, and where does its value come from?</p>
+<p>Once you see it that way, the two modes (Manual and JSON) are just two different editors for the same idea — rows of key/type/value versus a raw object you write yourself. Neither one is "more powerful"; they're trading off visibility for speed. Manual mode is safer when you're unsure what you're building. JSON mode is faster once you already know the shape you want and don't want to click through five rows to get there.</p>
+<h2>Brute Force Solution</h2>
+<p>If you didn't have a Set node, you'd reach for a Code node with custom JavaScript (or Python) that rebuilt the item manually:</p>
+<pre><code class="language-javascript">return items.map(item =&gt; {
+  return {
+    json: {
+      name: item.json.user_name,
+      age: parseInt(item.json.userAge, 10),
+      greeting: `Hey ${item.json.user_name}, welcome back!`
+    }
+  };
+});
+</code></pre>
+<p><strong>Advantages:</strong>
+- Full control — anything JavaScript can express, you can do here.
+- No UI limitations; complex conditional reshaping is possible.</p>
+<p><strong>Disadvantages:</strong>
+- Requires writing and maintaining code inside a no-code tool, which defeats part of the point.
+- Harder to read at a glance for anyone reviewing the workflow later.
+- No built-in field-level UI, so mistakes like typos are just as silent — arguably worse, since there's no visual list of "these are the fields I defined."
+- Time complexity: O(n) over the items in the batch, same as the Set node — the cost isn't performance, it's maintainability.</p>
+<h2>Optimal Solution</h2>
+<p>The Set node gets you the same O(n) transformation with none of the code-maintenance cost, plus a visible list of exactly which fields you're touching. The workflow looks like this:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Add a field named <code>name</code>, value = expression pointing at <code>user_name</code></td>
+<td>Establishes the canonical field name</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Rename <code>userAge</code> to <code>age</code>, change type to Number</td>
+<td>Fixes both the label and the type so downstream filters work</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Add a field <code>greeting</code>, value = expression referencing <code>name</code></td>
+<td>Demonstrates a computed field built from other fields on the same item</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Toggle "Keep Only Set Fields" on</td>
+<td>Drops <code>debug_flag</code> and any other field you didn't explicitly define</td>
+</tr>
+</tbody>
+</table>
+<p>The key design decision is step 4. Left off, your new fields join the original ones — useful when you're only patching a couple of fields on an otherwise fine item. Switched on, only the fields you explicitly defined survive. Use it whenever you want a clean, minimal item instead of "original plus extras."</p>
+<h2>Python Code</h2>
+<p>Since n8n's Set node is a no-code UI element, there's no literal Python equivalent to run — but here's the logic it performs internally, written as a standalone function. This is useful both for understanding the node's behavior and for reference if you ever need to replicate this transformation in a Python-based pipeline:</p>
+<pre><code class="language-python">from typing import Any
+
+
+def set_fields(
+    item: dict[str, Any],
+    field_map: dict[str, tuple[str, type]],
+    keep_only_set_fields: bool = False,
+) -&gt; dict[str, Any]:
+    &quot;&quot;&quot;Reshape an item the way n8n's Set node does.
+
+    field_map maps a new field name to (source_field_name, target_type).
+    &quot;&quot;&quot;
+    result: dict[str, Any] = {}
+
+    for new_name, (source_field, target_type) in field_map.items():
+        raw_value = item.get(source_field)
+        result[new_name] = target_type(raw_value) if raw_value is not None else None
+
+    if not keep_only_set_fields:
+        # merge original fields that weren't explicitly overwritten
+        for key, value in item.items():
+            result.setdefault(key, value)
+
+    return result
+
+
+def build_greeting(item: dict[str, Any]) -&gt; str:
+    return f&quot;Hey {item.get('name', 'there')}, welcome back!&quot;
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>field_map</code> mirrors the rows you'd fill in Manual mode: new field name → (where the value comes from, what type to cast it to).</li>
+<li><code>target_type(raw_value)</code> performs the type conversion — this is the equivalent of switching a field's type from Text to Number in the UI, and it's where the "age" filter bug gets fixed.</li>
+<li>The <code>keep_only_set_fields</code> flag directly mirrors the toggle in the node. When <code>False</code>, <code>setdefault</code> backfills any original field not already in <code>result</code>, so nothing is lost. When <code>True</code>, that block is skipped entirely and only explicitly set fields remain.</li>
+<li><code>build_greeting</code> is a standalone function to represent an expression field — a value computed from another field already present on the item, evaluated fresh for every item in the batch.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Starting item:</p>
+<pre><code class="language-python">item = {&quot;user_name&quot;: &quot;grace&quot;, &quot;userAge&quot;: &quot;34&quot;, &quot;debug_flag&quot;: True}
+</code></pre>
+<p>Field map:</p>
+<pre><code class="language-python">field_map = {
+    &quot;name&quot;: (&quot;user_name&quot;, str),
+    &quot;age&quot;: (&quot;userAge&quot;, int),
+}
+</code></pre>
+<p>Step-by-step:
+1. <code>name</code> = <code>str(item.get("user_name"))</code> → <code>"grace"</code>
+2. <code>age</code> = <code>int(item.get("userAge"))</code> → <code>34</code> (this is where text becomes a real number)
+3. <code>keep_only_set_fields=True</code>, so the merge-back step is skipped — <code>debug_flag</code> never makes it into <code>result</code>.
+4. <code>greeting</code> is computed separately: <code>build_greeting({"name": "grace"})</code> → <code>"Hey grace, welcome back!"</code></p>
+<p>Final item:</p>
+<pre><code class="language-python">{&quot;name&quot;: &quot;grace&quot;, &quot;age&quot;: 34, &quot;greeting&quot;: &quot;Hey grace, welcome back!&quot;}
+</code></pre>
+<p>Matches the target shape exactly.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> O(n × k), where n is the number of items in the batch and k is the number of fields being set. Each item is processed independently, and each field map entry does constant-time dictionary lookups and casts.</li>
+<li><strong>Space:</strong> O(n × k) for the output batch, since a new dictionary is built per item rather than mutating in place.</li>
+<li>Both are correct because there's no nested iteration over items — every item's transformation is independent, which is also why n8n can process large batches without the cost scaling non-linearly.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p>You could use a Function/Code node for full custom logic, as shown in the brute-force section, or an "Edit Fields" step combined with an "If" node for conditional reshaping. The Set node wins whenever the transformation is static and declarative — same fields, same types, every time. Reach for a Code node only when the reshaping logic depends on runtime conditions the UI can't express (e.g., "rename this field only if another field equals X").</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty input item:</strong> Expressions referencing a missing field return <code>undefined</code>/<code>null</code> rather than throwing — always check what your expression does when the source field doesn't exist.</li>
+<li><strong>Duplicate field names in Manual mode:</strong> the last row wins; earlier rows with the same name are silently overwritten.</li>
+<li><strong>Renaming to an existing field name:</strong> this overwrites the existing field's value — there's no warning.</li>
+<li><strong>Numeric strings with leading zeros or currency symbols:</strong> converting "$34" to Number will fail or produce <code>NaN</code>; strip formatting first.</li>
+<li><strong>Very large batches:</strong> Set node performance scales linearly, but expressions that call external functions per item can slow batch processing — keep expressions pure.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Misspelling a field name while renaming it</strong> (<code>emial</code> instead of <code>email</code>) — n8n doesn't validate against existing fields, so it silently creates a new field instead of erroring.</li>
+<li><strong>Leaving a numeric field as Text</strong> — filters like "greater than 18" fail silently because you're comparing a string to a number.</li>
+<li><strong>Forgetting "Keep Only Set Fields" is off by default</strong> — assuming a clean item when the original noisy fields are still attached.</li>
+<li><strong>Hardcoding a value instead of using an expression</strong> — the field works once, then breaks the moment the source data changes.</li>
+<li><strong>Not checking the field name after typing it</strong> — a stray space or wrong case creates a field that looks identical at a glance but doesn't match downstream references.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you design a data normalization layer for an API with inconsistent field naming?</li>
+<li>What's the tradeoff between failing loudly (throwing errors) and failing silently (creating unexpected fields) in a data pipeline?</li>
+<li>How would you validate a schema transformation step to catch typos before they reach production?</li>
+<li>Why does type coercion matter for filter/comparison logic downstream in a pipeline?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 49: Group Anagrams</strong> — similar idea of reshaping data into a canonical form (sorted string) before comparison, the same normalize-once philosophy.</li>
+<li><strong>LeetCode 217: Contains Duplicate</strong> — relies on consistent typing/hashing, directly related to why type mismatches break comparisons.</li>
+<li><strong>LeetCode 1189: Maximum Number of Balloons</strong> — another case where building a frequency/shape map upfront simplifies everything downstream.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>The Set node's job is to normalize messy data into a predictable shape, once, at the source — not to patch around it three nodes downstream.</li>
+<li>Manual mode and JSON mode are the same tool with different tradeoffs; don't avoid JSON mode just because it looks more intimidating.</li>
+<li>Type matters as much as naming — a field with the wrong type breaks filters silently.</li>
+<li>"Keep Only Set Fields" is the difference between "patch a few fields" and "rebuild the item from scratch."</li>
+<li>n8n does not validate field names against existing ones. A typo doesn't error — it creates a new field and leaves your real target untouched. Always double-check the name after typing it.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This lesson is easier to follow watching it happen live — seeing Manual mode and JSON mode side by side, and watching the typo bug happen in real time, makes the mental model stick faster than reading alone. Watch it here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This is part of <strong>Fun with Learning Technology</strong>, a course series built around one idea: we don't just click buttons, we figure out why they work. Each lesson builds real automation and engineering skills from the ground up — this one on the Set/Edit Fields node is Lesson 6, and it builds directly on the fundamentals covered earlier in the series.</p>
+<h2>Call To Action</h2>
+<p>If this saved you from a debugging session at midnight, the subscribe button on YouTube is right there — it helps more than you'd think. Subscribe to the Substack for the write-up version of every lesson, drop a comment with your <code>emial</code> typo story (we've all got one), and share this with anyone on your team still hardcoding field names into their workflows.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Set node: when should you reach for it?</summary><p>Whenever an item&#x27;s fields need adding, renaming, retyping, or trimming before the next node — reshaping data, not creating it.</p></details><details class='card2'><summary>Manual Mode vs JSON Mode in Set node?</summary><p>Manual Mode = point-and-click field editor for simple changes; JSON Mode = write raw JSON for nested/dynamic structures.</p></details><details class='card2'><summary>What does &#x27;Keep Only Set Fields&#x27; actually do?</summary><p>Drops every field not explicitly defined in this node — output item contains only what you set, nothing inherited.</p></details><details class='card2'><summary>Core insight behind the Set node&#x27;s design?</summary><p>n8n items are just plain JSON objects flowing between nodes, so &#x27;transforming data&#x27; is really just reshaping that JSON.</p></details><details class='card2'><summary>Gotcha: you rename a field with a typo. What happens?</summary><p>No error — n8n creates a new field with the typo&#x27;d name instead of renaming; downstream nodes silently get undefined data.</p></details><details class='card2'><summary>Real use case for Set node with expressions?</summary><p>Normalizing an inconsistent API response: pull values from nested/oddly-named fields via expressions into clean, consistent field names.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
