@@ -1,0 +1,205 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Python Lesson 25: One yield Replaces Two Dunder Methods — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-25-context-managers
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesson-25-conte">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-25-context-managers.html">
+<meta property="og:title" content="Python Lesson 25: One yield Replaces Two Dunder Methods — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-25-context-managers
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesson-25-conte">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 25: One yield Replaces Two Dunder Methods</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>If you've written Python for more than a few weeks, you've used <code>with open(...) as f:</code> a hundred times without asking what it actually does. That's fine — until the day you need to write your own version. Maybe you're managing a database connection that has to close even if a query fails. Maybe you're holding a lock that absolutely cannot stay locked after an exception. Maybe you're timing a block of code and want the timer to stop no matter what happens inside it.</p>
+<p>At that point, "I use <code>with</code> for files" isn't enough. You need to understand the actual protocol behind it — two methods, <code>__enter__</code> and <code>__exit__</code>, and the guarantee Python makes about when they run.</p>
+<p>This also happens to be a favorite interview topic, not because it's obscure, but because it separates people who've memorized <code>with open(...)</code> from people who understand <em>why</em> it's safe. Interviewers ask about context managers to see if you understand resource management, exception propagation, and the difference between "code that usually cleans up" and "code that is guaranteed to clean up."</p>
+<p>By the end of this lesson you'll be able to write a context manager two different ways — as a class, and as a four-line generator function — and you'll know exactly which one to reach for.</p>
+<h2>Problem Overview</h2>
+<p>Here's the situation that breaks people the first time they hit it: you open a resource (a file, a connection, a lock), do some work with it, and then something goes wrong — an exception gets raised. If your cleanup code (like <code>file.close()</code>) is written as the last line of a function, and the exception happens before that line, cleanup never runs. The exception jumps straight over it.</p>
+<p>In a short-lived script, you might never notice. The process exits and the OS reclaims everything anyway. But in a long-running service, this is how you leak file handles, leave stale locks in place, or hold onto database connections until the pool runs dry.</p>
+<p>The fix people reach for first is <code>try/finally</code>. That works, but it's easy to forget, verbose to repeat everywhere, and easy to get subtly wrong (what exactly do you do with the exception info in <code>finally</code>?). Python's answer is the context manager protocol: an object that defines what "setup" and "teardown" mean, paired with the <code>with</code> statement, which guarantees teardown runs no matter how the block exits — normal return, early <code>return</code>, or exception.</p>
+<h2>Example</h2>
+<p>Take a broken version first:</p>
+<pre><code class="language-python">f = open(&quot;log.txt&quot;, &quot;w&quot;)
+f.write(&quot;starting job\n&quot;)
+raise ValueError(&quot;something went wrong&quot;)
+f.close()  # never runs
+</code></pre>
+<p>The file is left open. Python doesn't get a chance to skip a line politely — the exception simply propagates past <code>f.close()</code> because that line is never reached.</p>
+<p>Now the same logic with <code>with</code>:</p>
+<pre><code class="language-python">with open(&quot;log.txt&quot;, &quot;w&quot;) as f:
+    f.write(&quot;starting job\n&quot;)
+    raise ValueError(&quot;something went wrong&quot;)
+</code></pre>
+<p>The exception still gets raised — <code>with</code> doesn't hide errors — but the file is closed before the exception continues upward. You didn't write <code>try</code>, you didn't write <code>finally</code>, you didn't call <code>close()</code>. The <code>with</code> statement did it for you.</p>
+<p>That's the entire value proposition: <strong>cleanup is guaranteed, regardless of how the block ends.</strong></p>
+<h2>Intuition</h2>
+<p>Think about a hotel key card. Pull it from the slot by the door and the lights cut immediately — it doesn't matter if you left calmly through the front door or climbed out a window mid-emergency. The room doesn't care <em>how</em> you left. It only cares that when you're gone, the lights go off.</p>
+<p>That's the guarantee a context manager gives you for code. It doesn't matter whether your block finishes normally or blows up with an exception three lines in — the teardown step runs regardless.</p>
+<p>Here's how an experienced engineer arrives at this design: they notice that "setup, do work, guaranteed teardown" is a pattern that shows up constantly — opening and closing files, acquiring and releasing locks, connecting and disconnecting from a database, starting and stopping a timer. Rather than writing <code>try/finally</code> by hand every single time, Python lets you define the setup and teardown once, as two methods, and then hands control to <code>with</code> to guarantee the teardown always fires.</p>
+<p>The two methods are:</p>
+<ul>
+<li><code>__enter__(self)</code> — runs when the <code>with</code> block starts. Whatever it returns becomes the <code>as</code> variable.</li>
+<li><code>__exit__(self, exc_type, exc_value, traceback)</code> — runs when the block ends, for <em>any</em> reason. If an exception occurred, Python hands it to <code>__exit__</code> as three arguments instead of skipping the call.</li>
+</ul>
+<p>The detail that trips people up: if <code>__exit__</code> returns <code>True</code>, Python treats the exception as handled and swallows it — silently. Return <code>False</code> or <code>None</code> (the default), and the exception keeps traveling upward like normal. Returning <code>True</code> out of habit, without meaning to suppress anything, is a classic way to lose an hour wondering why an error you know is happening seems to vanish.</p>
+<h2>Brute Force Solution</h2>
+<p>"Brute force" here just means: write the class version by hand.</p>
+<p><strong>Idea:</strong> define a class with <code>__enter__</code> and <code>__exit__</code>. <code>__enter__</code> does setup and returns whatever the <code>with</code> block should bind to. <code>__exit__</code> does teardown and returns <code>False</code> so exceptions still propagate.</p>
+<pre><code class="language-python">import time
+
+class Timer:
+    def __enter__(self):
+        self.start = time.perf_counter()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        elapsed = time.perf_counter() - self.start
+        print(f&quot;Elapsed: {elapsed:.4f}s&quot;)
+        return False
+</code></pre>
+<p><strong>Algorithm:</strong>
+1. Python sees <code>with Timer() as t:</code> and calls <code>Timer().__enter__()</code>.
+2. The return value of <code>__enter__</code> is bound to <code>t</code>.
+3. Everything inside the <code>with</code> block runs.
+4. The instant the block ends — for any reason — <code>__exit__</code> runs with exception info if there was one.</p>
+<p><strong>Advantages:</strong> explicit, easy to add state (multiple attributes, helper methods), easy to extend with more behavior later.</p>
+<p><strong>Disadvantages:</strong> verbose for something this small — a whole class just to time a block of code.</p>
+<p><strong>Time complexity:</strong> O(1) overhead for the protocol itself — the cost is whatever your setup/teardown code does.
+<strong>Space complexity:</strong> O(1) beyond whatever state you choose to store on <code>self</code>.</p>
+<h2>Optimal Solution</h2>
+<p>For a one-off case like the timer, writing a full class is more ceremony than the problem needs. Python's <code>contextlib.contextmanager</code> decorator lets you write the same enter/exit behavior as a single generator function with one <code>yield</code> in the middle.</p>
+<p>The trick: <strong>everything before <code>yield</code> is <code>__enter__</code>. Everything after <code>yield</code> is <code>__exit__</code>.</strong> Python pauses execution right at the <code>yield</code>, hands control to your <code>with</code> block, and resumes after <code>yield</code> (wrapped in an implicit <code>try/finally</code>) once the block ends.</p>
+<table>
+<thead>
+<tr>
+<th>Class version</th>
+<th>Generator version</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__enter__</code> body</td>
+<td>code before <code>yield</code></td>
+</tr>
+<tr>
+<td>value returned by <code>__enter__</code></td>
+<td>value passed to <code>yield</code></td>
+</tr>
+<tr>
+<td><code>__exit__</code> body</td>
+<td>code after <code>yield</code></td>
+</tr>
+<tr>
+<td><code>return False</code> at the end of <code>__exit__</code></td>
+<td>do nothing — exceptions propagate automatically unless caught</td>
+</tr>
+</tbody>
+</table>
+<h2>Python Code</h2>
+<pre><code class="language-python">import time
+from contextlib import contextmanager
+
+
+@contextmanager
+def timer():
+    start = time.perf_counter()
+    yield
+    elapsed = time.perf_counter() - start
+    print(f&quot;Elapsed: {elapsed:.4f}s&quot;)
+</code></pre>
+<p>That's the whole thing — four lines instead of a class.</p>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>@contextmanager</code> wraps the generator function so it behaves like a context manager when used with <code>with</code>.</li>
+<li><code>start = time.perf_counter()</code> runs when <code>with timer():</code> starts — this is the <code>__enter__</code> half.</li>
+<li><code>yield</code> is the handoff point. Python pauses here and lets the code inside the <code>with</code> block execute. If you write <code>yield value</code>, that <code>value</code> is what gets bound by <code>as</code>.</li>
+<li>The lines after <code>yield</code> are the <code>__exit__</code> half — they run once the <code>with</code> block finishes, whether it finished normally or an exception was raised inside it. <code>contextmanager</code> wraps this in a <code>try/finally</code> for you, so the teardown code still runs even on an exception, and the exception still propagates afterward unless you explicitly catch and suppress it.</li>
+</ul>
+<h2>Dry Run</h2>
+<pre><code class="language-python">with timer():
+    total = sum(range(10_000_000))
+</code></pre>
+<ol>
+<li><code>timer()</code> is called, creating a generator.</li>
+<li><code>with</code> calls the equivalent of <code>__enter__</code>, which runs <code>start = time.perf_counter()</code> and then hits <code>yield</code>.</li>
+<li>Execution pauses at <code>yield</code> and control passes to the <code>with</code> block.</li>
+<li><code>total = sum(range(10_000_000))</code> runs.</li>
+<li>The block ends. Python resumes the generator right after <code>yield</code>.</li>
+<li><code>elapsed = time.perf_counter() - start</code> and <code>print(...)</code> run, printing something like <code>Elapsed: 0.3120s</code>.</li>
+</ol>
+<p>Now with an exception:</p>
+<pre><code class="language-python">with timer():
+    raise ValueError(&quot;boom&quot;)
+</code></pre>
+<p>Steps 1–3 are identical. Then the <code>raise</code> fires inside the block. Because <code>contextmanager</code> wraps the post-<code>yield</code> code in <code>try/finally</code>, the <code>elapsed</code>/<code>print</code> lines still run — the timer still reports — and then <code>ValueError("boom")</code> continues propagating upward exactly as if <code>with</code> weren't there at all.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(1) overhead from the protocol itself in both the class and generator versions — one function call in, one function call out. The actual cost is dominated by whatever setup/teardown work you do (opening a file, acquiring a lock, etc.), not by the protocol.</p>
+<p><strong>Space:</strong> O(1) — a generator context manager keeps only its local frame alive between <code>yield</code> calls, and a class context manager only holds whatever attributes you assign to <code>self</code>. Neither approach scales with the size of the work done inside the <code>with</code> block.</p>
+<p>Both are correct because the guarantee doesn't come from complexity — it comes from Python's exception-propagation mechanics: <code>__exit__</code> (or the code after <code>yield</code>) is called unconditionally whenever the block exits, regardless of <em>why</em> it exits.</p>
+<h2>Alternative Solutions</h2>
+<p>The realistic alternative is plain <code>try/finally</code>:</p>
+<pre><code class="language-python">f = open(&quot;log.txt&quot;, &quot;w&quot;)
+try:
+    f.write(&quot;starting job\n&quot;)
+    raise ValueError(&quot;boom&quot;)
+finally:
+    f.close()
+</code></pre>
+<p>This works and needs no extra machinery. But it doesn't scale — every caller has to remember to wrap their code correctly, and there's no reusable, named unit of "how do I set up and tear down this resource." Context managers let you write the setup/teardown logic exactly once and reuse it anywhere with <code>with resource():</code>. For a one-off, throwaway block, <code>try/finally</code> is fine. For anything you'll use more than once, a context manager is the better investment.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty block:</strong> <code>with timer(): pass</code> — still runs enter and exit correctly; elapsed time will just be near-zero.</li>
+<li><strong>Multiple exceptions in nested <code>with</code> blocks:</strong> each context manager's <code>__exit__</code> runs in reverse order of entry, and each gets a chance to see the exception.</li>
+<li><strong><code>__exit__</code> returning <code>True</code> by mistake:</strong> silently swallows the exception — a subtle bug that looks like the error "just disappeared."</li>
+<li><strong>Generator-based context manager with more than one <code>yield</code>:</strong> <code>contextlib.contextmanager</code> raises a <code>RuntimeError</code> — it strictly expects exactly one <code>yield</code>.</li>
+<li><strong>Exception raised inside <code>__enter__</code> itself:</strong> <code>__exit__</code> is never called, because the block never actually started.</li>
+<li><strong>Reusing a generator-based context manager instance twice:</strong> generators are single-use; calling the decorated function again creates a fresh one, but reusing the <em>same</em> generator object with two <code>with</code> statements will fail.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Forgetting <code>return False</code> (or omitting a return statement) — usually harmless since <code>None</code> is falsy, but explicit is safer, especially if a teammate later "fixes" it to <code>return True</code> without knowing the consequence.</li>
+<li>Returning <code>True</code> from <code>__exit__</code> believing it means "exit cleanly" when it actually means "suppress the exception."</li>
+<li>Writing more than one <code>yield</code> in a <code>contextmanager</code>-decorated generator.</li>
+<li>Doing setup work <em>after</em> <code>yield</code> instead of before it — reversing enter and exit responsibilities.</li>
+<li>Forgetting that <code>contextlib.contextmanager</code> wraps the teardown in <code>try/finally</code> for you — manually adding another <code>try/finally</code> around the <code>yield</code> is redundant.</li>
+<li>Assuming <code>with</code> catches and hides all exceptions by default — it only does that if <code>__exit__</code> returns <code>True</code>.</li>
+<li>Using a class-based context manager for simple, stateless setup/teardown when a four-line generator would be clearer.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What are the two dunder methods behind the <code>with</code> statement, and what does each receive/return?</li>
+<li>What happens if <code>__exit__</code> returns <code>True</code>? Why is that dangerous?</li>
+<li>How would you implement a context manager using <code>contextlib.contextmanager</code> instead of a class?</li>
+<li>What happens if an exception is raised inside <code>__enter__</code>?</li>
+<li>Can you write a context manager that retries the block on failure? (Hint: think about what <code>__exit__</code> can inspect and do with <code>exc_type</code>.)</li>
+<li>What's the difference between <code>with</code> and <code>async with</code>?</li>
+<li>Why can't a generator-based context manager be reused across two separate <code>with</code> statements?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Implementing a custom iterator (<code>__iter__</code>/<code>__next__</code>)</strong> — same "protocol via dunder methods" pattern as context managers.</li>
+<li><strong>Writing a decorator with <code>functools.wraps</code></strong> — another case where Python gives you a small protocol to hook into standard behavior.</li>
+<li><strong>Thread lock usage (<code>threading.Lock</code> as a context manager)</strong> — a real-world case of the exact enter/exit pattern from this lesson.</li>
+<li><strong>Database connection pooling with <code>with conn:</code></strong> — same setup/teardown guarantee applied to a network resource instead of a file.</li>
+<li><strong><code>contextlib.suppress</code></strong> — a built-in context manager worth reading the source of once you understand <code>__exit__</code>'s return value.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li><code>with</code> guarantees cleanup code runs no matter how a block exits — normal completion, early return, or exception.</li>
+<li>The protocol is just two methods: <code>__enter__</code> for setup, <code>__exit__</code> for teardown, with <code>__exit__</code> receiving exception details if one occurred.</li>
+<li>Returning <code>True</code> from <code>__exit__</code> swallows the exception — almost always a mistake unless you mean to suppress it.</li>
+<li><code>contextlib.contextmanager</code> turns the same protocol into a single generator function: everything before <code>yield</code> is enter, everything after is exit.</li>
+<li>Reach for a class when you need real state and structure; reach for <code>contextmanager</code> when a function with one <code>yield</code> says the same thing in fewer lines.</li>
+<li>The same pattern covers files, locks, database connections, and temporary setting changes — not just files.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This lesson is easier to absorb watching it happen step by step — tracing exactly where an exception goes inside a <code>with</code> block, and watching the class rewritten into the generator version live. Watch it here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <em>Fun with Learning Technology</em>, a series built around one idea: you should understand the mechanism behind a language feature well enough to build it yourself, not just memorize the syntax that uses it. Each lesson takes something you've probably used without thinking about — decorators, context managers, comprehensions — and opens it up until it stops feeling like magic.</p>
+<h2>Call To Action</h2>
+<p>If this made <code>with</code> finally click, the video walkthrough makes it click even faster — give it a watch and a like on YouTube, and subscribe so the next lesson in the series lands in your feed. Prefer reading over your morning coffee? Subscribe to the Substack for the written version of every lesson. And if you've got a topic you want unpacked this same way, drop it in the comments — that's genuinely where most of these lessons come from.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>What triggers use of a context manager?</summary><p>Any setup/teardown pair that must run together — file handles, locks, db connections, temp state — signals `with`.</p></details><details class='card2'><summary>What two dunder methods define a context manager?</summary><p>`__enter__` (setup, returns value for `as`) and `__exit__` (teardown, receives exception info if raised).</p></details><details class='card2'><summary>What does `__exit__` returning True do?</summary><p>Suppresses the exception — it won&#x27;t propagate. Returning False/None lets it re-raise normally.</p></details><details class='card2'><summary>Common bug when hand-writing __exit__?</summary><p>Forgetting to check exception args before cleanup, or accidentally swallowing exceptions by returning truthy from __exit__.</p></details><details class='card2'><summary>contextlib.contextmanager vs class-based context manager?</summary><p>Decorator wraps a generator: code before `yield` is __enter__, after is __exit__; less boilerplate than writing a class.</p></details><details class='card2'><summary>Interview follow-up: how do exceptions inside a `with` block reach __exit__?</summary><p>Python calls __exit__ with (exc_type, exc_value, traceback) before propagating; __exit__ can inspect or suppress it.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
