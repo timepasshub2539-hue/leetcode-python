@@ -1,0 +1,195 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1140. Stone Game II | LeetCode Daily Python Solution — grab 2 piles now? You still lose — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/stone-game-ii
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/stone-game-ii
+
+Chapters:
+0:00 The Problem:">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/stone-game-ii.html">
+<meta property="og:title" content="1140. Stone Game II | LeetCode Daily Python Solution — grab 2 piles now? You still lose — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/stone-game-ii
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/stone-game-ii
+
+Chapters:
+0:00 The Problem:"><meta property="og:image" content="https://i.ytimg.com/vi/rbvKPHFhKiU/hqdefault.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>1140. Stone Game II | LeetCode Daily Python Solution — grab 2 piles now? You still lose</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/rbvKPHFhKiU' allowfullscreen></iframe></div><article><h2>Introduction</h2>
+<p>Stone Game II shows up on interview lists because it punishes the instinct that usually serves you well: take the biggest move available right now. In most greedy problems, grabbing the best immediate option is either optimal or close to it. Here, grabbing more stones on your turn can directly hand your opponent a bigger turn right after, and you end up worse off than if you'd taken less.</p>
+<p>That single insight — that your move changes the <em>rules</em> for your opponent, not just the score — is what interviewers are actually testing. They want to see whether you can recognize a two-player optimization problem, compress a messy game history into a small state, and reach for memoized recursion instead of trying to brute-force every possible sequence of moves.</p>
+<p>It's also a genuinely useful pattern outside of interviews. Any system where two agents alternate over a shrinking resource — auction bidding, turn-based game AI, adversarial scheduling — reduces to the same shape: define the state, define the recurrence, cache it.</p>
+<h2>Problem Overview</h2>
+<p>You're given a row of stone piles. Alice and Bob take turns removing piles from the <em>front</em> of the row only — you can never reach into the middle. Alice always goes first.</p>
+<p>There's a shared limit, <code>M</code>, that starts at 1. On any turn, a player can take between 1 and <code>2M</code> piles from the front. After the move, <code>M</code> is updated to be the larger of its old value or however many piles were just taken — so the limit never shrinks, only grows or stays the same.</p>
+<p>Both players play optimally, each trying to maximize their own total stone count. The question: how many stones does Alice end up with?</p>
+<p>The tricky part is that <code>M</code> isn't fixed — it's a resource both players are indirectly fighting over. Taking a big chunk of piles boosts <code>M</code> for everyone, including your opponent's next turn.</p>
+<h2>Example</h2>
+<p>Piles: <code>[2, 7, 9, 4, 4]</code> (26 stones total).</p>
+<p>If both players play optimally, Alice finishes with <strong>10</strong> stones and Bob gets the remaining 16.</p>
+<p>Here's why grabbing greedily fails: if Alice takes 2 piles right away (<code>2 + 7 = 9</code>), <code>M</code> becomes 2, and Bob can now take up to 4 piles. Bob takes the rest — <code>9 + 4 + 4 = 17</code> — and Alice is stuck with only 9.</p>
+<p>Instead, Alice takes just <strong>1</strong> pile (<code>2</code>). <code>M</code> stays at 1, so Bob can take at most 2 piles. Bob takes <code>7 + 9 = 16</code>, leaving Alice <code>4 + 4 = 8</code> more, for a total of <code>2 + 4 + 4 = 10</code>. Taking less right now wins.</p>
+<h2>Intuition</h2>
+<p>The naive instinct is to track the entire game: which piles are gone, whose turn it is, what's been taken so far. That's far too much state to search directly.</p>
+<p>The key realization: none of the history matters. Not which piles were taken, not who took them, not in what order. All that matters <em>right now</em> is:</p>
+<ol>
+<li>Where you are in the row (an index).</li>
+<li>What your current pick limit is.</li>
+</ol>
+<p>Call this the <strong>Growing Window</strong> — the limit only ever grows, never shrinks. Those two numbers, <code>(index, limit)</code>, fully describe every future outcome from this point forward. That's what makes the problem tractable: instead of exploring an exponential tree of pile sequences, you solve each <code>(index, limit)</code> state exactly once and cache the answer.</p>
+<p>The second piece of intuition is about scoring. You don't track "Alice's total" and "Bob's total" separately through the recursion. Instead, at each state, you compute: <em>everything remaining</em> minus <em>whatever your opponent scores best starting from the state you leave them in</em>. Since both players are optimal and stones don't disappear, this single formula captures both players' incentives at once.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> At every state, try every legal number of piles to take (1 through <code>2*limit</code>), recursively simulate the rest of the game for each choice, and pick whichever leaves you the best outcome — without caching anything.</p>
+<p><strong>Algorithm:</strong>
+1. Recursively define <code>best(index, limit)</code>.
+2. Base case: if no piles remain, return 0.
+3. Try every <code>x</code> from 1 to <code>2*limit</code>, recursively computing what's left after taking <code>x</code> piles, minus the opponent's best response.
+4. Return the max.</p>
+<p><strong>Advantages:</strong> Simple to reason about — it's a direct translation of the rules.</p>
+<p><strong>Disadvantages:</strong> Without memoization, the same <code>(index, limit)</code> state gets recomputed enormously many times, since different move sequences can land you back at an identical state. This blows up exponentially and is unusable beyond tiny inputs.</p>
+<p><strong>Complexity:</strong> Time is exponential — roughly <code>O(2^n)</code> in the worst case. Space is <code>O(n)</code> for the recursion stack.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal solution keeps the exact same recursive shape but adds two things: <strong>memoization</strong> on the <code>(index, limit)</code> state, and <strong>suffix sums</strong> so "everything remaining" is an O(1) lookup instead of a re-sum every time.</p>
+<p><strong>Suffix sums:</strong> Precompute, for every starting index, the total of every pile from that index to the end of the row. Walking backward from the end:</p>
+<pre><code>suffix[i] = piles[i] + suffix[i + 1]
+</code></pre>
+<p>At index 0, <code>suffix[0]</code> is the total of the whole row.</p>
+<p><strong>State:</strong> <code>(index, limit)</code> — where you are, and the largest number of piles you're currently allowed to take.</p>
+<p><strong>Recurrence:</strong></p>
+<pre><code>best(index, limit) = suffix[index] - min over x in [1, 2*limit] of best(index + x, max(limit, x))
+</code></pre>
+<p>Since <code>suffix[index]</code> is fixed for a given index, maximizing your own score is equivalent to minimizing what you leave your opponent's best response to be — which is why the formula subtracts the opponent's best future score.</p>
+<p>Two early exits keep this fast:
+- If <code>index == len(piles)</code>, nothing is left — return 0.
+- If <code>2 * limit &gt;= len(piles) - index</code>, the current player can simply take everything remaining — no need to search further moves.</p>
+<table>
+<thead>
+<tr>
+<th>Index</th>
+<th>Limit</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>1</td>
+<td>Alice compares taking 1 pile vs. 2 piles</td>
+</tr>
+<tr>
+<td>1</td>
+<td>1</td>
+<td>Bob's turn, limit still 1 (Alice took 1)</td>
+</tr>
+<tr>
+<td>1</td>
+<td>2</td>
+<td>Bob's turn, limit now 2 (if Alice had taken 2)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>2</td>
+<td>Only 2 piles left, <code>2*limit</code> covers them — take all</td>
+</tr>
+</tbody>
+</table>
+<h2>Python Code</h2>
+<pre><code class="language-python">from functools import lru_cache
+from typing import List
+
+
+def stone_game_ii(piles: List[int]) -&gt; int:
+    n = len(piles)
+
+    # suffix[i] = total stones from index i to the end
+    suffix = [0] * (n + 1)
+    for i in range(n - 1, -1, -1):
+        suffix[i] = suffix[i + 1] + piles[i]
+
+    @lru_cache(maxsize=None)
+    def best(index: int, limit: int) -&gt; int:
+        if index == n:
+            return 0
+
+        # Take-all shortcut: the whole remaining row fits in this turn
+        if 2 * limit &gt;= n - index:
+            return suffix[index]
+
+        best_score = 0
+        for x in range(1, 2 * limit + 1):
+            opponent_score = best(index + x, max(limit, x))
+            best_score = max(best_score, suffix[index] - opponent_score)
+
+        return best_score
+
+    return best(0, 1)
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>suffix</code> is built once, backward, so <code>suffix[i]</code> answers "how many stones remain from pile <code>i</code> onward" in constant time.</li>
+<li><code>best(index, limit)</code> is the entire game in miniature: given where you are and your current limit, what's the most you can score from here on, assuming both players play optimally?</li>
+<li>The base case <code>index == n</code> means no piles are left — nothing more to score.</li>
+<li>The take-all shortcut avoids looping when <code>2*limit</code> already covers every remaining pile — there's no strategic choice left to make.</li>
+<li>Otherwise, the loop tries every legal <code>x</code> (piles to take), recurses into the resulting state with the updated limit <code>max(limit, x)</code>, and keeps whichever <code>x</code> leaves the opponent with the least favorable position for them — which is the same as leaving the most for you.</li>
+<li><code>lru_cache</code> handles memoization automatically, keyed on <code>(index, limit)</code>, so each state is computed exactly once.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Piles: <code>[2, 7, 9, 4, 4]</code>, <code>suffix = [26, 24, 17, 8, 4, 0]</code>.</p>
+<p><code>best(0, 1)</code>: compares <code>x = 1</code> and <code>x = 2</code>.
+- <code>x = 1</code>: opponent gets <code>best(1, 1)</code>, current player gets <code>26 - best(1, 1)</code>.
+- <code>x = 2</code>: opponent gets <code>best(1, 2)</code>, current player gets <code>26 - best(1, 2)</code>.</p>
+<p><code>best(1, 2)</code> (Bob, after Alice took 2 piles): <code>2*limit = 4 &gt;= n - index = 4</code>, take-all shortcut fires. Bob scores <code>suffix[1] = 24</code>. So Alice's payoff for <code>x=2</code> is <code>26 - 24 = 2</code>.</p>
+<p><code>best(1, 1)</code> (Bob, after Alice took 1 pile): tries <code>x = 1</code> and <code>x = 2</code>.
+- <code>x = 2</code>: <code>2*1 = 2 &gt;= n - 1 - 2 = 2</code>? At index <code>1+2=3</code>, remaining is <code>n - 3 = 2</code>, and Bob's new limit is <code>max(1,2)=2</code>, so <code>2*2=4 &gt;= 2</code> — take-all fires at the next level, but here we're evaluating Bob's own move. Bob taking <code>x=2</code> piles (<code>7+9=16</code>) leaves Alice <code>best(3, 2) = suffix[3] = 8</code> (take-all). Bob's payoff: <code>24 - 8 = 16</code>.
+- <code>x = 1</code>: Bob takes 1 pile (<code>7</code>), Alice faces <code>best(2, 1)</code>, which recurses further and comes out to less for Bob.</p>
+<p>Bob picks <code>x = 2</code>, scoring 16, leaving Alice <code>8</code> from <code>best(1,1) = 24 - 16...</code> — following it through, Alice's payoff for taking <code>x=1</code> at the root is <code>26 - 16 = 10</code>.</p>
+<p>Comparing Alice's two options at the root: <code>x=1</code> gives 10, <code>x=2</code> gives 2. Alice takes 1 pile. Final result: <strong>Alice = 10, Bob = 16</strong>, matching the walkthrough.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> There are at most <code>n</code> possible index values and <code>n</code> possible limit values (limit can't usefully exceed <code>n</code>), giving <code>O(n^2)</code> distinct states. Each state tries up to <code>O(n)</code> moves. Total: <strong>O(n^3)</strong>.</p>
+<p><strong>Space:</strong> <code>O(n^2)</code> for the memoization cache (one entry per <code>(index, limit)</code> pair), plus <code>O(n)</code> for the suffix array and recursion depth.</p>
+<p>With <code>n</code> capped at 100 (LeetCode's constraint), that's roughly a million operations — comfortably fast.</p>
+<h2>Alternative Solutions</h2>
+<p><strong>Bottom-up (tabulation):</strong> Build the same <code>dp[index][limit]</code> table iteratively, filling it from the last pile backward instead of recursing top-down. It avoids any recursion-depth concern (irrelevant here at <code>n ≤ 100</code>, but relevant in languages with small stack limits), at the cost of writing the take-all shortcut and loop bounds slightly more carefully by hand. Same <code>O(n^3)</code> complexity — purely a style choice.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Single pile:</strong> <code>2 * limit</code> trivially covers it (<code>limit</code> starts at 1, <code>2*1=2 ≥ 1</code>), so Alice takes everything.</li>
+<li><strong>All piles equal value:</strong> The algorithm doesn't special-case this — it still finds the correct optimal split based on position and limit, not pile value alone.</li>
+<li><strong>Empty piles list:</strong> <code>best(0, 1)</code> immediately hits <code>index == n</code>, returning 0.</li>
+<li><strong>Large limit relative to remaining piles:</strong> As soon as <code>2*limit</code> reaches or exceeds what's left, the take-all shortcut fires — no further strategy to compute.</li>
+<li><strong>Two equal piles (<code>[2, 2]</code>):</strong> Alice can only take 1 pile (limit is 1, so <code>2*1=2</code> piles would require limit ≥ 2, which she doesn't have on the first move) — she gets 2, not 4.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Caching by index alone</strong>, ignoring <code>limit</code>. Two different limits at the same index represent genuinely different game states with different outcomes.</li>
+<li><strong>Re-summing remaining piles</strong> on every call instead of precomputing suffix sums — this alone can turn an <code>O(n^3)</code> solution into something far slower.</li>
+<li><strong>Forgetting to update the opponent's limit</strong>, not just the index, when recursing — passing the <em>old</em> limit forward silently breaks the DP (a mistake called out explicitly as a real hour-long debugging session in the source explanation).</li>
+<li><strong>Treating this as a simple maximization</strong> instead of a relative-score game — not subtracting the opponent's best response leads to overcounting your own total.</li>
+<li><strong>Skipping the take-all shortcut</strong>, which isn't just an optimization — without it, some implementations mishandle the case where no further legal recursive state exists to compare against.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Why does maximizing your own score require <em>subtracting</em> the opponent's best score from the total, rather than just maximizing your take directly?</li>
+<li>How would you extend this solution if the pick limit rule were removed entirely (see Stone Game III)?</li>
+<li>What changes if there are three players instead of two?</li>
+<li>Can you convert the top-down memoized version into an iterative bottom-up table, and what ordering do you need to fill it in?</li>
+<li>Why is the state space <code>O(n^2)</code> and not <code>O(n)</code>?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Stone Game (LeetCode 877):</strong> The original version — fixed take-from-either-end rules, no growing limit. Good for understanding the base two-player relative-score pattern.</li>
+<li><strong>Stone Game III (LeetCode 1406):</strong> Drops the growing-limit mechanic entirely; you can always take 1, 2, or 3 piles. A natural next step after mastering this problem.</li>
+<li><strong>Predict the Winner (LeetCode 486):</strong> Same relative-score DP shape applied to a simpler take-from-either-end game.</li>
+<li><strong>Optimal Strategy for a Game:</strong> Classic interview variant of the same alternating-turn, shrinking-resource pattern.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Stone Game II collapses into just two numbers — your position and your current limit — the Growing Window. Suffix sums turn "how much is left" into an instant lookup instead of a repeated sum. And the central lesson holds well beyond this problem: greedy grabbing loses here because your move changes your opponent's options, not just your own score. Whenever you see a two-player turn-based game, think in terms of relative score between the players, and ask whether the full game history can collapse into a small, cacheable state.</p>
+<h2>Watch the Video</h2>
+<p>Prefer to see the recursion, the suffix sums, and the full Alice-gets-10 walkthrough traced out visually? Watch the full breakdown here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This walkthrough is part of <strong>Fun with Learning Technology</strong>, a series built for developers who want algorithm and systems concepts to actually click — not just get memorized. Every episode takes a problem that looks intimidating at first glance and breaks it down into the handful of ideas that make it obvious in hindsight.</p>
+<h2>Call To Action</h2>
+<p>If this helped the pattern click, drop a like on the video and subscribe on YouTube — it's the fastest way to see future breakdowns like this one. For deeper write-ups and extra problem sets, subscribe to the Substack newsletter. And if you spot a sharper way to explain any part of this, drop it in the comments — always looking to make the next one clearer.</p>
+<hr /></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/rbvKPHFhKiU' target='_blank'>▶ Watch on YouTube</a></div><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Stone Game II: what pattern/tell signals interval DP with a growing window?</summary><p>Turn-based pick from array ends/prefix with a limit that grows (2*M) each move — think state = (position, limit), memoize over both.</p></details><details class='card2'><summary>Time complexity of the Stone Game II DP solution?</summary><p>O(n^2) states (index i, M up to n), each trying up to 2M choices, roughly O(n^3) worst case, often cited as O(n^2).</p></details><details class='card2'><summary>Space complexity for Stone Game II?</summary><p>O(n^2) for the memo table keyed by (index, M), plus O(n) for suffix sums.</p></details><details class='card2'><summary>Common bug when picking piles in Stone Game II?</summary><p>Forgetting to cap M by remaining piles or updating M as max(M, x) instead of max(M, x) only when it&#x27;s the opponent&#x27;s turn advantage — breaks the growing-limit rule.</p></details><details class='card2'><summary>Stone Game II vs Stone Game I — what&#x27;s the key difference?</summary><p>Game I has a fixed pick-from-ends rule solvable with simple interval DP; Game II allows picking 1 to 2M piles from the front, requiring a dynamic limit state.</p></details><details class='card2'><summary>Interview follow-up: why not just greedily grab the most stones now?</summary><p>Greedy ignores that a larger grab now hands the opponent a bigger future limit (2M), letting them out-score you later — DP captures that tradeoff.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
