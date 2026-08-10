@@ -1,0 +1,233 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson: O(1) Dict Lookup vs O(n) List — The Hash Function Explained — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/why-python-dictionaries-are-faster-than-you-think
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/why-py">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/why-python-dictionaries-are-faster-than-you-think.html">
+<meta property="og:title" content="Lesson: O(1) Dict Lookup vs O(n) List — The Hash Function Explained — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/why-python-dictionaries-are-faster-than-you-think
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/why-py">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Lesson: O(1) Dict Lookup vs O(n) List — The Hash Function Explained</h1><span class='badge' style='background:#facc1522;color:#facc15'>🔑 Hash Maps</span><article><h2>Introduction</h2>
+<p>If you've spent any time around Python developers, you've heard the claim: "dictionaries are fast." It gets repeated in tutorials, thrown around in interviews, and treated as a fact you're supposed to accept on faith. Almost nobody explains the mechanism behind it.</p>
+<p>That's a problem, because interviewers love probing exactly this gap. "Why is dict lookup O(1)?" is one of those questions that separates candidates who memorized a fact from candidates who understand a system. It also matters far beyond Python — the same idea powers sets, database indexes, and caching layers across nearly every language and system you'll ever touch. Once you understand hashing, you'll start recognizing "compute the address instead of searching" as a pattern that shows up everywhere in software engineering.</p>
+<p>This lesson breaks down exactly what happens when you look something up in a list versus a dictionary, why one scales linearly and the other stays flat, and why Python enforces a strict rule about what can and can't be used as a dictionary key.</p>
+<h2>Problem Overview</h2>
+<p>At its core, this isn't a coding problem in the traditional LeetCode sense — it's a systems question: <strong>given a collection of key-value pairs, how do you retrieve a value by its key as fast as possible?</strong></p>
+<p>There are two competing approaches:</p>
+<ol>
+<li><strong>Linear search</strong> — store items in a list and check each one until you find a match.</li>
+<li><strong>Hash-based lookup</strong> — compute a number from the key that tells you exactly where the value lives, and jump straight there.</li>
+</ol>
+<p>Understanding why the second approach wins — and <em>how</em> it actually works — is the goal here.</p>
+<h2>Example</h2>
+<p>Suppose you're storing user scores:</p>
+<pre><code class="language-python">scores = {&quot;alice&quot;: 92, &quot;bob&quot;: 85, &quot;carol&quot;: 78}
+</code></pre>
+<p>When you run <code>scores["bob"]</code>, Python does not loop through <code>"alice"</code>, then <code>"bob"</code>, then <code>"carol"</code>. It takes the string <code>"bob"</code>, runs it through a hash function, gets back a number, uses that number to compute a slot index in an internal table, and reads the value directly from that slot.</p>
+<p>Compare that to a list of tuples:</p>
+<pre><code class="language-python">scores_list = [(&quot;alice&quot;, 92), (&quot;bob&quot;, 85), (&quot;carol&quot;, 78)]
+</code></pre>
+<p>To find Bob's score here, Python checks <code>scores_list[0]</code>, sees it doesn't match, checks <code>scores_list[1]</code>, finds <code>"bob"</code>, and stops. With 3 items this is trivial. With 3 million items, that's a lot of checking on the way to a match — or all 3 million checks if the item isn't there at all.</p>
+<h2>Intuition</h2>
+<p>Think about how you'd find a coat at a coat-check counter. One approach: the attendant walks down every hook checking labels until they find yours. Another approach: you hand over a ticket with your hook number printed on it, and they walk straight there.</p>
+<p>The ticket doesn't describe your coat — it encodes an <em>address</em>. That's the entire trick behind a hash table. Instead of searching for where something <em>is</em>, you compute where it <em>must be</em>, based only on the key.</p>
+<p>An experienced engineer arrives at this idea by asking: "what's the actual bottleneck in searching?" The bottleneck is that a list has no relationship between a key's <em>value</em> and its <em>position</em>. Position is arbitrary — determined only by insertion order. If you could instead derive position directly from the key, you'd never need to search at all. That derivation is exactly what a hash function does: it takes a key and deterministically produces a number, which gets mapped to a slot index in an internal array.</p>
+<p>The remaining engineering problem is what happens when two different keys hash to the same slot — a <strong>collision</strong>. Real hash tables handle this with strategies like open addressing (probe to a nearby free slot) or chaining (store a small list at that slot). These add a small constant amount of overhead, but critically, they don't scale with the total size of the dictionary — which is why lookups stay close to instant even as the dictionary grows.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Store key-value pairs in a list and scan linearly for a match, exactly like searching an unsorted list.</p>
+<p><strong>Algorithm:</strong>
+1. Iterate over each <code>(key, value)</code> pair.
+2. Compare the target key against the stored key.
+3. Return the value on a match; otherwise continue to the next pair.</p>
+<p><strong>Advantages:</strong>
+- Trivial to implement.
+- No hash function needed — works for any comparable type, including mutable ones like lists.</p>
+<p><strong>Disadvantages:</strong>
+- Lookup cost grows linearly with the number of items.
+- Every miss (searching for a key that doesn't exist) costs a full scan.</p>
+<p><strong>Complexity:</strong>
+- Time: O(n) per lookup, worst case.
+- Space: O(n) to store n pairs.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach is a <strong>hash table</strong>, which is what Python's <code>dict</code> is implemented as under the hood.</p>
+<p><strong>Step-by-step:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Key is passed to Python's built-in hash function, <code>hash(key)</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>The hash (a large integer) is reduced to an index within the table's current size (<code>hash % table_size</code>, conceptually)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Python checks the slot at that index</td>
+</tr>
+<tr>
+<td>4</td>
+<td>If empty, the key doesn't exist. If occupied and the stored key matches, return the value</td>
+</tr>
+<tr>
+<td>5</td>
+<td>If occupied by a <em>different</em> key (collision), probe to another slot using a defined sequence, and repeat step 4</td>
+</tr>
+</tbody>
+</table>
+<pre><code>Key &quot;bob&quot; → hash(&quot;bob&quot;) → some large integer → reduced to slot index 4
+Table:
+  [0] -----
+  [1] -----
+  [2] carol: 78
+  [3] -----
+  [4] bob: 85      &lt;-- found directly, no scanning
+  [5] alice: 92
+</code></pre>
+<p>Because computing a hash and indexing into an array are both constant-time operations, the whole lookup is constant-time <em>on average</em> — regardless of how many items are in the table.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">class SimpleHashTable:
+    &quot;&quot;&quot;A minimal hash table to illustrate the mechanism dict uses internally.&quot;&quot;&quot;
+
+    def __init__(self, size=8):
+        self.size = size
+        self.table = [[] for _ in range(size)]  # chaining for collisions
+
+    def _index(self, key):
+        return hash(key) % self.size
+
+    def insert(self, key, value):
+        bucket = self.table[self._index(key)]
+        for i, (k, _) in enumerate(bucket):
+            if k == key:
+                bucket[i] = (key, value)  # overwrite existing key
+                return
+        bucket.append((key, value))
+
+    def get(self, key):
+        bucket = self.table[self._index(key)]
+        for k, v in bucket:
+            if k == key:
+                return v
+        raise KeyError(key)
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>_index(key)</code> calls Python's built-in <code>hash()</code> on the key and reduces it into a valid slot number using modulo. This is the "compute the address" step.</li>
+<li><code>self.table</code> is a list of buckets rather than a list of single slots — this is <strong>chaining</strong>, one of the standard collision-resolution strategies. Each bucket can hold multiple <code>(key, value)</code> pairs that happened to hash to the same slot.</li>
+<li><code>insert</code> computes the target bucket, then checks whether the key already exists in that bucket (to support overwriting), otherwise appends a new pair.</li>
+<li><code>get</code> computes the same bucket and scans only <em>that bucket</em> — not the whole table — for a matching key.</li>
+</ul>
+<p>Note the key detail: even with collisions, you're scanning a small bucket, not the entire dataset. That's what keeps this fast even in the worst realistic case.</p>
+<h2>Dry Run</h2>
+<p>Using <code>SimpleHashTable(size=8)</code>:</p>
+<pre><code class="language-python">ht = SimpleHashTable()
+ht.insert(&quot;alice&quot;, 92)
+ht.insert(&quot;bob&quot;, 85)
+ht.insert(&quot;carol&quot;, 78)
+
+ht.get(&quot;bob&quot;)
+</code></pre>
+<ol>
+<li><code>hash("bob") % 8</code> → say this evaluates to <code>4</code>.</li>
+<li><code>self.table[4]</code> is checked — it contains <code>[("bob", 85)]</code>.</li>
+<li>The loop in <code>get</code> finds <code>k == "bob"</code> immediately and returns <code>85</code>.</li>
+</ol>
+<p>No comparison against <code>"alice"</code> or <code>"carol"</code> ever happens. Compare this to the brute-force list version, which would have checked <code>"alice"</code> first, found no match, then checked <code>"bob"</code>.</p>
+<h2>Complexity Analysis</h2>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Brute force (list)</th>
+<th>Hash table (dict)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lookup (average)</td>
+<td>O(n)</td>
+<td>O(1)</td>
+</tr>
+<tr>
+<td>Lookup (worst case)</td>
+<td>O(n)</td>
+<td>O(n)*</td>
+</tr>
+<tr>
+<td>Insert</td>
+<td>O(1) (append) / O(n) (no duplicates check)</td>
+<td>O(1) average</td>
+</tr>
+<tr>
+<td>Space</td>
+<td>O(n)</td>
+<td>O(n)</td>
+</tr>
+</tbody>
+</table>
+<p>*Worst case for a hash table occurs only under pathological collision patterns (e.g., every key hashing to the same slot), which is rare in practice and actively mitigated by Python's hash function design and table resizing.</p>
+<p>The O(1) average case holds because the number of items examined per lookup doesn't grow with the total size of the table — it only depends on the (typically very small) number of collisions in a single bucket.</p>
+<h2>Alternative Solutions</h2>
+<ul>
+<li><strong>Balanced binary search tree (e.g., a sorted structure):</strong> gives O(log n) lookups. Better worst-case guarantees than a naive hash table, but slower on average than proper hashing, and Python doesn't use this for <code>dict</code>.</li>
+<li><strong>Perfect hashing:</strong> guarantees O(1) worst case by designing a collision-free hash function for a known, fixed set of keys. Not practical for a general-purpose, mutable dictionary where keys are added dynamically.</li>
+</ul>
+<p>For a general-purpose, dynamically-sized mapping, open addressing/chaining hash tables (what Python actually uses) remain the standard choice.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty dictionary:</strong> <code>{}.get("x")</code> returns <code>None</code> (or raises <code>KeyError</code> with <code>[]</code> access) — no crash, no scan needed since there's nothing to scan.</li>
+<li><strong>Duplicate keys during construction:</strong> <code>{"a": 1, "a": 2}</code> silently keeps only the last value — dict keys are always unique.</li>
+<li><strong>Hash collisions:</strong> two unrelated keys can hash to the same slot; correctness is preserved through probing/chaining, only performance is (minimally) affected.</li>
+<li><strong>Using an unhashable type as a key:</strong> <code>{[1, 2]: "value"}</code> raises <code>TypeError: unhashable type: 'list'</code> immediately.</li>
+<li><strong>Very large dictionaries:</strong> Python resizes the underlying table as it grows, keeping the average lookup cost flat even at scale.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Assuming dict lookups are O(1) worst case.</strong> They're O(1) <em>average case</em> — pathological collisions can degrade this, though it's rare in practice.</li>
+<li><strong>Trying to use a list as a dictionary key.</strong> Lists are mutable, so their hash could change after insertion, breaking the table. Python blocks this outright.</li>
+<li><strong>Forgetting that dict key order matters for equality of custom objects.</strong> If you override <code>__eq__</code> without also overriding <code>__hash__</code>, your object becomes unhashable or behaves unpredictably as a key.</li>
+<li><strong>Confusing "dict is ordered" (insertion order, guaranteed since Python 3.7) with "dict is sorted."</strong> Iteration order reflects insertion, not any hash-based ordering.</li>
+<li><strong>Believing hashing eliminates all cost.</strong> Computing a hash isn't free — for very large or complex keys, hashing itself has cost, though it's still dramatically cheaper than a full scan.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Why is dictionary lookup O(1) on average, but not guaranteed O(1) worst case?</li>
+<li>What's the difference between open addressing and chaining for collision resolution?</li>
+<li>Why must dictionary keys be hashable, and what does "hashable" actually require (<code>__hash__</code> and <code>__eq__</code>)?</li>
+<li>How does a hash table decide when to resize, and what does resizing cost?</li>
+<li>Could you implement a hash table using only a fixed-size array?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Two Sum (LeetCode 1):</strong> the classic use case for trading an O(n²) brute-force pair search for an O(n) hash-map-based lookup.</li>
+<li><strong>Group Anagrams (LeetCode 49):</strong> uses a hash map keyed by sorted characters to group items in O(1) average insert/lookup per item.</li>
+<li><strong>Contains Duplicate (LeetCode 217):</strong> directly tests whether you reach for a hash set instead of a nested loop.</li>
+<li><strong>LRU Cache (LeetCode 146):</strong> combines a hash map with a doubly linked list to get O(1) get/put — a natural next step after understanding basic hashing.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>List lookups are O(n) because there's no relationship between a key's value and its storage position — you have to search.</li>
+<li>Dictionary lookups are O(1) on average because a hash function computes the storage position directly from the key — you jump instead of searching.</li>
+<li>Collisions are handled through chaining or open addressing, and they add negligible average cost.</li>
+<li>Dictionary keys must be immutable (hashable) because a key's hash must never change after it's stored, or Python could never find it again.</li>
+<li>This same principle — trade a little upfront work for fast lookups later — underlies hash sets, database indexes, and caching systems everywhere.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This breakdown pairs with the full video walkthrough, where you can see the list-scan and hash-jump compared side by side. Watch it here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <strong>Fun with Learning Technology</strong>, a series dedicated to opening up the black boxes developers rely on every day instead of just trusting them. Each episode picks one mechanism — a data structure, a language feature, a system design pattern — and breaks it down until the "magic" disappears and what's left is a clear, reusable mental model.</p>
+<h2>Call To Action</h2>
+<p>If this helped the mechanism finally click, the best way to support more breakdowns like it is simple: like the video on YouTube, subscribe to the channel, and subscribe to the Substack for deeper written companion pieces. Drop a comment with your guess on the concurrent-write question from the video — we'll cover it in a follow-up. And if you know another developer still repeating "dicts are fast" without knowing why, share this with them.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Why is a Python dict lookup O(1) instead of O(n) like a list?</summary><p>It computes a hash of the key to jump straight to a slot, instead of scanning every item like a list search.</p></details><details class='card2'><summary>Time complexity of average-case dict get/set?</summary><p>O(1) average — hashing gives direct slot access; worst case degrades to O(n) with heavy collisions.</p></details><details class='card2'><summary>Space complexity tradeoff dicts make for that speed?</summary><p>O(n) extra space for the hash table (slots), more memory than a plain list to enable constant-time lookup.</p></details><details class='card2'><summary>Trickiest gotcha: why can&#x27;t a list be a dict key?</summary><p>Keys must be immutable/hashable so their hash never changes; lists are mutable, so Python raises TypeError.</p></details><details class='card2'><summary>Dict lookup vs list lookup — key mental model difference?</summary><p>List: check items one by one until found (linear scan). Dict: hash key, jump directly to its slot (near-instant).</p></details><details class='card2'><summary>Interview follow-up: what happens when two keys hash to the same slot?</summary><p>A collision — Python probes for another open slot (open addressing), so worst-case lookup can degrade toward O(n).</p></details></div><h2 class='ph1' style='font-size:1.4rem'>Similar problems</h2><div class='grid'><a class='card' href='find-missing-elements-intermediate.html'><div class='body'><h3>Find Missing Elements — 🟡 Intermediate (2/3) — LeetCode Daily Python Solution (index as hash trick)</h3><span class='badge' style='background:#facc1522;color:#facc15'>🔑 Hash Maps</span></div></a><a class='card' href='python-lesson-10-dictionaries.html'><div class='body'><h3>Lesson 10: Why Is Dictionary Lookup Basically Instant?</h3><span class='badge' style='background:#facc1522;color:#facc15'>🔑 Hash Maps</span></div></a><a class='card' href='rank-transform-of-an-array.html'><div class='body'><h3>Rank Transform of an Array — Sort, Set &amp; Hash Map in Python (Explained Simply)</h3><span class='badge' style='background:#facc1522;color:#facc15'>🔑 Hash Maps</span></div></a></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
