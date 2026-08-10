@@ -1,0 +1,221 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>n8n Lesson 7: The Silent Killer Hiding In Your Curly Braces — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/n8n-lesson-07-expressions-basics
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/n8n-lesson-07-expressio">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/n8n-lesson-07-expressions-basics.html">
+<meta property="og:title" content="n8n Lesson 7: The Silent Killer Hiding In Your Curly Braces — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/n8n-lesson-07-expressions-basics
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/n8n-lesson-07-expressio">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>n8n Lesson 7: The Silent Killer Hiding In Your Curly Braces</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every automation tool eventually asks you to answer the same question: is this value fixed, or does it change every time the workflow runs? Get that answer wrong and you don't get a crash — you get something worse. A workflow that runs perfectly, produces no errors, and quietly does the wrong thing.</p>
+<p>This is the exact failure mode behind one of the most common n8n bugs: an email field with a hardcoded address that worked for the first signup and then silently misfired for every signup after it. Nothing broke. Nothing alerted anyone. The workflow just kept sending the wrong data to the wrong place, run after run.</p>
+<p>Understanding n8n's expression syntax — the <code>{{ }}</code> blocks, the <code>$json</code> variable, and its long-range cousin <code>$node</code> — is what separates someone who can drag nodes onto a canvas from someone who can actually trust their automations in production. It's also one of those topics that looks trivial on the surface ("it's just curly braces") but hides a real mental model underneath, the same kind of scoping logic you'd find in variable resolution in any programming language. If you've ever debugged a closure capturing the wrong variable, this will feel familiar.</p>
+<p>By the end of this article you'll know exactly how to turn a static field into a dynamic one, why <code>$json</code> means something different depending on which node you're standing in, when you need <code>$node</code> instead, and how to catch the single most common typo before it costs you twenty minutes of your life.</p>
+<h2>Problem Overview</h2>
+<p>Here's the scenario in plain terms: you're building a workflow that reacts to a new customer signup and sends them a welcome email. The first time you build this, it's tempting to just type an email address directly into the "To" field. It works, because you tested it with one specific person's data.</p>
+<p>The problem is that a typed-in value is permanent. It doesn't know that the next person who signs up has a different email address. The field isn't asking "what's the email of the person who just signed up" — it's saying "always use this exact string, forever, no matter what."</p>
+<p>What you actually want is a way to tell n8n: "grab the email address from the data that's flowing through this workflow right now." That's what an expression does. And once you understand how n8n decides what "right now" means at any given point in a workflow, this class of bug disappears entirely.</p>
+<h2>Example</h2>
+<p>Imagine three connected nodes:</p>
+<ul>
+<li><strong>Node A</strong> — a webhook that receives signup data: <code>{ "first_name": "Maya", "last_name": "Chen", "email": "maya@example.com" }</code></li>
+<li><strong>Node B</strong> — a node that adds a <code>signup_date</code> field to that same item</li>
+<li><strong>Node C</strong> — the "Send Email" node, where you configure the "To" field</li>
+</ul>
+<p>If you're configuring the "To" field in Node C and you write:</p>
+<pre><code>{{ $json.email }}
+</code></pre>
+<p>n8n resolves this to <code>maya@example.com</code> — but only because Node B passed that field along unchanged from Node A. If Node B had transformed or dropped the <code>email</code> field, <code>$json.email</code> in Node C would reflect Node B's output, not Node A's original data.</p>
+<p>Now imagine Node B doesn't carry the email field forward at all — maybe it only outputs <code>signup_date</code>. In that case, from Node C, <code>$json.email</code> returns <code>undefined</code>. To reach back to Node A directly regardless of what Node B did, you'd write:</p>
+<pre><code>{{ $node[&quot;Node A&quot;].json.email }}
+</code></pre>
+<p>That expression skips straight past Node B and pulls <code>email</code> directly from Node A's output, no matter how many nodes sit between them.</p>
+<h2>Intuition</h2>
+<p>The mental model that makes this click: think of <code>$json</code> as the word "this." When you say "this" while pointing at something on a table, you're not describing a memory of what used to be there — you're describing what's physically in front of you right now. In n8n, <code>$json</code> inside a node always means "the data sitting in this node right now," which is whatever the immediately preceding node just handed off.</p>
+<p>That's the key insight experienced automation builders internalize fast: <code>$json</code> is not a global variable that floats around the entire workflow holding one fixed value. It's <em>scoped</em> to wherever you're asking from. As an item moves from Node A to Node B to Node C, the meaning of <code>$json</code> slides along with it, resetting at every stop to mean "whatever landed here."</p>
+<p>This explains why the hardcoded email bug happens in the first place — someone treated a field like a sticky note (write once, stays forever) when they needed a window (<code>{{ }}</code>) that reopens and re-evaluates on every run.</p>
+<p>It also explains why you sometimes need more reach than <code>$json</code> gives you. If you're three nodes downstream and need a value from the very first node — not the immediate parent — <code>$json</code> can't see that far. It only ever sees what the previous node produced. That's the gap <code>$node</code> is built to close: it lets you name any earlier node by its exact name and pull its data directly, bypassing everything in between.</p>
+<h2>Brute Force Solution</h2>
+<p>There isn't really a "brute force" algorithm here in the traditional coding-interview sense, but there is a brute-force <em>habit</em> worth naming, because it's exactly what causes the bug in this lesson.</p>
+<p><strong>Idea:</strong> Type the value you need directly into the field, using whatever the current test data happens to be.</p>
+<p><strong>Algorithm:</strong>
+1. Look at the sample data during testing.
+2. Copy the value you see (an email, an ID, a name) directly into the field as plain text.
+3. Move on.</p>
+<p><strong>Advantages:</strong>
+- Works immediately, no syntax to learn.
+- Fine for one-off, single-use configuration values that genuinely never change (an API key stored in credentials, a fixed Slack channel name).</p>
+<p><strong>Disadvantages:</strong>
+- Breaks the moment the input data changes, which for anything user-facing is every single run.
+- Fails silently — no error, no warning, just wrong behavior.
+- Impossible to spot in a review unless you already know to check every field for hardcoded values.</p>
+<p><strong>Complexity:</strong> Not applicable in time/space terms, but in maintenance terms this is O(n) manual fixes, where n is the number of times someone new signs up and gets the wrong email.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach is to treat every field that should reflect live data as an expression, and to pick the right variable for how far back you need to reach.</p>
+<p><strong>Step 1 — Turn the field into an expression.</strong> Next to nearly every field in n8n is a small function icon. Clicking it switches the field from a fixed value into expression mode — the border typically changes color to confirm it's now live.</p>
+<p><strong>Step 2 — Open the expression with <code>{{ }}</code>.</strong> Everything inside the double curly braces is evaluated fresh on every execution as a small JavaScript snippet.</p>
+<p><strong>Step 3 — Decide how far back you need to reach.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>Use</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>You need data from the node immediately before this one</td>
+<td><code>$json.fieldName</code></td>
+<td>Shorter, and it's really just a convenient shortcut for referencing the immediate parent</td>
+</tr>
+<tr>
+<td>You need data from a node two or more steps back</td>
+<td><code>$node["Node Name"].json.fieldName</code></td>
+<td><code>$json</code> only ever sees the immediate parent; <code>$node</code> names any earlier node directly</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Step 4 — Verify with the live preview.</strong> Directly beneath the expression input, n8n shows the resolved value using real data from the last execution. This is the single most underused feature in the editor, and it's what catches typos before they become production bugs.</p>
+<p><strong>Step 5 — Combine expressions when needed.</strong> A field isn't limited to one expression. You can write <code>{{ $json.first_name }} {{ $json.last_name }}</code> in the same field and n8n stitches the results into one string — useful for building full names, combined messages, or composite identifiers.</p>
+<h2>Python Code</h2>
+<p>n8n expressions run in JavaScript inside the tool itself, but the underlying resolution logic — "look up a field on the current item, or reach back to a named earlier step" — is worth modeling in Python, since it's the same pattern you'll implement anytime you're building a pipeline with scoped context per stage.</p>
+<pre><code class="language-python">from dataclasses import dataclass, field
+
+
+@dataclass
+class NodeOutput:
+    &quot;&quot;&quot;Represents the data produced by a single workflow node.&quot;&quot;&quot;
+    name: str
+    json_data: dict = field(default_factory=dict)
+
+
+class WorkflowContext:
+    &quot;&quot;&quot;
+    Mimics n8n's expression scoping: $json resolves against the
+    immediately preceding node, while $node resolves against any
+    named node executed earlier in the chain.
+    &quot;&quot;&quot;
+
+    def __init__(self):
+        self._history: list[NodeOutput] = []
+
+    def run_node(self, name: str, json_data: dict) -&gt; NodeOutput:
+        output = NodeOutput(name=name, json_data=json_data)
+        self._history.append(output)
+        return output
+
+    def current_json(self, field_name: str):
+        &quot;&quot;&quot;Equivalent to $json.fieldName — looks at the last executed node.&quot;&quot;&quot;
+        if not self._history:
+            raise LookupError(&quot;No node has run yet&quot;)
+        return self._history[-1].json_data.get(field_name)
+
+    def node(self, name: str, field_name: str):
+        &quot;&quot;&quot;Equivalent to $node[&quot;Name&quot;].json.fieldName — reaches back by name.&quot;&quot;&quot;
+        for output in self._history:
+            if output.name == name:
+                return output.json_data.get(field_name)
+        raise LookupError(f&quot;No node named {name!r} has run&quot;)
+
+
+def demo():
+    ctx = WorkflowContext()
+    ctx.run_node(&quot;Node A&quot;, {&quot;email&quot;: &quot;maya@example.com&quot;, &quot;first_name&quot;: &quot;Maya&quot;})
+    ctx.run_node(&quot;Node B&quot;, {&quot;signup_date&quot;: &quot;2026-08-10&quot;})  # email dropped here
+    ctx.run_node(&quot;Node C&quot;, {})
+
+    # $json in Node C sees Node B's output only — no email field
+    assert ctx.current_json(&quot;email&quot;) is None
+
+    # $node reaches back to Node A directly, skipping Node B
+    assert ctx.node(&quot;Node A&quot;, &quot;email&quot;) == &quot;maya@example.com&quot;
+
+    print(&quot;All assertions passed.&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    demo()
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>NodeOutput</code> is a small record type representing what one node produced — its name and its resulting data. This mirrors n8n's internal model where every node execution carries its own JSON payload.</li>
+<li><code>WorkflowContext._history</code> is an ordered list of every node that has run so far, in execution order. This is what makes "reach back to an earlier node" possible at all — nothing is discarded.</li>
+<li><code>run_node</code> simulates a node executing and appending its output to history, the same way n8n passes an item from one node to the next.</li>
+<li><code>current_json</code> implements <code>$json</code> semantics: it always looks at <code>self._history[-1]</code>, the most recently executed node. It has no concept of anything further back — exactly like the real <code>$json</code> variable.</li>
+<li><code>node</code> implements <code>$node["Name"]</code> semantics: it searches the full history by name, so it can retrieve data from any point in the chain regardless of how many nodes ran afterward.</li>
+<li>The <code>demo()</code> function is a self-check: it proves that <code>current_json</code> correctly returns <code>None</code> once an upstream field is dropped, and that <code>node</code> still finds it by going directly to the source.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Walking through the <code>demo()</code> function step by step:</p>
+<ol>
+<li><code>ctx.run_node("Node A", {...})</code> — history is now <code>[Node A]</code>. Node A's data includes <code>email</code> and <code>first_name</code>.</li>
+<li><code>ctx.run_node("Node B", {"signup_date": "..."})</code> — history is now <code>[Node A, Node B]</code>. Node B's output does <strong>not</strong> include <code>email</code>; it only carries <code>signup_date</code> forward.</li>
+<li><code>ctx.run_node("Node C", {})</code> — history is now <code>[Node A, Node B, Node C]</code>. Node C produces no fields of its own yet.</li>
+<li><code>ctx.current_json("email")</code> — this checks <code>self._history[-1]</code>, which is Node C's empty dict. <code>email</code> isn't there, so it returns <code>None</code>. This mirrors what you'd see in the live preview as <code>undefined</code> when <code>$json.email</code> is used in a field on Node C, given that Node B never forwarded it.</li>
+<li><code>ctx.node("Node A", "email")</code> — this ignores position entirely and searches by name, finding Node A directly. It returns <code>maya@example.com</code>.</li>
+<li>Both assertions pass, confirming the scoping behavior matches n8n's actual <code>$json</code> vs <code>$node</code> distinction.</li>
+</ol>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong><code>current_json</code></strong>: O(1) time — it only ever inspects the last element of the history list. Space is O(1) beyond the existing history.</li>
+<li><strong><code>node</code></strong>: O(n) time in the worst case, where n is the number of nodes executed so far, since it may need to scan the full history to find a match by name. Space is O(1) beyond the existing history.</li>
+<li><strong>Overall workflow context</strong>: O(n) space, where n is the number of nodes executed, since every node's output is retained for the lifetime of the run. This matches n8n's actual behavior — it keeps prior node outputs available precisely so <code>$node</code> lookups work no matter how far back they reach.</li>
+</ul>
+<p>These are correct because the underlying requirement is exactly this: <code>$json</code> needs only the most recent state (constant-time lookup), while <code>$node</code> needs the ability to address any prior state by identity (linear-time lookup by name, bounded by however many nodes have run).</p>
+<h2>Alternative Solutions</h2>
+<p>A reasonable alternative in n8n itself — rather than in the modeling code above — is using a <strong>Set</strong> or <strong>Edit Fields</strong> node earlier in the chain to explicitly carry forward any fields you'll need later, rather than relying on <code>$node</code> to reach back through the whole chain. This trades a slightly longer workflow for expressions that only ever need <code>$json</code>, which some teams prefer because it keeps every field lookup local and easy to reason about without knowing the full upstream history. The tradeoff: more nodes to maintain, versus fewer but more far-reaching expressions.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty input</strong>: If the triggering node produces no data at all (e.g., a webhook with an empty body), <code>$json.anything</code> resolves to <code>undefined</code> rather than throwing — this is the exact same silent-failure behavior as the typo case, so treat missing-field checks with the same care.</li>
+<li><strong>Duplicate node names</strong>: n8n requires unique node names, but if you rename a node after writing a <code>$node["OldName"]</code> expression, that expression breaks silently on next run — always re-check expressions after renaming nodes.</li>
+<li><strong>Minimum case — single node workflow</strong>: <code>$json</code> and <code>$node["OnlyNode"]</code> resolve identically since there's nothing else to distinguish them from.</li>
+<li><strong>Maximum case — long chains</strong>: In workflows with dozens of nodes, prefer <code>$node</code> sparingly and consider explicitly forwarding critical fields, since deeply nested <code>$node</code> references become hard to audit visually.</li>
+<li><strong>Fields with the same name at different nodes</strong>: If both Node A and Node B produce a field called <code>status</code> with different values, <code>$json.status</code> in Node C always reflects Node B's version, not Node A's — a frequent source of confusion when refactoring workflows.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Leaving a field as a fixed value when it needs to track live data</strong> — the exact bug this lesson opens with.</li>
+<li><strong>Typos in field names inside expressions</strong> (<code>emial</code> instead of <code>email</code>) — n8n returns <code>undefined</code> with no error, so the mistake surfaces downstream in a way that looks unrelated to the actual cause.</li>
+<li><strong>Assuming <code>$json</code> can reach arbitrarily far back</strong> — it only ever reflects the immediately preceding node's output.</li>
+<li><strong>Skipping the live preview panel</strong> — trusting memory of a field name instead of glancing at the resolved value before running the whole workflow.</li>
+<li><strong>Forgetting to switch a field into expression mode first</strong> — typing <code>{{ $json.email }}</code> into a plain fixed field just stores it as literal text instead of evaluating it.</li>
+<li><strong>Referencing a node by name after renaming it</strong> — <code>$node["Old Name"]</code> silently fails to resolve once the node has been renamed.</li>
+<li><strong>Not checking whether an intermediate node dropped a field</strong> — assuming data "just flows through" when a transform node in between may have filtered it out.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you explain variable scoping in a multi-step pipeline to someone with no programming background?</li>
+<li>What's the tradeoff between referencing data by relative position (like <code>$json</code>) versus by explicit identity (like <code>$node["Name"]</code>)?</li>
+<li>How would you design a system to warn users when an expression references a field that doesn't exist in the current data, instead of failing silently?</li>
+<li>If you were building the expression preview feature from scratch, what data would you need available at edit time to make it accurate?</li>
+<li>How does this scoping problem compare to variable shadowing or closures in general-purpose programming languages?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 146 — LRU Cache</strong>: Similar in spirit because it requires tracking "what's most recent" (like <code>$json</code>) versus needing to look up arbitrary earlier entries by key (like <code>$node</code>), with different complexity tradeoffs for each access pattern.</li>
+<li><strong>LeetCode 232 — Implement Queue using Stacks</strong>: Reinforces the idea of state changing shape as it moves through sequential processing stages, similar to how an item's <code>$json</code> shape changes as it moves node to node.</li>
+<li><strong>LeetCode 705 — Design HashMap</strong>: Directly relevant to how <code>$node</code>'s name-based lookup would actually be implemented efficiently at scale, using a hash-based structure instead of a linear scan.</li>
+<li><strong>System design: event pipelines / pub-sub systems</strong>: The same "what does 'current context' mean at each processing stage" question shows up in any streaming or event-driven architecture, not just no-code tools.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>A fixed field freezes a value once; an expression recalculates it on every run.</li>
+<li><code>$json</code> always means "the data at this exact node, right now" — it's scoped to your current position, not global to the workflow.</li>
+<li>To reach further back than the immediate parent node, use <code>$node["Name"]</code> to pull data directly from any earlier step.</li>
+<li>n8n fails silently on missing fields — always trust the live preview over memory when writing expressions.</li>
+<li>You can combine multiple expressions in a single field to build composite values like full names or messages.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This lesson is easier to absorb watching it happen live — seeing the expression editor, the live preview, and the exact moment <code>$json</code> resets between nodes. Watch the full walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This article is part of <strong>Fun with Learning Technology</strong>, a series built around teaching real automation, backend, and software engineering concepts the way a senior engineer would explain them to a teammate — grounded in the intuition behind why something works, not just the steps to make it work. Whether the topic is n8n, Python, SQL, or classic interview algorithms, the goal is always the same: build a mental model strong enough that you can solve the next unfamiliar problem on your own.</p>
+<h2>Call To Action</h2>
+<p>If this cleared up something that's been quietly confusing you in n8n, do three things: like the video on YouTube so more builders see it, subscribe to the channel for the rest of the series, and subscribe to the Substack newsletter for written breakdowns like this one delivered straight to your inbox. Drop a comment with the workflow bug that cost you the most debugging time — there's a good chance it'll become the next lesson. And if this saved you from shipping a hardcoded field, share it with the teammate who's about to make the same mistake.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>n8n: {{ }} in a field means what?</summary><p>Expression mode — field value is evaluated as JavaScript, not read as literal text.</p></details><details class='card2'><summary>What does $json refer to inside an expression?</summary><p>The JSON data of the current item on the current node&#x27;s input — changes meaning per node.</p></details><details class='card2'><summary>Why does $json &#x27;keep changing meaning&#x27; across nodes?</summary><p>$json always resolves relative to the node you&#x27;re in, so the same expression pulls different data depending on placement.</p></details><details class='card2'><summary>How do you pull data from a node further back than the previous one?</summary><p>Use $node[&quot;Node Name&quot;].json instead of $json, referencing the node explicitly by name.</p></details><details class='card2'><summary>Common &#x27;ticking time bomb&#x27; bug with expressions?</summary><p>Field left in plain-text mode while typing {{ }} — syntax never evaluates, silently passes literal string downstream.</p></details><details class='card2'><summary>Static text field vs expression field — key difference?</summary><p>Static: fixed value every run. Expression: recalculated per execution from live upstream item data.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
