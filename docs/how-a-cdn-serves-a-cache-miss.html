@@ -1,0 +1,226 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>One Round Trip Explains Every Cache Miss — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/how-a-cdn-serves-a-cache-miss
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/how-a-cdn-serves-a-cache-m">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/how-a-cdn-serves-a-cache-miss.html">
+<meta property="og:title" content="One Round Trip Explains Every Cache Miss — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/how-a-cdn-serves-a-cache-miss
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/how-a-cdn-serves-a-cache-m">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>One Round Trip Explains Every Cache Miss</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>If you've ever wondered why the same website loads instantly sometimes and crawls other times, the answer usually isn't your internet connection — it's caching. Specifically, it's the difference between a cache hit and a cache miss on a CDN (Content Delivery Network).</p>
+<p>This topic shows up constantly in system design interviews because it tests something deeper than trivia about CDNs. It tests whether you understand the fundamental tradeoff behind every caching system ever built: you can't store everything everywhere, so you have to accept that someone, somewhere, pays the cost of a miss. Once you understand that tradeoff at the CDN level, you'll recognize it in browser caches, database query caches, and application-level caches too. It's one idea wearing a lot of different hats.</p>
+<h2>Problem Overview</h2>
+<p>Here's the scenario: a user clicks a link to load a web page or asset — an image, a script, a video segment, doesn't matter. That request doesn't go straight to the company's main server. Instead, it lands on the nearest CDN edge server, a machine geographically close to the user, whose entire job is to serve content fast by keeping local copies of files.</p>
+<p>The edge server checks its local cache. Two outcomes are possible:</p>
+<ul>
+<li><strong>Cache hit</strong> — the file is already there. It gets served immediately.</li>
+<li><strong>Cache miss</strong> — the file isn't there. The edge server has to go get it from the origin server, the actual source of truth, which might be thousands of miles away.</li>
+</ul>
+<p>The question this problem is really asking is: what happens during that miss, why can't it be avoided entirely, and why doesn't the "obvious" fix (just cache everything everywhere) work?</p>
+<h2>Example</h2>
+<p>Imagine a product page on an e-commerce site. Nobody in Tokyo has requested that specific page in the last six hours. The nearest edge server to Tokyo has since evicted or never stored that file.</p>
+<p>A user in Tokyo clicks the link.</p>
+<ol>
+<li>Request hits the Tokyo edge server.</li>
+<li>Edge checks its cache — not found.</li>
+<li>Edge forwards the request to the origin server (say, based in the US).</li>
+<li>Origin builds/returns the response.</li>
+<li>Response travels back across the network to the Tokyo edge.</li>
+<li>Edge serves it to the user <strong>and</strong> stores a copy locally.</li>
+</ol>
+<p>That entire round trip — Tokyo to origin and back — is why this particular request feels slow. Thirty seconds later, a second user in Tokyo clicks the same link. This time the edge already has the file. Step 2 succeeds immediately. No trip to origin. The response is close to instant.</p>
+<p>Same link, same content, two completely different experiences — because of timing, not luck.</p>
+<h2>Intuition</h2>
+<p>The mental model that makes this click: an edge server is not a source of truth, it's a local convenience copy. Think of a public library branch versus a central archive. Your neighborhood branch doesn't have every book ever published — it has what people nearby actually ask for. If you request something rare, the branch has to send away for it. Once it arrives, they keep a copy on the shelf, because odds are somebody else in the neighborhood will want it soon too.</p>
+<p>An experienced engineer reasoning about this system asks two questions in order:</p>
+<ol>
+<li><strong>Where does data live closest to the requester, and what happens when it's not there?</strong> That's the miss path — go get it from the authoritative source.</li>
+<li><strong>What do you do with the response once you have it, so the next request doesn't pay the same cost?</strong> That's the store-on-the-way-back step, which turns future misses into hits.</li>
+</ol>
+<p>The tradeoff falls out naturally once you accept a constraint: storage at the edge is limited, and there are thousands of edge locations. You cannot mirror the entire internet at every location. So the system has to be reactive — it learns what's popular in a given region by watching what gets requested, and it caches based on actual demand rather than trying to predict everything in advance.</p>
+<h2>Brute Force Solution</h2>
+<p>The "brute force" approach to this design problem is: <strong>replicate everything, everywhere, all the time.</strong></p>
+<p><strong>Idea:</strong> Every edge server holds a full copy of every file that exists on the origin. No cache miss is ever possible because nothing is ever missing.</p>
+<p><strong>Algorithm:</strong>
+- On any content update at the origin, push a copy to every edge location immediately.
+- Every read request is served locally, no exceptions.</p>
+<p><strong>Advantages:</strong>
+- Zero latency from the "miss" path — every request is a hit.
+- Simple mental model, no eviction logic needed.</p>
+<p><strong>Disadvantages:</strong>
+- Storage cost scales with (number of edge locations) × (total size of all content), which is enormous and largely wasted, since most content isn't requested at most locations.
+- Every write requires propagating data globally before it's even been asked for, adding write-side latency and network cost for content nobody may ever request in that region.
+- Doesn't scale as content volume grows; the internet's total data size vastly exceeds any realistic edge storage budget.</p>
+<p><strong>Time complexity:</strong> O(1) per read (always a hit), but O(E) per write, where E is the number of edge locations — you pay the propagation cost for every single edge, every single time, regardless of demand.</p>
+<p><strong>Space complexity:</strong> O(E × D), where D is total data size — the killer constraint that makes this approach impossible at real-world scale.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach is <strong>demand-driven caching</strong>: only store a file at an edge location after someone at that location has actually requested it, and let that action define what deserves a spot in the cache.</p>
+<p>Here's the flow, step by step:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Request arrives at nearest edge server</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Edge checks local cache for the file</td>
+</tr>
+<tr>
+<td>3a</td>
+<td><strong>Hit:</strong> serve immediately from edge</td>
+</tr>
+<tr>
+<td>3b</td>
+<td><strong>Miss:</strong> edge forwards request to origin</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Origin builds/retrieves the response</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Response travels back to edge</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Edge serves response to user <strong>and</strong> stores a copy locally</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Future requests for that file at this edge become hits</td>
+</tr>
+</tbody>
+</table>
+<p>The elegance here is that the system doesn't need to know in advance what's popular where. Each cache miss is simultaneously a failure for the requester (they pay the round trip) and useful signal for the system (this file matters here, keep it around). The cost of the miss is paid once, and every subsequent request in that region benefits.</p>
+<p>Most CDNs layer additional logic on top of this — TTLs (time-to-live) that expire stale entries, LRU/LFU eviction when storage fills up, and cache invalidation when the origin content changes — but the round-trip-then-store pattern above is the core mechanism underneath all of it.</p>
+<h2>Python Code</h2>
+<p>While CDNs are distributed infrastructure, not a single Python program, the core mechanism — check cache, fall back to origin, store on the way back — is exactly the same pattern used in a local caching layer. Here's a minimal, faithful simulation:</p>
+<pre><code class="language-python">import time
+
+
+class Origin:
+    &quot;&quot;&quot;Simulates the authoritative source server.&quot;&quot;&quot;
+
+    def fetch(self, key: str) -&gt; str:
+        # Simulate real network + processing latency to a distant origin.
+        time.sleep(0.3)
+        return f&quot;content-for-{key}&quot;
+
+
+class EdgeCache:
+    &quot;&quot;&quot;Simulates a single CDN edge node.&quot;&quot;&quot;
+
+    def __init__(self, origin: Origin):
+        self.origin = origin
+        self.store: dict[str, str] = {}
+
+    def get(self, key: str) -&gt; tuple[str, bool]:
+        &quot;&quot;&quot;Return (content, was_cache_hit).&quot;&quot;&quot;
+        if key in self.store:
+            return self.store[key], True
+
+        # Cache miss: full round trip to origin.
+        content = self.origin.fetch(key)
+        self.store[key] = content
+        return content, False
+
+
+def demo() -&gt; None:
+    edge = EdgeCache(Origin())
+
+    # First request: cache miss, pays the round trip.
+    content, hit = edge.get(&quot;product-page-42&quot;)
+    assert hit is False
+    assert content == &quot;content-for-product-page-42&quot;
+
+    # Second request for the same key: cache hit, no round trip.
+    content, hit = edge.get(&quot;product-page-42&quot;)
+    assert hit is True
+    assert content == &quot;content-for-product-page-42&quot;
+
+    print(&quot;cache miss then hit behaves correctly&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    demo()
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>Origin.fetch</code> stands in for the real backend server, deliberately slow (<code>time.sleep(0.3)</code>) to represent network distance and processing time.</li>
+<li><code>EdgeCache.store</code> is a plain dictionary representing the edge node's local cache — in a real CDN this would be a distributed key-value store with eviction policies, but the interface is the same.</li>
+<li><code>EdgeCache.get</code> is the entire algorithm in five lines: check local store, return early on hit, otherwise fetch from origin, save it, then return it.</li>
+<li>The <code>bool</code> return value exists purely so callers (and the demo) can observe whether a given request was a hit or a miss — real CDNs expose this as response headers like <code>X-Cache: HIT</code> or <code>MISS</code>.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Request 1: <code>edge.get("product-page-42")</code>
+- <code>"product-page-42"</code> not in <code>self.store</code> → miss.
+- Calls <code>origin.fetch(...)</code>, waits ~0.3s, gets <code>"content-for-product-page-42"</code>.
+- Stores it in <code>self.store["product-page-42"]</code>.
+- Returns <code>(content, False)</code>.</p>
+<p>Request 2: <code>edge.get("product-page-42")</code>
+- <code>"product-page-42"</code> <strong>is</strong> in <code>self.store</code> → hit.
+- Returns immediately, no call to <code>origin.fetch</code>, no delay.
+- Returns <code>(content, True)</code>.</p>
+<p>This mirrors exactly what happened with the two Tokyo visitors: the first pays the origin round trip, the second gets an instant response because the first one already did the work.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> O(1) for a cache hit (dictionary lookup). A cache miss costs O(1) locally plus the network round-trip time to the origin, which in practice dominates — this is why misses feel slow and hits feel instant.</li>
+<li><strong>Space:</strong> O(k) at each edge, where k is the number of distinct keys currently cached at that location — bounded by the edge's storage capacity, not by the total size of all content that exists.</li>
+<li>These bounds are correct because the cache never grows past what's actually been requested at that location, and lookups are direct key access rather than any kind of search.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p><strong>Push-based pre-warming:</strong> instead of waiting for a miss, predict likely-popular content (based on trending signals, scheduled releases, or known traffic patterns) and push it to edges in advance. This eliminates the <em>first</em> miss for predicted content, but adds prediction complexity and still can't cover the long tail of rarely-requested files — those still rely on demand-driven caching. In practice, CDNs often combine both: predictive pre-warming for known high-traffic events, and lazy demand-driven caching for everything else.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty cache (cold edge node):</strong> every request is a miss until the cache warms up — this is why a brand-new edge location, or one after a cache flush, temporarily behaves slower for everyone.</li>
+<li><strong>Duplicate near-simultaneous requests for the same missing key:</strong> without request coalescing, two users hitting a cold cache at nearly the same moment can both trigger separate origin fetches ("cache stampede"); real CDNs typically lock or queue the second request behind the first.</li>
+<li><strong>Content that changes at the origin:</strong> a stale cached copy can be served after the source data has updated, unless TTLs or invalidation are in place.</li>
+<li><strong>Extremely large files:</strong> may exceed practical caching thresholds and get treated differently (e.g., streamed instead of fully cached).</li>
+<li><strong>Content marked non-cacheable</strong> (personalized responses, authenticated pages): should bypass the cache entirely and always hit the origin — caching these by mistake can leak one user's data to another.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Assuming a cache miss means something is broken — it's expected, normal behavior for infrequently requested content.</li>
+<li>Believing "cache everything everywhere" is a real fix, without accounting for storage cost at scale.</li>
+<li>Forgetting to store the response after fetching it from origin, which turns every future request into a miss again.</li>
+<li>Ignoring TTL/invalidation, leading to stale content being served indefinitely.</li>
+<li>Not handling concurrent misses for the same key, causing duplicate origin load (thundering herd/cache stampede).</li>
+<li>Treating CDN caching as unrelated to browser caching or database caching, when they're the same underlying pattern.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you handle a cache stampede when many users request the same missing key simultaneously?</li>
+<li>How do you decide what TTL to assign to different types of content?</li>
+<li>How would you invalidate a cached file across all edge locations when the origin content changes?</li>
+<li>What's the difference between cache-aside, write-through, and write-back caching strategies?</li>
+<li>How would you measure and improve a CDN's cache hit ratio?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LRU Cache (LeetCode 146):</strong> implementing the eviction policy an edge server needs once storage fills up.</li>
+<li><strong>Design a Rate Limiter:</strong> another system design problem centered on tracking and reacting to per-key state under load.</li>
+<li><strong>Design a Key-Value Store:</strong> the data-structure backbone behind any cache implementation.</li>
+<li><strong>Two Sum (as a warm-up for hash map fluency):</strong> the same O(1) lookup principle that makes cache hits fast underlies this classic problem.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>A cache miss isn't a failure — it's the mechanism by which a cache learns what's worth storing. The edge-to-origin round trip is the price paid once so that every subsequent nearby request becomes instant. Trying to eliminate misses entirely by caching everything everywhere doesn't scale; the real solution is accepting that misses happen and making sure each one pays for itself by warming the cache for the next request. This same pattern — check local, fall back to source, store on the way back — shows up in browser caches, database query caches, and any layered system with a fast local tier and a slow authoritative source.</p>
+<h2>Watch the Video</h2>
+<p>For the full visual walkthrough of this concept, including the Tokyo example animated step by step, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This article is part of <strong>Fun with Learning Technology</strong>, a series that takes concepts that feel like backend magic — caching, networking, distributed systems, the stuff that quietly runs the internet — and breaks them down piece by piece until they're intuitive rather than intimidating.</p>
+<h2>Call To Action</h2>
+<p>If this helped the concept click, give the video a like on YouTube and subscribe for more breakdowns like this one. Subscribe to the Substack newsletter for deeper written explainers that go beyond what fits in a video. Drop a comment with a topic you want broken down next, and share this with a fellow developer who's still cursing at that spinner.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>CDN cache miss: what&#x27;s the tell that a request took this path?</summary><p>Extra latency/round trip to origin plus a MISS header — edge had no copy so it fetched, served, and cached it.</p></details><details class='card2'><summary>Time cost of a cache miss vs a hit?</summary><p>Miss: origin round trip (~edge-to-origin RTT + origin processing). Hit: single edge lookup, no origin call.</p></details><details class='card2'><summary>Space tradeoff a CDN makes on cache misses?</summary><p>Caches response at the edge after fetching, trading storage capacity for fewer future origin round trips.</p></details><details class='card2'><summary>Trickiest bug: naive fix for &#x27;edge is stuck&#x27; on a miss?</summary><p>Don&#x27;t let every miss hit origin directly — concurrent misses for the same key can stampede origin; coalesce requests instead.</p></details><details class='card2'><summary>Cache miss vs cache hit — key distinguishing behavior?</summary><p>Hit serves straight from edge store; miss requires origin round trip before serving and storing the response.</p></details><details class='card2'><summary>Interview follow-up: how prevent &#x27;obvious fix doesn&#x27;t scale&#x27; issue?</summary><p>Use request coalescing/locking so only one origin fetch happens per key during simultaneous misses, others wait and reuse it.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
