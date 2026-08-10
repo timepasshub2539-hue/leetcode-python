@@ -1,0 +1,230 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1510. Stone Game IV | LeetCode Daily Python Solution (The One Line That Flips the Winner) — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/stone-game-iv
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/stone-game-iv
+
+Chapters:
+0:00 The Problem:">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/stone-game-iv.html">
+<meta property="og:title" content="1510. Stone Game IV | LeetCode Daily Python Solution (The One Line That Flips the Winner) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/stone-game-iv
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/stone-game-iv
+
+Chapters:
+0:00 The Problem:">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>1510. Stone Game IV | LeetCode Daily Python Solution (The One Line That Flips the Winner)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Game-theory problems have a reputation for scaring people off before they even read the constraints. The moment a problem says "two players take turns" and "assume optimal play," a lot of engineers mentally check out, expecting minimax trees, alpha-beta pruning, or something that belongs in a chess engine rather than a coding interview.</p>
+<p>Stone Game IV (LeetCode 1510) is the perfect problem to break that instinct. It looks like it needs deep lookahead across every possible sequence of moves. It doesn't. Once you see the shape of the problem, it collapses into a single boolean fact per state, computed with a plain list and a loop.</p>
+<p>This matters beyond the problem itself. Turn-based win/lose games show up constantly in interviews — Nim variants, coin games, subtraction games — and they almost all reduce to the same idea: a state is winning if you can move to <em>any</em> state where your opponent loses. Learn this pattern once here, and you'll recognize it instantly the next time it's wearing a different costume.</p>
+<h2>Problem Overview</h2>
+<p>Alice and Bob play a game with a pile of <code>n</code> stones. Alice always moves first. On each turn, the player to move must remove a <strong>perfect square</strong> number of stones from the pile — 1, 4, 9, 16, and so on — as long as that many stones are actually available.</p>
+<p>If it's your turn and there is no perfect square you can legally remove (which only happens when the pile is empty), you lose.</p>
+<p>Given <code>n</code>, the task is to determine whether Alice wins, assuming both players always play optimally.</p>
+<p>Constraints put <code>n</code> up to 100,000, which immediately rules out brute-force tree exploration and pushes us toward a solution that reuses work instead of recomputing it.</p>
+<h2>Example</h2>
+<p><strong>Example 1: n = 1</strong>
+Alice removes 1 stone (1² = 1). The pile is empty. Bob has no move and loses.
+<strong>Output: Alice wins.</strong></p>
+<p><strong>Example 2: n = 2</strong>
+Alice's only legal move is to remove 1 stone, leaving 1 stone for Bob. Bob then removes that 1 stone, and Alice is left with nothing.
+<strong>Output: Alice loses.</strong> Two stones is a trap — there's no way around it.</p>
+<p><strong>Example 3: n = 4</strong>
+4 is itself a perfect square (2²). Alice removes all 4 stones in one move, leaving Bob with an empty pile.
+<strong>Output: Alice wins.</strong></p>
+<h2>Intuition</h2>
+<p>Start by playing small cases by hand, because the pattern reveals itself faster than any formula:</p>
+<ul>
+<li><strong>n = 0</strong>: The player to move has no stones and no legal move. They lose automatically.</li>
+<li><strong>n = 1</strong>: Take 1, leave 0 for the opponent. Since the opponent now faces a losing position, you win.</li>
+<li><strong>n = 2</strong>: Your only move takes 1, leaving 1 stone — a winning position for whoever faces it. So you lose.</li>
+<li><strong>n = 3</strong>: Take 1, leave 2. We just showed 2 is a losing position for whoever's turn it is. So you win.</li>
+<li><strong>n = 4</strong>: Take 4 outright. You win immediately.</li>
+</ul>
+<p>Notice the pattern forming: every result depends entirely on smaller results we've already worked out. That's the signal that we're looking at an <strong>optimal substructure</strong> problem — the kind dynamic programming is built for.</p>
+<p>Here's the rule, stated precisely: <strong>a pile size is a winning position if there exists at least one perfect square you can remove that leaves your opponent facing a losing position.</strong> You don't need every move to work in your favor. You only need one. Call this the "loser flip" — your entire job each turn is hunting for a move that flips your opponent into the losing seat.</p>
+<p>This means we only need to track one fact per pile size: true if the player about to move wins, false if they lose. Everything else falls out of that single bit, checked against smaller pile sizes that are already solved.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea</strong>: Recursively try every legal square move from the current pile size, and recurse into whichever pile size remains. If <em>any</em> branch leads to a win, the current state is a win.</p>
+<p><strong>Algorithm</strong>:
+1. Base case: <code>n == 0</code> means the current player loses.
+2. Try every square <code>j*j &lt;= n</code>.
+3. Recurse on <code>n - j*j</code>. If that recursive call returns <code>False</code> (opponent loses), the current state is <code>True</code>.
+4. If no square move produces a losing state for the opponent, the current state is <code>False</code>.</p>
+<p><strong>Advantages</strong>: Trivial to reason about, directly mirrors the problem statement, easy to get right on the first try.</p>
+<p><strong>Disadvantages</strong>: Massive redundant work. The same smaller pile size (say, 5) gets recomputed every time it's reachable from multiple larger states, and the recursion tree grows exponentially. For <code>n</code> up to 100,000, this version simply never finishes.</p>
+<p><strong>Complexity</strong>: Time is exponential in the worst case, roughly O(2^√n) style blowup depending on branching. Space is O(n) for the call stack depth in the worst case.</p>
+<h2>Optimal Solution</h2>
+<p>The fix is exactly what you'd expect once you spot the repeated subproblems: cache the answer for every pile size the first time you compute it, then reuse it forever after.</p>
+<p>We build a table, <code>dp</code>, where <code>dp[i]</code> is <code>True</code> if the player about to move wins when <code>i</code> stones remain.</p>
+<ul>
+<li><code>dp[0] = False</code> — no stones, no move, automatic loss.</li>
+<li>For every <code>i</code> from <code>1</code> to <code>n</code>: try every perfect square <code>j*j &lt;= i</code>. If <code>dp[i - j*j]</code> is <code>False</code> for any such <code>j</code>, then <code>dp[i] = True</code> — you've found a move that hands your opponent a losing position. The moment you find one, stop checking; you don't need more than one.</li>
+<li>If no square move produces a <code>False</code> state, <code>dp[i]</code> stays <code>False</code>.</li>
+</ul>
+<p>We fill this table <strong>left to right</strong>, from small pile sizes to large. That ordering guarantees that by the time we need <code>dp[i - j*j]</code>, it's already been solved — nothing is computed out of order, and nothing is computed twice.</p>
+<table>
+<thead>
+<tr>
+<th>i</th>
+<th>Squares tried</th>
+<th>Result leaves opponent at</th>
+<th>dp[i]</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>—</td>
+<td>—</td>
+<td>False</td>
+</tr>
+<tr>
+<td>1</td>
+<td>1</td>
+<td>0 (False)</td>
+<td>True</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1</td>
+<td>1 (True)</td>
+<td>False</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1</td>
+<td>2 (False)</td>
+<td>True</td>
+</tr>
+<tr>
+<td>4</td>
+<td>1, 4</td>
+<td>4 → 0 (False)</td>
+<td>True</td>
+</tr>
+<tr>
+<td>5</td>
+<td>1, 4</td>
+<td>4 (True), 1 (True)</td>
+<td>False</td>
+</tr>
+<tr>
+<td>6</td>
+<td>1, 4</td>
+<td>5 (False)</td>
+<td>True</td>
+</tr>
+<tr>
+<td>7</td>
+<td>1, 4</td>
+<td>6 (True), 3 (True)</td>
+<td>False</td>
+</tr>
+</tbody>
+</table>
+<p>A quick note on cost: at <code>i = 8</code>, <code>j</code> only reaches <code>2</code> (since <code>3*3 = 9</code> overshoots). At <code>i = 9</code>, <code>j</code> reaches exactly <code>3</code>. The inner loop only runs about <code>√i</code> times, not <code>i</code> times — that's the entire reason this approach stays fast at <code>n = 100,000</code>.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def winner_square_game(n: int) -&gt; bool:
+    &quot;&quot;&quot;Return True if the player who moves first wins with n stones.&quot;&quot;&quot;
+    dp = [False] * (n + 1)
+
+    for i in range(1, n + 1):
+        j = 1
+        while j * j &lt;= i:
+            if not dp[i - j * j]:
+                dp[i] = True
+                break
+            j += 1
+
+    return dp[n]
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>dp = [False] * (n + 1)</code> — one boolean slot per pile size from <code>0</code> to <code>n</code>, all initialized to a loss since nothing has been proven yet.</li>
+<li><code>for i in range(1, n + 1)</code> — solve every pile size in increasing order, so smaller answers are always ready before they're needed.</li>
+<li><code>j = 1</code> / <code>while j * j &lt;= i</code> — walk through every perfect square that legally fits in the current pile size.</li>
+<li><code>if not dp[i - j * j]</code> — check whether removing this square leaves the opponent in a losing state.</li>
+<li><code>dp[i] = True; break</code> — the instant we find one winning move, we lock in the result and stop scanning further squares; we don't need every move to work, just one.</li>
+<li><code>j += 1</code> — otherwise, try the next square.</li>
+<li><code>return dp[n]</code> — the final answer for the actual starting pile size.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Let's trace <code>n = 7</code> using the table already built:</p>
+<p><code>dp[0..6]</code> = <code>[False, True, False, True, True, False, True]</code></p>
+<p>At <code>i = 7</code>:
+- <code>j = 1</code>: remove 1, leaving 6. <code>dp[6] = True</code>. No good — that hands Bob a winning position.
+- <code>j = 2</code>: remove 4, leaving 3. <code>dp[3] = True</code>. Still no good.
+- <code>j = 3</code> would need <code>9</code>, which exceeds <code>7</code>, so the loop stops.</p>
+<p>No square move leaves Bob in a losing spot, so <code>dp[7] = False</code>. <strong>Alice loses if the pile starts at 7 stones.</strong></p>
+<p>Try it yourself for <code>n = 5</code> before reading on: with <code>dp[0] = False</code>, <code>dp[1] = True</code>, <code>dp[2] = False</code>, <code>dp[3] = True</code>, <code>dp[4] = True</code>, check whether removing 1 (leaving 4) or removing 4 (leaving 1) hands the opponent a <code>False</code> state. Neither does — both leave <code>True</code> states — so <code>dp[5] = False</code>. Alice loses at 5 stones too.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time</strong>: O(n√n). For every pile size <code>i</code> from <code>1</code> to <code>n</code>, the inner loop checks roughly <code>√i</code> perfect squares. Summed across all <code>i</code>, this comes out to O(n√n) — comfortably fast even at <code>n = 100,000</code>.</p>
+<p><strong>Space</strong>: O(n) for the <code>dp</code> list. No recursion stack, no auxiliary structures beyond the table itself.</p>
+<p>Both bounds are tight because every pile size must be visited exactly once (we can't skip any, since larger states depend on smaller ones), and every visit does genuine, non-repeated work proportional to <code>√i</code>.</p>
+<h2>Alternative Solutions</h2>
+<p>The same logic can be written as top-down recursion with memoization instead of a bottom-up loop:</p>
+<pre><code class="language-python">from functools import lru_cache
+
+def winner_square_game(n: int) -&gt; bool:
+    @lru_cache(maxsize=None)
+    def wins(remaining: int) -&gt; bool:
+        if remaining == 0:
+            return False
+        j = 1
+        while j * j &lt;= remaining:
+            if not wins(remaining - j * j):
+                return True
+            j += 1
+        return False
+
+    return wins(n)
+</code></pre>
+<p>This reads a little more naturally to some people, since it mirrors the recursive definition directly. But it comes with a real cost: recursion depth can approach <code>n</code> in the worst case (repeatedly removing 1 stone), which risks hitting Python's recursion limit for large inputs. The bottom-up table sidesteps this completely by construction. For this problem, prefer the loop.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>n = 0</strong>: Not reachable per problem constraints (<code>n &gt;= 1</code>), but <code>dp[0] = False</code> correctly represents "no stones, no move."</li>
+<li><strong>n = 1</strong>: Smallest real case. Alice takes the only stone and wins immediately.</li>
+<li><strong>Perfect square n (e.g., 4, 9, 16)</strong>: Always a win for the player to move — they can clear the entire pile in one move, though the DP still correctly handles cases where clearing it isn't actually the best move for larger perfect squares.</li>
+<li><strong>n = 100,000 (upper bound)</strong>: Verifies the solution runs in reasonable time; O(n√n) at this size is on the order of tens of millions of operations, well within limits.</li>
+<li><strong>Consecutive losing positions</strong>: Values like 2, 5, 7 show losing positions aren't evenly spaced — don't assume a simple modular pattern exists.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Always grabbing the biggest available square.</strong> At 8 stones, taking 4 leaves 4 — a winning position for the opponent. Taking 1 and leaving 7 (a losing position) is correct. Greedily maximizing the move size is not the same as maximizing your win chance.</li>
+<li><strong>Stopping the inner loop too early or checking only one square.</strong> You must check every square up to <code>√i</code>; missing one might miss the only winning move.</li>
+<li><strong>Filling the DP table out of order.</strong> If you compute <code>dp[i]</code> before smaller dependent states are solved, you'll read stale or default values.</li>
+<li><strong>Off-by-one errors in the table size.</strong> The table needs indices <code>0</code> through <code>n</code> inclusive — a table of size <code>n</code> instead of <code>n + 1</code> will crash or silently misindex.</li>
+<li><strong>Confusing "the player who wins" with "Alice specifically."</strong> <code>dp[n]</code> tells you whether the player to move wins — since Alice moves first, <code>dp[n] = True</code> means Alice wins, but this framing breaks if you're not careful about whose turn it represents at recursive depth.</li>
+<li><strong>Using unbounded recursion without memoization</strong>, which reproduces the brute-force blowup this problem is designed to punish.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you modify this if players could also remove a fixed number of stones (like exactly 1) in addition to perfect squares?</li>
+<li>Can you extend this to return the optimal first move, not just win/lose?</li>
+<li>How does this generalize to other "subtract a set of allowed amounts" games?</li>
+<li>What changes if the losing condition were reversed (last player to move loses, a misère variant)?</li>
+<li>Can you prove why checking just one losing successor state is sufficient, rather than needing to check all of them?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 292 — Nim Game</strong>: The simplest version of this win/lose DP pattern, solvable in O(1) once you spot the modular pattern, but conceptually the same "any move to a losing state wins" logic.</li>
+<li><strong>LeetCode 877 — Stone Game</strong>: A different stone-pile game where players pick from either end; uses interval DP rather than a single 1D state.</li>
+<li><strong>LeetCode 1140 — Stone Game II</strong>: Introduces a variable move-size cap <code>M</code>, requiring a 2D DP state.</li>
+<li><strong>LeetCode 464 — Can I Win</strong>: Same "does any move lead to an opponent loss" pattern, applied to picking numbers instead of stones.</li>
+<li><strong>LeetCode 375 — Guess Number Higher or Lower II</strong>: A related minimax DP, though it optimizes cost rather than a binary win/lose outcome.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Stone Game IV isn't really about stones or squares — it's about recognizing a reusable shape: in any turn-based win/lose game, a state is winning if and only if some legal move lands the opponent in a losing state. Once you define that recurrence, an exponential recursive tree collapses into a linear table where each state is computed exactly once. The <code>√n</code> cost per state, rather than a full scan, is what makes this scale to 100,000 stones without breaking a sweat.</p>
+<h2>Watch the Video</h2>
+<p>Prefer to see this built step by step, dry-run included, with two live quiz rounds to test yourself before the answer is revealed? Watch the full walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series that takes LeetCode problems that look like they need a specialized background — game theory, advanced math, obscure data structures — and reduces them to one idea you'll actually remember and reuse. New daily problems drop regularly, each one built the same way: intuition first, code second.</p>
+<h2>Call To Action</h2>
+<p>If this walkthrough made Stone Game IV click, the video version has the full dry run and two pause-and-guess quiz rounds — give it a watch and a like on YouTube. Subscribe to the channel for daily LeetCode breakdowns, and subscribe to the Substack for deeper dives that don't fit in a video. Drop your n = 5 guess (or any questions) in the comments, and share this with anyone prepping for coding interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>What pattern signals: game where players remove items, last-move-wins?</summary><p>Game theory DP — think &#x27;can current player force a win from this state&#x27; (win/lose states).</p></details><details class='card2'><summary>Time complexity of Stone Game IV solution?</summary><p>O(n * sqrt(n)) — for each of n states, try all square roots up to sqrt(n).</p></details><details class='card2'><summary>Space complexity of the DP array approach?</summary><p>O(n) for the boolean dp array tracking win/lose per remaining stone count.</p></details><details class='card2'><summary>Trickiest bug when coding the win condition?</summary><p>Forgetting dp[0]=false (no stones left = current player already lost, previous player won).</p></details><details class='card2'><summary>Stone Game IV vs Nim game — key difference?</summary><p>Nim has closed-form XOR trick; here moves (perfect squares) aren&#x27;t uniform, so no shortcut — must brute-force DP.</p></details><details class='card2'><summary>Follow-up: how would you handle n up to 10^9?</summary><p>O(n*sqrt(n)) too slow; would need math/number-theory insight or memorized game-state periodicity, not plain DP.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
