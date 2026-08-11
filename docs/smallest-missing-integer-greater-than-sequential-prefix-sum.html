@@ -1,0 +1,202 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Smallest Missing Integer Greater Than Sequential Prefix Sum — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/smallest-missing-integer-greater-than-sequential-prefix-sum
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/m">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/smallest-missing-integer-greater-than-sequential-prefix-sum.html">
+<meta property="og:title" content="Smallest Missing Integer Greater Than Sequential Prefix Sum — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/smallest-missing-integer-greater-than-sequential-prefix-sum
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/m">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Smallest Missing Integer Greater Than Sequential Prefix Sum</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every so often a "rated easy" LeetCode problem quietly tests something that has nothing to do with difficulty and everything to do with discipline: did you actually read the constraints, or did you pattern-match to the nearest thing you've seen before? LeetCode 2996, "Smallest Missing Integer Greater Than Sequential Prefix Sum," is exactly that kind of problem. It looks like a straightforward "find the missing number" exercise, but it hides a trap that catches people who reach for the obvious shortcut without checking whether the array's assumptions actually hold.</p>
+<p>This pattern — numbers that are supposed to be issued in strict sequence, with a search for "the next safe value" once the sequence breaks — shows up constantly outside of interviews too. Auto-incrementing database IDs, invoice numbers, ticket queues, coupon codes: anywhere a system hands out numbers in order and something can create a gap, you need exactly this logic. Get the edge case wrong in production and you either reuse a number that's already spoken for or skip one that should have been assigned. That's not a hypothetical bug, it's the kind of thing that causes duplicate invoice numbers or ID collisions in a live system.</p>
+<p>Interviewers like this problem because it rewards precise reading over pattern memorization. You'll walk away from this article knowing exactly how to solve it, why the "obvious" approach fails, and how to spot this family of problems instantly.</p>
+<h2>Problem Overview</h2>
+<p>You're given an array of integers, <code>nums</code>. Look at the <em>sequential prefix</em> — the longest run starting at index 0 where each number is exactly one greater than the number before it. Sum up that prefix. Then find the smallest integer that is greater than or equal to that sum and does <strong>not</strong> appear anywhere in <code>nums</code>. Return it.</p>
+<p>In plain terms: walk from the start of the array as long as the numbers climb by exactly one each step. Add those numbers together. That sum becomes your starting point for a search — you now need the smallest number, from that point upward, that the array hasn't already claimed.</p>
+<h2>Example</h2>
+<p>Take <code>nums = [1, 2, 3, 2, 5]</code>.</p>
+<ul>
+<li>The sequential prefix is <code>1, 2, 3</code> — each value is exactly one more than the last.</li>
+<li>Sum of that prefix: <code>1 + 2 + 3 = 6</code>.</li>
+<li>Is <code>6</code> in the array? No. So <code>6</code> is the answer.</li>
+</ul>
+<p>Now take <code>nums = [3, 4, 5]</code>.</p>
+<ul>
+<li>The array is sequential the whole way through (<code>3, 4, 5</code>), but it doesn't <em>start</em> at <code>1</code>.</li>
+<li>Because <code>nums[0] != 1</code>, the number <code>1</code> itself was never claimed by anything.</li>
+<li>The answer is simply <code>1</code> — no summing required at all.</li>
+</ul>
+<p>And the trap case, <code>nums = [2, 2]</code>:</p>
+<ul>
+<li><code>nums[0]</code> is <code>2</code>, not <code>1</code>.</li>
+<li>The answer is immediately <code>1</code>, before you even look at the rest of the array.</li>
+</ul>
+<p>That last one is the case that catches people who don't check the starting value first.</p>
+<h2>Intuition</h2>
+<p>The first instinct almost everyone has: take the maximum value in the array and return <code>max + 1</code>. It feels safe — surely nothing bigger than everything you've seen could already be "taken."</p>
+<p>It's wrong, and the reason is instructive. Consider <code>[1, 2, 3, 2, 5]</code> again. The max is <code>5</code>, so the naive approach returns <code>6</code>. That happens to be correct here — but only by coincidence. The real question was never "what's bigger than everything in the array," it was "what number does the <em>sequential run at the start</em> not account for." The max-plus-one trick ignores the actual structure of the problem: gaps like <code>4</code> in the middle of the array, or the array simply not starting at <code>1</code>, are invisible to it.</p>
+<p>So instead of looking at the whole array, look only at how far it stays perfectly sequential from the very beginning. Walk forward while each number is exactly one more than the previous one. The moment that pattern breaks, stop. Sum every number you walked through — that sum represents the total "claimed territory" of the prefix, and the smallest number <em>not</em> claimed by that prefix is one more than the sum.</p>
+<p>Two things make this work:</p>
+<ol>
+<li><strong>Why the sum, and not just <code>index + 1</code>?</strong> Because the values in the prefix don't have to be small or contiguous starting from a fixed point once duplicates are involved — the sum is what actually accounts for the total space consumed, and it stays correct even when a duplicate later breaks the streak. Index-based counting silently drifts wrong the instant the array has any hiccup upstream.</li>
+<li><strong>Why check <code>nums[0]</code> first?</strong> Because the entire sum-based approach only means something if the prefix started at <code>1</code>. If it didn't, <code>1</code> itself is unclaimed and always wins — this is the <code>[3, 4, 5]</code> and <code>[2, 2]</code> trap.</li>
+</ol>
+<p>Once the sum is established, you're not done — you still need to confirm the candidate (<code>sum + 1</code>) isn't sitting somewhere else in the array, and keep incrementing until you find one that's genuinely missing.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Build a set of all values in <code>nums</code> for O(1) lookups, compute the sequential prefix sum the same way, then linearly search upward from <code>sum + 1</code> (or <code>1</code>, if the trap case applies) checking set membership.</p>
+<p><strong>Algorithm:</strong>
+1. Convert <code>nums</code> to a set.
+2. Walk the array to find the sequential prefix sum, same logic as the optimal approach.
+3. Starting from the candidate value, increment until a value isn't in the set.</p>
+<p><strong>Advantages:</strong> Set lookups are O(1), so the search phase is fast per check.</p>
+<p><strong>Disadvantages:</strong> You pay O(n) extra space to build the set, which is unnecessary for arrays this small — the number of candidates you'll actually check is tiny in practice, so the set buys you speed you don't need at the cost of memory you didn't have to spend.</p>
+<p><strong>Time complexity:</strong> O(n) to build the set, plus O(k) for the search where <code>k</code> is the number of candidates checked.
+<strong>Space complexity:</strong> O(n) for the set.</p>
+<h2>Optimal Solution</h2>
+<p>Skip the set. The array is small enough, and the number of membership checks is small enough, that <code>value in nums</code> (a linear scan) doesn't meaningfully change your runtime — the dominant cost is still the initial O(n) pass.</p>
+<p>Here's the full plan:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>If <code>nums[0] != 1</code>, return <code>1</code> immediately — the trap case.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Otherwise, walk the array, summing each value while it continues the run (<code>nums[i] == nums[i-1] + 1</code>).</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Stop the moment the run breaks (or the array ends).</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Starting at <code>sum + 1</code>, increment until you find a value not present in <code>nums</code>.</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Return that value.</td>
+</tr>
+</tbody>
+</table>
+<p>Walking through <code>[3, 4, 5, 1, 12, 14, 13]</code>: <code>nums[0]</code> is <code>3</code>, not <code>1</code>, so the trap fires — wait, that's not right for this array, let's trace it properly. Actually <code>nums[0] = 3 != 1</code>... </p>
+<p>Hold on — this specific example needs the full walk to explain correctly, so here it is precisely: the sequential-prefix rule only tracks numbers that increase by exactly one <em>starting from whatever <code>nums[0]</code> is</em> for the purpose of building the sum, but the "return 1 immediately" shortcut only applies when the problem is asking about the integer <code>1</code> specifically. In <code>[3, 4, 5, 1, 12, 14, 13]</code>, the prefix <code>3, 4, 5</code> is sequential, and the running sum is <code>12</code>. Since the prefix didn't start at <code>1</code>, the sum itself is still the correct floor — the candidate search begins at <code>sum + 1 = 13</code>... but <code>13</code> is in the array, <code>14</code> is in the array, and <code>15</code> is missing. <strong>Answer: 15.</strong></p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def missing_integer(nums: list[int]) -&gt; int:
+    &quot;&quot;&quot;LeetCode 2996: smallest missing integer &gt;= sequential prefix sum.&quot;&quot;&quot;
+    total = nums[0]
+
+    # Extend the running sum while the prefix keeps climbing by exactly 1
+    for i in range(1, len(nums)):
+        if nums[i] == nums[i - 1] + 1:
+            total += nums[i]
+        else:
+            break
+
+    # Search upward from total + 1 for the first value missing from nums
+    candidate = total + 1
+    nums_set = set(nums)
+    while candidate in nums_set:
+        candidate += 1
+
+    return candidate
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>total = nums[0]</code> seeds the running sum with the first element — the prefix always includes at least this one value.</li>
+<li>The <code>for</code> loop walks from index <code>1</code> onward. As long as each value is exactly one more than its predecessor, it's added to <code>total</code>. The instant that condition fails, <code>break</code> stops the walk — the sequential prefix is over.</li>
+<li><code>candidate = total + 1</code> sets the starting point for the search: the smallest value not yet accounted for by the prefix.</li>
+<li><code>nums_set = set(nums)</code> converts the array once for O(1) membership checks during the search loop — cheap insurance against a pathological array where many consecutive candidates are all present.</li>
+<li>The <code>while</code> loop increments <code>candidate</code> until it lands on a value that isn't in <code>nums</code>, then returns it.</li>
+</ul>
+<p>Note this version doesn't special-case <code>nums[0] != 1</code> separately — it doesn't need to. If <code>nums[0]</code> isn't <code>1</code>, the loop still runs correctly, but you can add an early return for clarity and a tiny speed win:</p>
+<pre><code class="language-python">def missing_integer(nums: list[int]) -&gt; int:
+    if nums[0] != 1:
+        return 1
+
+    total = nums[0]
+    for i in range(1, len(nums)):
+        if nums[i] == nums[i - 1] + 1:
+            total += nums[i]
+        else:
+            break
+
+    candidate = total + 1
+    nums_set = set(nums)
+    while candidate in nums_set:
+        candidate += 1
+
+    return candidate
+</code></pre>
+<p>This second version mirrors the trap case explicitly, which makes the intent obvious to the next person reading the code — and is the version worth using in an interview, since it shows you saw the edge case rather than stumbled into handling it by accident.</p>
+<h2>Dry Run</h2>
+<p>Trace <code>nums = [1, 3, 5]</code>:</p>
+<ol>
+<li><code>nums[0] == 1</code>, so no early return.</li>
+<li><code>total = 1</code>.</li>
+<li><code>i = 1</code>: <code>nums[1] = 3</code>. Is <code>3 == nums[0] + 1 = 2</code>? No. Break immediately.</li>
+<li><code>total</code> stays <code>1</code>. <code>candidate = 2</code>.</li>
+<li>Is <code>2</code> in <code>{1, 3, 5}</code>? No. Return <code>2</code>.</li>
+</ol>
+<p>Trace <code>nums = [2, 2]</code>:</p>
+<ol>
+<li><code>nums[0] = 2 != 1</code> → return <code>1</code> immediately. Done.</li>
+</ol>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(n). The prefix walk touches each element at most once. Building the set is O(n). The candidate search, in the worst realistic case, touches a small, bounded number of values relative to <code>n</code> — each array element is inspected a small constant number of times overall.</p>
+<p><strong>Space:</strong> O(n) for the set used in membership checks; O(1) beyond the input if you skip the set and check membership directly against the list (fine for small <code>n</code>, worse asymptotically for large <code>n</code> with many collisions).</p>
+<p>Both bounds are tight: you cannot avoid at least one full pass over the array (you need every element to know the prefix and to know what's "taken"), and the set is the standard trade of memory for guaranteed O(1) lookups.</p>
+<h2>Alternative Solutions</h2>
+<p>You could skip the set entirely and use <code>candidate in nums</code> (a list scan) instead. For small inputs, this is honestly the more "lazy" and perfectly acceptable choice — it avoids building a second data structure for a handful of membership checks. It only becomes a real liability if <code>nums</code> is large and many consecutive candidates happen to collide with existing values, since each check becomes O(n) instead of O(1).</p>
+<p>There's no meaningfully different algorithmic approach here — sorting, heaps, or DP add complexity without solving anything the single pass doesn't already handle.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Array starts above 1</strong> (<code>[3, 4, 5]</code>): trap case, return <code>1</code> immediately.</li>
+<li><strong>Duplicate at the very start</strong> (<code>[2, 2]</code>): trap case fires before the loop even matters.</li>
+<li><strong>Fully sequential array with no gaps</strong> (<code>[1, 2, 3, 4]</code>): the streak runs the whole array; return the total sum (since nothing broke the streak, the sum itself was never claimed).</li>
+<li><strong>Single-element array</strong> (<code>[7]</code>): if <code>nums[0] != 1</code>, return <code>1</code>. If <code>nums[0] == 1</code>, the prefix is just <code>1</code>, and you search from <code>2</code>.</li>
+<li><strong>Large gap immediately after the prefix</strong> (<code>[1, 2, 3, 100]</code>): sum is <code>6</code>, candidate search finds <code>6</code> missing immediately (since only <code>1, 2, 3, 100</code> are present).</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Using <code>max(nums) + 1</code></strong> instead of the sequential prefix sum — ignores gaps entirely.</li>
+<li><strong>Forgetting to check <code>nums[0] != 1</code></strong> before trusting the sum — this is the single most common failure mode.</li>
+<li><strong>Using <code>index + 1</code> instead of the running sum</strong> — breaks silently the moment a duplicate or out-of-order value appears in the prefix.</li>
+<li><strong>Off-by-one in the break condition</strong> — comparing <code>nums[i] == nums[i-1]</code> instead of <code>nums[i] == nums[i-1] + 1</code>.</li>
+<li><strong>Not handling a single-element array</strong> — forgetting the loop simply never executes and <code>total</code> stays as <code>nums[0]</code>.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What if the array is sorted but empty — how do you guard against <code>nums[0]</code> on an empty list?</li>
+<li>How would your solution change if the array could contain negative numbers?</li>
+<li>Can you solve this without building a <code>set</code>, and what's the trade-off?</li>
+<li>What's the smallest input that forces your candidate search loop to run more than once?</li>
+<li>How would you extend this to return <em>all</em> missing integers up to some bound, not just the smallest?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 41 – First Missing Positive</strong>: same "smallest missing" theme, no sequential-prefix twist, classic O(n) time / O(1) space challenge.</li>
+<li><strong>LeetCode 268 – Missing Number</strong>: simpler version, single missing number in a known range, good warm-up for the mental model here.</li>
+<li><strong>LeetCode 1539 – Kth Missing Positive Number</strong>: extends the "find missing values" idea to the kth missing value instead of the first.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Walk the sequential prefix from the start, summing as you go, and stop the instant the streak breaks. If the array doesn't start at <code>1</code>, the answer is <code>1</code> — no computation needed. Otherwise, the answer is the smallest value at or above <code>sum + 1</code> that the array hasn't already claimed. The core lesson: don't reach for <code>max + 1</code> as a shortcut when the problem is actually about <em>sequential</em> structure, and always sanity-check the array's starting assumption before trusting downstream math built on top of it.</p>
+<h2>Watch the Video</h2>
+<p>Prefer to see this traced live, including two quiz rounds to test your understanding? {LINK}</p>
+<h2>About the Series</h2>
+<p>This walkthrough is part of <strong>Fun with Learning Technology</strong>, a daily series that takes one coding problem and actually breaks it down — not just to get to a working solution, but to understand why it works and where the traps are. New problems drop daily, covering the patterns that show up again and again in real interviews.</p>
+<h2>Call To Action</h2>
+<p>If this helped the pattern click, a like on the video goes a long way, and subscribing means you won't miss tomorrow's problem. Subscribe to the Substack for the written breakdown delivered straight to your inbox. Drop a comment with questions, alternative approaches, or requests for problems you'd like to see covered — and share this with anyone prepping for interviews right now.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Pattern: build result by comparing running total vs sorted array?</summary><p>Greedy prefix-sum scan — when you see &#x27;sum so far&#x27; + &#x27;next allowed value&#x27;, track prefix sum and compare to array, not heap/DP.</p></details><details class='card2'><summary>Time complexity of the prefix-sum-vs-array scan?</summary><p>O(n log n) if sorting needed, O(n) if already sorted — single pass comparing running sum to current element.</p></details><details class='card2'><summary>Space complexity of this approach?</summary><p>O(1) extra space — just a running sum variable, no auxiliary structures needed.</p></details><details class='card2'><summary>Trickiest bug: what happens at the very first element?</summary><p>Prefix sum starts at 0; must check missing integer could be smaller than array[0] before any addition happens.</p></details><details class='card2'><summary>Why not use a max-heap or DP here?</summary><p>Overkill — the array&#x27;s order already encodes the constraint; heap/DP add complexity with no benefit over a linear scan.</p></details><details class='card2'><summary>Follow-up: how does this pattern show up in real systems?</summary><p>Coupon/ledger validation — checking a running balance against the next expected entry to catch the first gap.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
