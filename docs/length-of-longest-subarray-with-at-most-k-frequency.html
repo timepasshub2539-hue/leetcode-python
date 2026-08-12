@@ -1,0 +1,289 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Length of Longest Subarray With at Most K Frequency — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/length-of-longest-subarray-with-at-most-k-frequency
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/leng">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/length-of-longest-subarray-with-at-most-k-frequency.html">
+<meta property="og:title" content="Length of Longest Subarray With at Most K Frequency — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/length-of-longest-subarray-with-at-most-k-frequency
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/leng">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Length of Longest Subarray With at Most K Frequency</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every so often a problem shows up that looks like it needs a fancy data structure — a heap, a sorted map, maybe even a segment tree — and then turns out to be a two-pointer exercise wearing a disguise. Length of Longest Subarray With at Most K Frequency (LeetCode 2958) is exactly that kind of problem, and it's a favorite in interviews for a specific reason: it tests whether you actually understand <em>why</em> sliding window works, not just whether you've memorized the template.</p>
+<p>The core idea — find the longest stretch of a sequence where no value repeats too often — isn't just an interview trick. It's the same shape behind rate limiters, spam filters, and anomaly-detection windows in real production systems. Once you internalize this pattern, you'll start recognizing it everywhere: "longest/shortest run under a running constraint" is a signal to reach for two pointers and a count map, before anything more exotic.</p>
+<h2>Problem Overview</h2>
+<p>You're given an array of integers and an integer <code>k</code>. You need to find the length of the longest contiguous subarray such that no single value appears more than <code>k</code> times inside it.</p>
+<p>In plain terms: slide a window across the array, and as long as every distinct number inside that window shows up <code>k</code> times or fewer, the window is "legal." Your job is to find the biggest legal window that ever existed as you swept across the array.</p>
+<h2>Example</h2>
+<p>Consider the array:</p>
+<pre><code>[1, 2, 3, 1, 2, 3, 1, 2], k = 2
+</code></pre>
+<p>The first six elements — <code>[1, 2, 3, 1, 2, 3]</code> — form a valid window. Each value (<code>1</code>, <code>2</code>, <code>3</code>) appears exactly twice, which is within the limit of <code>k = 2</code>.</p>
+<p>Add the seventh element (<code>1</code>), and now <code>1</code> appears three times. The window is no longer legal, so it has to shrink from the left until it's valid again.</p>
+<p>The answer for this array is <code>6</code> — the largest legal window we found.</p>
+<h2>Intuition</h2>
+<p>The naive instinct is: "just check every possible subarray." Pick a start, pick an end, count the frequency of every element in between, and see if it's legal. That works, but think about what happens as you slide the end pointer forward by one position: almost nothing about the window changed. You added exactly one value. Yet the brute-force approach throws away everything it knew and recounts from scratch.</p>
+<p>That's the real waste — not the comparison itself, but discarding work you already did. An experienced engineer's first move here is to ask: "What do I already know that I'm about to recompute?" The answer is the frequency counts of everything currently in the window. If you keep those counts updated incrementally instead of recalculating them, you can process each element exactly once.</p>
+<p>That leads directly to the sliding window pattern: two pointers, <code>left</code> and <code>right</code>, define the window's boundaries. A dictionary tracks how many times each value currently appears inside that window. The <code>right</code> pointer always moves forward, adding one new element at a time. The <code>left</code> pointer only moves forward when the window becomes illegal — that is, when some value's count exceeds <code>k</code>.</p>
+<p>Here's the part that trips people up: shrinking is a <code>while</code> loop, not an <code>if</code>. If duplicates pile up quickly, dropping a single element from the left might not be enough to make the window legal again. You need to keep shrinking until the count is actually back at or below <code>k</code>.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> For every pair of start and end indices, count the frequency of every value in that subarray from scratch, and check if the maximum frequency is at most <code>k</code>.</p>
+<p><strong>Algorithm:</strong>
+1. For every possible <code>start</code> index.
+2. For every possible <code>end</code> index greater than or equal to <code>start</code>.
+3. Count frequencies of all elements between <code>start</code> and <code>end</code>.
+4. If the max frequency is at most <code>k</code>, update the best length.</p>
+<p><strong>Advantages:</strong> Trivial to reason about and implement; hard to get wrong.</p>
+<p><strong>Disadvantages:</strong> Recomputes counts that barely changed between adjacent windows. Quadratic number of subarrays, and counting each one costs additional time — this becomes far too slow once the input grows.</p>
+<p><strong>Time complexity:</strong> O(n³) in the naive form (O(n²) subarrays × O(n) to count each), or O(n²) if you count incrementally per <code>start</code>. Either way, it doesn't scale.</p>
+<p><strong>Space complexity:</strong> O(n) for the frequency map used per subarray check.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal solution uses a growing-and-shrinking window with a single frequency dictionary.</p>
+<ol>
+<li>Start with an empty <code>counts</code> dictionary, <code>left = 0</code>, and <code>best = 0</code>.</li>
+<li>For every <code>right</code> position, add the value at <code>right</code> into <code>counts</code>, incrementing its count.</li>
+<li>While the count of that value exceeds <code>k</code>, remove the value at <code>left</code> from <code>counts</code> and move <code>left</code> forward — repeat until the window is legal again.</li>
+<li>After each shrink step, the window is guaranteed legal. Compute its size as <code>right - left + 1</code>, and update <code>best</code> if it's larger.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>right</th>
+<th>Value added</th>
+<th>Window</th>
+<th>Legal?</th>
+<th>Best so far</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>0</td>
+<td>1</td>
+<td>[1]</td>
+<td>✅</td>
+<td>1</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1</td>
+<td>2</td>
+<td>[1,2]</td>
+<td>✅</td>
+<td>2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>2</td>
+<td>3</td>
+<td>[1,2,3]</td>
+<td>✅</td>
+<td>3</td>
+</tr>
+<tr>
+<td>4</td>
+<td>3</td>
+<td>1</td>
+<td>[1,2,3,1]</td>
+<td>✅</td>
+<td>4</td>
+</tr>
+<tr>
+<td>5</td>
+<td>4</td>
+<td>2</td>
+<td>[1,2,3,1,2]</td>
+<td>✅</td>
+<td>5</td>
+</tr>
+<tr>
+<td>6</td>
+<td>5</td>
+<td>3</td>
+<td>[1,2,3,1,2,3]</td>
+<td>✅</td>
+<td>6</td>
+</tr>
+<tr>
+<td>7</td>
+<td>6</td>
+<td>1</td>
+<td>count of 1 = 3 → shrink</td>
+<td>shrink until legal</td>
+<td>6</td>
+</tr>
+</tbody>
+</table>
+<p>Every element enters the window exactly once (via <code>right</code>) and leaves at most once (via <code>left</code>). No element is ever recounted from scratch — that's what turns this into a single linear pass.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from collections import defaultdict
+
+
+def max_subarray_length(nums: list[int], k: int) -&gt; int:
+    counts = defaultdict(int)
+    left = 0
+    best = 0
+
+    for right, value in enumerate(nums):
+        counts[value] += 1
+
+        while counts[value] &gt; k:
+            counts[nums[left]] -= 1
+            left += 1
+
+        best = max(best, right - left + 1)
+
+    return best
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>counts = defaultdict(int)</code>: tracks how many times each value currently sits inside the window. <code>defaultdict</code> avoids manual key-existence checks.</li>
+<li><code>left = 0</code>: the window's left boundary; it only ever moves forward.</li>
+<li><code>for right, value in enumerate(nums)</code>: <code>right</code> is both the loop index and the window's right boundary.</li>
+<li><code>counts[value] += 1</code>: the new element enters the window, so its count goes up.</li>
+<li><code>while counts[value] &gt; k</code>: not an <code>if</code> — because a single shrink step might not be enough to fix the violation if the window had prior duplicates near the left edge.</li>
+<li><code>counts[nums[left]] -= 1; left += 1</code>: remove the leftmost element from the count map, then advance <code>left</code>.</li>
+<li><code>best = max(best, right - left + 1)</code>: once the window is legal, record its size if it's the largest seen so far.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Array: <code>[1, 2, 1, 2, 1, 2, 1, 2]</code>, <code>k = 1</code></p>
+<table>
+<thead>
+<tr>
+<th>right</th>
+<th>value</th>
+<th>counts after add</th>
+<th>shrink?</th>
+<th>left after</th>
+<th>window size</th>
+<th>best</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>1</td>
+<td>{1:1}</td>
+<td>no</td>
+<td>0</td>
+<td>1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>1</td>
+<td>2</td>
+<td>{1:1, 2:1}</td>
+<td>no</td>
+<td>0</td>
+<td>2</td>
+<td>2</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1</td>
+<td>{1:2, 2:1}</td>
+<td>yes → drop nums[0]=1</td>
+<td>1</td>
+<td>2</td>
+<td>2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>2</td>
+<td>{1:1, 2:2}</td>
+<td>yes → drop nums[1]=2</td>
+<td>2</td>
+<td>2</td>
+<td>2</td>
+</tr>
+<tr>
+<td>4</td>
+<td>1</td>
+<td>{1:2, 2:1}</td>
+<td>yes → drop nums[2]=1</td>
+<td>3</td>
+<td>2</td>
+<td>2</td>
+</tr>
+<tr>
+<td>5</td>
+<td>2</td>
+<td>{1:1, 2:2}</td>
+<td>yes → drop nums[3]=2</td>
+<td>4</td>
+<td>2</td>
+<td>2</td>
+</tr>
+<tr>
+<td>6</td>
+<td>1</td>
+<td>{1:2, 2:1}</td>
+<td>yes → drop nums[4]=1</td>
+<td>5</td>
+<td>2</td>
+<td>2</td>
+</tr>
+<tr>
+<td>7</td>
+<td>2</td>
+<td>{1:1, 2:2}</td>
+<td>yes → drop nums[5]=2</td>
+<td>6</td>
+<td>2</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+<p>Final answer: <code>2</code>. With <code>k = 1</code>, the window can never grow past two elements once alternating duplicates start appearing.</p>
+<p>Edge case: <code>[5, 5, 5, 5, 5, 5, 5]</code>, <code>k = 4</code>. The window grows until <code>counts[5]</code> hits <code>5</code>, at which point it shrinks back down to <code>4</code>. It can never exceed that again — answer is <code>4</code>.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(n). Each index is added to <code>counts</code> exactly once via <code>right</code>, and removed at most once via <code>left</code>. Since both pointers only move forward and never reset, the total work across the entire pass is linear, even though the inner <code>while</code> loop looks like it could be expensive.</p>
+<p><strong>Space:</strong> O(n) in the worst case, if every element in the array is distinct and all end up as keys in <code>counts</code>.</p>
+<p>These bounds are correct because the two pointers never move backward — there's no scenario where an element is reprocessed, which is what keeps this from degrading into the brute-force quadratic behavior.</p>
+<h2>Alternative Solutions</h2>
+<p>You could theoretically use a <code>Counter</code> from <code>collections</code> with a sorted structure to track the maximum frequency at each step, but it's unnecessary — you never need to know <em>which</em> value has the highest count, only whether the value you just added crossed the threshold. Adding a heap or sorted container here is over-engineering: it adds <code>O(log n)</code> factors for information the algorithm doesn't need. The plain dictionary approach is both simpler and strictly faster.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty array:</strong> returns <code>0</code> — the loop never executes, and <code>best</code> stays at its initial value.</li>
+<li><strong>All identical values with <code>k</code> larger than the array length:</strong> the whole array is the answer, since the window never needs to shrink.</li>
+<li><strong><code>k = 0</code>:</strong> every window becomes illegal the moment any value is added twice; if <code>k</code> is <code>0</code> and any value must appear, behavior depends on whether the problem guarantees <code>k &gt;= 1</code> — always check constraints before assuming this can't happen.</li>
+<li><strong>Single-element array:</strong> returns <code>1</code> regardless of <code>k</code>, as long as <code>k &gt;= 1</code>.</li>
+<li><strong>All unique values:</strong> the entire array is always legal, so the answer equals the array's length.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Using <code>if</code> instead of <code>while</code> when shrinking.</strong> A single removal might not be enough to make the window legal again.</li>
+<li><strong>Forgetting to decrement the count when the left pointer moves.</strong> This leaves stale counts and produces wrong shrink decisions later.</li>
+<li><strong>Recomputing the window's frequency from scratch on every step</strong>, which silently reintroduces the brute-force quadratic behavior.</li>
+<li><strong>Using a <code>set</code> instead of a dictionary.</strong> A set can tell you a value is present, but not how many times — and the shrink condition depends entirely on the exact count.</li>
+<li><strong>Updating <code>best</code> before the window is confirmed legal</strong>, which can record an invalid window size.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you modify this to return the actual subarray, not just its length?</li>
+<li>What changes if the constraint were "at least K" instead of "at most K"?</li>
+<li>Can you solve this with a fixed-size window instead of a variable one? Why or why not?</li>
+<li>How would this scale if the array were a live stream instead of a fixed array?</li>
+<li>What's the time complexity if <code>k</code> were allowed to be different for each distinct value?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Longest Substring Without Repeating Characters (LeetCode 3):</strong> same sliding window and count-map pattern, with <code>k = 1</code>.</li>
+<li><strong>Fruit Into Baskets (LeetCode 904):</strong> longest subarray with at most 2 distinct values — a variant constraint on the same window.</li>
+<li><strong>Max Consecutive Ones III (LeetCode 1004):</strong> longest window under a different kind of running constraint (flips allowed).</li>
+<li><strong>Subarrays with K Different Integers (LeetCode 992):</strong> uses the same window mechanics to count subarrays rather than find the longest one.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Whenever a problem asks for the longest or shortest stretch that stays legal under some running rule, reach for two pointers plus a count map before anything more complex. Grow the window from the right, shrink it from the left only when necessary, and let the dictionary tell you instantly when the rule has been broken. That single pattern — no recounting, no restarting — collapses what looks like a quadratic problem into a clean linear pass.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with diagrams, live dry runs, and the quiz that tests whether the pattern has actually clicked, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <em>Fun with Learning Technology</em>, a series focused on building real intuition behind coding interview patterns — not just memorizing solutions, but understanding why they work so the pattern transfers to problems you've never seen before.</p>
+<h2>Call To Action</h2>
+<p>If this helped the pattern click, consider watching the full video on YouTube and subscribing — it helps more than you'd think for a small channel. Subscribe to the Substack for written breakdowns like this one, drop a comment if something felt unclear or you want a specific problem covered next, and share it with anyone prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>You need max window length but can&#x27;t just track distinct counts — which pattern?</summary><p>Sliding window with a frequency hashmap; shrink from the left when any element&#x27;s count exceeds K.</p></details><details class='card2'><summary>Time complexity of the sliding-window frequency-map approach?</summary><p>O(n) — each index enters and leaves the window at most once.</p></details><details class='card2'><summary>Space complexity for tracking frequencies?</summary><p>O(n) worst case (or O(distinct values)) for the hashmap of counts.</p></details><details class='card2'><summary>Common bug when shrinking the window here?</summary><p>Decrementing count but forgetting to delete the key at 0, or comparing max length before shrinking finishes.</p></details><details class='card2'><summary>This pattern vs. &#x27;longest substring with at most K distinct chars&#x27;?</summary><p>Same shrink-on-violation shape, but here the violation is a count cap (&gt;K occurrences), not distinct-count cap.</p></details><details class='card2'><summary>Interview follow-up: why not brute-force all subarrays?</summary><p>O(n^2) or worse since you&#x27;d recheck frequency validity per subarray; sliding window reuses prior work in O(n).</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
