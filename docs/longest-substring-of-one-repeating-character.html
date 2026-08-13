@@ -1,0 +1,206 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Longest Substring of One Repeating Character — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/longest-substring-of-one-repeating-character
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/longest-sub">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/longest-substring-of-one-repeating-character.html">
+<meta property="og:title" content="Longest Substring of One Repeating Character — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/longest-substring-of-one-repeating-character
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/longest-sub">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Longest Substring of One Repeating Character</h1><span class='badge' style='background:#3fb95022;color:#3fb950'>🌳 Trees</span><article><h2>Introduction</h2>
+<p>If you've spent any time on LeetCode's hard-difficulty string problems, you've probably noticed a recurring trap: a problem that looks like a simple linear scan turns hard the moment someone adds the word "update." LeetCode 2213, <em>Longest Substring of One Repeating Character</em>, is exactly that trap. The base question — find the longest run of the same character in a string — is something most people can solve in their sleep. What makes it hard is that you have to answer that question again, instantly, after every single character update, potentially tens of thousands of times.</p>
+<p>This pattern is worth learning for reasons beyond the LeetCode badge. Any system where data keeps changing but you need a live, correct answer — a collaborative text editor recalculating formatting spans, a streaming analytics dashboard recomputing a rolling metric, a compression tool re-evaluating run-length encoding — leans on the same idea: don't recompute everything, recompute only what changed, and summarize the rest.</p>
+<p>Interviewers like this problem because it tests something more specific than "can you code a sliding window." It tests whether you notice that an edit has a <em>local</em> blast radius, and whether you know a data structure that turns "local change, global answer" into a cheap operation. That data structure is a segment tree, and once you've built one for this problem, you'll recognize the shape immediately in other problems.</p>
+<h2>Problem Overview</h2>
+<p>You're given a string <code>s</code>, plus two parallel lists: a list of characters and a list of indices. For each pair <code>(queryCharacters[i], queryIndices[i])</code>, you place that character at that index in the string — overwriting whatever was there. After each placement, you need to report the length of the longest contiguous run of identical characters anywhere in the string.</p>
+<p>The constraint that makes this interesting: the string and the number of queries can each be up to 100,000. A naive "rescan the whole string after every edit" approach is going to be far too slow.</p>
+<h2>Example</h2>
+<p>Start with <code>s = "babacc"</code> (as a list: <code>b, a, b, a, c, c</code>).</p>
+<p><strong>Query 1:</strong> place <code>b</code> at index 1 → string becomes <code>b, b, b, a, c, c</code>. The longest run is <code>bbb</code>, length <strong>3</strong>.</p>
+<p><strong>Query 2:</strong> place <code>c</code> at index 3 → string becomes <code>b, b, b, c, c, c</code>. Now there are two runs of length 3 (<code>bbb</code> and <code>ccc</code>). The answer is still <strong>3</strong>.</p>
+<p><strong>Query 3:</strong> place <code>b</code> at index 3 → string becomes <code>b, b, b, b, c, c</code>. Now <code>bbbb</code> is a run of length <strong>4</strong>.</p>
+<p>Final answers: <code>[3, 3, 4]</code>.</p>
+<p>Notice that every edit changed exactly one character, but the length of the affected run changed by a lot — the second <code>b</code> insertion merged what used to be a boundary into a longer run. That's the core difficulty: a single-character change can ripple into a longer run just by connecting two neighboring runs.</p>
+<h2>Intuition</h2>
+<p>The instinct most people reach for first is the correct one for the <em>static</em> version of this problem: walk the string left to right with a counter. Same character as before, bump the counter; different character, reset it to 1 and remember the best count seen so far. That's an O(n) scan, and it's completely correct — for a string that never changes.</p>
+<p>The moment updates enter the picture, an experienced engineer asks a different question: <em>when I change one character, how much of my previous answer is actually invalidated?</em> The key realization is that an edit at index <code>i</code> can only break or merge runs immediately around <code>i</code>. A run 50,000 characters away is untouched. So recomputing the entire answer from scratch every time is throwing away almost all of the previous work.</p>
+<p>That leads naturally to a "divide the string into chunks, and let each chunk remember a summary of itself" design. If each chunk knows its own longest run, and — critically — the run touching its left edge and the run touching its right edge, then two neighboring chunks can be combined into a summary of the bigger range just by checking whether the left chunk's right-edge character matches the right chunk's left-edge character. That's a segment tree: a binary tree over the string where each node holds <code>(max_run, left_run, right_run, character)</code> for its range, and where updating one leaf only requires recomputing the handful of ancestors on the path back to the root — O(log n) nodes, not O(n).</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> After every update, rescan the entire string with the running-counter approach described above.</p>
+<p><strong>Algorithm:</strong>
+1. Apply the update to the string (list).
+2. Walk left to right, tracking the current run length and the best seen so far.
+3. Append the best run length to the results.</p>
+<p><strong>Advantages:</strong> Trivial to write, trivial to verify, no auxiliary data structure.</p>
+<p><strong>Disadvantages:</strong> Every query costs O(n), regardless of how small the actual change was.</p>
+<p><strong>Complexity:</strong> With <code>n</code> = string length and <code>q</code> = number of queries, total time is <strong>O(n · q)</strong>. Space is O(n) for the string itself. For <code>n = q = 10^5</code>, that's on the order of 10^10 operations — far too slow.</p>
+<h2>Optimal Solution</h2>
+<p>Build a <strong>segment tree</strong> over the string. Each leaf represents a single character; each internal node represents a range and stores:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>max_run</code></td>
+<td>Longest run of one repeated character anywhere inside this range</td>
+</tr>
+<tr>
+<td><code>left_run</code></td>
+<td>Length of the run starting at the range's left edge</td>
+</tr>
+<tr>
+<td><code>right_run</code></td>
+<td>Length of the run ending at the range's right edge</td>
+</tr>
+<tr>
+<td><code>left_char</code> / <code>right_char</code></td>
+<td>The characters at the two edges (or just infer from the string)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Merging two children (<code>left</code>, <code>right</code>) into a parent:</strong></p>
+<ul>
+<li><code>parent.max_run = max(left.max_run, right.max_run)</code></li>
+<li>If <code>left</code>'s rightmost character equals <code>right</code>'s leftmost character, the runs at that seam combine:</li>
+<li><code>parent.max_run = max(parent.max_run, left.right_run + right.left_run)</code></li>
+<li><code>parent.left_run = left.left_run</code>, unless <code>left.left_run == len(left)</code> (the left child is <em>entirely</em> one character), in which case it may extend into the right child: <code>parent.left_run = left.left_run + (right.left_run if chars match else 0)</code></li>
+<li><code>parent.right_run</code> is computed symmetrically from the right side.</li>
+</ul>
+<p><strong>Build:</strong> Recursively build leaves, then merge bottom-up. O(n).</p>
+<p><strong>Update:</strong> Change one leaf's character, then walk back up to the root, recomputing each ancestor via merge. Only <code>O(log n)</code> nodes are touched per update, since the tree has height <code>log n</code> and each level contributes exactly one node on the path from that leaf.</p>
+<p><strong>Query:</strong> The answer is always sitting at <code>root.max_run</code> — no separate query walk needed.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">class SegmentTree:
+    def __init__(self, s):
+        self.s = list(s)
+        self.n = len(self.s)
+        # each node: [max_run, left_run, right_run]
+        self.tree = [None] * (4 * self.n)
+        self._build(1, 0, self.n - 1)
+
+    def _build(self, node, lo, hi):
+        if lo == hi:
+            self.tree[node] = (1, 1, 1)
+            return
+        mid = (lo + hi) // 2
+        self._build(2 * node, lo, mid)
+        self._build(2 * node + 1, mid + 1, hi)
+        self.tree[node] = self._merge(node, lo, mid, hi)
+
+    def _merge(self, node, lo, mid, hi):
+        left = self.tree[2 * node]
+        right = self.tree[2 * node + 1]
+        left_len = mid - lo + 1
+        right_len = hi - mid
+
+        max_run = max(left[0], right[0])
+        left_run, right_run = left[1], right[1]
+
+        if self.s[mid] == self.s[mid + 1]:
+            # seam run: end of left range meets start of right range
+            max_run = max(max_run, left[2] + right[1])
+            if left[1] == left_len:
+                left_run = left_len + right[1]
+            if right[2] == right_len:
+                right_run = right_len + left[2]
+
+        return (max_run, left_run, right_run)
+
+    def update(self, node, lo, hi, idx, char):
+        if lo == hi:
+            self.s[idx] = char
+            self.tree[node] = (1, 1, 1)
+            return
+        mid = (lo + hi) // 2
+        if idx &lt;= mid:
+            self.update(2 * node, lo, mid, idx, char)
+        else:
+            self.update(2 * node + 1, mid + 1, hi, idx, char)
+        self.tree[node] = self._merge(node, lo, mid, hi)
+
+    def longest_repeating(self):
+        return self.tree[1][0]
+
+
+def longestRepeating(s, queryCharacters, queryIndices):
+    tree = SegmentTree(s)
+    n = len(s)
+    answers = []
+    for char, idx in zip(queryCharacters, queryIndices):
+        tree.update(1, 0, n - 1, idx, char)
+        answers.append(tree.longest_repeating())
+    return answers
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>SegmentTree.__init__</code> stores the string as a mutable list (so single-character writes are O(1)) and allocates a <code>4 * n</code>-sized array for the tree — the standard safe upper bound for a recursive segment tree.</li>
+<li><code>_build</code> recurses down to single-character leaves, each trivially a run of length 1, then merges pairs of children back up.</li>
+<li><code>_merge</code> is where the logic actually lives. It first takes the plain max of the two children's <code>max_run</code>. Then it checks the seam — the last character of the left range and the first character of the right range. If they match, a run can cross the boundary, so it checks <code>left.right_run + right.left_run</code> as a candidate for the new max. It also has to correct <code>left_run</code>/<code>right_run</code> for the <em>parent</em> range: if the left child is entirely one repeated character (its <code>left_run</code> fills its whole length), the parent's <code>left_run</code> can extend into the right child; same logic mirrored for <code>right_run</code>.</li>
+<li><code>update</code> walks down to the target leaf, overwrites the character, then re-merges every ancestor on the way back up — exactly the nodes whose ranges include the changed index.</li>
+<li><code>longest_repeating</code> just reads <code>tree[1][0]</code>, the root's <code>max_run</code>, since the root's range is the whole string.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>String: <code>b a b a c c</code> (indices 0–5).</p>
+<p><strong>Query 1: place <code>b</code> at index 1.</strong> Leaf 1 becomes <code>b</code>. String is now <code>b b b a c c</code>. Walking up, merges detect <code>bbb</code> at indices 0–2 (three matching characters in a row), giving <code>max_run = 3</code>. Result: <strong>3</strong>.</p>
+<p><strong>Query 2: place <code>c</code> at index 3.</strong> String becomes <code>b b b c c c</code>. Two separate runs of 3 (<code>bbb</code>, <code>ccc</code>), no seam match between index 2 (<code>b</code>) and index 3 (<code>c</code>). <code>max_run = 3</code>. Result: <strong>3</strong>.</p>
+<p><strong>Query 3: place <code>b</code> at index 3.</strong> String becomes <code>b b b b c c</code>. Now indices 0–3 are all <code>b</code>. The seam between the left half and right half of the tree at that boundary matches, <code>left.right_run + right.left_run</code> yields 4. Result: <strong>4</strong>.</p>
+<p>Final: <code>[3, 3, 4]</code> — matches the brute-force answer, but each query only touched <code>O(log 6)</code> nodes instead of rescanning all 6 characters.</p>
+<p><strong>Checkpoint:</strong> string <code>a a a a</code>, place <code>z</code> at index 2. Before reading on — what's the longest run?</p>
+<p>It's <strong>2</strong>: <code>a a</code> then <code>z</code> breaks it, then <code>a a</code> again. The most common mistake here is only tracking each half's <em>best</em> run and forgetting a run can straddle a boundary between children — which is exactly why every node also stores <code>left_run</code> and <code>right_run</code>, not just <code>max_run</code>.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Build:</strong> O(n) — each node is visited once, and merge is O(1) work per node.</li>
+<li><strong>Update:</strong> O(log n) per query — the path from a leaf to the root has exactly <code>log n</code> nodes, and each merge is O(1).</li>
+<li><strong>Total:</strong> O(n + k log n) for <code>k</code> queries, versus O(n · k) for the brute force. Space is O(n) for the tree (the <code>4n</code> array) plus O(n) for the string.</li>
+</ul>
+<p>This is correct because the only nodes whose stored summary can change after a single-character edit are the ones whose range contains that index — and there are exactly <code>log n</code> of those, one per tree level.</p>
+<h2>Alternative Solutions</h2>
+<p>You could maintain a sorted set of run boundaries (start/end index pairs) and manually merge or split neighboring runs on each edit, tracking the current maximum with a max-heap. This avoids building a tree, but the heap needs <strong>lazy deletion</strong> — old run lengths become stale as runs merge or split, and you can't efficiently remove arbitrary entries from a heap. In practice this ends up being more bookkeeping, not less, than the segment tree, for the same asymptotic complexity.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>String of length 1:</strong> builds a single-node tree; every update just rewrites that one leaf. Answer is always 1.</li>
+<li><strong>Placing the character that's already there:</strong> a no-op update — the leaf gets rewritten to the same value, ancestors re-merge to the same result. Harmless but not free (still O(log n)).</li>
+<li><strong>Update at index 0 or the last index:</strong> the update walk simply goes all the way to that edge of the tree; no special-casing needed.</li>
+<li><strong>All characters identical:</strong> <code>max_run</code> equals the full string length at every node, and any single edit in the middle splits it into (at most) two smaller runs.</li>
+<li><strong>Two queries hitting the same index back to back:</strong> each is processed independently; the second update simply overwrites the first.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Rescanning the whole string on every query</strong> — technically correct, but O(n·q), which times out on large inputs.</li>
+<li><strong>Only storing <code>max_run</code> per node and forgetting <code>left_run</code>/<code>right_run</code></strong> — this silently drops runs that cross a child boundary, producing a wrong (too small) answer.</li>
+<li><strong>Failing to propagate <code>left_run</code>/<code>right_run</code> correctly when a child is entirely one character</strong> — if you don't check whether <code>left.left_run == left_len</code> before extending into the sibling, boundary-crossing runs get miscounted.</li>
+<li><strong>Off-by-one errors in the seam comparison</strong> — comparing <code>s[mid]</code> and <code>s[mid+1]</code> (not <code>s[lo]</code>/<code>s[hi]</code>) is what actually represents the adjacency between the two child ranges.</li>
+<li><strong>Forgetting to re-merge every ancestor after an update</strong> — updating only the leaf and the root, skipping intermediate levels, leaves the tree in an inconsistent state for future queries.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you extend this to support range updates (assign a character to an entire range at once) instead of point updates?</li>
+<li>Could you support "insert" and "delete" operations instead of overwrite-in-place? What breaks?</li>
+<li>How would you adapt the segment tree if you needed the longest run of <em>any</em> two allowed characters, not just one repeated character?</li>
+<li>What's the memory tradeoff of an iterative (bottom-up array) segment tree versus this recursive version?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 2213 relatives via segment tree pattern:</strong> LeetCode 307 (Range Sum Query – Mutable) — same "point update, range query, tree of summaries" shape, simpler merge function.</li>
+<li><strong>LeetCode 715 (Range Module)</strong> — tracks ranges with a different structure but shares the "local edit, global query" theme.</li>
+<li><strong>LeetCode 128 (Longest Consecutive Sequence)</strong> — related in spirit (longest run), but over a static unsorted array, solved with a hash set instead of a tree.</li>
+<li><strong>LeetCode 5 (Longest Palindromic Substring)</strong> — different technique, but a good companion for building intuition about "runs" and substring properties.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The naive rescan-after-every-edit approach costs O(n) per query because it throws away everything it already knew about the string. The fix isn't a smarter scan — it's a structure that only recomputes what actually changed. A segment tree that stores each range's max run plus its left-edge and right-edge runs lets every update touch just <code>O(log n)</code> nodes, because a change only affects the ancestors of one leaf. The transferable lesson: whenever an update only affects a small, local region of your data, look for a tree that summarizes chunks and recombines summaries on the way up, instead of rescanning everything from scratch.</p>
+<h2>Watch the Video</h2>
+<p>For the full visual walkthrough — including the tree diagrams and the live dry run on <code>babacc</code> — check out the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <em>Fun with Learning Technology</em>, a series built for developers who want to actually understand the "why" behind interview problems and core computer science patterns — not just memorize a solution to pass a test case.</p>
+<h2>Call To Action</h2>
+<p>If this walkthrough helped the segment tree click, give the video a like on YouTube and subscribe for more deep dives like this one. For write-ups, code, and extra breakdowns delivered straight to your inbox, subscribe to the Substack. Drop a comment with your answer to the checkpoint question, and share this with anyone prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Substring with only repeated chars — what pattern applies?</summary><p>Sliding window / linear scan — when you see &#x27;longest run of same element&#x27;, think group boundaries, not brute-force rescanning.</p></details><details class='card2'><summary>Time complexity of the one-pass solution?</summary><p>O(n) — each character visited once, comparing to its predecessor.</p></details><details class='card2'><summary>Space complexity of the one-pass solution?</summary><p>O(1) — just running counters for current length and best length.</p></details><details class='card2'><summary>Trickiest bug in the single-pass approach?</summary><p>Forgetting to compare the final run&#x27;s length after the loop ends — the last group never triggers a mismatch to close it.</p></details><details class='card2'><summary>Naive rescan vs one-pass: what&#x27;s the rescan trap?</summary><p>Rescanning from each start index re-walks overlapping ground, turning O(n) into O(n²) for no new info.</p></details><details class='card2'><summary>Follow-up: what if you need the substring itself, not just length?</summary><p>Track start index alongside the running counter, update it whenever a new max length is found.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
