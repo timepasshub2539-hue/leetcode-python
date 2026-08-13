@@ -1,0 +1,234 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Python Lesson 29: parametrize() Turns 1 Test Into 10 — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-29-testing-with-pytest
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesson-29-te">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-29-testing-with-pytest.html">
+<meta property="og:title" content="Python Lesson 29: parametrize() Turns 1 Test Into 10 — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-29-testing-with-pytest
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesson-29-te">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 29: parametrize() Turns 1 Test Into 10</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>8. Introduction: Why Testing Matters Before You Deploy</h2>
+<p>Imagine you write a function to add two numbers. It works perfectly today. Two weeks later, a teammate changes a variable name nearby, or updates a dependency version, and suddenly the output is wrong. The user complains first because they didn't know it was broken until then. That is the silent killer of software quality.</p>
+<p>In the world of professional software engineering, we don't rely on "hope." We rely on <strong>automated tests</strong>. But writing them manually for every single input can feel like drudgery. Today, we are diving deep into one of the most powerful tools in the Python ecosystem: <code>pytest</code>. Specifically, we will master the concept of <strong>parametrization</strong>. This is not just about syntax; it is about shifting your mindset from "testing once" to "testing exhaustively."</p>
+<p>Interviewers love testing questions because they reveal whether a developer thinks about failure modes or only happy paths. By the end of this lesson, you will understand how to write assertions that catch bugs instantly, how to use fixtures to avoid code duplication, and crucially, how <code>@pytest.mark.parametrize</code> allows you to cover zero inputs, negative numbers, and massive integers without writing ten separate files.</p>
+<h2>9. Problem Overview</h2>
+<p>The core challenge in software development is maintaining stability. As code evolves, old logic breaks unless verified automatically. The "problem" we are solving here is twofold:</p>
+<ol>
+<li><strong>Repetition:</strong> Writing the same test setup for every single scenario is inefficient and prone to human error (copy-paste mistakes).</li>
+<li><strong>Coverage Gaps:</strong> Developers naturally focus on the "happy path" (the code working as expected). We often forget to write tests for edge cases, leading to subtle bugs that only appear in production.</li>
+</ol>
+<p>We will build a simple function called <code>add</code> and create a testing suite that proves it works not just for $2+3$, but for an infinite variety of inputs. We will move from the primitive <code>assert</code> statement to a robust, parametrized architecture that scales.</p>
+<h2>10. Example</h2>
+<p>Let's look at what we are building. We have a simple function:</p>
+<pre><code class="language-python">def add(a, b):
+    return a + b
+</code></pre>
+<p>And we want to verify it behaves correctly in different scenarios. Here is the expected behavior we need to validate:
+*   <strong>Happy Path:</strong> <code>add(2, 3)</code> should return <code>5</code>.
+*   <strong>Edge Case (Zero):</strong> <code>add(0, 10)</code> should return <code>10</code> (identity property).
+*   <strong>Edge Case (Negative):</strong> <code>add(-1, -4)</code> should return <code>-5</code>.
+*   <strong>Large Numbers:</strong> <code>add(10**9, 2)</code> should handle large integers correctly.</p>
+<h2>11. Intuition: How an Experienced Engineer Discovers the Solution</h2>
+<p>How do we get from "one test" to "a suite of tests"? The intuition comes from <strong>data-driven thinking</strong>.</p>
+<p>Instead of writing a new function <code>test_add_zero</code>, then another <code>test_add_negative</code>, think of the <em>inputs</em> as data points in a table.
+| Input A | Input B | Expected Output |
+| :--- | :--- | :--- |
+| 2 | 3 | 5 |
+| 0 | 10 | 10 |
+| -1 | -4 | -5 |</p>
+<p>If you view your tests as a dataset, you stop seeing them as separate code blocks. You see them as rows of data that need to feed into the same logic. This is why <code>@pytest.mark.parametrize</code> exists: it allows you to define this table once and let the test runner execute your single test function multiple times, feeding each row's data into the arguments automatically.</p>
+<p>The "aha" moment usually hits when you realize: <em>"I am not writing 10 tests; I am defining 10 scenarios that share one logic."</em> This reduces cognitive load and ensures that every time you fix a bug in your test assertion, it fixes the bug for all those edge cases simultaneously.</p>
+<h2>12. Brute Force Solution</h2>
+<p>Before we use the decorator, let's see the "Brute Force" approach. You simply copy-paste the same test function over and over again.</p>
+<h3>The Algorithm</h3>
+<ol>
+<li>Define <code>test_add_zero</code>. Inside, assert the result.</li>
+<li>Define <code>test_add_negative</code>. Inside, assert the result.</li>
+<li>Define <code>test_add_large_numbers</code>. Inside, assert the result.</li>
+<li>Repeat for every single edge case.</li>
+</ol>
+<h3>Code Structure (Brute Force)</h3>
+<pre><code class="language-python">def test_add_simple():
+    assert add(2, 3) == 5
+
+def test_add_zero():
+    assert add(0, 10) == 10
+
+def test_add_negative():
+    assert add(-1, -4) == -5
+</code></pre>
+<h3>Analysis</h3>
+<ul>
+<li><strong>Advantages:</strong> It is easy to understand for a beginner. No decorators or advanced syntax required.</li>
+<li><strong>Disadvantages:</strong><ul>
+<li><strong>Duplication:</strong> You are repeating the <code>assert</code> logic (the mental check "I expect X") multiple times. If you decide to change how you report errors, you have to update three functions instead of one.</li>
+<li><strong>Maintenance:</strong> If the test fails, you have to look at multiple function definitions to understand which row failed.</li>
+<li><strong>Scalability:</strong> Writing a test for every possible edge case becomes tedious and painful quickly.</li>
+</ul>
+</li>
+</ul>
+<h3>Complexity</h3>
+<ul>
+<li><strong>Time Complexity:</strong> $O(N)$ where $N$ is the number of test cases written manually. The setup time scales linearly with the number of inputs.</li>
+<li><strong>Space Complexity:</strong> $O(1)$ per function, but high overall file size due to code duplication.</li>
+</ul>
+<h2>13. Optimal Solution: <code>@pytest.mark.parametrize</code></h2>
+<p>Now, let's reconstruct the solution using the optimal approach described in this lesson. We will use the <code>parametrize</code> decorator.</p>
+<h3>The Algorithm</h3>
+<ol>
+<li>Define a list (or list of lists) containing tuples of inputs and expected outputs.</li>
+<li>Decorate your single test function with <code>@pytest.mark.parametrize</code>. Pass the parameter name(s) and the data rows.</li>
+<li>Inside the function, use placeholders (e.g., <code>a</code>, <code>b</code>) for the arguments.</li>
+</ol>
+<h3>Visualizing the Mechanism</h3>
+<p>Think of this like a loop that runs behind the scenes:</p>
+<pre><code class="language-text">Row 1: Input A=2, B=3 -&gt; Call test_function(2, 3)
+Row 2: Input A=0, B=10 -&gt; Call test_function(0, 10)
+Row 3: Input A=-1, B=-4 -&gt; Call test_function(-1, -4)
+</code></pre>
+<h3>Python Solution</h3>
+<pre><code class="language-python">import pytest
+
+def add(a, b):
+    return a + b
+
+# The parametrize decorator takes two arguments:
+# 1. The name of the parameters in the function definition ('a', 'b')
+# 2. A list of lists where each inner list is a row of data (input, expected_output)
+@pytest.mark.parametrize(&quot;a, b&quot;, [
+    (2, 3),        # Row 1
+    (0, 10),       # Row 2: Edge case - Zero
+    (-1, -4),      # Row 3: Edge case - Negative numbers
+    (10**9, 2),    # Row 4: Edge case - Large integers
+])
+def test_add(a, b):
+    # This single line is now executed once for every row above
+    assert add(a, b) == a + b
+</code></pre>
+<h3>Why This Works</h3>
+<p>The decorator creates distinct test functions dynamically at runtime. If you run <code>pytest -v</code>, you will see four separate tests in the output:
+1.  <code>test_add[2-3]</code>
+2.  <code>test_add[0-10]</code>
+3.  <code>test_add[-1--4]</code>
+4.  <code>test_add[1000000000-2]</code></p>
+<p>This separation allows you to see exactly which input caused the failure, while maintaining a single, clean definition of logic.</p>
+<h2>14. Python Code (Production Quality)</h2>
+<p>Here is the complete, production-quality module including error handling and fixtures to demonstrate best practices.</p>
+<pre><code class="language-python"># test_add.py
+import pytest
+
+def add(a: int, b: int) -&gt; int:
+    &quot;&quot;&quot;
+    Adds two integers.
+
+    Args:
+        a (int): The first number.
+        b (int): The second number.
+
+    Returns:
+        int: The sum of a and b.
+    &quot;&quot;&quot;
+    return a + b
+
+# Fixture to provide a shared utility if needed, 
+# though for simple math we can keep it simple.
+@pytest.fixture(scope=&quot;function&quot;)
+def calculator():
+    return lambda x, y: x + y
+
+# The core parametrized test
+@pytest.mark.parametrize(&quot;a, b, expected&quot;, [
+    (2, 3, 5),                # Standard case
+    (0, 10, 10),              # Edge case: Zero identity
+    (-1, -4, -5),             # Edge case: Negative numbers
+    (10**9, 2, 1000000002),   # Edge case: Large integers
+])
+def test_addition(a, b, expected):
+    &quot;&quot;&quot;
+    Verifies that add() returns the correct sum for various inputs.
+
+    This test covers the happy path and critical edge cases.
+    &quot;&quot;&quot;
+    assert add(a, b) == expected
+
+# Fixture example: Setting up a mock or shared environment
+@pytest.fixture
+def sample_data():
+    &quot;&quot;&quot;Creates a reusable object to avoid copy-paste setup.&quot;&quot;&quot;
+    return {&quot;x&quot;: 10, &quot;y&quot;: 20}
+
+def test_sample_data_consistency(sample_data):
+    &quot;&quot;&quot;
+    Demonstrates how fixtures work. 
+    If we needed complex setup, we'd do it here once and pass 'sample_data' to tests.
+    &quot;&quot;&quot;
+    assert sample_data[&quot;x&quot;] + sample_data[&quot;y&quot;] == 30
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<p>Let's break down the <code>test_addition</code> function line by line.</p>
+<ol>
+<li><strong><code>import pytest</code></strong>: This imports the testing framework. Without it, the decorators won't be recognized.</li>
+<li><strong><code>@pytest.mark.parametrize("a, b", ...)</code></strong>: This decorator is the key.<ul>
+<li><code>"a, b"</code> tells pytest which variables in the test function below should be replaced by the data from the rows.</li>
+<li>The list <code>[(2, 3), (0, 10)...]</code> represents the dataset. Each tuple is one row of execution.</li>
+</ul>
+</li>
+<li><strong><code>def test_addition(a, b, expected):</code></strong>: Notice that our function definition now matches the parameter names defined in the decorator. Pytest will inject the correct values for each row into these variables before running the code inside the function.</li>
+<li><strong><code>assert add(a, b) == expected</code></strong>: This is the assertion. It compares the actual output of <code>add()</code> with our manually calculated expectation. If they differ, pytest halts immediately and prints a clear error message indicating which specific row failed.</li>
+</ol>
+<h2>16. Dry Run: Tracing One Complete Execution</h2>
+<p>Let's simulate what happens when you run <code>pytest</code> on our file, specifically focusing on the second row of data: <code>(0, 10)</code>.</p>
+<p><strong>Step 1: Test Discovery</strong>
+Pytest scans the file and finds <code>test_addition</code>. It sees it has a parametrize decorator with 2 parameters (<code>a</code>, <code>b</code>).</p>
+<p><strong>Step 2: Data Extraction</strong>
+The decorator extracts the second row from our list: <code>[0, 10]</code>. Wait, our example included <code>expected</code> in the optimized version above. Let's stick to the simpler two-parameter version for clarity on the dry run.
+*   <strong>Row 2 Input:</strong> <code>a=0</code>, <code>b=10</code>.</p>
+<p><strong>Step 3: Function Instantiation</strong>
+Pytest generates a unique test instance, conceptually named <code>test_addition[0-10]</code>. It binds <code>a</code> to <code>0</code> and <code>b</code> to <code>10</code> in the local scope of the function.</p>
+<p><strong>Step 4: Execution</strong>
+The function body runs:
+*   Calls <code>add(0, 10)</code>.
+*   Internal logic computes <code>0 + 10 = 10</code>.
+*   Assert checks: Is <code>10</code> equal to the expected result? (Assuming we stored <code>expected=10</code> in the decorator data).</p>
+<p><strong>Step 5: Result Handling</strong>
+Since <code>10 == 10</code>, the check passes. Pytest prints a green "PASSED" for this specific run and proceeds immediately to load the next row <code>(-1, -4)</code>.</p>
+<p>If we had written <code>add(0, 10)</code> expecting <code>99</code> (a bug), Step 5 would catch it instantly: <code>AssertionError: assert 10 == 99</code>. The error message explicitly states "Expected: 99" and "Got: 10".</p>
+<h2>17. Complexity Analysis</h2>
+<h3>Time Complexity</h3>
+<ul>
+<li><strong>Setup:</strong> Parsing the decorator arguments takes constant time relative to the number of rows $N$, but this happens once at import/module load time.</li>
+<li><strong>Execution:</strong> The test body runs $N$ times. If the function inside (<code>add</code>) takes $O(1)$ time, the total execution time is $O(N)$.</li>
+<li><strong>Comparison with Brute Force:</strong> In brute force, you write $N$ functions. In parametrized testing, you write 1 function and define a list of size $N$. The computational overhead is negligible because the test runner's loop is highly optimized in C (inside pytest).</li>
+</ul>
+<h3>Space Complexity</h3>
+<ul>
+<li><strong>Storage:</strong> We store $N$ tuples in memory for the decorator arguments. This is $O(N)$.</li>
+<li><strong>Runtime:</strong> Since we are not creating new objects for every row (just reusing the function and passing integers), the auxiliary space is minimal, effectively $O(1)$ per run of the test body.</li>
+</ul>
+<h2>18. Alternative Solutions</h2>
+<p><strong>Fixtures vs. Parametrization</strong>
+Sometimes you might think, "Can't I just copy-paste?" No, that's brute force. What about <strong>fixtures</strong>?
+A fixture (like <code>@pytest.fixture</code>) is for <em>setup code</em>.
+*   <em>Scenario:</em> You have a database connection string. You don't want to paste the login logic in every test. You make it a fixture.
+*   <em>Difference:</em> Fixtures manage state and lifecycle of objects. Parametrization manages data inputs for functions. They are often used together! You can parametrize your input values inside a test that uses a fixture.</p>
+<p><strong>Manual Data-Driven Testing (CSV/JSON)</strong>
+Another alternative is reading test cases from a <code>data.json</code> file. This is useful if your test data changes frequently and you want to separate logic from data. However, <code>parametrize</code> is preferred for unit tests because the logic is tightly coupled with the expected behavior in the code itself, making reviews easier.</p>
+<h2>19. Edge Cases: The Real Value of Parametrization</h2>
+<p>The true power of this lesson shines here. Without parametrization, developers often skip these cases because they feel "extra work":
+1.  <strong>Empty Inputs:</strong> <code>add(None, None)</code> (Type error, but good to catch).
+2.  <strong>Zeroes:</strong> <code>add(0, 0)</code>, <code>add(-5, 5)</code> (Result 0).
+3.  <strong>Max Integers:</strong> Python handles arbitrary precision integers, so overflow isn't an issue like in C++, but testing limits is still vital for performance profiling.
+4.  <strong>Negative Numbers:</strong> Ensuring signs are handled correctly.</p>
+<p>By placing these rows into the decorator list, you force yourself to think about them <em>while coding</em>. You cannot easily forget a row of data that sits right at the top of your test file.</p>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Mistaking Parameters for Variables:</strong> Writing <code>@pytest.mark.parametrize("x", ...)</code> but defining the function as <code>def test_x(y):</code>. This causes a naming conflict and confusion. Ensure the variable names in the decorator match the function arguments exactly.</li>
+<li><strong>Hardcoding Values in Tests:</strong> Don't put actual values like <code>add(1, 2)</code> inside an assertion if you are parametrizing. Use the variables passed from the decorator (e.g., <code>assert add(a, b) == expected</code>). Hardcoding defeats the purpose of automation.</li>
+<li><strong>Ignoring the <code>expected</code> Column:</strong> Sometimes people only pass inputs <code>(a, b)</code> and forget to provide what the output <em>should</em> be. The <code>assert</code> statement needs a target to compare against. You can use a helper function or just compare to a computed value, but explicit <code>expected</code> values are better for debugging.</li>
+<li><strong>Using Lists of Tuples vs. Dicts:</strong> While you can pass dicts `{ "a": 2, "b":</li>
+</ol></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>What does the &#x27;You Tested It. It Still Broke.&#x27; pattern signify?</summary><p>It signifies that tests pass locally but fail on CI due to environment differences, not test failures.</p></details><details class='card2'><summary>What is the time complexity of standard pytest parametrization?</summary><p>Time complexity is O(n) where n is the total number of generated test cases from parameters.</p></details><details class='card2'><summary>What is the space complexity of using fixtures in pytest?</summary><p>Space complexity is O(1) for scope-specific fixtures, but scales with object count for module/session scopes.</p></details><details class='card2'><summary>What is the trickiest edge case when writing parametrized tests?</summary><p>Handling dynamic parameter dependencies where one test input needs to generate another&#x27;s input value.</p></details><details class='card2'><summary>How does &#x27;Not the Tool&#x27; compare to &#x27;The Habit&#x27; regarding pytest?</summary><p>&#x27;Not the Tool&#x27; warns against over-relying on pytest features, while &#x27;The Habit&#x27; emphasizes writing tests regardless of framework.</p></details><details class='card2'><summary>What is a common follow-up question for writing unit tests?</summary><p>How do you mock external dependencies like a database or third-party API to isolate the function being tested?</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
