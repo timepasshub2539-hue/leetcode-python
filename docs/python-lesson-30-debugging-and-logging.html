@@ -1,0 +1,213 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Python Lesson 30: Why Does print() Stop Working in Production? — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-30-debugging-and-logging
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesson-30-">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-30-debugging-and-logging.html">
+<meta property="og:title" content="Python Lesson 30: Why Does print() Stop Working in Production? — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-30-debugging-and-logging
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesson-30-">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 30: Why Does print() Stop Working in Production?</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every developer starts the same way: something breaks, and the first instinct is to sprinkle <code>print()</code> statements around the code until the problem reveals itself. It works, sort of — right up until the code leaves your laptop. The moment a bug shows up in production, on a server nobody is watching, <code>print()</code> stops being a debugging tool and starts being noise you have to clean up later, if you remember to.</p>
+<p>This matters more than it seems for a simple reason: debugging is not a peripheral skill you pick up eventually. It's the actual job. Writing code is maybe half of what a software engineer does; figuring out why code isn't doing what you expect is the other half, and it's the half interviewers quietly evaluate even when they're not asking a "debug this" question directly. Someone who can only debug by guessing and re-running is slower at everything — shipping features, reviewing PRs, responding to incidents.</p>
+<p>The good news is that Python already ships with two tools that solve this properly, and neither requires installing anything. <code>pdb</code> (and its shortcut, <code>breakpoint()</code>) lets you freeze code mid-execution and inspect it like a live crime scene. The <code>logging</code> module gives you a print statement that never has to be deleted, because you can just turn it off. Combined with a simple strategy for narrowing down where a bug lives, these two tools turn a twenty-minute guessing game into a two-minute lookup.</p>
+<h2>Problem Overview</h2>
+<p>Here's the scenario in plain terms: you have a function that's supposed to calculate a discount for a user's cart, but it keeps returning <code>None</code> instead of a number. The function itself looks fine when you read it. The logic seems correct. So where's the bug?</p>
+<p>The traditional approach is to add a <code>print()</code> statement above the suspicious line, run the code, look at the output, and repeat — moving the print statement around until something looks wrong. This works for genuinely trivial bugs. It falls apart the moment:</p>
+<ul>
+<li>The bug depends on live state you can't easily reconstruct (a running server, a real user session, a database in a particular state).</li>
+<li>The bug isn't in the function you're staring at, but in data that arrived <em>before</em> that function was ever called.</li>
+<li>You need to inspect more than one variable, or inspect them conditionally, or step through several function calls in sequence.</li>
+</ul>
+<p>In our example, the bug isn't actually inside <code>get_discount</code> at all. It's upstream — bad data is arriving at the function's doorstep. No amount of print statements inside <code>get_discount</code> would tell you that as directly as pausing execution and looking at the incoming argument.</p>
+<h2>Example</h2>
+<pre><code class="language-python">def get_discount(user: dict) -&gt; float:
+    total = user[&quot;cart_total&quot;]
+    if total &gt; 100:
+        return total * 0.9
+    return total * 0.95
+
+cart = {&quot;cart_total&quot;: None}
+print(get_discount(cart))
+</code></pre>
+<p>Run this, and Python throws a <code>TypeError: '&gt;' not supported between instances of 'NoneType' and 'int'</code>. The traceback points at the comparison inside <code>get_discount</code>, which makes it tempting to assume the bug lives there. It doesn't. The function is doing exactly what it's told — the problem is that <code>cart_total</code> was <code>None</code> before it ever reached this function. Something upstream (a failed API call, a missing form field, a bad default) produced bad data, and <code>get_discount</code> is just the first place it caused a visible crash.</p>
+<p>This is the core insight the whole video builds toward: the line where code fails and the line where the bug originates are often two different places, and print statements are bad at telling them apart.</p>
+<h2>Intuition</h2>
+<p>An experienced engineer doesn't reach for more print statements when a bug is confusing — they reach for a way to <em>stop time</em>. The real question a debugger answers isn't "what does my code do," it's "what does my program actually look like, right now, at this exact line, with these exact values." Print statements approximate that by showing you fragments after the fact. A debugger gives you the whole picture, live, and lets you ask follow-up questions on the spot instead of guessing what the next print statement should say.</p>
+<p>The second piece of intuition is about <em>where</em> to look. Instead of inspecting every line, an experienced engineer bisects the problem: pick a line roughly in the middle of where the bug could be, check whether the bad state exists before or after it, and repeat. This is the same idea as binary search, applied to a bug instead of a sorted array — each check eliminates half the remaining code, so you converge on the exact line in a handful of steps instead of scanning the whole file top to bottom.</p>
+<p>Once you accept that debugging is really "pause, inspect, narrow" repeated a few times, the specific tools become obvious. You need something that pauses (<code>breakpoint()</code>), something that records without needing to be there live (<code>logging</code>), and a strategy for choosing where to pause (bisection).</p>
+<h2>Brute Force Solution</h2>
+<p>The brute-force approach is scattering <code>print()</code> calls:</p>
+<pre><code class="language-python">def get_discount(user: dict) -&gt; float:
+    print(&quot;DEBUG: user =&quot;, user)
+    total = user[&quot;cart_total&quot;]
+    print(&quot;DEBUG: total =&quot;, total)
+    if total &gt; 100:
+        return total * 0.9
+    return total * 0.95
+</code></pre>
+<p><strong>Idea:</strong> insert output statements near anything suspicious, run the program, read the console.</p>
+<p><strong>Algorithm:</strong> guess a location → add a print → run → read output → if not helpful, add another print elsewhere → repeat.</p>
+<p><strong>Advantages:</strong>
+- Zero setup, works everywhere immediately.
+- Easy for a beginner to understand.</p>
+<p><strong>Disadvantages:</strong>
+- Doesn't work once the code is running somewhere you can't watch it live (a server, a scheduled job, a container).
+- Every print statement has to be manually added and later manually removed — forget one and it ships to production.
+- Only shows you what you thought to print. If the actual bug is in a variable you didn't think to inspect, you get nothing.
+- No severity levels — you either see everything or you comment lines out one by one.</p>
+<p><strong>Time complexity:</strong> effectively O(n) <em>edit-run cycles</em>, where n is the number of guesses before you get lucky — unbounded in the worst case, since a wrong guess costs a full round trip.</p>
+<p><strong>Space complexity:</strong> N/A — this is a workflow cost, not a memory cost, but the "space" it costs is your own time and attention.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach swaps guessing for pausing, and swaps manual cleanup for a dial you can turn.</p>
+<p><strong>Step 1 — Pause execution with <code>breakpoint()</code>.</strong>
+Drop <code>breakpoint()</code> on the line right before you suspect trouble. When Python reaches it, execution freezes and drops you into a <code>pdb</code> prompt — an interactive shell sitting inside your running program.</p>
+<p><strong>Step 2 — Use five commands to look around.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>p &lt;expr&gt;</code></td>
+<td>Print the value of a variable or expression</td>
+</tr>
+<tr>
+<td><code>n</code></td>
+<td>Step to the next line (don't go inside function calls)</td>
+</tr>
+<tr>
+<td><code>s</code></td>
+<td>Step into a function call</td>
+</tr>
+<tr>
+<td><code>c</code></td>
+<td>Continue running until the next breakpoint (or the end)</td>
+</tr>
+<tr>
+<td><code>l</code></td>
+<td>List the surrounding source code</td>
+</tr>
+</tbody>
+</table>
+<p><code>n</code> and <code>p</code> alone resolve the majority of bugs — step forward, print whatever looks suspicious, repeat. <code>s</code>, <code>c</code>, and <code>l</code> are there for when you need to go deeper.</p>
+<p><strong>Step 3 — Once you find it, switch to <code>logging</code> for anything that needs to survive outside your terminal.</strong></p>
+<pre><code class="language-python">import logging
+logging.basicConfig(level=logging.WARNING)
+</code></pre>
+<p>Every log call carries a timestamp and a severity level automatically — <code>debug</code>, <code>info</code>, <code>warning</code>, <code>error</code>. The <code>level</code> argument acts as a floor: anything below it is silently dropped, without touching the calls themselves. Set the floor to <code>WARNING</code> and your <code>debug</code>/<code>info</code> calls stay in the code but produce no output. Need more detail during an incident? Change one argument to <code>DEBUG</code>, and every line reappears — no code changes, no redeploy just to see more.</p>
+<p><strong>Step 4 — Bisect instead of scanning.</strong>
+Rather than debugging the whole file, ask one question repeatedly: does the bug exist <em>before</em> this line, or <em>after</em> it? Each answer eliminates half the remaining code, so a file with dozens of candidate lines collapses to the right one in just a few pauses.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">import logging
+
+logging.basicConfig(level=logging.WARNING)
+
+
+def get_discount(user: dict) -&gt; float:
+    &quot;&quot;&quot;Return the discounted cart total for a user.&quot;&quot;&quot;
+    breakpoint()  # pause here to inspect `user` before `total` is used
+    total = user[&quot;cart_total&quot;]
+    logging.debug(&quot;cart_total resolved to %s&quot;, total)
+
+    if total is None:
+        logging.error(&quot;cart_total was None for user=%s&quot;, user)
+        raise ValueError(&quot;cart_total is missing or None&quot;)
+
+    if total &gt; 100:
+        return total * 0.9
+    return total * 0.95
+
+
+if __name__ == &quot;__main__&quot;:
+    cart = {&quot;cart_total&quot;: None}
+    print(get_discount(cart))
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>logging.basicConfig(level=logging.WARNING)</code> sets the global floor for log output. Only <code>WARNING</code> and <code>ERROR</code> calls print; <code>DEBUG</code> and <code>INFO</code> calls still execute but produce nothing.</li>
+<li><code>breakpoint()</code> freezes execution at that exact line, before <code>total</code> is even assigned, and drops into the <code>pdb</code> prompt.</li>
+<li>Inside the prompt, <code>p user</code> prints the entire dictionary — this is where you'd see <code>cart_total</code> is <code>None</code> immediately, without stepping any further.</li>
+<li><code>logging.debug(...)</code> is a permanent, harmless line. It costs nothing when the floor is <code>WARNING</code> and becomes useful the instant you need to raise the floor to <code>DEBUG</code>.</li>
+<li>The explicit <code>if total is None</code> guard converts a confusing downstream <code>TypeError</code> into a clear, immediate <code>ValueError</code> with context about which user triggered it — this is what production code should do instead of crashing three lines later with no explanation.</li>
+<li><code>logging.error(...)</code> records the failure with the actual bad state attached, so even if nobody was watching a terminal when it happened, the log file tells the story afterward.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using <code>cart = {"cart_total": None}</code>:</p>
+<ol>
+<li><code>get_discount(cart)</code> is called.</li>
+<li>Execution hits <code>breakpoint()</code> and pauses before <code>total</code> is assigned.</li>
+<li>You type <code>p user</code> → output: <code>{'cart_total': None}</code>. The bad data is visible immediately.</li>
+<li>You type <code>c</code> to continue.</li>
+<li><code>total = user["cart_total"]</code> assigns <code>None</code>.</li>
+<li><code>logging.debug(...)</code> runs but produces no output (floor is <code>WARNING</code>).</li>
+<li><code>if total is None:</code> is <code>True</code> → <code>logging.error(...)</code> prints a timestamped error line, then <code>ValueError</code> is raised.</li>
+</ol>
+<p>Total elapsed debugging time: one breakpoint, one <code>p</code> command. Compare that to the opening scenario, where the same bug took twenty minutes of relocating print statements.</p>
+<h2>Complexity Analysis</h2>
+<p>This isn't an algorithm with input size <code>n</code>, but the same reasoning applies to <em>debugging effort</em>:</p>
+<ul>
+<li><strong>Brute force (print debugging):</strong> effort scales roughly linearly with how many wrong guesses you make before finding the right line — unbounded, since nothing narrows the search space systematically.</li>
+<li><strong>Optimal (breakpoint + bisection):</strong> effort scales with <strong>O(log n)</strong> pauses, where <code>n</code> is the number of candidate lines, because each bisection step eliminates half the remaining code. That's the same reason binary search beats a linear scan — you're not checking every line, you're halving the search space each time.</li>
+</ul>
+<p>Space cost is unaffected in both cases; this is purely about the number of round trips needed to locate the bug.</p>
+<h2>Alternative Solutions</h2>
+<ul>
+<li><strong>IDE breakpoints (VS Code, PyCharm):</strong> functionally similar to <code>pdb</code> — pause, inspect, step — but tied to a specific editor and its UI. <code>breakpoint()</code> is text-based, works over SSH, in Docker containers, and in any terminal, which makes it more portable for backend and server-side debugging.</li>
+<li><strong><code>logging</code> with structured JSON output:</strong> for larger production systems, plain-text log lines are often replaced with structured logs (JSON) so they can be queried by tools like Elasticsearch or Datadog. The mental model is identical — severity levels and a filterable floor — just with a different output format.</li>
+<li><strong><code>pdb++</code> / <code>ipdb</code>:</strong> drop-in replacements for <code>pdb</code> with syntax highlighting and tab completion. Worth adopting once you're comfortable with the stock five commands; not necessary to get started.</li>
+</ul>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty input:</strong> <code>get_discount({})</code> raises a <code>KeyError</code> before <code>breakpoint()</code> even matters — worth guarding with <code>user.get("cart_total")</code> if missing keys are expected.</li>
+<li><strong><code>cart_total</code> is <code>None</code>:</strong> handled explicitly above, converted from a confusing downstream error into a clear one.</li>
+<li><strong><code>cart_total</code> is exactly <code>100</code>:</strong> falls into the <code>else</code> branch (<code>&gt; 100</code> is <code>False</code>), applying the 5% discount, not the 10% one — a common off-by-one-style boundary bug worth testing directly.</li>
+<li><strong><code>cart_total</code> is negative:</strong> the function will happily return a "discounted" negative number; whether that's valid depends on business rules the function doesn't currently enforce.</li>
+<li><strong>Breakpoint inside a loop running many iterations:</strong> <code>breakpoint()</code> pauses on <em>every</em> iteration, which quickly becomes unusable for large loops. Use a conditional breakpoint (<code>if i == 500: breakpoint()</code>) or <code>pdb</code>'s conditional breakpoint support instead of pausing blindly on every pass.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Leaving <code>breakpoint()</code> in code that gets deployed.</strong> It will freeze a production process waiting for a terminal input that will never come. Always grep for stray <code>breakpoint()</code> calls before shipping.</li>
+<li><strong>Forgetting to remove print statements</strong>, which either ship to production or get accidentally committed as noise in a diff.</li>
+<li><strong>Setting the logging floor to <code>DEBUG</code> in production long-term</strong>, flooding log storage with noise that makes real errors harder to find.</li>
+<li><strong>Debugging top-to-bottom instead of bisecting</strong>, which turns a <code>O(log n)</code> search into something closer to <code>O(n)</code>.</li>
+<li><strong>Assuming the crash location is the bug location.</strong> As shown above, the line that raises the exception is often just the first place bad data becomes visible, not where it originated.</li>
+<li><strong>Using <code>print()</code> for anything meant to persist.</strong> Once the terminal closes, the output is gone; <code>logging</code> can be routed to a file or external service so it survives past the run.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>"How would you debug a function that intermittently returns the wrong result in production, where you can't attach a live debugger?"</li>
+<li>"What's the difference between <code>logging.debug</code> and <code>print</code>, and when would you use each?"</li>
+<li>"Explain how you'd narrow down a bug in a 2,000-line file without reading every line."</li>
+<li>"What happens if you put <code>breakpoint()</code> inside a loop that runs 10,000 times?"</li>
+<li>"How do log levels let you control verbosity without redeploying code?"</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode-style debugging katas</strong> (intentionally broken functions with subtle off-by-one or type errors) — good practice for applying <code>pdb</code> instead of reading code by eye.</li>
+<li><strong>Any "trace the output" question</strong> (common in interview prep) — bisection and variable inspection are the same skill applied to a whiteboard instead of a terminal.</li>
+<li><strong>Exception-handling design problems</strong> (e.g., "design a robust <code>parse_config</code> function") — the <code>is None</code> guard pattern shown here generalizes to any function that receives untrusted or externally sourced input.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li><code>print()</code> debugging doesn't scale past your own machine — it needs someone watching a terminal in real time.</li>
+<li><code>breakpoint()</code> freezes execution and lets you inspect live state with five commands: <code>p</code>, <code>n</code>, <code>s</code>, <code>c</code>, <code>l</code>.</li>
+<li><code>logging</code> is a print statement that never has to be deleted — control verbosity with one level argument instead of adding or removing code.</li>
+<li>Bisecting the problem (before this line or after?) turns a linear scan into a logarithmic one.</li>
+<li>The crash site and the bug's origin are often different places — inspect the data, not just the error message.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This entire workflow — catching the live bug, flipping the logging level, and debugging the same problem twice to compare a guesswork approach against a systematic one — is demonstrated step by step in the video: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <em>Fun with Learning Technology</em>, a series focused on making the parts of coding that usually get skipped over — tooling, debugging, the practical habits senior engineers rely on daily — actually make sense. Rather than just covering syntax, the series builds real workflows you can use the next time something breaks.</p>
+<h2>Call To Action</h2>
+<p>If this saved you from another twenty-minute print-statement hunt, the like button is the easiest way to say so. Subscribe on YouTube for the rest of the series, and subscribe to the Substack newsletter for deeper written breakdowns like this one. Drop a comment with your guess on what happens when a <code>breakpoint()</code> sits inside a loop running a thousand times — and share this with anyone still debugging exclusively with <code>print()</code>.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Print debugging: why avoid it for tricky bugs?</summary><p>No state inspection, clutters code, easy to forget and ship. Trigger: bug needs repeated re-runs to isolate → use breakpoint() instead.</p></details><details class='card2'><summary>How do you pause execution mid-function?</summary><p>Insert breakpoint() (or import pdb; pdb.set_trace()) at the line — drops you into pdb shell at that exact point.</p></details><details class='card2'><summary>Name pdb&#x27;s five essential commands.</summary><p>n (next), s (step in), c (continue), p &lt;expr&gt; (print), l (list) — covers nearly all interactive debugging.</p></details><details class='card2'><summary>Why does print() fail in production debugging?</summary><p>Stdout is often unmonitored/discarded in prod; breakpoint() can&#x27;t attach to a live server either — logging module is the fix.</p></details><details class='card2'><summary>logging vs print for permanent diagnostics?</summary><p>logging has levels (DEBUG/INFO/WARNING/ERROR), timestamps, and can be silenced via one config flag instead of deleting code.</p></details><details class='card2'><summary>Common bug when leaving debug logging in code?</summary><p>Forgetting to flip the log level back up (e.g. left at DEBUG) floods production logs or hides real errors at wrong severity.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
