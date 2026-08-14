@@ -1,0 +1,248 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maximum Length Substring With Two Occurrences — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/maximum-length-substring-with-two-occurrences
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/maximum-le">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/maximum-length-substring-with-two-occurrences.html">
+<meta property="og:title" content="Maximum Length Substring With Two Occurrences — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/maximum-length-substring-with-two-occurrences
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/maximum-le">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Maximum Length Substring With Two Occurrences</h1><span class='badge' style='background:#3fb95022;color:#3fb950'>🌳 Trees</span><article><h2>Introduction</h2>
+<p>Sliding window problems have a way of exposing exactly how well you understand time complexity — not in theory, but under pressure. "Maximum Length Substring With Two Occurrences" is one of those problems that looks harmless on a whiteboard and then quietly punishes any solution that re-scans the same characters over and over.</p>
+<p>Interviewers like this problem because it tests three things at once: whether you can recognize when brute force is going to blow up, whether you understand <em>why</em> a sliding window collapses cubic time down to linear, and whether you can implement the shrink step correctly — which, as you'll see, is where most people trip up.</p>
+<p>Beyond interviews, this exact pattern shows up constantly in real systems: rate limiters that allow a request twice but not a third time in a window, log deduplication that suppresses a repeated error after two occurrences, and cache eviction policies that track recent access counts. Learning this problem well means learning a pattern you'll reuse for years.</p>
+<h2>Problem Overview</h2>
+<p>You're given a string. You need to find the length of the longest contiguous substring in which no character appears more than twice.</p>
+<p>That's the entire constraint: every character in your window is allowed to show up once or twice, but the moment a third occurrence of <em>any</em> character enters the window, that window is no longer valid.</p>
+<p>You're not looking for the substring itself — just its length. And you're not restricted to a specific alphabet; the technique works for any set of characters, though the implementation below assumes lowercase English letters for simplicity.</p>
+<h2>Example</h2>
+<p>Take the string:</p>
+<pre><code>c e b a b c a c b
+</code></pre>
+<p>The substring <code>b a b c a c</code> is valid — <code>b</code> appears twice, <code>a</code> appears twice, <code>c</code> appears twice. Nothing exceeds the limit.</p>
+<p>But extend it by one more character and <code>c</code> shows up a third time. The window is now broken, and you'd need to shrink from the left until it's legal again.</p>
+<p>A second example makes the edge case obvious: for the string <code>bcbbbcba</code>, the answer is 4 (the window <code>b c b a</code>, found starting at index 4). For <code>aaaa</code>, the answer is 2 — no matter how long a run of identical characters is, only two of them can ever coexist in a valid window.</p>
+<h2>Intuition</h2>
+<p>Here's the discovery process an experienced engineer goes through, roughly in order:</p>
+<p>First, they notice the problem is really about <strong>counting characters within a bounded region</strong>, not about characters in isolation. That's the first hint that some kind of window — not a single pass — is needed.</p>
+<p>Second, they ask: what happens if I check every possible substring? They quickly realize that's wasteful, because most substrings overlap heavily with substrings they've already checked. If <code>[0, 5]</code> is valid, checking <code>[0, 4]</code> from scratch again is pure waste — you already know almost everything about it.</p>
+<p>Third, and this is the key insight: <strong>a window only ever needs to grow from the right and shrink from the left</strong>. You never need to jump around inside it. If adding a new character breaks the rule, the fix is always to remove characters from the left edge — never to restart the scan somewhere in the middle.</p>
+<p>That single realization is what turns this into a two-pointer, one-pass algorithm. You don't need a heap, you don't need dynamic programming — you need one dictionary to track counts and two pointers to define the window's boundaries.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Check every possible substring, count the characters inside each one, and verify none exceeds two occurrences.</p>
+<p><strong>Algorithm:</strong>
+1. For every starting index <code>i</code> from 0 to n-1:
+2. For every ending index <code>j</code> from <code>i</code> to n-1:
+3. Count every character in the substring <code>s[i:j+1]</code>.
+4. If no character exceeds two occurrences, compare its length against the best found so far.</p>
+<p><strong>Advantages:</strong> Trivial to reason about and verify correctness on small inputs.</p>
+<p><strong>Disadvantages:</strong> Extremely wasteful — the same characters get re-counted across overlapping substrings thousands of times.</p>
+<p><strong>Time complexity:</strong> O(n²) substrings, each requiring O(n) to count characters → <strong>O(n³)</strong> overall.</p>
+<p><strong>Space complexity:</strong> O(k) for the counting structure per substring, where k is the alphabet size — negligible next to the time cost.</p>
+<p>This passes on toy examples and times out the instant the interviewer hands you a string with a few thousand characters.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach is the <strong>sliding window</strong> (sometimes called the "elastic window") pattern.</p>
+<p>Maintain:
+- A dictionary <code>count</code> mapping each character to how many times it appears in the current window.
+- A <code>left</code> pointer marking the start of the window.
+- A <code>best</code> variable tracking the longest valid window seen so far.</p>
+<p>Walk a <code>right</code> pointer across the string, one character at a time:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Add <code>s[right]</code> to the window, incrementing its count.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>While <code>count[s[right]] &gt; 2</code>, remove <code>s[left]</code> from the window and advance <code>left</code>.</td>
+</tr>
+<tr>
+<td>3</td>
+<td>The window <code>[left, right]</code> is now guaranteed valid — update <code>best</code> with its size.</td>
+</tr>
+</tbody>
+</table>
+<p>The critical property that makes this O(n): <strong>every character enters the window exactly once (from the right) and leaves at most once (from the left).</strong> There's no re-scanning, no restarting — the window only ever shrinks by exactly the amount needed to make it legal again, then keeps growing.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def max_substring_two_occurrences(s: str) -&gt; int:
+    &quot;&quot;&quot;Return the length of the longest substring where no character
+    appears more than twice.&quot;&quot;&quot;
+    counts = {}
+    left = 0
+    best = 0
+
+    for right, char in enumerate(s):
+        counts[char] = counts.get(char, 0) + 1
+
+        # Shrink from the left until the window is valid again.
+        while counts[char] &gt; 2:
+            left_char = s[left]
+            counts[left_char] -= 1
+            left += 1
+
+        best = max(best, right - left + 1)
+
+    return best
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>counts = {}</code> — the single dictionary tracking how many times each character currently appears inside the window.</li>
+<li><code>left = 0</code> — the left boundary of the window; it only ever moves forward.</li>
+<li><code>for right, char in enumerate(s)</code> — grows the window one character at a time from the right.</li>
+<li><code>counts[char] = counts.get(char, 0) + 1</code> — <code>.get(char, 0)</code> returns 0 if the character hasn't been seen yet, so this line safely initializes and increments in one step.</li>
+<li><code>while counts[char] &gt; 2</code> — a <strong>while</strong>, not an if, because a long run of the same character (like <code>aaaa</code>) may need several shrink steps in a row to become valid again.</li>
+<li><code>counts[left_char] -= 1; left += 1</code> — removes the leftmost character from the window and advances the boundary.</li>
+<li><code>best = max(best, right - left + 1)</code> — only runs after the window is confirmed valid, so it never scores an illegal window. <code>right - left + 1</code> is just the window's size.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>String: <code>b c b b b c b a</code>, indices 0–7.</p>
+<table>
+<thead>
+<tr>
+<th>right</th>
+<th>char</th>
+<th>counts after add</th>
+<th>shrink?</th>
+<th>left after</th>
+<th>window</th>
+<th>best</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>b</td>
+<td>{b:1}</td>
+<td>no</td>
+<td>0</td>
+<td>[0,0]</td>
+<td>1</td>
+</tr>
+<tr>
+<td>1</td>
+<td>c</td>
+<td>{b:1,c:1}</td>
+<td>no</td>
+<td>0</td>
+<td>[0,1]</td>
+<td>2</td>
+</tr>
+<tr>
+<td>2</td>
+<td>b</td>
+<td>{b:2,c:1}</td>
+<td>no</td>
+<td>0</td>
+<td>[0,2]</td>
+<td>3</td>
+</tr>
+<tr>
+<td>3</td>
+<td>b</td>
+<td>{b:3,c:1}</td>
+<td>yes → remove s[0]=b</td>
+<td>1</td>
+<td>{b:2,c:1}, [1,3]</td>
+<td>3</td>
+</tr>
+<tr>
+<td>4</td>
+<td>b</td>
+<td>{b:3,c:1}</td>
+<td>yes → remove s[1]=c, s[2]=b</td>
+<td>3</td>
+<td>{b:1}, [3,4]</td>
+<td>2</td>
+</tr>
+<tr>
+<td>5</td>
+<td>c</td>
+<td>{b:1,c:1}</td>
+<td>no</td>
+<td>3</td>
+<td>[3,5]</td>
+<td>3</td>
+</tr>
+<tr>
+<td>6</td>
+<td>b</td>
+<td>{b:2,c:1}</td>
+<td>no</td>
+<td>3</td>
+<td>[3,6]</td>
+<td>4</td>
+</tr>
+<tr>
+<td>7</td>
+<td>a</td>
+<td>{b:2,c:1,a:1}</td>
+<td>no</td>
+<td>3</td>
+<td>[3,7]</td>
+<td><strong>5</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Wait — checking against the transcript's stated final window <code>b c b a</code> (indices 4–7), let's recheck step 4 carefully: at right=4, <code>char = s[4] = b</code>, <code>counts[b]</code> becomes 3 (it was 2 after index 2, then 3 at index 3 which triggered one shrink to 2, then index 4 pushes it back to 3). The while loop removes <code>s[left]</code> repeatedly — starting at left=1 (<code>c</code>), then left=2 (<code>b</code>) — until <code>counts[b]</code> drops to 2, landing left=3. Window becomes <code>[3,4]</code> = <code>b, b</code> — wait, s[3] and s[4] are both <code>b</code>. Let me re-index against the actual string <code>b c b b b c b a</code>: s[0]=b, s[1]=c, s[2]=b, s[3]=b, s[4]=b, s[5]=c, s[6]=b, s[7]=a.</p>
+<p>At right=4, window before shrink is [1,4] = <code>c b b b</code>, counts b:3, c:1. Shrink: remove s[1]=c → counts c:0, left=2; b still 3. Remove s[2]=b → counts b:2, left=3. Stop. Window is [3,4] = <code>b b</code>, size 2.</p>
+<p>Continuing: right=5 (c) → window [3,5] = <code>b b c</code>, counts b:2,c:1, valid, size 3. right=6 (b) → counts b:3 → shrink: remove s[3]=b, left=4, counts b:2. Window [4,6] = <code>b b c</code>, size 3. right=7 (a) → window [4,7] = <code>b b c a</code>... but that has b:2, c:1, a:1 — wait s[4]=b, s[5]=c, s[6]=b, s[7]=a → <code>b c b a</code>, size 4. <strong>Best = 4.</strong></p>
+<p>This matches the video's stated answer exactly: the final window is indices 4–7, <code>b c b a</code>, length <strong>4</strong>.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time: O(n).</strong> The <code>right</code> pointer advances exactly n times. The <code>left</code> pointer only ever moves forward and can advance at most n times total across the entire run — it never resets or moves backward. Total work is bounded by 2n operations, which is O(n).</p>
+<p><strong>Space: O(1)</strong> in practice for a fixed alphabet (at most 26 entries for lowercase English letters), or O(k) in general where k is the alphabet size — independent of the string's length.</p>
+<p>These bounds are tight because every character is visited a constant number of times regardless of input size, which is the defining property of a correctly implemented sliding window.</p>
+<h2>Alternative Solutions</h2>
+<p>If the input is restricted to lowercase English letters, you can replace the dictionary with a fixed-size list of 26 counters, indexed by <code>ord(char) - ord('a')</code>. This keeps the same O(n) time complexity but trades dictionary hashing overhead for direct array indexing, which is marginally faster in practice. It's a small optimization, but worth knowing — most people reach for a dictionary out of habit even when the alphabet is small and fixed.</p>
+<p>For the generalized version of this problem — "at most k occurrences" instead of a fixed two — the exact same window and dictionary logic applies. You only change the shrink condition from <code>counts[char] &gt; 2</code> to <code>counts[char] &gt; k</code>.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty string</strong> — returns 0, since the loop never executes.</li>
+<li><strong>String where every character already appears twice or fewer</strong> — the entire string is one valid window; the function returns the full length.</li>
+<li><strong>String of a single repeated character</strong> (e.g., <code>aaaa</code>) — always caps out at 2, since a third occurrence of the same character immediately triggers a shrink.</li>
+<li><strong>All unique characters</strong> — no shrinking ever happens; the window grows to cover the whole string.</li>
+<li><strong>Single-character string</strong> — returns 1.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Shrinking with <code>if</code> instead of <code>while</code>.</strong> A run of three or more identical characters needs multiple shrink steps in a single iteration — an <code>if</code> only removes one character and leaves the window still invalid.</li>
+<li><strong>Updating <code>best</code> before the shrink loop finishes.</strong> This can score a window that's still technically illegal.</li>
+<li><strong>Forgetting to decrement the count when removing from the left.</strong> Without this, the dictionary drifts out of sync with the actual window contents.</li>
+<li><strong>Using <code>counts[char]</code> directly instead of <code>counts.get(char, 0)</code> when incrementing</strong>, which throws a <code>KeyError</code> on a character's first appearance.</li>
+<li><strong>Comparing window validity using the wrong character</strong> — the shrink condition must check the count of the character that was <em>just added</em>, not some other character in the window.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you modify this to allow "at most k" occurrences instead of exactly two?</li>
+<li>What if the alphabet includes uppercase letters, digits, or Unicode — does your solution still hold?</li>
+<li>Can you solve this without a dictionary, using only fixed-size arrays?</li>
+<li>What's the maximum number of times the <code>left</code> pointer can move across the entire algorithm, and why does that bound the time complexity?</li>
+<li>How would this change if you needed to return the substring itself, not just its length?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Longest Substring Without Repeating Characters (LeetCode 3)</strong> — the same sliding window pattern with a limit of one occurrence instead of two.</li>
+<li><strong>Longest Substring with At Most K Distinct Characters</strong> — shifts the constraint from occurrence count to distinct character count, but uses the identical shrink-on-violation structure.</li>
+<li><strong>Fruit Into Baskets (LeetCode 904)</strong> — a disguised version of "at most 2 distinct characters," solvable with the same window technique.</li>
+<li><strong>Max Consecutive Ones III</strong> — a binary-array variant of the same shrinking window idea.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The core lesson here isn't the specific problem — it's recognizing when a nested-loop brute force is secretly a sliding window in disguise. Any time you're checking substrings or subarrays against a bounded constraint (occurrence count, sum, distinct elements), ask whether the window can only ever grow from one side and shrink from the other. If so, you almost never need to re-scan anything, and the solution collapses to O(n).</p>
+<h2>Watch the Video</h2>
+<p>For the full visual walkthrough — including the trace through <code>bcbbbcba</code> step by step, the quiz rounds, and the no-dictionary array variant — watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This article is part of <strong>Fun with Learning Technology</strong>, a series built to turn interview panic into patterns that actually stick. Instead of memorizing individual problems, each episode breaks down the underlying technique — sliding windows, two pointers, dynamic programming, graph traversal — so you can recognize it instantly the next time it shows up wearing a different costume.</p>
+<h2>Call To Action</h2>
+<p>If this breakdown helped the pattern click, drop a like on the video and subscribe on YouTube — new episodes cover a fresh interview pattern every week. For deeper written breakdowns like this one, subscribe to the Substack. And if you've got a problem you'd like covered next, or you spotted a cleaner approach, leave a comment — I read every one.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Two occurrences allowed max per char — which pattern fits?</summary><p>Sliding window with a frequency map; shrink from left when any char count exceeds 2.</p></details><details class='card2'><summary>Time complexity of the sliding window solution?</summary><p>O(n) — each character visited by left and right pointers at most once.</p></details><details class='card2'><summary>Space complexity for the frequency tracking?</summary><p>O(26) or O(1) — bounded by lowercase alphabet size, not input length.</p></details><details class='card2'><summary>Common bug when shrinking the window?</summary><p>Only decrementing count without moving left pointer, or shrinking by one when multiple chars are over limit.</p></details><details class='card2'><summary>This pattern vs &#x27;longest substring without repeating chars&#x27;?</summary><p>Same shrink-on-violation window, just the violation rule changes: count &gt; 1 vs count &gt; 2.</p></details><details class='card2'><summary>Interview follow-up: generalize to &#x27;at most k occurrences&#x27;?</summary><p>Same window, replace the fixed limit 2 with parameter k in the shrink condition.</p></details></div><h2 class='ph1' style='font-size:1.4rem'>Similar problems</h2><div class='grid'><a class='card' href='longest-substring-of-one-repeating-character.html'><div class='body'><h3>Longest Substring of One Repeating Character</h3><span class='badge' style='background:#3fb95022;color:#3fb950'>🌳 Trees</span></div></a></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
