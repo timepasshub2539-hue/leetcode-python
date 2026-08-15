@@ -1,0 +1,180 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Python Lesson 31: Why Does a 200 Status Code Still Break Your Code? — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-31-working-with-apis-and-http
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesso">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-31-working-with-apis-and-http.html">
+<meta property="og:title" content="Python Lesson 31: Why Does a 200 Status Code Still Break Your Code? — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-31-working-with-apis-and-http
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesso">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 31: Why Does a 200 Status Code Still Break Your Code?</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every real application talks to something outside itself — a weather service, a payment processor, a login provider, your own backend running on a different machine. The moment your code crosses that boundary, it stops being purely a Python problem and becomes a Python-plus-network problem. And networks fail constantly: servers time out, endpoints go down, connections drop mid-request. None of that shows up when you're testing locally against a service that's always up and always fast.</p>
+<p>This matters for interviews too. When a company asks you to "call this API and process the results," they're rarely testing whether you know the syntax for <code>requests.get()</code>. They're watching whether you handle the response as if it might not be what you expect. A candidate who parses JSON directly off a raw response, with no status check and no timeout, is showing they've only ever tested against the happy path. That's the gap this lesson closes.</p>
+<h2>Problem Overview</h2>
+<p>Say you write three lines of code: import <code>requests</code>, call <code>requests.get(url)</code>, and print the result. Run it against a server that's slow, unreachable, or just never responds, and your script doesn't crash — it just hangs. No traceback, no error message, nothing. The terminal sits there with a blinking cursor, possibly forever.</p>
+<p>The underlying issue is that <code>requests.get()</code> makes no promises about how long it will wait for a response, and it makes no judgment about whether the response it got back is actually useful. A 404 page and a valid JSON payload both come back as ordinary response objects. It's entirely on you to check what actually happened.</p>
+<h2>Example</h2>
+<pre><code class="language-python">import requests
+
+response = requests.get(&quot;https://api.github.com/users/octocat&quot;)
+print(response.status_code)   # 200
+data = response.json()
+print(data[&quot;url&quot;])            # https://api.github.com/users/octocat
+</code></pre>
+<p>That works fine — until the URL is wrong, the endpoint moves, or the server is overloaded:</p>
+<pre><code class="language-python">response = requests.get(&quot;https://api.github.com/users/does-not-exist-1234&quot;)
+print(response.status_code)   # 404
+data = response.json()        # still &quot;succeeds&quot; — parses an error body as JSON
+</code></pre>
+<p>Nothing here raises an exception. <code>response.json()</code> happily parses whatever text came back, whether it's a real user object or a GitHub error message saying "Not Found." If your code assumes <code>data["url"]</code> exists, you get a <code>KeyError</code> deep inside your program, far from where the actual problem occurred — a broken request that was never checked.</p>
+<h2>Intuition</h2>
+<p>Think about what actually happens when you call <code>requests.get()</code>. Your script sends a request out over the network to a machine you don't control, running software you didn't write, on a connection with no guarantees. Three broad things can go wrong on the way back:</p>
+<ol>
+<li>The server responds, but with bad news (404, 500, etc.) — the connection worked fine, the <em>content</em> is the problem.</li>
+<li>The server never responds at all, but is at least reachable — this is a timeout.</li>
+<li>There's no server to reach in the first place — your Wi-Fi drops, DNS fails, the connection is refused — this is a connection error.</li>
+</ol>
+<p>An experienced engineer treats all three as expected outcomes, not exceptional ones. The fix isn't one trick — it's three independent guards, one for each failure mode, stacked in the same block of code.</p>
+<h2>Brute Force Solution</h2>
+<p>The "brute force" version is really just the naive version most people write first: call <code>requests.get()</code>, assume it comes back, assume the status is 200, assume the body is valid JSON.</p>
+<p><strong>Idea:</strong> Fire the request, read the response, move on.</p>
+<p><strong>Algorithm:</strong>
+1. Call <code>requests.get(url)</code>.
+2. Call <code>.json()</code> on the result.
+3. Use the data.</p>
+<p><strong>Advantages:</strong> Minimal code, fast to write, works fine in a demo against a healthy server.</p>
+<p><strong>Disadvantages:</strong> No timeout means an unresponsive server can hang the script indefinitely. No status check means error pages get treated as real data. No exception handling means any network hiccup crashes the program with a raw traceback — or worse, silently produces garbage.</p>
+<p><strong>Time complexity:</strong> O(1) beyond the network round trip itself — this isn't an algorithmic problem, it's a robustness problem.
+<strong>Space complexity:</strong> O(n) where n is the size of the response body.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach adds three specific safeguards, each addressing one of the failure modes from the intuition section:</p>
+<table>
+<thead>
+<tr>
+<th>Failure mode</th>
+<th>Symptom without a guard</th>
+<th>Guard</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Slow/unresponsive server</td>
+<td>Script hangs forever</td>
+<td><code>timeout=5</code></td>
+</tr>
+<tr>
+<td>Bad status code (404, 500)</td>
+<td>Error page treated as real data</td>
+<td><code>response.raise_for_status()</code></td>
+</tr>
+<tr>
+<td>No server reachable (dead Wi-Fi, DNS failure)</td>
+<td><code>ConnectionError</code> crashes program</td>
+<td><code>except requests.exceptions.ConnectionError</code></td>
+</tr>
+<tr>
+<td>Server too slow to answer within the limit</td>
+<td><code>Timeout</code> crashes program</td>
+<td><code>except requests.exceptions.Timeout</code></td>
+</tr>
+</tbody>
+</table>
+<p>The key insight worth calling out: a dropped connection and a slow server are <em>different</em> failures, even though both eventually raise an exception. A <code>Timeout</code> means the server exists and is just too slow. A <code>ConnectionError</code> means there was no server to talk to at all — your machine couldn't even establish the connection. Catching them separately means your error message actually matches the real cause, instead of one generic "something went wrong."</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">import requests
+
+
+def fetch_json(url: str, timeout: float = 5.0) -&gt; dict | None:
+    &quot;&quot;&quot;Fetch JSON from a URL, handling timeouts, bad status codes,
+    and dropped connections. Returns None if the request fails.&quot;&quot;&quot;
+    try:
+        response = requests.get(url, timeout=timeout)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.Timeout:
+        print(f&quot;Request to {url} timed out after {timeout}s&quot;)
+    except requests.exceptions.ConnectionError:
+        print(f&quot;Could not connect to {url} — check your network&quot;)
+    except requests.exceptions.RequestException as exc:
+        print(f&quot;Request to {url} failed: {exc}&quot;)
+    return None
+
+
+if __name__ == &quot;__main__&quot;:
+    result = fetch_json(&quot;https://api.github.com/users/octocat&quot;)
+    if result:
+        print(result[&quot;url&quot;])
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>timeout=timeout</code> on the <code>requests.get()</code> call caps how long the function waits for a response. Without it, there is no built-in limit — the request can hang forever.</li>
+<li><code>response.raise_for_status()</code> inspects the status code and raises <code>requests.exceptions.HTTPError</code> if it's a 4xx or 5xx. A 200 passes through silently; anything else becomes a real exception instead of an error page disguised as data.</li>
+<li>The <code>except</code> blocks are ordered from most specific to least specific. <code>Timeout</code> and <code>ConnectionError</code> are caught separately so the printed message matches the actual cause. The final <code>except requests.exceptions.RequestException</code> is a catch-all for anything else in the requests exception hierarchy, including the <code>HTTPError</code> raised by <code>raise_for_status()</code>.</li>
+<li>The function returns <code>None</code> on failure rather than letting an exception propagate, so callers can check the result with a simple <code>if result:</code> instead of wrapping every call site in its own try block.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Call <code>fetch_json("https://api.github.com/users/octocat")</code> against a healthy server:</p>
+<ol>
+<li><code>requests.get()</code> sends the request, server responds within 5 seconds with status 200.</li>
+<li><code>raise_for_status()</code> checks 200 — no exception raised.</li>
+<li><code>response.json()</code> parses the body into a dict.</li>
+<li>The dict is returned; <code>result["url"]</code> prints successfully.</li>
+</ol>
+<p>Now call it against a server that never responds:</p>
+<ol>
+<li><code>requests.get()</code> sends the request and starts waiting.</li>
+<li>At 5 seconds, <code>requests</code> gives up and raises <code>requests.exceptions.Timeout</code>.</li>
+<li>The <code>except Timeout</code> block catches it, prints a clear message.</li>
+<li>The function returns <code>None</code>; the caller's <code>if result:</code> check skips the rest safely.</li>
+</ol>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(1) in terms of Python-side computation — the dominant cost is the network round trip, which is bounded by the <code>timeout</code> value rather than being unbounded. This bound is exactly what turns an unpredictable hang into a predictable worst case.</p>
+<p><strong>Space:</strong> O(n), where n is the size of the response body being held in memory and parsed into a dict. This is unavoidable — you can't process a response without holding it.</p>
+<p>Both are correct because the guards added don't change what the function computes, only how it handles failure — the complexity of the happy path is untouched.</p>
+<h2>Alternative Solutions</h2>
+<p>You could reach for <code>urllib</code>, which is in the standard library and needs no extra dependency. But you'd end up writing your own JSON header handling, your own exception mapping, and your own status-code checks — <code>requests</code> gives you all of that for free with cleaner syntax. For high-throughput async workloads, <code>httpx</code> or <code>aiohttp</code> are reasonable alternatives since they support async/await, but for straightforward synchronous API calls, <code>requests</code> remains the standard, well-understood default.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty response body:</strong> <code>response.json()</code> raises <code>json.JSONDecodeError</code> if the body isn't valid JSON (e.g., an empty string) — worth catching separately if you expect this.</li>
+<li><strong>Very large responses:</strong> memory usage scales with body size; consider <code>stream=True</code> for large downloads instead of loading everything at once.</li>
+<li><strong>Redirects:</strong> <code>requests</code> follows redirects by default, which can mask an endpoint that's moved — check <code>response.history</code> if that matters to your use case.</li>
+<li><strong>Malformed JSON with a 200 status:</strong> <code>raise_for_status()</code> won't catch this since the status code is fine; you still need a <code>try/except</code> around <code>.json()</code> itself in strict pipelines.</li>
+<li><strong>Extremely slow but eventually successful requests:</strong> a short <code>timeout</code> can cause false failures on legitimately slow endpoints — tune the value to the API you're calling, not an arbitrary default.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Omitting <code>timeout</code> entirely, leaving the request able to hang indefinitely.</li>
+<li>Assuming a 200 status guarantees valid data instead of calling <code>raise_for_status()</code>.</li>
+<li>Catching only <code>requests.exceptions.RequestException</code> and losing the distinction between a timeout and a dead connection.</li>
+<li>Calling <code>.json()</code> before checking the status code, so an error page gets parsed as if it were real data.</li>
+<li>Wrapping the entire script in one broad <code>except Exception</code>, which hides bugs unrelated to the network call.</li>
+<li>Reusing a single hardcoded timeout value across calls to APIs with very different expected latencies.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Why doesn't <code>requests.get()</code> raise an exception on a 404 or 500 by default?</li>
+<li>What's the difference between <code>requests.exceptions.Timeout</code> and <code>requests.exceptions.ConnectionError</code>?</li>
+<li>How would you add retry logic on top of this pattern for transient failures?</li>
+<li>What happens if you call <code>.json()</code> on a response that isn't valid JSON?</li>
+<li>How would you adapt this function to handle rate limiting (HTTP 429)?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Design a rate limiter</strong> — tests similar judgment about handling external, unreliable systems gracefully.</li>
+<li><strong>Implement a retry-with-backoff decorator</strong> — a natural extension of this pattern for transient failures.</li>
+<li><strong>Build a simple web scraper with error recovery</strong> — applies the same timeout/status/exception structure at scale across many URLs.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The network fails more often than your local machine ever does, and that's just a fact to design around, not an edge case to dismiss. Three additions turn a fragile script into a resilient one: a <code>timeout</code> so a dead server can't freeze your program, <code>raise_for_status()</code> so a bad response never gets mistaken for real data, and a <code>try/except</code> block so you decide what happens next instead of a stack trace deciding for you.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with live debugging and the exact moment this pattern gets built up step by step, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <strong>Fun with Learning Technology</strong>, a series built around one idea: understanding <em>why</em> code works beats memorizing <em>that</em> it works. Every episode takes a problem developers actually hit — in Python, in interviews, in production — and builds the intuition behind the fix, not just the fix itself.</p>
+<h2>Call To Action</h2>
+<p>If this saved you from a bug you didn't know you had, drop a like on the video and subscribe on YouTube for more of this series. For deeper written breakdowns like this one, subscribe to the Substack. And if you've got a war story about a hang or a silent failure that taught you a lesson the hard way, share it in the comments — those are always the best ones.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>What&#x27;s the tell you need requests + JSON parsing over raw sockets?</summary><p>Any &#x27;fetch data from a URL&#x27; task — requests handles TCP/TLS/headers, .json() parses the body.</p></details><details class='card2'><summary>Time complexity of a single requests.get() call?</summary><p>O(1) in your code; dominated by network latency, not algorithmic work.</p></details><details class='card2'><summary>Why check status codes instead of trusting a 200-shaped response?</summary><p>Some APIs return 200 with an error payload inside JSON — status lies by omission; always check content too.</p></details><details class='card2'><summary>Bug: response.json() called without checking status first — what happens?</summary><p>Raises exceptions.JSONDecodeError on error pages (HTML/empty body), masking the real HTTP failure.</p></details><details class='card2'><summary>raise_for_status() vs manual status code checks?</summary><p>raise_for_status() raises HTTPError on 4xx/5xx automatically; manual checks need explicit if/elif for each code.</p></details><details class='card2'><summary>Follow-up: why always pass a timeout to requests calls?</summary><p>Without one, a hung server blocks your program forever; timeout raises Timeout exception instead.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>

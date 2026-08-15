@@ -1,0 +1,257 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>n8n Lesson 12: This One Node Replaces Every API Integration You&#x27;d Write — Python LeetCode Solution</title><meta name="description" content="Learn the HTTP Request node in n8n, the single node that can talk to almost any API. We cover GET vs POST, dropping the node into a workflow, making your first real call, adding query params, setting ">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/n8n-lesson-12-http-request-node-basics.html">
+<meta property="og:title" content="n8n Lesson 12: This One Node Replaces Every API Integration You&#x27;d Write — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="Learn the HTTP Request node in n8n, the single node that can talk to almost any API. We cover GET vs POST, dropping the node into a workflow, making your first real call, adding query params, setting ">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>n8n Lesson 12: This One Node Replaces Every API Integration You&#x27;d Write</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every automation tool eventually hits the same wall: the thing you want to connect to doesn't have a built-in node. Maybe it's an internal company API, a niche SaaS product, or a service that launched last month and hasn't been integrated anywhere yet. This is the moment where most no-code builds stall, because it suddenly feels like you need to write backend code to move forward.</p>
+<p>You don't. Almost every API on the internet, whether it's Slack, a weather service, a payment processor, or your own backend, speaks the same underlying language: HTTP. And n8n has exactly one node built to speak that language fluently, the HTTP Request node.</p>
+<p>This is also one of the most common things interviewers and technical leads probe for when evaluating someone's automation or backend fluency: do you understand the difference between reading data and writing data, and do you understand why credentials belong in headers instead of URLs? These aren't n8n-specific concepts. They're fundamental to how the web works, and they show up in job interviews, code reviews, and security audits far outside of any automation tool.</p>
+<p>By the end of this lesson, you'll understand how to call a live API from n8n, pass parameters and credentials correctly, and avoid a mistake that has leaked real API keys in real production systems.</p>
+<h2>Problem Overview</h2>
+<p>Stated simply: given a workflow automation tool with no direct integration for the service you need, how do you still connect to that service?</p>
+<p>The answer is the HTTP Request node. Instead of relying on a purpose-built node for every possible API (which would be an impossible number of integrations to maintain), n8n gives you a general-purpose node that can talk to any HTTP endpoint. You configure four things:</p>
+<ul>
+<li><strong>Method</strong> — GET (asking for data) or POST (sending data)</li>
+<li><strong>URL</strong> — the address of the endpoint</li>
+<li><strong>Query Parameters</strong> — extra bits of information appended to the URL</li>
+<li><strong>Headers</strong> — metadata about the request, often used for authentication</li>
+<li><strong>Body</strong> — the actual payload you're sending, used with POST</li>
+</ul>
+<p>Once you understand these five pieces, you can wire n8n into essentially any API that exists.</p>
+<h2>Example</h2>
+<p>Let's ground this in a concrete case: fetching live weather data.</p>
+<p>You configure the HTTP Request node with:
+- Method: <code>GET</code>
+- URL: <code>https://api.open-meteo.com/v1/forecast?latitude=52.52&amp;longitude=13.41&amp;current_weather=true</code></p>
+<p>Run the node, and the output looks something like this:</p>
+<pre><code class="language-json">{
+  &quot;current_weather&quot;: {
+    &quot;temperature&quot;: 18.4,
+    &quot;windspeed&quot;: 12.3,
+    &quot;winddirection&quot;: 270,
+    &quot;time&quot;: &quot;2026-08-15T10:00&quot;
+  }
+}
+</code></pre>
+<p>What just happened: your workflow sent a question over the internet ("what's the weather at this latitude and longitude?") and got a real, structured answer back, as plain JSON. No server of your own, no backend framework, no API client library. Just a node and a URL.</p>
+<p>Now compare that to a POST example, sending a message into a Slack channel via an incoming webhook:
+- Method: <code>POST</code>
+- URL: <code>https://hooks.slack.com/services/T000/B000/XXXXXXXX</code>
+- Header: <code>Content-Type: application/json</code>
+- Body: <code>{"text": "Deployment finished successfully."}</code></p>
+<p>This time you're not asking for data, you're pushing data into Slack, and a message appears in the channel. Same node, opposite direction.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer thinks about this before touching any code or node configuration.</p>
+<p>First question: <strong>am I asking for something, or am I telling something to happen?</strong> That single question determines your HTTP method. Checking a weather forecast, fetching a list of Slack channels, pulling a customer record, all of these are asking. Posting a message, creating a record, updating a database row, all of these are telling. GET asks, POST tells.</p>
+<p>Second question: <strong>does this piece of information change the request every time, or does it identify who I am?</strong> If it changes per-call, like a city name or a search term, it's a query parameter, tacked onto the URL after a <code>?</code>. If it identifies you as the caller, an API key, an auth token, a client ID, it belongs in a header, not the URL.</p>
+<p>The reasoning behind that second point matters: URLs get logged everywhere. Browser history, server access logs, proxy logs, shared links, screenshots. A credential in a URL is a credential that will eventually leak somewhere you didn't intend. Headers exist specifically because they're treated differently, they're not logged as casually, not cached as aggressively, and not accidentally pasted into a Slack message when someone shares a link.</p>
+<p>Third question: <strong>if I'm telling the server to do something, what exactly am I telling it?</strong> That's the body. The body is the actual payload, the message text, the new record's fields, the data being created or changed. It only shows up with methods like POST, because GET requests don't carry a body, they only ask.</p>
+<p>Once you separate these three concerns, method, params/headers, and body, wiring up any API stops feeling like guesswork and starts feeling like filling in a form you already understand.</p>
+<h2>Brute Force Solution</h2>
+<p>There isn't really a "brute force" way to call an API in the traditional algorithmic sense, but there is a brute-force <em>engineering</em> approach worth naming so you can see why it's wrong.</p>
+<p><strong>The idea:</strong> skip headers entirely and jam everything, including the API key, into the URL as a query parameter. It technically works for many APIs, since some services do accept a key as a query string parameter.</p>
+<p><strong>Algorithm:</strong>
+1. Take the base URL.
+2. Append <code>?api_key=YOUR_KEY&amp;other_param=value</code>.
+3. Send the request.</p>
+<p><strong>Advantages:</strong>
+- Fast to set up, no separate header configuration step.
+- Works with some lenient APIs.</p>
+<p><strong>Disadvantages:</strong>
+- The key ends up in browser history, server logs, and shared links.
+- If you export or share the workflow, the key travels with it in plain text.
+- Many stricter APIs reject key-in-URL entirely for security reasons.</p>
+<p><strong>Complexity:</strong> this isn't a computational problem, so time and space complexity aren't meaningful here, but the "risk complexity" is high: one shared screenshot or one shared workflow file is enough to leak a production credential.</p>
+<p>This is exactly the mistake described in the video: pasting a key into a query param because it was faster, then sharing that workflow with a teammate and having the key leak in plain text.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach separates concerns cleanly, using each part of the request for what it's actually meant for.</p>
+<table>
+<thead>
+<tr>
+<th>Piece</th>
+<th>Purpose</th>
+<th>Where it lives</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Method</td>
+<td>Read vs. write intent</td>
+<td>GET or POST field</td>
+</tr>
+<tr>
+<td>URL</td>
+<td>Endpoint identity</td>
+<td>Base address</td>
+</tr>
+<tr>
+<td>Query Params</td>
+<td>Request-specific variables</td>
+<td>Appended to URL after <code>?</code></td>
+</tr>
+<tr>
+<td>Headers</td>
+<td>Identity, auth, content type</td>
+<td>Separate Headers section</td>
+</tr>
+<tr>
+<td>Body</td>
+<td>The actual payload (writes only)</td>
+<td>Separate Body section</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Step-by-step for a GET call (reading data):</strong>
+1. Drop the HTTP Request node into your workflow.
+2. Set the method to GET.
+3. Enter the base URL.
+4. Add query parameters for anything that changes per-call, like a city name or a date range.
+5. Add any required headers, most commonly an <code>Authorization</code> header carrying an API key or bearer token.
+6. Execute the node and inspect the JSON response.</p>
+<p><strong>Step-by-step for a POST call (writing data):</strong>
+1. Set the method to POST.
+2. Enter the target URL, for example a webhook endpoint.
+3. Add a <code>Content-Type: application/json</code> header so the receiving server knows how to parse the body.
+4. Add any auth headers required.
+5. Fill in the body with the actual payload, the message text, record fields, or whatever the receiving API expects.
+6. Execute the node and confirm the action happened on the other end (a Slack message posted, a record created, etc.).</p>
+<p>The key insight that makes this "optimal" rather than just "correct": headers and query params aren't interchangeable conveniences, they're a security boundary. Anything identifying <em>who is calling</em> goes in a header. Anything describing <em>what is being asked for</em> goes in the URL as a query param. Mixing these up is what causes credential leaks.</p>
+<h2>Python Code</h2>
+<p>While n8n itself is a visual/no-code tool, it's worth seeing the equivalent in Python, because it makes the method/headers/params/body separation explicit and reinforces the same intuition, and because you'll frequently need to prototype or debug an API call in Python before wiring it into n8n.</p>
+<pre><code class="language-python">import requests
+
+def get_weather(latitude: float, longitude: float) -&gt; dict:
+    &quot;&quot;&quot;GET request: ask the weather API for current conditions.&quot;&quot;&quot;
+    url = &quot;https://api.open-meteo.com/v1/forecast&quot;
+    params = {
+        &quot;latitude&quot;: latitude,
+        &quot;longitude&quot;: longitude,
+        &quot;current_weather&quot;: &quot;true&quot;,
+    }
+    response = requests.get(url, params=params)
+    response.raise_for_status()
+    return response.json()
+
+
+def post_slack_message(webhook_url: str, text: str) -&gt; requests.Response:
+    &quot;&quot;&quot;POST request: send a message to a Slack channel via webhook.&quot;&quot;&quot;
+    headers = {&quot;Content-Type&quot;: &quot;application/json&quot;}
+    body = {&quot;text&quot;: text}
+    response = requests.post(webhook_url, json=body, headers=headers)
+    response.raise_for_status()
+    return response
+
+
+def get_authenticated_resource(url: str, api_key: str) -&gt; dict:
+    &quot;&quot;&quot;GET request with credentials passed correctly, in a header, not the URL.&quot;&quot;&quot;
+    headers = {&quot;Authorization&quot;: f&quot;Bearer {api_key}&quot;}
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    return response.json()
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>get_weather</code>: builds a <code>params</code> dict, which the <code>requests</code> library automatically appends to the URL as a query string. This mirrors the "Query Params" section in n8n's HTTP Request node exactly.</li>
+<li><code>post_slack_message</code>: uses <code>json=body</code>, which sets the <code>Content-Type</code> header automatically and serializes the dict into the request body. This is the direct equivalent of filling in n8n's Body field for a POST call.</li>
+<li><code>get_authenticated_resource</code>: places the API key inside the <code>Authorization</code> header rather than the URL, which is the corrected version of the mistake described earlier in this lesson. <code>response.raise_for_status()</code> ensures a bad status code (like a 401) raises an exception instead of failing silently.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Walk through <code>get_authenticated_resource("https://api.example.com/data", "sk_live_abc123")</code> under two scenarios.</p>
+<p><strong>Scenario 1: header included correctly.</strong>
+1. <code>headers</code> becomes <code>{"Authorization": "Bearer sk_live_abc123"}</code>.
+2. <code>requests.get</code> sends the request with that header attached.
+3. The server checks the header, confirms the token is valid, and returns a <code>200 OK</code> with a JSON body.
+4. <code>response.json()</code> parses and returns the data.</p>
+<p><strong>Scenario 2: header forgotten entirely (the mistake highlighted in the video).</strong>
+1. <code>headers</code> is empty.
+2. The request goes out with no credentials.
+3. The server can't verify who's calling and returns <code>401 Unauthorized</code>, not an empty response, a hard rejection every time.
+4. <code>response.raise_for_status()</code> raises an <code>HTTPError</code>, stopping execution immediately rather than silently returning bad data.</p>
+<p>That 401 behavior is the exact signal n8n users see when a header is missing: no data, no empty JSON, a flat rejection.</p>
+<h2>Complexity Analysis</h2>
+<p>This isn't an algorithmic problem, so complexity is better framed in terms of request cost:</p>
+<ul>
+<li><strong>Time:</strong> one network round trip per call, dominated by network latency rather than computation, typically tens to hundreds of milliseconds.</li>
+<li><strong>Space:</strong> proportional to the size of the JSON response being held in memory, negligible for most API responses.</li>
+</ul>
+<p>Why these bounds hold: each function issues exactly one HTTP request and does no looping or retry logic, so cost scales linearly with the number of calls you make, not with any input size inside a single call.</p>
+<h2>Alternative Solutions</h2>
+<p>Instead of the raw HTTP Request node, some workflows use n8n's <strong>pre-built service nodes</strong> (like a dedicated Slack node or Google Sheets node) when one exists. These wrap the HTTP details for you, handling auth and formatting automatically.</p>
+<p><strong>Comparison:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>When to use</th>
+<th>Trade-off</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HTTP Request node</td>
+<td>No dedicated node exists, or you need full control</td>
+<td>You manage method, headers, params, body yourself</td>
+</tr>
+<tr>
+<td>Pre-built service node</td>
+<td>A dedicated integration exists (Slack, Sheets, etc.)</td>
+<td>Less flexible, but faster and less error-prone</td>
+</tr>
+</tbody>
+</table>
+<p>The HTTP Request node is the fallback that always works, the dedicated nodes are a convenience layer built on top of exactly the same HTTP fundamentals.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty response body:</strong> some APIs return <code>204 No Content</code> on success; downstream nodes referencing response data will get nothing, plan for it.</li>
+<li><strong>Missing required headers:</strong> results in a <code>401 Unauthorized</code> or <code>403 Forbidden</code>, not a soft failure.</li>
+<li><strong>Malformed query parameters:</strong> special characters (spaces, <code>&amp;</code>, <code>#</code>) in a param value need URL encoding, or the server may misparse the request.</li>
+<li><strong>Rate limiting:</strong> many APIs return <code>429 Too Many Requests</code> if called too frequently; this needs handling logic, not just a single node call.</li>
+<li><strong>Large response payloads:</strong> a very large JSON body can slow down downstream nodes that try to reference deeply nested fields.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Putting credentials in the URL as a query parameter</strong> instead of a header, exactly the mistake called out in this lesson, which risks leaking keys through logs and shared links.</li>
+<li><strong>Using GET when the intent is actually to change something</strong>, some APIs will silently accept this and do nothing, leaving you debugging why "nothing happened."</li>
+<li><strong>Forgetting the <code>Content-Type</code> header on a POST</strong>, causing the receiving server to misinterpret or reject the body.</li>
+<li><strong>Assuming an empty response means success</strong>, when it may actually indicate an error that wasn't surfaced clearly.</li>
+<li><strong>Hardcoding values that should be dynamic</strong>, like pasting a fixed city name instead of using a query parameter, making the workflow inflexible.</li>
+<li><strong>Not checking the status code</strong>, treating any response as a success even when it's a 4xx or 5xx error.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What's the practical difference between a GET and a POST request?</li>
+<li>Why should API keys go in headers instead of query parameters?</li>
+<li>What does a 401 status code indicate, and how is it different from a 403?</li>
+<li>How would you design a system to safely store and rotate API credentials used in automated workflows?</li>
+<li>What's idempotency, and which HTTP methods are typically idempotent?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Understanding REST API status codes</strong> — deepens the "why did my request fail" debugging skill built here.</li>
+<li><strong>Working with API authentication (OAuth vs. API keys vs. bearer tokens)</strong> — a natural next step after headers.</li>
+<li><strong>Building a webhook receiver</strong> — the reverse direction of the Slack POST example, receiving instead of sending.</li>
+<li><strong>Pagination handling in API responses</strong> — relevant once your GET requests start returning large datasets.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>The HTTP Request node in n8n can replace a dedicated integration for almost any API.</li>
+<li>GET asks for data, POST sends data, that single distinction drives every other configuration choice.</li>
+<li>Query parameters customize what you're asking for; headers carry who you are.</li>
+<li>Credentials belong in headers, never in the URL, because URLs get logged, cached, and shared in ways headers aren't.</li>
+<li>A missing required header typically produces a clear, hard failure (like a 401), not a silent one, which makes it debuggable once you know what to look for.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with live API calls and real responses, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <strong>Fun with Learning Technology</strong>, a series built for developers who want to actually understand the tools they use, not just click through a tutorial. Each lesson breaks a real concept down to its core intuition first, then shows the practical implementation, whether that's an n8n workflow, a Python script, or a full-stack feature.</p>
+<h2>Call To Action</h2>
+<p>If this made the HTTP Request node click for you, drop a like on the video, it helps more developers find this series. Subscribe on YouTube for the rest of the n8n lessons, and subscribe to the Substack newsletter for deeper written breakdowns like this one delivered straight to your inbox. Got a question, a request for the next topic, or something that felt off? Leave a comment, I read every one.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>n8n HTTP Request node — what&#x27;s its core trick?</summary><p>One node replaces hand-written API integration code: configure method, URL, params, headers, body instead of writing a client.</p></details><details class='card2'><summary>GET vs POST in the HTTP Request node — when each?</summary><p>GET reads data via query params, no body; POST sends data to create/modify via a request body.</p></details><details class='card2'><summary>Where do query params vs headers go in the node?</summary><p>Query Params tab appends ?key=value to URL; Headers tab sets metadata like Authorization, Content-Type.</p></details><details class='card2'><summary>Common mistake beginners make with this node?</summary><p>Putting auth tokens or data in the wrong tab (e.g. body instead of headers) or forgetting Content-Type for POST body.</p></details><details class='card2'><summary>What does the node output after a call?</summary><p>The HTTP response becomes JSON data flowing into the next node — same shape as any other n8n item.</p></details><details class='card2'><summary>Follow-up: how do you send a POST with JSON body in n8n?</summary><p>Set method POST, Body Content Type to JSON, and enter body fields under the Body tab.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
