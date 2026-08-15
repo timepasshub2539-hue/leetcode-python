@@ -1,0 +1,170 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Longest Subsequence With Non-Zero Bitwise XOR — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/longest-subsequence-with-non-zero-bitwise-xor
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/longest-su">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/longest-subsequence-with-non-zero-bitwise-xor.html">
+<meta property="og:title" content="Longest Subsequence With Non-Zero Bitwise XOR — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/longest-subsequence-with-non-zero-bitwise-xor
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/longest-su">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Longest Subsequence With Non-Zero Bitwise XOR</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Bitwise XOR problems have a reputation for looking harder than they are, and LeetCode 3702, Longest Subsequence With Non-Zero XOR, is a perfect example. On first read it sounds like a subsequence optimization problem, the kind that usually pulls out dynamic programming or backtracking. It isn't. The entire problem collapses into one observation about how XOR behaves across an array, and once you see it, the solution is a single pass with no extra memory.</p>
+<p>Interviewers like this problem because it tests something more specific than "do you know XOR." It tests whether you notice that a brute-force subsequence search is exponential before you start writing one, and whether you can reduce a combinatorial question to a property of the whole array. That instinct — stepping back from the subsequence and asking what the total XOR tells you — is the actual skill being evaluated.</p>
+<p>Learning this pattern pays off beyond this one problem. Anywhere duplicates need to be detected instantly, in hashing schemes, checksums, or streaming deduplication, this same cancellation property of XOR shows up.</p>
+<h2>Problem Overview</h2>
+<p>You're given an array of integers. You need to choose a subsequence, meaning you pick elements while keeping their original order, but you can skip any of them. The one requirement: XOR every chosen element together, and the result must not be zero. Among all subsequences that satisfy this, return the length of the longest one. If no subsequence can avoid an XOR of zero, return 0.</p>
+<p>The key word is subsequence, not subarray. You are allowed to skip elements freely; you just can't reorder them. That freedom is exactly what makes the "drop one element" trick possible later.</p>
+<h2>Example</h2>
+<p>Take <code>nums = [1, 2, 3]</code>.</p>
+<ul>
+<li>Picking <code>{2, 3}</code> gives <code>2 XOR 3 = 1</code>, which is nonzero. Valid, length 2.</li>
+<li>Picking all three, <code>1 XOR 2 XOR 3</code>, also gives <code>0</code>. Wait — let's check: <code>1 XOR 2 = 3</code>, then <code>3 XOR 3 = 0</code>. That's zero, so the full array fails.</li>
+</ul>
+<p>So for <code>[1, 2, 3]</code>, the best you can do is drop one element. Removing <code>1</code> leaves <code>{2, 3}</code>, XOR is <code>1</code>, nonzero, length 2. The answer is 2.</p>
+<p>Now take <code>nums = [2, 3, 4]</code>. XOR them all: <code>2 XOR 3 = 1</code>, <code>1 XOR 4 = 5</code>. The total is 5, which is nonzero, so the entire array already qualifies. The answer is 3, no removal needed.</p>
+<p>Compare that to <code>nums = [0, 0]</code>. Every subsequence you can form, <code>{0}</code>, <code>{0}</code>, or <code>{0, 0}</code>, XORs to zero. There is no way out. The answer is 0.</p>
+<h2>Intuition</h2>
+<p>The instinct most people reach for first is pairing: try to figure out which specific elements cancel each other out, maybe with a hash set tracking values seen so far, maybe with some DP state tracking achievable XOR values. That instinct is what leads straight into an exponential or at best polynomial-in-value-range solution, and it's solving a harder problem than the one that's actually being asked.</p>
+<p>The reframe: instead of asking "which subsequence has nonzero XOR," ask "what does the XOR of the entire array tell me?"</p>
+<p>There are only two possibilities for the total XOR of the full array: it's nonzero, or it's zero.</p>
+<p>If it's nonzero, you're done immediately. The full array itself is a valid answer, and you can't do better than including everything.</p>
+<p>If it's zero, that means the elements cancel out in aggregate. But here's the useful fact: <code>x XOR x = 0</code>. If you remove any single nonzero value from a set of elements that XORs to zero, the running total changes from <code>0</code> to that value, which is nonzero by definition. So dropping exactly one nonzero element flips the whole array's XOR from zero to nonzero, at the cost of a single position. That gives you <code>n - 1</code>.</p>
+<p>The only way this fails completely is if there's no nonzero element to drop; that is, every element in the array is <code>0</code>. In that case, every subsequence, no matter which elements you pick, XORs to <code>0</code>, because <code>0 XOR 0 XOR ... XOR 0</code> is always <code>0</code>. That's the one edge case that breaks a naive "just subtract one" answer.</p>
+<p>So the whole problem reduces to three checks: is the total nonzero, is there at least one nonzero element to remove, or is everything zero.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Enumerate every possible subsequence, compute its XOR, and track the longest one whose XOR isn't zero.</p>
+<p><strong>Algorithm:</strong> For an array of length <code>n</code>, there are <code>2^n</code> subsequences (including the empty one). Generate each, either via recursion (include/exclude each element) or by iterating over bitmasks from <code>0</code> to <code>2^n - 1</code>, compute the XOR of the selected elements, and keep the maximum length among those with nonzero XOR.</p>
+<p><strong>Advantages:</strong> Trivial to reason about and verify by hand on small inputs. Good as a warm-up to build intuition about what "cancellation" means before reaching for the optimal trick.</p>
+<p><strong>Disadvantages:</strong> Completely impractical past a few dozen elements. LeetCode 3702 allows up to 100,000 elements, and <code>2^100000</code> isn't a large number in the normal sense, it's larger than the estimated number of atoms in the observable universe.</p>
+<p><strong>Complexity:</strong> Time O(2ⁿ · n) (generating each subsequence and XORing its elements), Space O(n) for recursion depth or O(1) extra if iterating bitmasks without storing subsequences.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach uses exactly the reduction from the intuition section, formalized into three steps:</p>
+<ol>
+<li>Compute <code>total = nums[0] XOR nums[1] XOR ... XOR nums[n-1]</code> in one pass.</li>
+<li>If <code>total != 0</code>, the whole array is valid. Return <code>n</code>.</li>
+<li>If <code>total == 0</code>, check whether there's any nonzero element in the array.
+   - If yes, return <code>n - 1</code> (drop any one nonzero element).
+   - If no (every element is <code>0</code>), return <code>0</code>.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Case</th>
+<th>Total XOR</th>
+<th>Nonzero element exists?</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>nonzero</td>
+<td>—</td>
+<td><code>n</code></td>
+</tr>
+<tr>
+<td>B</td>
+<td>zero</td>
+<td>yes</td>
+<td><code>n - 1</code></td>
+</tr>
+<tr>
+<td>C</td>
+<td>zero</td>
+<td>no (all zeros)</td>
+<td><code>0</code></td>
+</tr>
+</tbody>
+</table>
+<p>It doesn't matter <em>which</em> nonzero element you drop in case B; any single nonzero value, once removed, flips the running XOR away from zero. There's nothing to optimize there, so don't spend time picking a "best" one to remove.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from functools import reduce
+from operator import xor
+
+
+def longest_subsequence(nums: list[int]) -&gt; int:
+    total = reduce(xor, nums, 0)
+
+    if total != 0:
+        return len(nums)
+
+    if any(nums):  # at least one nonzero element
+        return len(nums) - 1
+
+    return 0
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>reduce(xor, nums, 0)</code> XORs every element in the array together in one pass, starting from <code>0</code>. This replaces a manual loop with <code>total = 0; for x in nums: total ^= x</code>, but does the same thing.</li>
+<li><code>if total != 0: return len(nums)</code> handles case A: the full array already satisfies the constraint.</li>
+<li><code>any(nums)</code> returns <code>True</code> if at least one element is truthy, meaning nonzero, since Python treats <code>0</code> as falsy and any other int as truthy. This distinguishes case B (drop one, return <code>n - 1</code>) from case C (all zeros, return <code>0</code>).</li>
+<li>The function never builds any subsequence explicitly; it only reasons about the array's aggregate XOR and the presence of a nonzero value.</li>
+</ul>
+<h2>Dry Run</h2>
+<p><code>nums = [1, 2, 3]</code></p>
+<ol>
+<li><code>total = 0 XOR 1 = 1</code></li>
+<li><code>total = 1 XOR 2 = 3</code></li>
+<li><code>total = 3 XOR 3 = 0</code></li>
+<li><code>total == 0</code>, so check <code>any(nums)</code>. <code>1</code> and <code>2</code> are nonzero, so <code>any(nums)</code> is <code>True</code>.</li>
+<li>Return <code>len(nums) - 1 = 2</code>.</li>
+</ol>
+<p>This matches the example: <code>{2, 3}</code> is a valid length-2 subsequence, and the full array fails because its total XOR is zero.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(n). The <code>reduce</code> call is one pass, and <code>any(nums)</code> in the worst case is another pass, but both are linear and don't nest, so the total stays O(n).</p>
+<p><strong>Space:</strong> O(1). Only a running XOR total and no auxiliary array, hash set, or DP table is needed. This is optimal, since you have to read every element at least once to compute the total XOR, so O(n) time is a hard lower bound, and no algorithm can do better than O(1) extra space for this problem.</p>
+<h2>Alternative Solutions</h2>
+<p>A DP-based approach, tracking, for each prefix, the maximum length of a subsequence achieving each possible XOR value, would also work but is unnecessary here. It costs O(n · V) time and space, where <code>V</code> is the range of possible XOR values, dramatically worse than O(n) time and O(1) space for no benefit. It's only worth mentioning as the "obvious but wrong” instinct: the moment you see "subsequence" and "XOR" together, DP is a natural first thought, but this problem's structure, only one XOR value (zero) ever needs to be avoided, means DP is solving a harder, more general question than what's actually asked.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty array:</strong> Not a valid input per constraints, but if encountered, <code>total</code> stays <code>0</code> and <code>any([])</code> is <code>False</code>, correctly returning <code>0</code>.</li>
+<li><strong>Single element, nonzero:</strong> <code>total</code> equals that element, which is nonzero, so return <code>1</code>.</li>
+<li><strong>Single element, zero:</strong> <code>total</code> is <code>0</code>, <code>any([0])</code> is <code>False</code>, return <code>0</code>.</li>
+<li><strong>All zeros:</strong> Handled explicitly by case C; every subsequence XORs to zero.</li>
+<li><strong>Duplicates that aren't all zero:</strong> e.g. <code>[5, 5, 3]</code>. Total is <code>5 XOR 5 XOR 3 = 3</code>, nonzero, so the full array of length 3 is valid despite the duplicate pair.</li>
+<li><strong>Large values (near constraint max):</strong> XOR is bitwise and independent of magnitude, so this doesn't affect correctness or performance.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting the all-zero edge case</strong> and returning <code>n - 1</code> even when every element is zero, when it must return <code>0</code>.</li>
+<li><strong>Trying to figure out which specific element to drop</strong> as if it mattered, when any nonzero element works identically.</li>
+<li><strong>Reaching for DP or a hash set of prefix XOR values</strong> by pattern-matching on "subsequence problem" instead of checking the whole-array case first.</li>
+<li><strong>Confusing subsequence with subarray</strong> and assuming elements must be contiguous, which would require a completely different (and unnecessary) sliding-window approach.</li>
+<li><strong>Not short-circuiting</strong> when <code>total != 0</code>, and running unnecessary extra checks (like scanning for a nonzero element) even though the full array already answers the question.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What if the problem asked for the longest <strong>subarray</strong> (contiguous) instead of subsequence? How would the approach change?</li>
+<li>Can you extend this to find the longest subsequence whose XOR equals some target <code>k</code>, not just "nonzero"?</li>
+<li>What's the maximum possible XOR of any subsequence, and how would you compute it (hint: linear basis / XOR basis)?</li>
+<li>How would you handle this problem in a streaming context where you can't store the whole array?</li>
+<li>Why is <code>any(nums)</code> sufficient to check for a nonzero element instead of scanning with a loop, and is there a performance difference?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 1442 – Count Triplets That Can Form Two Arrays of Equal XOR:</strong> Also relies on the property that a range XORing to zero means two prefix XORs are equal.</li>
+<li><strong>LeetCode 1720 – Decode XORed Array:</strong> Builds on prefix-XOR reconstruction, a related but distinct XOR property.</li>
+<li><strong>LeetCode 1310 – XOR Queries of a Subarray:</strong> Uses prefix XOR arrays, good practice for the same "aggregate operation" mindset.</li>
+<li><strong>LeetCode 1734 – Decode XORed Permutation:</strong> Another problem where the whole-array XOR unlocks the individual values.</li>
+</ul>
+<p>These are grouped because they all hinge on the same core fact: XOR of a range can often be reasoned about via a single running total rather than examining every element combination.</p>
+<h2>Key Takeaways</h2>
+<ul>
+<li>When a subsequence problem's validity depends on one combined operation (XOR, sum, product), check the whole-array case first before reaching for DP or brute force.</li>
+<li><code>x XOR x = 0</code> means duplicates cancel; a zero-XOR subsequence is cancellation in disguise, not some deeper structural property.</li>
+<li>If the total XOR is already nonzero, the full array is your answer. If it's zero, dropping any one nonzero element fixes it in O(1) extra work.</li>
+<li>The only true dead end is an all-zero array, where no subsequence can ever produce a nonzero XOR.</li>
+<li>This reduces an apparently exponential subsequence search to a single O(n) pass with O(1) space.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>If you want to see this reasoning built up step by step, including the dry run and the quiz at the end, watch the full walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series that takes scary-looking whiteboard problems and shows the one-line trick usually hiding underneath. New daily drops cover LeetCode problems, core data structures, and the intuition interviewers actually care about, not just the code that passes the test cases.</p>
+<h2>Call To Action</h2>
+<p>If this saved you from writing an unnecessary DP table, like the video on YouTube and subscribe so the next daily drop lands in your feed. Subscribe to the Substack for the written breakdowns like this one, drop a comment with your quiz answers or questions, and share this with anyone prepping for coding interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>You see array elements with total XOR = 0. What&#x27;s the pattern to spot?</summary><p>Removing any one element makes subset XOR nonzero — answer is n-1, else it&#x27;s n.</p></details><details class='card2'><summary>Time complexity for solving this problem?</summary><p>O(n) — one pass to XOR everything, no need to check every subsequence.</p></details><details class='card2'><summary>Space complexity needed?</summary><p>O(1) — just a running XOR accumulator, no extra structures.</p></details><details class='card2'><summary>What&#x27;s the trickiest edge case here?</summary><p>All elements XOR to 0 but array has only 1 element (which is 0) — no valid subsequence exists, tricky base case.</p></details><details class='card2'><summary>Why is checking every subsequence the wrong instinct?</summary><p>Exponential 2^n brute force; the whole-array XOR check collapses it to one linear scan.</p></details><details class='card2'><summary>Interview follow-up: why does dropping one element always work when total XOR is 0?</summary><p>Since full XOR is 0, dropping any single nonzero element leaves the rest XOR to that element&#x27;s value, which is nonzero.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
