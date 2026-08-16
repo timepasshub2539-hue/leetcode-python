@@ -1,0 +1,205 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1. Two Sum | LeetCode Daily Python Solution (100M steps to one pass) — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/two-sum
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-pytho">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/two-sum.html">
+<meta property="og:title" content="1. Two Sum | LeetCode Daily Python Solution (100M steps to one pass) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/two-sum
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-pytho">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>1. Two Sum | LeetCode Daily Python Solution (100M steps to one pass)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h3>Introduction</h3>
+<p>Two Sum is usually the first problem anyone sees on LeetCode, and there's a reason it stays there. It looks trivial — find two numbers in a list that add up to a target — and that's exactly why it's dangerous in an interview. The obvious solution works. It's also the wrong answer.</p>
+<p>What separates a junior response from a senior one here isn't whether you can solve Two Sum. It's whether you notice that your first solution rescans data you've already looked at, and whether you know how to stop doing that. That instinct — trade a repeated scan for a single lookup — shows up constantly: rate limiting, deduplication, caching, database indexing. Two Sum is the smallest possible version of a pattern you'll use for the rest of your career.</p>
+<p>This walkthrough covers both approaches end to end: why the brute force costs 100 million steps on realistic input, how a hash map cuts that down to 10,000, and why the fix isn't really about hash maps at all — it's about not throwing away information you already have.</p>
+<h3>Problem Overview</h3>
+<p>You're given a list of integers and a target number. Somewhere in that list, exactly two numbers add up to the target — no more, no less, guaranteed. Your job is to return the <em>positions</em> of those two numbers, not the numbers themselves.</p>
+<p>A few constraints matter more than they look:</p>
+<ul>
+<li>You can't use the same element twice, even if the array has duplicate values at different positions.</li>
+<li>Exactly one valid pair exists, so you don't need to handle "no answer" or "multiple answers."</li>
+<li>The order of the two returned indices doesn't matter.</li>
+</ul>
+<p>That last constraint — one guaranteed pair — is a gift. It means you don't need to keep scanning after you find a match. The moment you find it, you're done.</p>
+<h3>Example</h3>
+<pre><code>nums = [2, 7, 11, 15]
+target = 9
+</code></pre>
+<p><code>2 + 7 = 9</code>, and they sit at indices 0 and 1. The answer is <code>[0, 1]</code>.</p>
+<p>Nothing else in the array matters — 11 and 15 are noise. The problem isn't "check everything," it's "find the one thing," and that distinction is what separates the two approaches you're about to see.</p>
+<h3>Intuition</h3>
+<p>Here's how an engineer actually arrives at the fast solution, rather than being handed it.</p>
+<p>Say you're standing at index 0, looking at <code>2</code>. You don't need to ask "what does 2 add up to with every other number?" You can flip the question: "what number, if it existed earlier in the array, would have already paired with 2?" That number is <code>target - 2</code>, or <code>7</code>.</p>
+<p>You haven't seen a 7 yet. Fine — remember that 2 is out there waiting for its partner, and keep moving.</p>
+<p>Now you reach <code>7</code>. Ask the same question: what would pair with 7 to make 9? That's <code>2</code>. Have you seen a 2? Yes — you remembered it two steps ago.</p>
+<p>That's the entire algorithm. You're never comparing every pair. You're asking, for each number, "have I already met the number that completes this one?" The moment the answer is yes, you're done.</p>
+<p>The brute force version asks a fundamentally different, more expensive question: "for this number, check it against every other number in the array." That's checking-after — you look at a number, then go search for its partner from scratch. The fast version is checking-as-you-go — you keep a running memory, so the search is never more than one lookup.</p>
+<p>The tool that makes "have I seen this before" a single step instead of a scan is a hash map. Think of a coat check at a theater: you don't dig through a rack of coats to find yours, you hand over a ticket and get it back instantly, because someone already indexed it. A Python dictionary does the same thing for numbers — it remembers a value and where it came from, and checking whether that value exists is a constant-time operation, not a search.</p>
+<h3>Brute Force Solution</h3>
+<p><strong>Idea:</strong> For every number in the array, check it against every other number, and see if any pair sums to the target.</p>
+<p><strong>Algorithm:</strong>
+1. Loop over each index <code>i</code>.
+2. For each <code>i</code>, loop over every index <code>j</code> after it.
+3. If <code>nums[i] + nums[j] == target</code>, return <code>[i, j]</code>.</p>
+<p><strong>Advantages:</strong>
+- Trivial to write, no extra data structures.
+- Uses O(1) extra space.
+- Easy to reason about — you're not trusting a helper structure to be correct.</p>
+<p><strong>Disadvantages:</strong>
+- Rescans the array from scratch for every element.
+- Degrades badly as input grows — this is the whole point of the video's 100-million-step example.</p>
+<p><strong>Complexity:</strong> Time O(n²), because for every one of the n elements you may scan up to n more. Space O(1), since no extra storage is used beyond the loop variables.</p>
+<p>For a 4-element array, that's 16 comparisons — bearable. For 10,000 elements, that's roughly 100 million comparisons. The algorithm didn't change; the input did, and the cost scaled with the square of it.</p>
+<h3>Optimal Solution</h3>
+<p>The fix is to stop re-deriving information you already walked past. As you move through the array once, keep a dictionary mapping <em>value seen → index where you saw it</em>.</p>
+<p>For each number, compute its complement (<code>target - number</code>). Check the dictionary:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Check dictionary for</th>
+<th>Found?</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>See <code>2</code> at index 0</td>
+<td>complement <code>7</code></td>
+<td>No</td>
+<td>Store <code>2 → 0</code></td>
+</tr>
+<tr>
+<td>See <code>7</code> at index 1</td>
+<td>complement <code>2</code></td>
+<td>Yes, at index 0</td>
+<td>Return <code>[0, 1]</code></td>
+</tr>
+</tbody>
+</table>
+<p>Two things make this correct, not just fast:</p>
+<ol>
+<li><strong>You check before you insert.</strong> This is why the same element never pairs with itself — when you look for <code>2</code>'s complement, <code>2</code> itself isn't in the dictionary yet, because you haven't stored it. It only enters the dictionary <em>after</em> the check.</li>
+<li><strong>You only need to look backward.</strong> Because you're guaranteed exactly one valid pair, the first time you find a match, it's the answer. There's no need to keep scanning or to compare every element against every other.</li>
+</ol>
+<h3>Python Code</h3>
+<pre><code class="language-python">def two_sum(nums: list[int], target: int) -&gt; list[int]:
+    &quot;&quot;&quot;Return indices of the two numbers that add up to target.&quot;&quot;&quot;
+    seen = {}  # value -&gt; index
+
+    for index, value in enumerate(nums):
+        complement = target - value
+        if complement in seen:
+            return [seen[complement], index]
+        seen[value] = index
+
+    # Problem guarantees a solution, so this line is unreachable.
+    raise ValueError(&quot;no two sum solution found&quot;)
+</code></pre>
+<h3>Code Walkthrough</h3>
+<ul>
+<li><code>seen = {}</code> creates the dictionary that stands in for "everything I've already looked at."</li>
+<li><code>enumerate(nums)</code> gives both the value and its position in one pass, so we never need a second loop to recover an index later.</li>
+<li><code>complement = target - value</code> is the reversed question from the intuition section: "what would I need to have already seen to finish this pair?"</li>
+<li><code>if complement in seen</code> is the one-step lookup that replaces the brute force's inner loop. Dictionary membership checks in Python run in average O(1) time.</li>
+<li><code>return [seen[complement], index]</code> returns the <em>earlier</em> index first, then the current one. Order doesn't matter per the problem's rules, but this is naturally chronological.</li>
+<li><code>seen[value] = index</code> only runs if no match was found — this is what keeps the current number from matching itself.</li>
+</ul>
+<h3>Dry Run</h3>
+<pre><code>nums = [3, 2, 4], target = 6
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Index</th>
+<th>Value</th>
+<th>Complement</th>
+<th>In <code>seen</code>?</th>
+<th>Action</th>
+<th><code>seen</code> after</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>3</td>
+<td>3</td>
+<td>No</td>
+<td>store</td>
+<td><code>{3: 0}</code></td>
+</tr>
+<tr>
+<td>1</td>
+<td>2</td>
+<td>4</td>
+<td>No</td>
+<td>store</td>
+<td><code>{3: 0, 2: 1}</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>4</td>
+<td>2</td>
+<td>Yes, at index 1</td>
+<td>return <code>[1, 2]</code></td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>At index 2, the complement of <code>4</code> is <code>2</code>, and <code>2</code> is already sitting in the dictionary at index 1. Return <code>[1, 2]</code> immediately — no need to look at anything else.</p>
+<h3>Complexity Analysis</h3>
+<p><strong>Time: O(n).</strong> Each element is visited exactly once. The dictionary lookup and insertion are both average O(1), so the total work scales linearly with the size of the input, not its square.</p>
+<p><strong>Space: O(n).</strong> In the worst case — no match until the very last element — the dictionary holds nearly every value in the array before the answer is found.</p>
+<p>This is a textbook time-for-space trade: you spend O(n) memory to avoid O(n²) time. For anything beyond a handful of elements, that trade is almost always worth making.</p>
+<h3>Alternative Solutions</h3>
+<p>If the array were sorted, a two-pointer approach (one pointer at each end, moving inward based on whether the current sum is too high or too low) would solve this in O(n) time and O(1) space — no extra dictionary needed. The catch is that Two Sum doesn't guarantee sorted input, and sorting it yourself costs O(n log n) while also destroying the original indices you need to return. That's precisely the setup for the follow-up problem, Two Sum II, where the array <em>is</em> sorted and two pointers become the right tool.</p>
+<h3>Edge Cases</h3>
+<ul>
+<li><strong>Empty or single-element array:</strong> No valid pair can exist; the problem's guarantee doesn't apply, so this shouldn't occur in valid input, but a defensive version should not silently return a wrong pair.</li>
+<li><strong>Duplicate values:</strong> e.g., <code>[3, 3]</code> with target <code>6</code>. Works correctly because the current element is checked against the map <em>before</em> being inserted — the first 3 can't match itself, only the second 3 completes the pair.</li>
+<li><strong>Negative numbers:</strong> The complement math (<code>target - value</code>) works identically whether numbers are negative, zero, or positive.</li>
+<li><strong>Target achieved by the first two elements:</strong> The loop exits on the very first check after two stores — still O(n) in the best case, just with a small constant.</li>
+<li><strong>Large duplicate value overwritten in the dictionary:</strong> If a value appears more than twice, <code>seen[value] = index</code> overwrites the earlier index with the latest one, which only matters if multiple valid pairs exist — outside this problem's guarantees, but worth knowing if you adapt this pattern elsewhere.</li>
+</ul>
+<h3>Common Mistakes</h3>
+<ol>
+<li><strong>Checking the dictionary after inserting the current value</strong>, which lets an element pair with itself.</li>
+<li><strong>Using a nested loop out of habit</strong> without recognizing that the problem allows a single pass.</li>
+<li><strong>Sorting the array to make searching easier</strong>, then returning indices from the sorted array instead of the original — silently wrong output.</li>
+<li><strong>Assuming the dictionary needs to store all values upfront</strong> in a separate pass, instead of building it incrementally during the same loop that checks for matches.</li>
+<li><strong>Not handling duplicate values correctly</strong>, either by overengineering a check that's unnecessary or by breaking on the case where the same value appears twice.</li>
+<li><strong>Returning the value instead of the index</strong> — a mismatch with what the problem actually asks for.</li>
+</ol>
+<h3>Interview Questions</h3>
+<ul>
+<li>What if there could be multiple valid pairs — how would you return all of them?</li>
+<li>What if no valid pair is guaranteed — how do you signal "not found"?</li>
+<li>How would you solve this if the array were sorted?</li>
+<li>What's the three-number version (3Sum) and how does the approach change?</li>
+<li>Could you solve this with O(1) space if you were allowed to sort the input?</li>
+</ul>
+<h3>Similar Problems</h3>
+<ul>
+<li><strong>Two Sum II — Input Array Is Sorted:</strong> Same goal, sorted input, solved with two pointers instead of a hash map.</li>
+<li><strong>3Sum:</strong> Extends the same complement idea to three numbers, usually combining sorting with two pointers.</li>
+<li><strong>4Sum:</strong> Further generalizes 3Sum with an additional layer of iteration.</li>
+<li><strong>Two Sum IV — Input is a BST:</strong> Same problem shape, different underlying data structure.</li>
+<li><strong>Subarray Sum Equals K:</strong> Uses the identical "remember what you've seen" hash map pattern, applied to running sums instead of individual values.</li>
+</ul>
+<h3>Key Takeaways</h3>
+<p>The nested loop isn't wrong, it's just expensive — and expense is invisible until the input gets large. The fix was never really about a hash map specifically; it was about recognizing that checking-after (search once you arrive) is strictly worse than checking-as-you-go (remember, then look up). That single reframe — trade a rescan for a lookup — is the most reusable idea in this entire problem, and it's worth internalizing far beyond Two Sum.</p>
+<h3>Watch the Video</h3>
+<p>For the full walkthrough, including a live timed comparison of both approaches and two quiz rounds to test your understanding as you go, watch the video here: {LINK}</p>
+<h3>About the Series</h3>
+<p>This breakdown is part of <em>Fun with Learning Technology</em>, a series that works through interview and fundamentals-level coding problems the way an engineer actually reasons through them — building intuition first, writing code second, and never skipping the "why" behind an approach.</p>
+<h3>Call To Action</h3>
+<p>If this helped the problem click, the video has the full trace-through and both timed benchmarks — give it a watch and a like on YouTube, and subscribe if you want more of these. For deeper written breakdowns like this one, subscribe to the Substack. Drop a comment with which problem you'd like covered next, and share this with anyone prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Which pattern fits &#x27;find a pair summing to a target&#x27;?</summary><p>Hash map lookup pattern — when you see &#x27;find pair/complement matching target&#x27;, think store-seen-values-in-a-map.</p></details><details class='card2'><summary>Time complexity of the one-pass hash map Two Sum?</summary><p>O(n) — single pass, each lookup and insert into the hash map is O(1) average.</p></details><details class='card2'><summary>Space complexity of the hash map approach?</summary><p>O(n) — worst case stores every element in the map before finding the match.</p></details><details class='card2'><summary>Common bug when checking for the complement?</summary><p>Checking the map before inserting current index, or accidentally matching an element with itself.</p></details><details class='card2'><summary>Nested-loop brute force vs hash map: what&#x27;s the tradeoff?</summary><p>Brute force is O(n²) time but O(1) space; hash map trades memory for a single O(n) pass.</p></details><details class='card2'><summary>Follow-up: what if the array is sorted?</summary><p>Use two pointers from both ends, moving inward based on sum vs target — O(n) time, O(1) space.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
