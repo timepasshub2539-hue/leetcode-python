@@ -1,19 +1,263 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>11. Container With Most Water | LeetCode Daily Python Solution (two pointers cut 10,000x the work) — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/container-with-most-water
-💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/container-with-most-water
+<title>11. Container With Most Water | LeetCode Daily Python Solution (the trick nobody sees) — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
 
-Cha">
+📄 Full written solution: https://interview-kit-fe.vercel.app/container-with-most-water
+💻 Code on GitHub: https://github.com/timepasshub2539-">
 <meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/container-with-most-water.html">
-<meta property="og:title" content="11. Container With Most Water | LeetCode Daily Python Solution (two pointers cut 10,000x the work) — Python LeetCode Solution"><meta property="og:type" content="website">
-<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/container-with-most-water
-💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/container-with-most-water
+<meta property="og:title" content="11. Container With Most Water | LeetCode Daily Python Solution (the trick nobody sees) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
 
-Cha">
+📄 Full written solution: https://interview-kit-fe.vercel.app/container-with-most-water
+💻 Code on GitHub: https://github.com/timepasshub2539-">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>11. Container With Most Water | LeetCode Daily Python Solution (two pointers cut 10,000x the work)</h1><span class='badge' style='background:#2dd4bf22;color:#2dd4bf'>↔️ Two Pointers</span><article><p>You've hit your monthly spend limit · raise it at claude.ai/settings/usage?from=cc_cli_limit_message</p></article><h2 class='ph1' style='font-size:1.4rem'>Similar problems</h2><div class='grid'><a class='card' href='sum-of-gcd-of-formed-pairs.html'><div class='body'><h3>Sum of GCD of Formed Pairs — LeetCode Daily Python Solution (Two Pointers Eats It Alive)</h3><span class='badge' style='background:#2dd4bf22;color:#2dd4bf'>↔️ Two Pointers</span></div></a><a class='card' href='sequential-digits.html'><div class='body'><h3>Sequential Digits Explained in Python — Sliding Window Over a String (LeetCode 1291)</h3><span class='badge' style='background:#2dd4bf22;color:#2dd4bf'>↔️ Two Pointers</span></div></a></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>11. Container With Most Water | LeetCode Daily Python Solution (the trick nobody sees)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Container With Most Water shows up constantly in coding interview prep lists, and there's a good reason for that: it looks simple on the surface, but it quietly tests whether you can spot a greedy insight that isn't obvious from the problem statement alone. Anyone can write the brute-force version in a few minutes — loop over every pair, compute the area, keep the max. It works. It also passes every tiny test case an interviewer throws at you early on.</p>
+<p>The real signal comes from what happens next. When the interviewer asks "can you do better than O(n²)?", this is the moment where a lot of candidates stall. The two-pointer trick that solves this problem isn't a memorized formula — it's a reasoning pattern that reappears in Trapping Rain Water, 3Sum, and a whole family of array problems where you're searching for an optimal pair or triplet under a monotonic constraint. Once you internalize why moving the shorter wall is the only move worth making, you'll recognize the same shape of argument the next time it shows up in a different disguise.</p>
+<p>This walkthrough builds the intuition from scratch, not just the final code, so you can reconstruct the solution on a whiteboard without having seen this exact problem before.</p>
+<h2>Problem Overview</h2>
+<p>You're given an array of non-negative integers, where each number represents the height of a vertical line drawn at that index on the x-axis. Pick any two of these lines. Together with the x-axis between them, they form a container capable of holding water.</p>
+<p>The catch: the container's walls are rigid and vertical, so water can never rise above the shorter of the two chosen lines — the taller line's extra height above the shorter one is just wasted, it doesn't hold anything back that would otherwise spill.</p>
+<p>The amount of water held is:</p>
+<pre><code>area = width × height
+width = distance between the two chosen indices
+height = the shorter of the two line heights
+</code></pre>
+<p>Your task is to choose the pair of lines that maximizes this area and return that maximum value.</p>
+<h2>Example</h2>
+<p>Take the array:</p>
+<pre><code>heights = [1, 8, 6, 2, 5, 4, 8, 3, 7]
+indices =  0  1  2  3  4  5  6  7  8
+</code></pre>
+<p>The best pair here is index <code>1</code> (height 8) and index <code>8</code> (height 7).</p>
+<ul>
+<li>Width = <code>8 - 1 = 7</code></li>
+<li>Height = <code>min(8, 7) = 7</code></li>
+<li>Area = <code>7 × 7 = 49</code></li>
+</ul>
+<p>Notice that index <code>6</code> also has height 8 — taller than index <code>8</code>'s height of 7 — but pairing index <code>1</code> with index <code>6</code> gives width <code>5</code>, so area <code>5 × 8 = 40</code>, which is smaller. A taller wall isn't automatically better; width matters just as much as height, and the winning pair balances both.</p>
+<h2>Intuition</h2>
+<p>Don't start by thinking about code. Start by thinking about what makes a container big: it needs to be either wide, tall, or both. Since height is capped by whichever wall is shorter, tall alone isn't enough — you need the <em>shorter</em> of your two chosen walls to still be reasonably tall while the walls are also far apart.</p>
+<p>Here's the key move an experienced engineer makes: start with the widest possible container, the one formed by the very first and very last line. This container has the maximum width you could ever get, though its height might not be great.</p>
+<p>Now ask: from here, is there any way moving the <em>taller</em> wall inward could help? No — moving it inward only shrinks the width, and since the shorter wall was already the limiting height, moving the taller wall doesn't change that cap at all. It can only make things worse or, at best, equal. So it's never worth trying.</p>
+<p>But moving the <em>shorter</em> wall inward might help. You lose a bit of width, but you have a chance at finding a taller line that raises the water cap enough to make up for it. That's the only move that could possibly reveal something better — so that's the move you always make.</p>
+<p>This single observation is what collapses an O(n²) search into an O(n) pass: at every step, you eliminate the shorter wall from ever being useful again in combination with anything to its inside, because any container using that wall and a line further in is strictly narrower with the same or lower height cap.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Try every possible pair of lines, compute the area for each, and track the maximum.</p>
+<p><strong>Algorithm:</strong>
+1. For each index <code>i</code> from <code>0</code> to <code>n-1</code>.
+2. For each index <code>j</code> from <code>i+1</code> to <code>n-1</code>.
+3. Compute <code>width = j - i</code>, <code>height = min(heights[i], heights[j])</code>, <code>area = width * height</code>.
+4. Update the running maximum.</p>
+<p><strong>Advantages:</strong> Trivial to write, easy to reason about, guaranteed correct.</p>
+<p><strong>Disadvantages:</strong> Checks every pair even though most of them are provably worse than pairs you've already checked. Doesn't scale.</p>
+<p><strong>Complexity:</strong>
+- Time: O(n²) — nested loop over every pair.
+- Space: O(1) — no extra data structures.</p>
+<p>With 10 lines, that's roughly 45 comparisons — nothing. With 100,000 lines, that's about 10 billion comparisons, which will time out on any real judge or interview constraint.</p>
+<h2>Optimal Solution</h2>
+<p>Set two pointers: <code>left</code> at index <code>0</code>, <code>right</code> at index <code>n-1</code>. Track <code>max_area = 0</code>.</p>
+<p>Loop while <code>left &lt; right</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Compute <code>width = right - left</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Compute <code>height = min(heights[left], heights[right])</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Compute <code>area = width * height</code>, update <code>max_area</code> if larger</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Move the pointer at the <strong>shorter</strong> wall inward by one</td>
+</tr>
+</tbody>
+</table>
+<p>Repeat until <code>left</code> meets <code>right</code>. Return <code>max_area</code>.</p>
+<p>Each iteration eliminates exactly one line from ever being the limiting wall again, and each line is visited at most once, which is what gives you the linear time bound.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from typing import List
+
+
+def max_area(heights: List[int]) -&gt; int:
+    left, right = 0, len(heights) - 1
+    best = 0
+
+    while left &lt; right:
+        width = right - left
+        height = min(heights[left], heights[right])
+        best = max(best, width * height)
+
+        # The taller wall can never raise the cap by moving inward,
+        # so only the shorter wall's side is worth advancing.
+        if heights[left] &lt; heights[right]:
+            left += 1
+        else:
+            right -= 1
+
+    return best
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>left, right = 0, len(heights) - 1</code> — start with the widest possible container.</li>
+<li><code>best = 0</code> — nothing has been measured yet, so the running maximum starts at zero.</li>
+<li><code>while left &lt; right</code> — stop once the pointers meet; a single line can't form a container by itself.</li>
+<li><code>width = right - left</code> — the horizontal distance between the two chosen walls.</li>
+<li><code>height = min(heights[left], heights[right])</code> — water can never rise above the shorter wall.</li>
+<li><code>best = max(best, width * height)</code> — keep the largest area seen so far.</li>
+<li><code>if heights[left] &lt; heights[right]: left += 1 else: right -= 1</code> — always advance the pointer on the shorter side, since that's the only move that could possibly find a taller cap.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using <code>heights = [1, 8, 6, 2, 5, 4, 8, 3, 7]</code>:</p>
+<table>
+<thead>
+<tr>
+<th>left</th>
+<th>right</th>
+<th>width</th>
+<th>height</th>
+<th>area</th>
+<th>best</th>
+<th>move</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0 (1)</td>
+<td>8 (7)</td>
+<td>8</td>
+<td>1</td>
+<td>8</td>
+<td>8</td>
+<td>left++</td>
+</tr>
+<tr>
+<td>1 (8)</td>
+<td>8 (7)</td>
+<td>7</td>
+<td>7</td>
+<td>49</td>
+<td>49</td>
+<td>right--</td>
+</tr>
+<tr>
+<td>1 (8)</td>
+<td>7 (3)</td>
+<td>6</td>
+<td>3</td>
+<td>18</td>
+<td>49</td>
+<td>right--</td>
+</tr>
+<tr>
+<td>1 (8)</td>
+<td>6 (8)</td>
+<td>5</td>
+<td>8</td>
+<td>40</td>
+<td>49</td>
+<td>right--</td>
+</tr>
+<tr>
+<td>1 (8)</td>
+<td>5 (4)</td>
+<td>4</td>
+<td>4</td>
+<td>16</td>
+<td>49</td>
+<td>right--</td>
+</tr>
+<tr>
+<td>1 (8)</td>
+<td>4 (5)</td>
+<td>3</td>
+<td>5</td>
+<td>15</td>
+<td>49</td>
+<td>right--</td>
+</tr>
+<tr>
+<td>1 (8)</td>
+<td>3 (2)</td>
+<td>2</td>
+<td>2</td>
+<td>4</td>
+<td>49</td>
+<td>right--</td>
+</tr>
+<tr>
+<td>1 (8)</td>
+<td>2 (6)</td>
+<td>1</td>
+<td>6</td>
+<td>6</td>
+<td>49</td>
+<td>right--</td>
+</tr>
+</tbody>
+</table>
+<p><code>left</code> and <code>right</code> meet — loop ends. Return <code>49</code>, matching the winning pair from the example.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time: O(n)</strong> — each iteration moves exactly one pointer, and each pointer can move at most <code>n</code> times total across the whole run, so the loop body executes at most <code>n</code> times.</li>
+<li><strong>Space: O(1)</strong> — only a handful of scalar variables are used, regardless of input size.</li>
+</ul>
+<p>Both bounds are tight: you can't do better than O(n) here because in the worst case you must inspect every line at least once to know it isn't part of the answer (consider an array that's strictly increasing then strictly decreasing — every value could plausibly matter until checked).</p>
+<h2>Alternative Solutions</h2>
+<p>A monotonic-stack approach is sometimes suggested, but it doesn't actually fit this problem well — that pattern shines in Trapping Rain Water, where you're accumulating water contributed by <em>every</em> bar, not searching for a single best pair. For Container With Most Water, two pointers is both the simplest and the asymptotically optimal approach; there's no meaningfully different algorithm worth comparing it against here.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Fewer than two lines:</strong> with 0 or 1 elements, no container can be formed — the loop never executes, <code>best</code> stays <code>0</code>.</li>
+<li><strong>All heights equal:</strong> e.g., <code>[4, 4, 4, 4]</code> — height never changes, so the widest pair automatically wins; the algorithm still finds it correctly since width shrinks monotonically as pointers close in.</li>
+<li><strong>Two lines only:</strong> <code>[1, 1]</code> — width <code>1</code>, height <code>min(1, 1) = 1</code>, area <code>1</code>. The loop runs exactly once.</li>
+<li><strong>Very tall wall far from a short one:</strong> e.g., <code>[1, 1000]</code> — height is still capped by the shorter wall (<code>1</code>), so the algorithm correctly returns a small area instead of being fooled by the tall bar.</li>
+<li><strong>Duplicate maximum heights:</strong> ties are handled naturally since <code>min()</code> doesn't care which side is "first" — either branch of the <code>if</code> still makes progress.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Moving the taller pointer instead of the shorter one.</strong> This throws away containers that could still beat the current best — the taller side was never the limiting factor.</li>
+<li><strong>Sorting the array first.</strong> Sorting destroys the original indices, and width depends entirely on original positions, not on relative height order.</li>
+<li><strong>Using <code>&lt;=</code> instead of <code>&lt;</code> in the while condition</strong>, or forgetting the loop condition entirely, causing an off-by-one or infinite loop.</li>
+<li><strong>Forgetting to update <code>best</code> before moving a pointer.</strong> If you move first and compute area second, you'll skip evaluating the current pair entirely.</li>
+<li><strong>Assuming height is <code>max()</code> instead of <code>min()</code>.</strong> Water spills over the shorter wall, not the taller one — this single flipped function call silently breaks every test case involving unequal heights.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>"Why is it safe to discard the shorter wall's line entirely once you move past it?"</li>
+<li>"How would this change if the container could hold water above the shorter wall (i.e., walls aren't perfectly vertical)?"</li>
+<li>"Can you extend this approach to find the actual indices of the optimal pair, not just the area?"</li>
+<li>"What's the relationship between this problem and Trapping Rain Water?"</li>
+<li>"Could a two-pointer approach fail if the array weren't allowed to have duplicate values? Why or why not?"</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Trapping Rain Water (LeetCode 42):</strong> Also uses two pointers (or a stack), but sums water across every position instead of finding a single best pair — a natural next problem once this one clicks.</li>
+<li><strong>3Sum (LeetCode 15):</strong> Uses the same "fix one, shrink the range with two pointers" pattern after sorting, applied to finding triplets summing to zero.</li>
+<li><strong>Two Sum II — Input Array Is Sorted (LeetCode 167):</strong> The canonical introduction to the two-pointer technique on a sorted array.</li>
+<li><strong>Boats to Save People (LeetCode 881):</strong> Another greedy two-pointer problem where pairing the extremes and shrinking inward is optimal.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Start from the widest possible container and always release the shorter wall — that single greedy rule is provably safe because the taller wall could never have raised the cap anyway. This turns an O(n²) brute-force scan into a single O(n) pass with no extra space. The pattern generalizes: whenever you're searching for an optimal pair under a "the weaker element decides the outcome" constraint, check whether narrowing from both ends while discarding the weaker side is safe — it often is.</p>
+<h2>Watch the Video</h2>
+<p>Prefer watching the pointers close in step by step? The full walkthrough, including the live run against the actual test case, is here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series that takes one problem at a time — LeetCode daily challenges, core CS concepts, real-world engineering patterns — and works through the reasoning from first principles instead of just reciting a memorized solution. The goal isn't to get you to recognize this exact problem again; it's to build the kind of intuition that transfers to problems you haven't seen yet.</p>
+<h2>Call To Action</h2>
+<p>If this helped the two-pointer pattern click, drop a like on the video and subscribe on YouTube for the rest of the daily LeetCode series. For deeper write-ups like this one delivered straight to your inbox, subscribe to the Substack. And if you spotted a cleaner explanation or a case this didn't cover, leave a comment — those shape what gets covered next.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Two pointers converging inward — when does this pattern apply?</summary><p>When comparing pairs across a sorted/array boundary where moving one side discards the worse option.</p></details><details class='card2'><summary>Time complexity of the two-pointer container solution?</summary><p>O(n) — single pass, each pointer moves at most n times total.</p></details><details class='card2'><summary>Space complexity of the two-pointer approach?</summary><p>O(1) — just two index variables, no extra structures.</p></details><details class='card2'><summary>Common bug: which pointer do you move after computing area?</summary><p>Always move the pointer at the shorter line inward; moving the taller one can only shrink or match area.</p></details><details class='card2'><summary>Two pointers vs brute force here — key tradeoff?</summary><p>Brute force checks all O(n²) pairs; two pointers proves moving the shorter side never loses the optimal answer, cutting to O(n).</p></details><details class='card2'><summary>Interview follow-up: why does moving the taller line never help?</summary><p>Width shrinks by 1 regardless, and height stays capped by the shorter line, so area can&#x27;t improve.</p></details></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>
