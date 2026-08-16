@@ -1,0 +1,164 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2029. Stone Game IX | LeetCode Daily Python Solution (winner decided before move one) — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/stone-game-ix
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/stone-game-ix
+
+Chapters:
+0:00 Stone Game I">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/stone-game-ix.html">
+<meta property="og:title" content="2029. Stone Game IX | LeetCode Daily Python Solution (winner decided before move one) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/stone-game-ix
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/stone-game-ix
+
+Chapters:
+0:00 Stone Game I"><meta property="og:image" content="https://i.ytimg.com/vi/du9B-DDNgiE/hqdefault.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>2029. Stone Game IX | LeetCode Daily Python Solution (winner decided before move one)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/du9B-DDNgiE' allowfullscreen></iframe></div><article><h2>Introduction</h2>
+<p>Every so often a problem shows up on LeetCode's daily list that's built to trick you into overreacting. Stone Game IX is one of those. Read it once and your brain immediately jumps to recursion, memoization, maybe a game tree with branching turn orders. That instinct is exactly what the problem is testing — not your ability to write a simulation, but your ability to notice when a simulation is unnecessary.</p>
+<p>This matters for interviews because "two players alternate turns, who wins" is one of the most common problem shapes you'll see, and most candidates default to the same heavy machinery every time: recursion plus memoization on game state. That works until the state space explodes, and with this problem it does — fast. Learning to recognize when a two-player turn game collapses into a simple counting argument is a transferable skill that shows up far beyond this one question.</p>
+<h2>Problem Overview</h2>
+<p>Alice and Bob take turns removing stones from a pile, one at a time, with Alice always moving first. Each stone has a value. As stones get removed, the players keep a running total of everything removed so far. The instant that running total becomes divisible by 3, the player who just made that move loses immediately — the game ends right there, mid-pile if it has to.</p>
+<p>Given the list of stone values, you need to determine: does Alice win?</p>
+<h2>Example</h2>
+<p>Take stones <code>[2, 1]</code>.</p>
+<ul>
+<li>Alice removes <code>2</code>. Running sum = 2. Not divisible by 3, game continues.</li>
+<li>Bob removes <code>1</code>. Running sum = 3. Divisible by 3 — Bob just made this move, so Bob loses.</li>
+</ul>
+<p>Alice wins.</p>
+<p>Now take stones <code>[2, 2]</code>. Both stones have the same remainder when divided by 3 (remainder 2), and there are no stones with remainder 1 at all. As you'll see below, that lopsided bucket count is exactly the kind of pattern that decides the outcome before anyone touches a stone.</p>
+<h2>Intuition</h2>
+<p>The trap here is treating this as a problem about stone <em>values</em>. It isn't. The only thing that affects whether a running sum hits a multiple of 3 is each stone's value <strong>mod 3</strong> — nothing else about the stone matters.</p>
+<p>That means every stone falls into exactly one of three buckets:</p>
+<ul>
+<li><strong>Bucket 0</strong> — remainder 0</li>
+<li><strong>Bucket 1</strong> — remainder 1</li>
+<li><strong>Bucket 2</strong> — remainder 2</li>
+</ul>
+<p>Once you see that, the entire game reduces to three integers: how many stones are in each bucket.</p>
+<p>Think about what a remainder-0 stone does to the running sum's remainder: nothing. Adding a multiple of 3 doesn't change the sum's remainder mod 3 at all. So a remainder-0 stone is a "free" move — it consumes a turn but doesn't move anyone closer to danger.</p>
+<p>The real tension is between remainder-1 and remainder-2 stones. Starting from a sum of 0, you're safe as long as you don't return the running total to a multiple of 3. Picking a remainder-1 stone moves you to a "1 mod 3" state; picking a remainder-2 stone moves you to "2 mod 3." From there, the <em>next</em> pick determines whether you land back on a multiple of 3 or not. Players are forced into an alternating pattern between the two buckets to stay safe, and whoever runs out of the "safe" bucket to pick from first is the one who eventually gets forced into a losing move.</p>
+<p>The remainder-0 stones complicate this only in one way: since they don't change the running remainder, they effectively let a player "pass" without disturbing the 1/2 alternation — but only whoever is on move when they're used. If the count of remainder-0 stones is even, they cancel each other out in terms of who benefits. If it's odd, one of them tips the alternation in a specific direction.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea</strong>: simulate the game. At each state (remaining stones, current running sum mod 3, whose turn it is), try removing each remaining stone, check if the mover loses, and recurse. Memoize on the state.</p>
+<p><strong>Algorithm</strong>:
+1. Represent state as <code>(count0, count1, count2, running_sum_mod_3, turn)</code>.
+2. At each state, try picking from each non-empty bucket.
+3. If the new running sum is divisible by 3, the current player loses.
+4. Otherwise recurse into the next state with the opposite turn.
+5. Alice wins if any move leads to a state where she doesn't immediately lose and Bob is forced into a loss down the line.</p>
+<p><strong>Advantages</strong>: correct by construction, easy to reason about for small inputs, useful if the loss condition were more complex (not a simple modulo).</p>
+<p><strong>Disadvantages</strong>: with up to 100,000 stones, even representing the state space explodes past anything practical. The problem constraints (up to 10^5 stones) make this approach unusable in practice — it's a correctness reference, not a real solution.</p>
+<p><strong>Complexity</strong>: exponential time in the naive form; even with memoization on <code>(count0, count1, count2, sum_mod_3)</code> it's still far too slow and memory-heavy for the input bounds, since you'd need to track exact counts alongside turn state.</p>
+<h2>Optimal Solution</h2>
+<p>Reduce the whole pile to three counters: <code>cnt0</code>, <code>cnt1</code>, <code>cnt2</code> — how many stones have each remainder mod 3.</p>
+<p>The outcome depends only on these three numbers, split into two cases based on the parity of <code>cnt0</code>:</p>
+<p><strong>Case 1: <code>cnt0</code> is even.</strong>
+The free moves cancel out. Alice wins only if <strong>both</strong> <code>cnt1 &gt; 0</code> and <code>cnt2 &gt; 0</code>. If either bucket is empty, Alice can never sustain the 1/2 alternation and loses.</p>
+<p><strong>Case 2: <code>cnt0</code> is odd.</strong>
+The single leftover free move shifts the danger zone. Alice wins only if the gap between the two buckets is large enough:</p>
+<pre><code>abs(cnt1 - cnt2) &gt; 2
+</code></pre>
+<table>
+<thead>
+<tr>
+<th><code>cnt0</code> parity</th>
+<th>Winning condition for Alice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>even</td>
+<td><code>cnt1 &gt; 0</code> and <code>cnt2 &gt; 0</code></td>
+</tr>
+<tr>
+<td>odd</td>
+<td><code>abs(cnt1 - cnt2) &gt; 2</code></td>
+</tr>
+</tbody>
+</table>
+<p>That's the entire rule. No recursion, no memoization, no simulated turns — just a tally and one comparison.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def stone_game_ix(stones: list[int]) -&gt; bool:
+    &quot;&quot;&quot;Return True if Alice wins Stone Game IX.&quot;&quot;&quot;
+    cnt = [0, 0, 0]
+    for stone in stones:
+        cnt[stone % 3] += 1
+
+    if cnt[0] % 2 == 0:
+        return cnt[1] &gt; 0 and cnt[2] &gt; 0
+
+    return abs(cnt[1] - cnt[2]) &gt; 2
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>cnt = [0, 0, 0]</code> — three counters, one per remainder bucket.</li>
+<li><code>for stone in stones: cnt[stone % 3] += 1</code> — a single pass over the input. <code>stone % 3</code> gives 0, 1, or 2, and we bump the matching counter. This is the only place we touch the input list.</li>
+<li><code>if cnt[0] % 2 == 0</code> — checks whether the free-move (remainder-0) count is even.</li>
+<li><code>return cnt[1] &gt; 0 and cnt[2] &gt; 0</code> — in the even case, Alice needs both danger buckets populated to sustain the alternation.</li>
+<li><code>return abs(cnt[1] - cnt[2]) &gt; 2</code> — in the odd case, the gap between the two buckets must exceed 2 for Alice to win. <code>abs</code> handles the comparison regardless of which bucket is larger.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Stones: <code>[9, 7, 2, 2]</code></p>
+<ol>
+<li><code>9 % 3 = 0</code> → <code>cnt = [1, 0, 0]</code></li>
+<li><code>7 % 3 = 1</code> → <code>cnt = [1, 1, 0]</code></li>
+<li><code>2 % 3 = 2</code> → <code>cnt = [1, 1, 1]</code></li>
+<li><code>2 % 3 = 2</code> → <code>cnt = [1, 1, 2]</code></li>
+</ol>
+<p>Final: <code>cnt = [1, 1, 2]</code>.</p>
+<p><code>cnt[0] = 1</code>, which is odd → check <code>abs(cnt[1] - cnt[2]) &gt; 2</code> → <code>abs(1 - 2) = 1</code>, which is not greater than 2.</p>
+<p><strong>Result: Alice loses (Bob wins).</strong></p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time</strong>: O(n) — one pass over the stones to build the three counters, then constant-time arithmetic on the result. This scales cleanly to the 100,000-stone upper bound.</li>
+<li><strong>Space</strong>: O(1) — exactly three counters regardless of input size, since we never need the original values again after tallying.</li>
+</ul>
+<p>The correctness rests on the fact that the loss condition (<code>running_sum % 3 == 0</code>) depends only on the multiset of remainders, not the actual values or their order beyond which bucket they came from — which is why counting is sufficient and simulation is wasted work.</p>
+<h2>Alternative Solutions</h2>
+<p>The brute-force recursive simulation above is the only real alternative, and it's worth knowing conceptually because the same "simulate then find the counting shortcut" progression appears constantly in these problems. There's no meaningfully different optimal approach here — once you spot the mod-3 reduction, the bucket-comparison rule is essentially forced, since it's the smallest sufficient state that captures the game.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Fewer than 2 stones</strong>: with 0 stones, no move is ever made — treat this defensively depending on problem constraints (LeetCode guarantees <code>stones.length &gt;= 1</code>). With 1 stone, Alice removes it; she loses only if that single stone's value is divisible by 3.</li>
+<li><strong>All stones in one bucket</strong>: e.g., all remainder 2, <code>cnt1 = 0</code>. Alice loses regardless of <code>cnt0</code>'s parity, since she can never start the 1/2 alternation.</li>
+<li><strong><code>cnt0</code> very large, <code>cnt1</code>/<code>cnt2</code> small</strong>: the free moves don't help Alice manufacture a win if the other buckets are empty or too close together.</li>
+<li><strong>Duplicate stone values</strong>: doesn't matter — only the remainder counts matter, so duplicates just increment the same bucket.</li>
+<li><strong>Maximum input size (10^5 stones)</strong>: this is exactly why the O(n) bucket approach exists; brute force is not viable here.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting <code>cnt0</code>'s parity flips the rule.</strong> Using the same condition regardless of whether <code>cnt0</code> is even or odd is the single most common bug — it silently produces wrong answers only on odd inputs, which makes it easy to miss in testing.</li>
+<li><strong>Assuming "bigger bucket wins."</strong> It's not about which of <code>cnt1</code>/<code>cnt2</code> is larger — it's about the <em>size of the gap</em> between them, measured with <code>abs()</code>.</li>
+<li><strong>Using the wrong threshold.</strong> The odd-<code>cnt0</code> case requires the gap to be <strong>strictly greater than 2</strong>, not greater than or equal to 2, and not greater than 1.</li>
+<li><strong>Trying to simulate the game directly.</strong> Writing recursive/backtracking code works on small examples but times out or exceeds memory on the real constraints (up to 100,000 stones).</li>
+<li><strong>Forgetting to check <code>cnt1 &gt; 0 and cnt2 &gt; 0</code>, not just one of them, in the even case.</strong> An empty bucket in either position breaks Alice's plan.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Why does the value of each stone not matter beyond its remainder mod 3?</li>
+<li>How would the rule change if the losing condition were "sum divisible by 4" instead of 3?</li>
+<li>Can you prove why an even count of remainder-0 stones cancels out, but an odd count doesn't?</li>
+<li>What's the time and space complexity of your solution, and why is brute-force simulation infeasible here?</li>
+<li>How would you modify this if Bob moved first instead of Alice?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Stone Game (LeetCode 877)</strong> — a related turn-based stone-removal game, but decided by optimal value selection rather than modular arithmetic.</li>
+<li><strong>Nim Game (LeetCode 292)</strong> — another game where the winner is determined by a simple property of the input (divisibility) rather than simulation.</li>
+<li><strong>Predict the Winner (LeetCode 486)</strong> — classic two-player game requiring DP, useful for contrasting against problems that <em>don't</em> reduce to a closed-form rule.</li>
+<li><strong>Divisor Game (LeetCode 1025)</strong> — another mislabeled-as-hard game problem where the winner follows directly from a parity observation.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Stone Game IX teaches a pattern that's bigger than the problem itself: when you see a two-player turn-based game, resist the urge to model every move. Ask what minimal state actually determines the outcome. Here, that state was three integers — remainder-bucket counts — and one parity check. Recognizing this kind of reduction is what separates a brute-force answer from an O(n) one, and it's exactly the kind of judgment interviewers are probing for.</p>
+<h2>Watch the Video</h2>
+<p>For the full visual walkthrough — including the bucket trace, the brute-force comparison, and two live quiz rounds — watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series dedicated to making LeetCode problems, algorithms, and core computer science concepts genuinely click — not just memorized, but understood well enough to reconstruct under interview pressure.</p>
+<h2>Call To Action</h2>
+<p>If this explanation helped the mod-3 trick finally make sense, leave a like on the video and subscribe for more daily LeetCode breakdowns. For deeper dives and bonus problem sets, subscribe to the Substack newsletter. Drop your questions or problem requests in the comments, and share this with anyone prepping for coding interviews.</p>
+<hr /></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/du9B-DDNgiE' target='_blank'>▶ Watch on YouTube</a></div><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>What&#x27;s the core pattern for Stone Game IX?</summary><p>Bucket-count by remainder mod 3, then simulate turn order with the two nonzero buckets — greedy parity trick, not brute force.</p></details><details class='card2'><summary>Time complexity of the bucket-count solution?</summary><p>O(n) — one pass to count remainders, then constant-time logic on the three buckets.</p></details><details class='card2'><summary>Space complexity of the bucket-count solution?</summary><p>O(1) — only three counters (remainder 0, 1, 2) needed, no extra arrays.</p></details><details class='card2'><summary>Trickiest edge case in Stone Game IX?</summary><p>When count of remainder-0 stones is odd, it flips which player is forced to end on a multiple of 3 — easy to miss.</p></details><details class='card2'><summary>Why does &#x27;try every removal order&#x27; fail here?</summary><p>State space of orders is exponential; the outcome only depends on remainder-mod-3 counts, so brute force wastes work the buckets already capture.</p></details><details class='card2'><summary>Interview follow-up: why mod 3 specifically?</summary><p>A player loses only when the running sum becomes divisible by 3 (multiple of 3 stones total) — that&#x27;s the losing condition baked into the rules.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
