@@ -1,0 +1,191 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Software-Architecture Lesson 1: One Button, Two Broken Screens — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/software-architecture-lesson-01-what-software-architecture-actually-means
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/software-architecture-lesson-01-what-software-architecture-actually-means.html">
+<meta property="og:title" content="Software-Architecture Lesson 1: One Button, Two Broken Screens — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/software-architecture-lesson-01-what-software-architecture-actually-means
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Software-Architecture Lesson 1: One Button, Two Broken Screens</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every developer has had this moment: you touch one file, run the app, and something completely unrelated breaks. You didn't touch that file. You didn't even know it existed until it started throwing errors. Your first instinct is to assume you made a mistake somewhere — but when you go looking, the code you touched is clean, and the code that broke is untouched.</p>
+<p>This isn't a rare glitch. It's one of the most common early-warning signs that a codebase has no architecture — not "bad" architecture, no architecture at all. And it matters far beyond this one bug, because it's exactly the kind of failure that interviewers probe for in system design rounds: not "can you draw boxes and arrows," but "do you understand why boxes and arrows need to exist in the first place."</p>
+<p>Understanding this scenario deeply gives you something most tutorials skip: an intuition for <em>when</em> structure earns its keep and when it's just overhead. That distinction is what separates engineers who over-architect three-file scripts from ones who can't scale past ten files, from engineers who know exactly when to add the wall.</p>
+<h2>Problem Overview</h2>
+<p>Here's the setup, in plain terms. You have a small application — three files, one folder. Nothing exotic. You add a button to the settings screen. Nothing fancy, just a button.</p>
+<p>Now the checkout screen breaks. Not the settings screen — checkout. A screen nobody touched, in a file nobody edited.</p>
+<p>The question isn't "how do I fix this bug." The question is: how is this even possible? What has to be true about a codebase for a change in file A to break file B, when file B has zero relationship to what you just did — at least on paper?</p>
+<p>That's the real problem this lesson is solving: not a specific bug, but the <em>structural condition</em> that makes bugs like this possible at all.</p>
+<h2>Example</h2>
+<p>Let's make this concrete instead of abstract.</p>
+<p>Imagine <code>settings.js</code>, <code>checkout.js</code>, and a shared <code>app.js</code> that wires them together. You add a button to <code>settings.js</code> that reads some shared state to decide whether to render. That state object is the same one <code>checkout.js</code> reads to calculate totals. You didn't rename it, you didn't delete it — you just added a new read to it earlier in the app's lifecycle, which changed <em>when</em> a value gets set relative to when checkout reads it.</p>
+<p>Checkout now sees <code>undefined</code> where it expected a number. It breaks.</p>
+<p>Notice what didn't happen: nobody edited <code>checkout.js</code>. Git blame on that file shows nothing recent. The code inside it is fine, in isolation. The bug isn't a bug in either file — it's a bug in the <em>relationship</em> between them, and that relationship was never made explicit anywhere. It just existed, silently, because nothing stopped it from existing.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer reasons through this, step by step, before writing a single line of a fix.</p>
+<p><strong>Step one: rule out the obvious.</strong> Something broke inside <code>checkout.js</code> — did the checkout code itself change? Check git blame. If it's untouched for weeks, that's not it.</p>
+<p><strong>Step two: rule out sloppy code.</strong> Did whoever wrote <code>settings.js</code> do something careless — a typo, a bad mutation, a leaked side effect? Read it. If it's clean, that's not it either.</p>
+<p><strong>Step three — the important one: stop looking at the files, and start looking at the <em>connections between</em> the files.</strong> If neither file is individually broken, but the system as a whole is broken, the bug isn't inside a file. It's between files. And a bug that lives "between" files can only exist if those files are allowed to reach into each other freely, with no boundary stopping them.</p>
+<p>This is the core intuition: <strong>bugs like this are not implementation bugs, they're architecture bugs.</strong> No amount of writing "better code" inside <code>settings.js</code> or <code>checkout.js</code> fixes it, because the problem was never inside either one. The fix has to happen at the level of <em>what's allowed to talk to what</em> — which is architecture, not implementation.</p>
+<p>A useful mental model: think of building a house.
+- <strong>Implementation</strong> is laying the bricks — the actual code you type.
+- <strong>Design</strong> is how one room is shaped — a single function or class.
+- <strong>Architecture</strong> is which rooms have doors to which other rooms — which parts of your app are allowed to talk to which.</p>
+<p>Same rooms, same bricks. Architecture is the decision about doors. Get that decision right, and the settings room never had a door into checkout to begin with — the bug becomes structurally impossible, not just unlikely.</p>
+<h2>Brute Force Solution</h2>
+<p>The "brute force" fix here isn't a code fix at all — it's the instinctive first move most people make: <strong>patch the symptom.</strong></p>
+<p><strong>The idea:</strong> find the exact line in checkout that broke, add a null check or a default value, and move on.</p>
+<pre><code class="language-python"># The &quot;just make it stop erroring&quot; patch
+total = shared_state.get(&quot;cart_total&quot;, 0)  # defaults to 0 if missing
+</code></pre>
+<p><strong>Algorithm:</strong> locate the crash, wrap it in a guard, ship it.</p>
+<p><strong>Advantages:</strong>
+- Fast. Takes minutes.
+- Unblocks whatever you were doing.</p>
+<p><strong>Disadvantages:</strong>
+- Doesn't explain <em>why</em> the value went missing.
+- The same class of bug can resurface anywhere else that reads <code>shared_state</code>, because the actual cause — unrestricted access between unrelated screens — is still there.
+- Every future "quick guard" like this is a tax you pay forever, and it compounds as the app grows.</p>
+<p><strong>Complexity:</strong> O(1) time to patch, but unbounded future cost — there's no ceiling on how many times this exact shape of bug can repeat.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal fix is to stop treating this as a checkout bug and treat it as a boundary problem: <strong>decide, explicitly, which parts of the app are allowed to depend on which</strong>, and enforce that decision structurally instead of hoping everyone remembers it.</p>
+<p>Here's the reasoning, laid out as a table:</p>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>What it reveals</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>What does this piece <em>do</em>?</td>
+<td>Its responsibility — is it settings logic, checkout logic, or shared state?</td>
+</tr>
+<tr>
+<td>What does it <em>need</em> to know about?</td>
+<td>Its real dependencies — often smaller than what it currently <em>can</em> reach</td>
+</tr>
+<tr>
+<td>What's currently allowed to reach it?</td>
+<td>The actual door count — often far larger than what's needed</td>
+</tr>
+</tbody>
+</table>
+<p>Applying this to the example: settings and checkout both currently have unrestricted access to the same shared state object. Neither <em>needs</em> full access to the other's concerns — settings needs to know if a feature flag is on; checkout needs a stable total. Once you separate "settings-owned state" from "checkout-owned state" and give each screen a narrow, explicit interface to read from, a change in settings can no longer silently shift what checkout sees. The door settings never should have had into checkout gets removed.</p>
+<p>Why this scales when the patch doesn't: the fix isn't tied to <em>this</em> bug's specific symptom, it's tied to the <em>shape</em> of the codebase. Once the boundary exists, this entire category of bug — "unrelated screen breaks" — becomes structurally harder to reproduce, not just fixed once.</p>
+<h2>Python Code</h2>
+<p>Here's a minimal illustration of the difference between unrestricted shared state and a bounded interface, in Python terms that map directly to the JS example.</p>
+<pre><code class="language-python"># --- Before: no boundary, both screens reach into the same mutable dict ---
+shared_state = {}
+
+def settings_add_button(state: dict) -&gt; None:
+    # Adds a new read that shifts when a key gets set
+    state[&quot;feature_flag&quot;] = state.get(&quot;cart_total&quot;) is not None
+    # ^ accidentally depends on checkout's key existing first
+
+
+def checkout_calculate_total(state: dict) -&gt; float:
+    return state[&quot;cart_total&quot;] * 1.0  # breaks if key was never set
+
+
+# --- After: each screen owns its own state, exposed through a narrow interface ---
+class CheckoutState:
+    def __init__(self, cart_total: float = 0.0):
+        self._cart_total = cart_total
+
+    def total(self) -&gt; float:
+        return self._cart_total
+
+
+class SettingsState:
+    def __init__(self, checkout: CheckoutState):
+        self._checkout = checkout  # explicit, narrow dependency
+
+    def feature_flag_enabled(self) -&gt; bool:
+        return self._checkout.total() &gt;= 0  # reads through a stable interface
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>shared_state = {}</code> — one mutable dict both "screens" can freely read and write. This is the architectural flaw: no ownership, no boundary.</li>
+<li><code>settings_add_button</code> mutates a key based on the <em>presence</em> of another screen's key — this is the "door" that shouldn't exist.</li>
+<li><code>checkout_calculate_total</code> assumes <code>cart_total</code> exists, because nothing ever told it that assumption could be violated.</li>
+<li>In the "after" version, <code>CheckoutState</code> owns its own data and exposes exactly one method, <code>total()</code>. Nothing outside it can set <code>cart_total</code> directly.</li>
+<li><code>SettingsState</code> takes a <code>CheckoutState</code> as an explicit dependency in its constructor — the relationship is now visible, declared, and limited to one method call instead of open dict access.</li>
+<li>The bug class this prevents: settings can no longer accidentally depend on checkout's <em>internal</em> key names or ordering, because it only ever sees <code>total()</code>.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Walk through the "before" version with the exact failure from the video:</p>
+<ol>
+<li>App starts. <code>shared_state = {}</code> — empty.</li>
+<li>User navigates to settings first (order matters, and that's the problem). <code>settings_add_button(shared_state)</code> runs.</li>
+<li>Inside it: <code>state.get("cart_total")</code> — key doesn't exist yet, returns <code>None</code>. So <code>feature_flag</code> is set to <code>False</code>. No crash yet.</li>
+<li>User navigates to checkout. <code>checkout_calculate_total(shared_state)</code> runs.</li>
+<li><code>state["cart_total"]</code> — this key was never set by anyone in this flow. <code>KeyError</code>. Checkout breaks.</li>
+<li>Nobody edited checkout. The bug was entirely caused by settings reading a key it had no business knowing about, in a shared space with no ownership rules.</li>
+</ol>
+<p>Now the "after" version: <code>SettingsState</code> can only ever call <code>checkout.total()</code>, which always returns a valid float because <code>CheckoutState</code> initializes it in its own constructor. There is no path by which settings can put checkout into an invalid state, because settings never has write access to checkout's internals at all.</p>
+<h2>Complexity Analysis</h2>
+<p>This isn't a performance problem, so the relevant "complexity" is <em>structural</em>, not computational — but it's worth quantifying because it's the actual crux of the lesson.</p>
+<p>The number of <em>possible</em> connections between <code>n</code> files grows as pairs: <code>n(n-1)/2</code>.</p>
+<ul>
+<li>At 3 files: 3 possible connections. Trivial to hold in your head.</li>
+<li>At 10 files: 45 possible connections.</li>
+<li>At 50 files: 1,225 possible connections.</li>
+</ul>
+<p>This is the ceiling, not a guarantee — but it's the ceiling you're up against as the codebase grows, and it's why "just be careful" stops working long before you'd expect. Space complexity of the <em>mental model</em> required to safely change one file is, in the worst case, O(n) — you'd need to hold every other file's assumptions in your head. Boundaries collapse that back down: a change inside a bounded module only requires reasoning about that module's declared interface, not the whole graph.</p>
+<h2>Alternative Solutions</h2>
+<p><strong>"Just be more careful" / code review:</strong> catches some of these bugs, but doesn't scale — reviewers can't hold a 1,225-edge graph in their head any better than the original author.</p>
+<p><strong>Dump shared logic into a <code>utils.js</code>:</strong> the instinctive fix, and it feels like progress because you've "separated" the logic. It isn't a fix. Now every file imports <code>utils</code>, so <code>utils</code> silently becomes the single most-connected node in the entire graph — you've hidden the fan-out behind a filename instead of removing it. This is worth calling out explicitly because it's the trap most people fall into on the way to learning boundaries actually work.</p>
+<p><strong>Real boundaries (the recommended approach):</strong> each module owns its own state and exposes a narrow, explicit interface — as shown above. More upfront thought, but the connection count a human has to reason about per change drops back to a small, fixed number regardless of total app size.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty state / first run:</strong> a boundary's constructor should establish valid defaults (as <code>CheckoutState.__init__</code> does) so "state doesn't exist yet" can't become "state is silently wrong."</li>
+<li><strong>Circular dependencies:</strong> if <code>CheckoutState</code> also needed to read from <code>SettingsState</code>, you'd have a cycle — a sign the boundary was drawn in the wrong place, not that boundaries don't work.</li>
+<li><strong>Legitimate cross-cutting concerns</strong> (like a logged-in user): these are exactly why "no boundaries anywhere" fails, but also why "everything is its own hard boundary" fails too — some things genuinely need to be shared, deliberately, through an explicit interface rather than an open dict.</li>
+<li><strong>Very small apps (3 files):</strong> boundaries are actively not worth it here — there's nothing to get lost in yet, and adding structure is pure overhead with no payoff.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Assuming the broken file is the buggy file.</strong> Checkout looked broken; checkout wasn't the cause.</li>
+<li><strong>Fixing the symptom (null check) instead of the structural cause.</strong> It stops this crash, not this <em>class</em> of crash.</li>
+<li><strong>Adding a <code>utils.js</code> to "reduce coupling."</strong> It usually increases fan-out and just hides it.</li>
+<li><strong>Adding heavy structure to a 3-file script "to be safe."</strong> Premature boundaries are pure friction with no payoff at that scale.</li>
+<li><strong>Treating architecture as a diagram you draw once.</strong> It's an ongoing rule enforced on every change, not documentation.</li>
+<li><strong>Waiting until the app is unmanageable to add boundaries.</strong> The right time is <em>before</em> the file count outgrows your memory, not after.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>"How would you detect that two unrelated modules are secretly coupled?"</li>
+<li>"At what point in a project's growth would you introduce module boundaries, and why not earlier?"</li>
+<li>"Why does moving shared code into a <code>utils</code> file not, by itself, reduce coupling?"</li>
+<li>"How do you distinguish an implementation bug from an architecture bug when debugging?"</li>
+<li>"What's the tradeoff of adding boundaries too early versus too late?"</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Design a rate limiter / cache with clear module boundaries</strong> — same core skill: deciding what's allowed to depend on what.</li>
+<li><strong>Refactor a God object</strong> — the direct next step once you've identified unbounded shared state.</li>
+<li><strong>Design a plugin system</strong> — architecture as explicit interfaces taken to its logical extreme.</li>
+<li><strong>Microservices vs. monolith tradeoffs</strong> — the same boundary question at a much larger scale.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>A change in one file breaking an unrelated file is a sign of missing boundaries, not bad code.</li>
+<li>Architecture is the ongoing decision of what's allowed to depend on what — not a diagram, a rule you enforce continuously.</li>
+<li>Possible connections grow roughly with the square of file count; that's the ceiling you eventually hit.</li>
+<li>Dumping shared code into <code>utils.js</code> hides fan-out, it doesn't remove it.</li>
+<li>Boundaries cost upfront thought and are genuinely not worth it at a handful of files — the goal is adding them before file count outgrows your memory, not on day one.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This lesson is easier to absorb watching the button click and the break happen live. Watch it here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This is Lesson 1 of <strong>Fun with Learning Technology</strong>, a series built around one idea: real engineering intuition comes from watching a small, concrete problem break and understanding exactly why — not from memorizing definitions. Future lessons build on this same "one button, two screens" example as the app grows, showing exactly when and how boundaries should evolve with it.</p>
+<h2>Call To Action</h2>
+<p>If this changed how you think about a bug you've hit before, the video walks through it visually — worth a watch and a like on YouTube. Subscribe there for the rest of the series, and subscribe to the Substack if you want these lessons as writeups you can reference later. Drop a comment with a time you got burned by exactly this kind of "unrelated" bug — and share this with a teammate who's about to reach for a <code>utils.js</code>.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Architecture vs. design vs. implementation — what&#x27;s the difference?</summary><p>Architecture = boundaries between parts; design = internal shape of one part; implementation = actual code. Different altitudes, different questions.</p></details><details class='card2'><summary>Why does &#x27;just start coding&#x27; break down as a project grows?</summary><p>With one file/button, nothing separates the parts, so any change ripples everywhere — the obvious guess stops being obvious past a certain size.</p></details><details class='card2'><summary>What is a &#x27;boundary&#x27; in software architecture?</summary><p>A deliberate seam where two parts talk only through a defined interface, keeping changes on one side from leaking into the other.</p></details><details class='card2'><summary>&#x27;Boundaries, not blueprints&#x27; — what does this mean?</summary><p>Architecture isn&#x27;t a fixed upfront diagram; it&#x27;s the ongoing discipline of keeping parts separated as the system changes.</p></details><details class='card2'><summary>When are boundaries NOT worth adding yet?</summary><p>When the system is small (e.g. &#x27;at three files, it&#x27;s fine&#x27;) — premature separation adds cost before connections outgrow the code.</p></details><details class='card2'><summary>What&#x27;s the &#x27;three questions&#x27; test for whether you need architecture?</summary><p>Ask: what changes together, what changes independently, and where do connections cross — if answers are unclear, that&#x27;s the signal boundaries are needed.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
