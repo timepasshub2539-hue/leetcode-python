@@ -1,0 +1,214 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Python Lesson 32: The GIL Is Lying to Your Threads — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-32-concurrency-threads-and-processes
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/pytho">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-32-concurrency-threads-and-processes.html">
+<meta property="og:title" content="Python Lesson 32: The GIL Is Lying to Your Threads — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-32-concurrency-threads-and-processes
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/pytho">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 32: The GIL Is Lying to Your Threads</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Open sixteen cores of usage graph, run a CPU-heavy Python script, and watch fifteen of them stay flat. That's not a fluke, and it's not your laptop being slow — it's the Global Interpreter Lock, one of the most consequential design decisions in the Python language, and one that trips up engineers at every level.</p>
+<p>Interviewers bring this up constantly, not because they want you to recite trivia about CPython internals, but because it reveals whether you actually understand what your code is doing at runtime versus what you assume it's doing. A candidate who reaches for <code>threading</code> to speed up a number-crunching loop without knowing about the GIL will confidently ship code that does nothing useful — and in production, that mistake burns real compute budget on a machine that was never actually parallelizing anything.</p>
+<p>Learning this properly means you stop treating "concurrency" as one tool and start treating it as a question: <em>is this task waiting, or is this task working?</em> Get that distinction right, and thread vs. process stops being a coin flip.</p>
+<h2>Problem Overview</h2>
+<p>Python ships with a global lock inside the interpreter. Only one thread can hold this lock and execute Python bytecode at any given moment — no matter how many CPU cores the machine has. If you spin up ten threads on a sixteen-core machine, you don't get ten threads running in parallel. You get ten threads taking turns on one core, with the other fifteen doing nothing for your Python code specifically.</p>
+<p>The lock exists because CPython's memory management (reference counting, primarily) isn't thread-safe by default. Rather than making every object access thread-safe individually — which is slow and complex — CPython takes the simpler route: only one thread touches Python objects at a time. That's the trade-off. Simplicity and speed for single-threaded code, at the cost of true parallelism for multi-threaded CPU work.</p>
+<p>The lock isn't held forever, though. It gets released whenever a thread stops needing the CPU — waiting on a network response, a disk read, a timer, a database query. That's the detail that determines whether threading helps you or wastes your time.</p>
+<h2>Example</h2>
+<p><strong>Scenario A — I/O-bound work:</strong> four HTTP requests, each taking about one second to get a response.</p>
+<ul>
+<li>Run them one after another: ~4 seconds total. Each request pays its own wait, and the waits stack up.</li>
+<li>Run them in four threads: ~1 second total. While thread 1 is sitting idle waiting on the network, the GIL is free, so thread 2 can run. All four waits overlap.</li>
+</ul>
+<p><strong>Scenario B — CPU-bound work:</strong> four functions, each doing fifty million additions, no waiting involved.</p>
+<ul>
+<li>Run them in four threads: time is nearly identical to running one thread alone. There's no idle moment where the GIL gets handed off — each thread is always busy, so one thread just monopolizes the lock while the others queue behind it.</li>
+<li>Run them in four separate processes: time drops to roughly a quarter — a real 4x speedup, because each process has its own interpreter and its own GIL, so the cores genuinely run in parallel.</li>
+</ul>
+<p>The output tells the whole story: threading collapses wait time, multiprocessing multiplies compute throughput. They are not interchangeable tools for "make it faster."</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer reasons through this, before writing a line of code.</p>
+<p>Start with one question: <strong>when this task is running, is the CPU actually doing something, or is it sitting around waiting for something else to finish?</strong></p>
+<p>Network calls, disk reads, database queries, and file I/O all have long stretches where the CPU is idle — the request is out on the wire, or the disk head is seeking. During that idle window, a single CPU could easily juggle other work. Threads exploit exactly this: while thread A waits for a response, thread B — or C, or D — gets the CPU. The GIL isn't a problem here because it's not being contested; nobody wants the CPU while they're waiting.</p>
+<p>Now flip it. If a task is fifty million additions in a tight loop, there is no idle window. The CPU is pegged the entire time. Handing the GIL to another thread just means that thread also wants the CPU, immediately, with nothing to overlap. You've added the overhead of context-switching threads without gaining anything — you're still fundamentally limited to one core's worth of work, dressed up as four threads.</p>
+<p>The fix, once you see this, is obvious: stop trying to share one interpreter's lock across CPU-bound work, and instead give each unit of work its <em>own</em> interpreter. That's what a process is. Four processes means four independent Python interpreters, four independent GILs, and — finally — four cores actually computing at once.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Use <code>threading</code> for everything, regardless of what the work looks like, because "concurrency" sounds like it should always help.</p>
+<p><strong>Algorithm:</strong>
+1. Spin up a thread per unit of work.
+2. Start them all.
+3. Join them all.
+4. Assume you've parallelized the work.</p>
+<p><strong>Advantages:</strong> Simple to write, low memory overhead, works genuinely well for I/O-bound work.</p>
+<p><strong>Disadvantages:</strong> Silently fails to speed up CPU-bound work. Worse, it can look like it's "working" (the code runs, produces correct results) while delivering zero performance benefit — the kind of bug that only shows up when someone profiles production and asks why four threads take exactly as long as one.</p>
+<p><strong>Time complexity:</strong> For CPU-bound work, still O(total work) on a single core — no parallel reduction, despite N threads.
+<strong>Space complexity:</strong> O(N) thread stacks, each with its own overhead, for a benefit you never actually collect.</p>
+<h2>Optimal Solution</h2>
+<p>Match the tool to the bottleneck:</p>
+<table>
+<thead>
+<tr>
+<th>Work is...</th>
+<th>Bottleneck</th>
+<th>Use</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Waiting on network/disk/DB</td>
+<td>I/O wait</td>
+<td><code>threading</code></td>
+<td>GIL releases during waits; waits overlap</td>
+</tr>
+<tr>
+<td>Crunching numbers</td>
+<td>CPU cycles</td>
+<td><code>multiprocessing</code></td>
+<td>Each process gets its own interpreter and GIL — true parallel execution</td>
+</tr>
+</tbody>
+</table>
+<p>For CPU-bound work specifically, the mental model is: <strong>stop sharing an interpreter.</strong> A <code>multiprocessing.Pool</code> (or <code>ProcessPoolExecutor</code>) forks separate OS processes, each running its own instance of the Python interpreter with its own memory space and its own GIL. There's no lock contention between them because there's nothing shared to contend over — which is also the catch. Processes can't reach into each other's variables the way threads can. Any data crossing the process boundary — arguments in, results out — has to be <strong>pickled</strong> (serialized) and shipped across, which costs time and memory, and which fails outright for anything unpicklable: open file handles, database connections, lambdas, closures over local state.</p>
+<p>That's why multiprocessing isn't a free upgrade over threading — it's a different trade-off, worth paying only when the CPU-bound work is heavy enough that the 4x (or Nx) speedup outweighs the process-spawning and serialization overhead. For a small, quick computation, four fresh interpreters and pickled arguments can cost more than they save.</p>
+<p><code>concurrent.futures</code> gives both models the same interface, so the actual code change between them is often one line:</p>
+<pre><code class="language-python"># I/O-bound
+with ThreadPoolExecutor(max_workers=4) as ex:
+    results = list(ex.map(fetch_url, urls))
+
+# CPU-bound
+with ProcessPoolExecutor(max_workers=4) as ex:
+    results = list(ex.map(count_to_fifty_million, workloads))
+</code></pre>
+<p>But "same interface" doesn't mean "same guarantees." Swap <code>ThreadPoolExecutor</code> for <code>ProcessPoolExecutor</code> and anything unpicklable passed into the function will blow up or silently misbehave. The choice isn't just "waiting vs. crunching" — it's also "can what I'm passing survive being pickled."</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">import time
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+
+
+def fetch_url(url: str) -&gt; str:
+    &quot;&quot;&quot;Simulate a slow network call.&quot;&quot;&quot;
+    time.sleep(1)
+    return f&quot;fetched {url}&quot;
+
+
+def count_to_fifty_million(_: int) -&gt; int:
+    &quot;&quot;&quot;Simulate CPU-bound work: no waiting, pure computation.&quot;&quot;&quot;
+    total = 0
+    for i in range(50_000_000):
+        total += i
+    return total
+
+
+def run_io_bound(urls: list[str]) -&gt; list[str]:
+    with ThreadPoolExecutor(max_workers=len(urls)) as executor:
+        return list(executor.map(fetch_url, urls))
+
+
+def run_cpu_bound(n_workers: int) -&gt; list[int]:
+    with ProcessPoolExecutor(max_workers=n_workers) as executor:
+        return list(executor.map(count_to_fifty_million, range(n_workers)))
+
+
+if __name__ == &quot;__main__&quot;:
+    urls = [&quot;url_1&quot;, &quot;url_2&quot;, &quot;url_3&quot;, &quot;url_4&quot;]
+
+    start = time.perf_counter()
+    run_io_bound(urls)
+    print(f&quot;I/O-bound (threads): {time.perf_counter() - start:.2f}s&quot;)
+
+    start = time.perf_counter()
+    run_cpu_bound(4)
+    print(f&quot;CPU-bound (processes): {time.perf_counter() - start:.2f}s&quot;)
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>fetch_url</code> sleeps for a second — a stand-in for any real I/O wait (HTTP call, DB query, disk read). The sleep is what releases the GIL, letting other threads run.</li>
+<li><code>count_to_fifty_million</code> never waits on anything external; it's a pure CPU loop, deliberately heavy enough to make the GIL's effect visible.</li>
+<li><code>run_io_bound</code> uses <code>ThreadPoolExecutor</code> sized to the number of URLs, so all four requests are in flight at once, overlapping their wait time.</li>
+<li><code>run_cpu_bound</code> uses <code>ProcessPoolExecutor</code>, so each unit of work gets its own OS process and interpreter — genuine parallel execution across cores.</li>
+<li><code>executor.map</code> in both cases hides the manual thread/process start-join bookkeeping — you get results back in order, without managing lifecycle by hand.</li>
+<li>The <code>if __name__ == "__main__":</code> guard matters specifically for multiprocessing on Windows and macOS (spawn start method): without it, child processes re-import the module and can recursively spawn more children.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Take <code>run_io_bound(["url_1", "url_2", "url_3", "url_4"])</code>:</p>
+<ol>
+<li>Four threads start almost simultaneously, each calling <code>fetch_url</code> with its own URL.</li>
+<li>Each thread hits <code>time.sleep(1)</code>. The GIL is released the instant a thread enters the sleep, since sleeping isn't executing Python bytecode.</li>
+<li>With the GIL free, another thread's <code>fetch_url</code> call gets scheduled and also hits its sleep.</li>
+<li>All four sleeps proceed concurrently in wall-clock time, even though only one thread could theoretically hold the GIL doing Python work at once — sleeping isn't "Python work."</li>
+<li>After ~1 second, all four wake up, threads finish, <code>executor.map</code> collects results in order: <code>["fetched url_1", "fetched url_2", "fetched url_3", "fetched url_4"]</code>.</li>
+<li>Total elapsed time: ~1 second, not ~4.</li>
+</ol>
+<p>Now <code>run_cpu_bound(4)</code>:</p>
+<ol>
+<li>Four OS processes are spawned, each with its own interpreter instance.</li>
+<li>Each process runs <code>count_to_fifty_million</code> independently — no shared GIL, no waiting on each other.</li>
+<li>All four loops execute on separate cores simultaneously.</li>
+<li>Results return to the parent process (pickled across the process boundary), collected in order.</li>
+<li>Total elapsed time: roughly a quarter of running all four sequentially in one process.</li>
+</ol>
+<h2>Complexity Analysis</h2>
+<p><strong>Threading (I/O-bound):</strong>
+- Time: O(max wait), not O(sum of waits) — the dominant cost is the longest single wait, since waits overlap. Correct because idle time doesn't compete for the GIL.
+- Space: O(N) thread stacks, cheap relative to processes.</p>
+<p><strong>Multiprocessing (CPU-bound):</strong>
+- Time: O(total work / N workers), bounded below by core count and serialization overhead. Correct because each process genuinely computes in parallel, unlike threads sharing one GIL.
+- Space: O(N × interpreter overhead) — each process duplicates interpreter startup cost and memory, which is why multiprocessing is not "free" the way threading is.</p>
+<h2>Alternative Solutions</h2>
+<p><strong><code>asyncio</code></strong> is worth mentioning as a third option for I/O-bound work: instead of OS threads, it uses a single-threaded event loop with cooperative coroutines. It scales to far more concurrent I/O operations than threads can (thousands of open connections vs. hundreds of threads) with lower memory overhead, but it requires <code>async</code>/<code>await</code>-aware libraries throughout your call stack — you can't just drop a blocking <code>requests.get()</code> into it and expect the same overlap benefit you get from threads.</p>
+<p>Compared to <code>asyncio</code>, threading is simpler to retrofit onto existing blocking code; <code>asyncio</code> is the better long-term choice for high-concurrency I/O services built from scratch.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Zero tasks:</strong> <code>executor.map</code> over an empty iterable returns immediately with no work — handle a truly empty batch before spinning up a pool at all, since pool creation still has overhead.</li>
+<li><strong>A single task:</strong> threading/multiprocessing overhead can exceed the benefit; for one task, just call the function directly.</li>
+<li><strong>A task that raises an exception:</strong> with <code>executor.map</code>, the exception surfaces when you iterate the results, not when the task runs — don't assume silence means success.</li>
+<li><strong>Unpicklable arguments in <code>ProcessPoolExecutor</code>:</strong> passing a lambda, open file handle, or DB connection raises a <code>PicklingError</code> (or hangs, depending on platform) — pass plain data and open resources inside the worker function instead.</li>
+<li><strong>More workers than cores for CPU-bound work:</strong> doesn't speed things up past the core count; it just adds context-switching overhead between processes competing for the same physical cores.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Reaching for <code>threading</code> by default for anything called "concurrency," without checking if the work is CPU-bound.</strong> This is the single most common GIL mistake — the code runs, produces correct output, and delivers zero speedup.</li>
+<li><strong>Assuming <code>multiprocessing</code> is always faster.</strong> For light work, process-spawn and pickling overhead can make it slower than just running sequentially.</li>
+<li><strong>Passing unpicklable objects (open files, DB connections, lambdas) into <code>ProcessPoolExecutor</code>.</strong> Works fine in threads, breaks silently or loudly in processes.</li>
+<li><strong>Forgetting the <code>if __name__ == "__main__":</code> guard when using multiprocessing</strong>, causing runaway process spawning on Windows/macOS.</li>
+<li><strong>Assuming threads share no state, when they actually share all state</strong> — leading to race conditions on shared mutable objects that don't exist across process boundaries.</li>
+<li><strong>Sizing a thread or process pool arbitrarily</strong> instead of matching pool size to the actual bottleneck (I/O concurrency limits vs. CPU core count).</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What is the GIL, and why does CPython have it?</li>
+<li>Why does threading speed up I/O-bound Python code but not CPU-bound code?</li>
+<li>How does multiprocessing avoid the GIL, and what does that cost?</li>
+<li>What happens if you pass a lambda or open file handle into a <code>ProcessPoolExecutor</code>?</li>
+<li>When would you choose <code>asyncio</code> over <code>threading</code> for I/O-bound work?</li>
+<li>Is the GIL removed in newer versions of Python? (Worth knowing: PEP 703 introduces an experimental free-threaded build without the GIL, though it's not yet the default.)</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Producer-Consumer with <code>queue.Queue</code></strong> — classic thread-safe coordination problem that builds on understanding what the GIL does and doesn't protect.</li>
+<li><strong>Rate-limited API fetcher</strong> — extends the threaded I/O pattern with concurrency limits and backoff.</li>
+<li><strong>Parallel merge sort using multiprocessing</strong> — a CPU-bound divide-and-conquer problem that's a natural fit for process pools.</li>
+<li><strong>Dining Philosophers / deadlock problems</strong> — general concurrency reasoning that transfers across languages, not GIL-specific but tests the same "what's actually running when" intuition.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>The GIL means only one thread executes Python bytecode at a time — full stop.</li>
+<li>Threads help when work waits (I/O); the GIL releases during that wait.</li>
+<li>Threads don't help when work computes (CPU-bound); there's no idle moment to hand off.</li>
+<li>Multiprocessing sidesteps the GIL by giving each process its own interpreter — real parallelism, at the cost of memory and serialization.</li>
+<li><code>concurrent.futures</code> unifies the interface, but the pickling requirement for processes is not optional — check what you're passing across the boundary.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This lesson is easier to absorb watching the core-usage graph react in real time to threaded vs. process-based code. Catch the full walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This is Lesson 32 of <em>Fun with Learning Technology</em> — a series that takes real developer topics (Python internals, algorithms, system design, and interview-relevant engineering) and breaks them down the way a senior engineer would explain them to a teammate: no fluff, just the reasoning that makes the concept click.</p>
+<h2>Call To Action</h2>
+<p>If this saved you from shipping a "parallel" script that wasn't, drop a like on the video and subscribe on YouTube for the rest of the series. Subscribe to the Substack for the deeper written breakdowns that don't fit in a video. Got a GIL war story or a concurrency bug that cost you a day? Drop it in the comments — and share this with anyone still threading their way through a CPU-bound loop.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Why doesn&#x27;t threading speed up CPU-bound Python code?</summary><p>The GIL lets only one thread execute Python bytecode at a time, so threads serialize on CPU work.</p></details><details class='card2'><summary>When to reach for threading vs multiprocessing?</summary><p>Threading for I/O-bound waits (network, disk); multiprocessing for CPU-bound work needing real parallelism.</p></details><details class='card2'><summary>Why do processes sidestep the GIL?</summary><p>Each process gets its own interpreter and memory space, so GIL contention doesn&#x27;t cross process boundaries.</p></details><details class='card2'><summary>Common bug when picking concurrency for CPU-bound tasks?</summary><p>Using ThreadPoolExecutor for CPU work; threads still contend on the GIL, so it acts like single-threaded code.</p></details><details class='card2'><summary>Cost of multiprocessing vs threading?</summary><p>Processes aren&#x27;t free: extra memory, slower startup, and pickling overhead to pass data between processes.</p></details><details class='card2'><summary>What does concurrent.futures unify?</summary><p>ThreadPoolExecutor and ProcessPoolExecutor share one Future-based API, so you swap executor class by workload type.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
