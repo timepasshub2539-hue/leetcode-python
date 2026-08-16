@@ -1,0 +1,245 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Software-Architecture Lesson 2: Software Architecture Lesson 2: A System That Passed Every Test — An — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/software-architecture-lesson-02-functional-vs-non-functional-requirements
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/software-architecture-lesson-02-functional-vs-non-functional-requirements.html">
+<meta property="og:title" content="Software-Architecture Lesson 2: Software Architecture Lesson 2: A System That Passed Every Test — An — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/software-architecture-lesson-02-functional-vs-non-functional-requirements
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Software-Architecture Lesson 2: Software Architecture Lesson 2: A System That Passed Every Test — An</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>A login system shipped. Every feature worked. Sign up worked. Log in worked. Password reset worked. QA signed off. Three hours after launch, ten thousand people tried to log in at the same time, and the whole thing fell over.</p>
+<p>Nobody skipped a feature. The spec was fully implemented. So what actually got missed?</p>
+<p>This is one of the most common failure patterns in real systems, and it's also one of the favorite traps in system design interviews. Interviewers rarely ask "does your design work?" They ask "does your design work at scale, under load, with acceptable latency, without going down?" Those are different questions, and if you don't know how to separate them, you'll design a system that's correct on a whiteboard and broken in production.</p>
+<p>Understanding this distinction — functional versus non-functional requirements — is one of the highest-leverage things you can learn as a software engineer. It's not abstract theory. It's the difference between a system that survives its first real traffic spike and one that doesn't.</p>
+<h2>Problem Overview</h2>
+<p>Every requirement you're ever given, whether it comes from a product manager, a spec doc, or an interviewer, answers one of two questions:</p>
+<ol>
+<li>
+<p><strong>What must the system do?</strong> — This is a functional requirement. It describes a capability, a feature, a piece of behavior. "A user can log in." "A user can reset their password." "A user can search for a product." You can check these off with a simple yes or no. Either the feature works or it doesn't.</p>
+</li>
+<li>
+<p><strong>How well must it do it?</strong> — This is a non-functional requirement. It describes a constraint on quality: speed, capacity, reliability. "The response must return in under 200 milliseconds." "The system must be available 99.9% of the time." "It must handle 10,000 concurrent users."</p>
+</li>
+</ol>
+<p>Functional requirements tell you what to build. Non-functional requirements tell you how to build it — and they're the ones that actually decide your architecture.</p>
+<p>The trap is that non-functional requirements are invisible on a feature checklist. Nobody puts "handles 10,000 concurrent logins" on a UI mockup. But users feel it immediately the moment it's missing.</p>
+<h2>Example</h2>
+<p>Think of a restaurant. The menu tells you what dishes the kitchen serves — that's the functional side. How fast the kitchen gets a plate to your table on a packed Friday night is a completely different question — that's the non-functional side. A kitchen that can cook everything on the menu but takes forty minutes per order during a rush is not a working restaurant, even though every dish "works."</p>
+<p>Software has the exact same split. Take one feature: <strong>search for a product.</strong></p>
+<p><strong>System A</strong>: 100 users total, and a 2-second response time is perfectly acceptable. A single database handles this without any special design. Done.</p>
+<p><strong>System B</strong>: 10 million users, and the response must come back in under 50 milliseconds. That single database now can't keep up — you need caching layers, database indexing, and probably a dedicated search engine like Elasticsearch to hit that latency target at that scale.</p>
+<p>Same feature. Same functional requirement: "search for a product." Completely different systems, because the non-functional numbers attached to that feature were different.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer actually thinks about this, before writing a single line of code.</p>
+<p>When you're handed a requirement like "a user can log in," your first instinct might be to think about the feature itself: form validation, password hashing, session tokens. That's necessary, but it's not what determines your architecture. What determines your architecture is the unwritten context around that feature — the scale it needs to run at, the speed it needs to respond in, and the failure tolerance it's allowed to have.</p>
+<p>"Log in a user" — one server handles that without breaking a sweat.</p>
+<p>"Log in a user, in 200 milliseconds, for 10,000 people at once" — that's a fundamentally different engineering problem, and it's exactly why teams reach for a load balancer and multiple servers instead of a single machine.</p>
+<p>The functional requirement is identical in both cases. The architecture is not. This is the core intuition: <strong>non-functional requirements are the actual design constraints.</strong> Functional requirements tell you what boxes to draw. Non-functional requirements tell you how many of those boxes you need, how they're connected, and what infrastructure sits between them.</p>
+<p>So before you design anything, you should always be asking three questions that never show up as buttons on a screen: How many? How fast? How often is failure allowed?</p>
+<h2>Brute Force Solution</h2>
+<p>The "brute force" approach to system design is to read only the functional requirements and build the simplest thing that satisfies them.</p>
+<p><strong>Idea</strong>: If the requirement is "a user can log in," stand up one server, one database, write the login logic, and ship it.</p>
+<p><strong>Algorithm</strong>:
+1. Read the feature list.
+2. Build each feature with the simplest possible implementation.
+3. Deploy on a single instance.</p>
+<p><strong>Advantages</strong>:
+- Fast to build.
+- Simple to reason about.
+- Zero infrastructure overhead.
+- Perfectly fine for genuinely low-traffic, low-stakes systems.</p>
+<p><strong>Disadvantages</strong>:
+- Completely blind to scale, latency, and availability requirements.
+- Works fine in testing, where load is low and controlled, and fails exactly where it matters most: in production, under real traffic.
+- No warning signs until the system is already down.</p>
+<p><strong>Time and space complexity</strong>: Not the right lens here — the failure isn't algorithmic, it's architectural. A single server login flow might be O(1) per request in isolation, but complexity analysis of one request tells you nothing about what happens when 10,000 requests arrive in the same second. That's the whole point of this lesson: correctness per-request and correctness under load are different measurements.</p>
+<p>This is exactly what happened to the login system in the opening story. It passed every functional test because functional tests check one request at a time. Nobody load-tested for 10,000 concurrent logins, because that number was never written down as a requirement.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach is to treat non-functional requirements as first-class inputs to your design, not an afterthought you bolt on after the features are done.</p>
+<p>Here's the process:</p>
+<p><strong>Step 1 — Extract the functional requirements.</strong> List every feature as a checklist item. "User can log in." "User can reset password." "User can search products." Nothing about performance yet.</p>
+<p><strong>Step 2 — Attach numbers to each one.</strong> For every feature, ask: how many concurrent users, how fast must it respond, and what's the acceptable downtime? These numbers are your non-functional requirements.</p>
+<p><strong>Step 3 — Let the numbers drive the architecture, not the other way around.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Requirement type</th>
+<th>Example</th>
+<th>Architecture impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Scale</td>
+<td>10,000 concurrent logins</td>
+<td>Load balancer + multiple app servers</td>
+</tr>
+<tr>
+<td>Latency</td>
+<td>Under 50ms search response</td>
+<td>Caching layer, indexing, or search engine</td>
+</tr>
+<tr>
+<td>Availability</td>
+<td>99.9% uptime</td>
+<td>Redundancy, failover, health checks</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Step 4 — Compare designs against the numbers, not against the feature list.</strong> A design "passes" only when it satisfies both the functional checklist and the non-functional numbers simultaneously.</p>
+<p>Going back to the search example: System A (100 users, 2 seconds) and System B (10 million users, 50 milliseconds) implement the identical feature but end up as entirely different systems, because Step 2 produced entirely different numbers. That's the mechanism. The feature list is constant; the numbers are the variable that reshapes the architecture.</p>
+<p>This is also why non-functional requirements have to be gathered up front, not discovered after launch. If "10,000 concurrent logins" isn't written down before the design phase, nobody designs for it — and you get the 3-hour crash from the opening story.</p>
+<h2>Python Code</h2>
+<p>Since this lesson is about requirements analysis rather than a single algorithm, the most useful code artifact is a small, reusable way to make non-functional requirements explicit and checkable instead of implicit and forgotten. Here's a minimal requirements model you can attach to any feature:</p>
+<pre><code class="language-python">from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass
+class FunctionalRequirement:
+    &quot;&quot;&quot;What the system must do.&quot;&quot;&quot;
+    name: str
+    description: str
+
+
+@dataclass
+class NonFunctionalRequirement:
+    &quot;&quot;&quot;How well the system must do it.&quot;&quot;&quot;
+    max_latency_ms: Optional[int] = None
+    min_availability_pct: Optional[float] = None
+    concurrent_users: Optional[int] = None
+
+    def describe(self) -&gt; str:
+        parts = []
+        if self.concurrent_users is not None:
+            parts.append(f&quot;{self.concurrent_users:,} concurrent users&quot;)
+        if self.max_latency_ms is not None:
+            parts.append(f&quot;under {self.max_latency_ms}ms response&quot;)
+        if self.min_availability_pct is not None:
+            parts.append(f&quot;{self.min_availability_pct}% availability&quot;)
+        return &quot;, &quot;.join(parts) if parts else &quot;no constraints specified&quot;
+
+
+@dataclass
+class Feature:
+    functional: FunctionalRequirement
+    non_functional: NonFunctionalRequirement
+
+    def needs_horizontal_scaling(self) -&gt; bool:
+        # ponytail: simple threshold heuristic, not a real capacity model
+        return (self.non_functional.concurrent_users or 0) &gt; 1000
+
+    def needs_low_latency_infra(self) -&gt; bool:
+        return (self.non_functional.max_latency_ms or float(&quot;inf&quot;)) &lt; 100
+
+
+def summarize(feature: Feature) -&gt; str:
+    nfr = feature.non_functional.describe()
+    flags = []
+    if feature.needs_horizontal_scaling():
+        flags.append(&quot;load balancer + multiple servers&quot;)
+    if feature.needs_low_latency_infra():
+        flags.append(&quot;caching / indexing / search engine&quot;)
+
+    flags_str = f&quot; -&gt; requires: {', '.join(flags)}&quot; if flags else &quot; -&gt; single server is fine&quot;
+    return f&quot;{feature.functional.name} ({nfr}){flags_str}&quot;
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>FunctionalRequirement</code> holds the "what" — just a name and description, no numbers. This mirrors the checklist nature of functional requirements: yes/no, present/absent.</li>
+<li><code>NonFunctionalRequirement</code> holds the "how well" — latency, availability, and concurrency, each optional because not every feature needs every constraint specified.</li>
+<li><code>describe()</code> turns the raw numbers into the same sentence structure the lesson uses: "how many, how fast, how often it's allowed to fail."</li>
+<li><code>Feature</code> bundles both halves together, because in the optimal solution, you never evaluate one without the other.</li>
+<li><code>needs_horizontal_scaling()</code> and <code>needs_low_latency_infra()</code> are deliberately simple threshold checks — they exist to demonstrate the <em>mechanism</em> (numbers drive architecture decisions), not to serve as a real capacity-planning model.</li>
+<li><code>summarize()</code> produces a human-readable line showing how a single feature's non-functional numbers translate directly into infrastructure decisions — exactly the System A vs. System B comparison from the lesson.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Let's run both search systems from the lesson through this model.</p>
+<pre><code class="language-python">system_a = Feature(
+    functional=FunctionalRequirement(&quot;Search for a product&quot;, &quot;...&quot;),
+    non_functional=NonFunctionalRequirement(
+        max_latency_ms=2000,
+        concurrent_users=100,
+    ),
+)
+
+system_b = Feature(
+    functional=FunctionalRequirement(&quot;Search for a product&quot;, &quot;...&quot;),
+    non_functional=NonFunctionalRequirement(
+        max_latency_ms=50,
+        concurrent_users=10_000_000,
+    ),
+)
+
+print(summarize(system_a))
+print(summarize(system_b))
+</code></pre>
+<p><strong>System A trace</strong>: <code>concurrent_users=100</code> → <code>needs_horizontal_scaling()</code> returns <code>False</code> (100 is not &gt; 1000). <code>max_latency_ms=2000</code> → <code>needs_low_latency_infra()</code> returns <code>False</code> (2000 is not &lt; 100). No flags. Output:</p>
+<pre><code>Search for a product (100 concurrent users, under 2000ms response) -&gt; single server is fine
+</code></pre>
+<p><strong>System B trace</strong>: <code>concurrent_users=10_000_000</code> → <code>needs_horizontal_scaling()</code> returns <code>True</code>. <code>max_latency_ms=50</code> → <code>needs_low_latency_infra()</code> returns <code>True</code>. Both flags trigger. Output:</p>
+<pre><code>Search for a product (10,000,000 concurrent users, under 50ms response) -&gt; requires: load balancer + multiple servers, caching / indexing / search engine
+</code></pre>
+<p>Identical functional requirement, identical <code>FunctionalRequirement</code> object even — and the output architecture recommendation is completely different, purely because of the non-functional numbers. That's the entire lesson compressed into one dry run.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time</strong>: <code>summarize()</code> runs in O(1) — a fixed number of comparisons regardless of the numbers involved. This is correct because we're not processing a data structure; we're evaluating fixed threshold conditions on a handful of fields.</li>
+<li><strong>Space</strong>: O(1) — each <code>Feature</code> stores a constant number of fields.</li>
+<li><strong>Why this doesn't capture the real cost</strong>: this is worth calling out explicitly — the complexity of <em>this code</em> is trivial, but the complexity of <em>the system it's describing</em> (caching layers, load balancers, distributed search) is not. That gap is exactly the point: requirements analysis is cheap, the architecture it demands is not, which is why skipping it is so costly.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p><strong>Alternative: capacity-based thresholds instead of fixed heuristics.</strong> Instead of a hardcoded <code>&gt; 1000</code> check, a more realistic system would model requests-per-second against actual server throughput benchmarks. This is more accurate but requires real load-testing data you usually don't have at design time — the simple threshold version is what you'd sketch on a whiteboard in an interview, and it's good enough to make the point.</p>
+<p><strong>Alternative: requirements as configuration/YAML instead of code.</strong> Some teams track non-functional requirements in a spec document or YAML file reviewed by architects before implementation starts. This decouples "requirements gathering" from "code" entirely, which is arguably more correct for a real organization — the code version here exists to make the <em>reasoning</em> executable and testable, not to replace a proper requirements doc.</p>
+<p>Both alternatives converge on the same principle as the optimal solution: numbers must be captured explicitly, early, and attached to every feature — the format is a secondary decision.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>No non-functional requirements given at all</strong>: Treat this as "requirements gathering is incomplete," not as "assume single server." The lesson's entire point is that an unwritten number is exactly what causes production failures — silence should be a red flag you ask about, not a default you assume.</li>
+<li><strong>Extremely low concurrency (e.g., 1 user, an internal admin tool)</strong>: A single server is genuinely correct here. Don't over-architect a tool three people will use.</li>
+<li><strong>Extremely high availability with low scale</strong>: A low-traffic system can still need 99.99% uptime (e.g., a payment webhook receiver). Scale and availability are independent dimensions — don't assume one implies the other.</li>
+<li><strong>Conflicting requirements</strong>: Sub-50ms latency at 10 million concurrent users with a single-region deployment may be physically impossible due to network round-trip time alone. Recognizing an infeasible requirement is itself part of the analysis.</li>
+<li><strong>Requirements that change post-launch</strong>: A system built for 100 users that suddenly needs to support 100,000 requires re-running this entire analysis — non-functional requirements aren't a one-time document, they're a living constraint.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Treating "it works" as equivalent to "it's done."</strong> A feature passing a functional test tells you nothing about its behavior under load.</li>
+<li><strong>Only load-testing after launch, if ever.</strong> Non-functional requirements should be validated before the system meets real traffic, not discovered by real traffic.</li>
+<li><strong>Assuming non-functional requirements are the infrastructure team's problem.</strong> They determine the architecture — you can't design the system correctly without them.</li>
+<li><strong>Writing vague non-functional requirements like "fast" or "reliable."</strong> These aren't requirements until they're numbers: "under 200ms," "99.9% uptime." A requirement you can't measure is a requirement you can't design against.</li>
+<li><strong>Over-engineering for numbers nobody asked for.</strong> Building a globally distributed, auto-scaling system for an internal tool with 20 users is the same mistake in the opposite direction — non-functional requirements should match actual need, not worst-case paranoia.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>"How would you scale this design if concurrent users increased 100x?"</li>
+<li>"What's your target latency for this endpoint, and how does that change your data storage choice?"</li>
+<li>"How do you handle the tradeoff between consistency and availability under this system's uptime requirement?"</li>
+<li>"What non-functional requirements would you ask the interviewer for before starting this design?"</li>
+<li>"How would your architecture differ between a system needing 99.9% vs. 99.99% availability?"</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Design a URL shortener</strong> — a classic system design problem where read/write ratio and latency requirements (not the redirect logic itself) drive the choice between SQL and key-value storage.</li>
+<li><strong>Design a rate limiter</strong> — directly about non-functional requirements: how many requests per second, and what happens when that number is exceeded.</li>
+<li><strong>Design a notification system</strong> — functional requirement is simple ("send a notification"), but availability and delivery-latency requirements determine whether you need a message queue.</li>
+<li><strong>Design a chat application</strong> — functional requirements (send/receive messages) are trivial; non-functional requirements (real-time latency, millions of concurrent connections) are what make it a hard problem.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Every requirement answers either "what must it do" (functional) or "how well must it do it" (non-functional).</li>
+<li>Functional requirements are a checklist. Non-functional requirements are numbers: latency, scale, availability.</li>
+<li>The same feature can require radically different architectures depending only on its non-functional numbers — not on the feature itself.</li>
+<li>Non-functional requirements have to be gathered before the design starts, not discovered after the system is in production and failing.</li>
+<li>When a system fails while doing exactly what it was built to do, the real question is: what number was never written down?</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This lesson is easier to absorb with the visual walkthrough of System A vs. System B side by side. Watch the full explanation here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This is part of <strong>Fun with Learning Technology</strong>, a series built for developers who want to actually understand the systems they're building, not just memorize interview answers. Each lesson breaks down one core software architecture or computer science concept using plain language, real comparisons, and code you can run yourself.</p>
+<h2>Call To Action</h2>
+<p>If this lesson helped the functional vs. non-functional distinction finally click, do three things: like the video on YouTube so more developers see it, subscribe to the channel for the rest of the series, and subscribe to the Substack newsletter for deeper written breakdowns like this one. Drop a comment with a system you've seen fail this exact way — production stories are the best teaching material. And if you know an engineer prepping for system design interviews, share this with them.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Functional vs non-functional requirement — how do you tell them apart?</summary><p>Functional = what the system does (features). Non-functional = how well it does it (latency, availability, scale).</p></details><details class='card2'><summary>Why did the system &#x27;pass every check&#x27; but still fail users?</summary><p>Tests verified functional correctness only; no non-functional requirement (speed, uptime) was defined or checked.</p></details><details class='card2'><summary>Same feature, different number — what does this scenario teach?</summary><p>Two systems can implement identical functional requirements yet differ entirely in the non-functional numbers behind them.</p></details><details class='card2'><summary>System A vs System B: why pick different architectures for the same feature?</summary><p>Differing non-functional targets (e.g. 1 server vs distributed) force different architectures despite identical functionality.</p></details><details class='card2'><summary>What was &#x27;the line that was missing&#x27; in the spec?</summary><p>An explicit non-functional requirement (a number like latency/availability target) — without it, architecture has no real constraint.</p></details><details class='card2'><summary>What actually decides the architecture: features or numbers?</summary><p>The numbers — non-functional requirements (scale, latency, availability) drive architecture choices, not the feature list.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
