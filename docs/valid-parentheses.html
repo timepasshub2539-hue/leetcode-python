@@ -1,0 +1,275 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>20. Valid Parentheses | LeetCode Daily Python Solution (Stop Using a Counter!) — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/valid-parentheses
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leet">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/valid-parentheses.html">
+<meta property="og:title" content="20. Valid Parentheses | LeetCode Daily Python Solution (Stop Using a Counter!) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/valid-parentheses
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leet">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>20. Valid Parentheses | LeetCode Daily Python Solution (Stop Using a Counter!)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction: The Trap of "Just Counting"</h2>
+<p>If you are preparing for a software engineering interview, you have likely encountered the classic "Valid Parentheses" problem on LeetCode. At first glance, it seems deceptively simple. You have a string containing only opening and closing brackets—parentheses <code>()</code>, square brackets <code>[]</code>, and curly braces <code>{}</code>. Your job is to determine if every opening bracket has a corresponding closing bracket of the <em>same type</em> in the correct order.</p>
+<p>The intuitive reaction for many developers is to reach for a counter. "I'll just count the openers and closers," they think. "If the counts match, it's valid." While this logic holds for simple cases like <code>()</code>, <code>([])</code>, or <code>{[()]}</code>, it catastrophically fails when faced with interleaved brackets like <code>( [ ) ]</code>.</p>
+<p>This is where interviewers love to test you. They aren't just checking if you know how to count; they are checking if you understand <strong>order</strong>, <strong>matching types</strong>, and <strong>Last-In, First-Out (LIFO)</strong> logic. This problem serves as a foundational lesson in why specific data structures exist. By mastering the stack approach here, you build an intuition that will help you solve complex parsing problems later on. In this guide, we will walk through the pitfalls of naive solutions, construct the optimal algorithm using Python's <code>stack</code> pattern, and analyze the performance gains.</p>
+<h2>Problem Overview</h2>
+<p>The core task is straightforward: given a string consisting only of characters <code>'('</code>, <code>')'</code>, <code>'['</code>, <code>']'</code>, <code>'{'</code>, and <code>'}'</code>, return <code>true</code> if the input string is valid, and <code>false</code> otherwise.</p>
+<p>A string is considered valid only if two conditions are met simultaneously:
+1.  <strong>Type Matching:</strong> Every opening bracket must be closed by the <em>same type</em> of bracket. For example, an open parenthesis <code>(</code> must be closed by a parenthesis <code>)</code>, not a square bracket <code>]</code>.
+2.  <strong>Order Preservation:</strong> Brackets must close in the reverse order they were opened. If you push A then B onto the structure, B must be popped first.</p>
+<p>The "naive" counter approach fails because it ignores these two constraints. It treats all open brackets as identical resources that can be closed by any available closing bracket at any time. The problem is designed to expose this flaw immediately.</p>
+<h2>Example Analysis</h2>
+<p>Let's break down why intuition often leads us astray with specific examples.</p>
+<p><strong>Example 1: Valid Input</strong>
+*   <strong>Input:</strong> <code>"([)]"</code>
+*   <strong>Naive Expectation:</strong> If we just count, we see 2 openers and 2 closers. We might incorrectly conclude this is valid.
+*   <strong>Actual Logic:</strong>
+    1.  We encounter <code>(</code> (open). Current state: <code>(</code> is waiting.
+    2.  We encounter <code>[</code> (open). Current state: We have <code>(</code> waiting, then <code>[</code> sitting on top of it.
+    3.  We encounter <code>)</code> (close). This tries to close the <em>last</em> opened item, which is <code>[</code>. But <code>)</code> does not match <code>[</code>.
+    4.  <strong>Result:</strong> Invalid immediately.</p>
+<p><strong>Example 2: Valid Input</strong>
+*   <strong>Input:</strong> <code>"()"</code>
+*   <strong>Logic:</strong> Open <code>(</code>, then Close <code>)</code>. They match perfectly. Stack becomes empty at the end.
+*   <strong>Result:</strong> Valid.</p>
+<p><strong>Example 3: Empty Input</strong>
+*   <strong>Input:</strong> <code>""</code>
+*   <strong>Logic:</strong> The stack starts empty and remains empty throughout. No unmatched brackets.
+*   <strong>Result:</strong> Valid.</p>
+<h2>Intuition: Discovering the Stack Pattern</h2>
+<p>How does an experienced engineer arrive at the solution without immediately writing code? It starts with a mental model of <strong>nesting</strong>.</p>
+<p>Think about HTML tags. If you write <code>&lt;div&gt;</code>, then inside it you write <code>&lt;span&gt;</code>, when you want to close them, you cannot close the <code>div</code> before the <code>span</code>. You must close the <code>span</code> first. The browser waits for the most recent open tag before closing the older ones.</p>
+<p>This "Last In, First Out" behavior is the definition of a <strong>Stack</strong>.</p>
+<p>In our bracket problem:
+1.  When we see an opening bracket, we are <em>adding</em> to our nesting depth. We must remember what we added so we can close it later. We <strong>push</strong> onto the stack.
+2.  When we see a closing bracket, we are trying to <em>resolve</em> the most recent open bracket. We look at the top of our stack. If it matches, great—we resolve it and remove it (<strong>pop</strong>). If it doesn't match or the stack is empty, we have an error in ordering or type.</p>
+<p><strong>The Key Insight:</strong> You do not need a complex lookup table if you store the <em>closing</em> character on the stack while pushing the <em>opening</em> one.
+*   See <code>(</code>? Push <code>)</code> (the expected partner).
+*   See <code>[</code>? Push <code>]</code>.
+*   Now, when we see a closing bracket, we simply check if it equals the top of the stack.</p>
+<p>Wait—why store the closing character? It simplifies the logic! Instead of asking "What opens this closing bracket?", we ask "Is this closing bracket what I was waiting for?" This avoids nested conditionals and makes the code cleaner.</p>
+<h2>Brute Force Solution: The Counter Trap</h2>
+<p>Let's formalize the naive approach that leads to failure on the test case <code>([)]</code>.</p>
+<p><strong>The Idea:</strong>
+Maintain three counters (or one counter tracking net balance) for each bracket type, or simply a single integer count assuming symmetry. Increment for every opener, decrement for every closer. If the total sum is zero at the end, assume valid.</p>
+<p><strong>Algorithm Steps:</strong>
+1.  Initialize <code>count = 0</code>.
+2.  Iterate through the string.
+3.  If char is <code>(</code>, <code>[</code>, or <code>{</code>: increment <code>count</code>.
+4.  If char is <code>)</code>, <code>]</code>, or <code>}</code>: decrement <code>count</code>.
+5.  If <code>count</code> &lt; 0 at any point (more closers than openers), return <code>False</code>.
+6.  At the end, if <code>count == 0</code>, return <code>True</code>.</p>
+<p><strong>Advantages:</strong>
+*   Extremely simple to implement.
+*   Runs in O(n) time.
+*   Uses O(1) space (assuming single counter).</p>
+<p><strong>Disadvantages:</strong>
+*   <strong>Fundamentally Flawed Logic:</strong> It ignores bracket <em>types</em>. <code>([)]</code> has two opens and two closes, so the counter ends at 0, but the types don't match.
+*   To fix this properly with counters, you would need a complex state machine checking every combination, which defeats the purpose of a simple counter.</p>
+<p><strong>Complexity:</strong>
+*   <strong>Time:</strong> $O(n)$
+*   <strong>Space:</strong> $O(1)$ (for the single integer counter).</p>
+<h2>Optimal Solution: The Stack Approach</h2>
+<p>The optimal solution leverages the data structure that matches the problem's topology perfectly: a <strong>Stack</strong>.</p>
+<p><strong>The Algorithm:</strong>
+We will use Python's built-in <code>list</code> as a stack. Lists in Python have an $O(1)$ append/pop at the end, making them efficient for this purpose.</p>
+<p><strong>Step-by-Step Logic:</strong>
+1.  Initialize an empty list called <code>stack</code>. This will act as our LIFO container.
+2.  Create a mapping (dictionary) that maps every <em>closing</em> bracket to its corresponding <em>opening</em> bracket. For example: <code>{ ')': '(', ']': '[', '}': '{' }</code>. This allows us to quickly check "Was the expected opener this one?".
+3.  Iterate through each character in the input string.
+    *   <strong>Case A (Closing Bracket):</strong> If the current character is <code>)</code>, <code>]</code>, or <code>}</code>:
+        *   We need to match it against the most recent open bracket.
+        *   Check if the <code>stack</code> is empty. If it is, there is no matching opener yet. Return <code>False</code>.
+        *   Look at the top of the stack (<code>stack[-1]</code>). If this value matches our map (e.g., top is <code>(</code> and current is <code>)</code>), then we found a match. <strong>Pop</strong> the stack to remove the matched pair.
+        *   If they don't match, the order or type is wrong. Return <code>False</code>.
+    *   <strong>Case B (Opening Bracket):</strong> If the current character is <code>(</code>, <code>[</code>, or <code>{</code>:
+        *   Push it onto the <code>stack</code>. We are recording that we have an open bracket waiting for a specific partner.
+4.  After iterating through the entire string:
+    *   Return <code>True</code> only if the <code>stack</code> is <strong>empty</strong>.
+    *   Why? If the stack is not empty, it means we encountered opening brackets that never found a closing partner (e.g., input <code>"("</code>).</p>
+<p><strong>Why this works:</strong>
+The stack enforces strict ordering. We can only close the bracket that was opened <em>last</em>. This naturally handles nested structures like <code>([])</code> correctly and fails fast on <code>([)]</code>.</p>
+<h2>Python Code</h2>
+<p>Here is the production-quality solution in Python. Note the clean separation of logic and the use of a list as a stack.</p>
+<pre><code class="language-python">def isValid(s: str) -&gt; bool:
+    &quot;&quot;&quot;
+    Determines if a string of brackets is valid using a stack approach.
+
+    Args:
+        s (str): A string containing only '(', ')', '{', '}', '[' and ']'.
+
+    Returns:
+        bool: True if the string is valid, False otherwise.
+    &quot;&quot;&quot;
+    # We use a list to act as our stack. 
+    # O(1) operations for append() and pop().
+    stack = []
+
+    # Map closing brackets to their opening counterparts.
+    # This acts as our lookup table for validation.
+    bracket_map = {
+        ')': '(',
+        ']': '[',
+        '}': '{'
+    }
+
+    # Iterate over every character in the string
+    for char in s:
+        # If char is a closing bracket, we must check against stack top
+        if char in bracket_map:
+            # Base case: Stack empty means no opener to match this closer
+            if not stack:
+                return False
+
+            # Pop the top element. We need to compare it with the map.
+            # stack[-1] is the most recent opening bracket pushed.
+            top_element = stack.pop()
+
+            # If the popped opener doesn't match the expected opener for this closer, fail
+            if bracket_map[char] != top_element:
+                return False
+
+        # If char is an opening bracket (or simply not in the map dict)
+        # Push it onto the stack to wait for a matching closer.
+        else:
+            stack.append(char)
+
+    # Final validation: The string is only valid if no openers remain on the stack.
+    # Any remaining items mean we had unclosed brackets like &quot;(&quot;.
+    return len(stack) == 0
+
+# --- Test Cases ---
+print(isValid(&quot;()&quot;))          # True
+print(isValid(&quot;()[]{}&quot;))      # True
+print(isValid(&quot;(]&quot;))          # False
+print(isValid(&quot;([)]&quot;))        # False (The classic trap!)
+print(isValid(&quot;{[]}&quot;))        # True
+print(isValid(&quot;&quot;))            # True
+</code></pre>
+<h2>Code Walkthrough</h2>
+<p>Let's dissect the implementation line-by-line to understand the mechanics.</p>
+<ol>
+<li><strong><code>stack = []</code></strong>: We initialize an empty list. In Python, this is the standard way to implement a stack using a dynamic array.</li>
+<li><strong><code>bracket_map</code></strong>: We define a dictionary where keys are closing brackets and values are the matching opening brackets. This allows us to answer "Does this <code>)</code> match the top of the stack?" in constant time $O(1)$ without complex nested <code>if/else</code> chains.</li>
+<li><strong><code>for char in s:</code></strong>: We traverse the input string character by character.</li>
+<li><strong><code>if char in bracket_map:</code></strong>: This checks if the current character is a <em>closer</em>.<ul>
+<li>If it is a closer (e.g., <code>)</code>), we must verify that there is an unmatched opener waiting for it.</li>
+<li><strong>Critical Check:</strong> We first check <code>if not stack</code>. If the stack is empty, there is no opener to match the current closer (like encountering <code>)</code> at the start of a string). We immediately return <code>False</code>.</li>
+<li><strong>The Pop Operation:</strong> If the stack isn't empty, we grab the top item: <code>top_element = stack.pop()</code>. Note that <code>.pop()</code> removes the item, updating our state.</li>
+<li><strong>The Comparison:</strong> We check if <code>bracket_map[char]</code> (the expected opener) equals <code>top_element</code>. If they differ, e.g., stack has <code>[</code> but we have <code>)</code>, we return <code>False</code>.</li>
+</ul>
+</li>
+<li><strong><code>else:</code></strong>: If the character is an opener (like <code>(</code>), it doesn't exist as a key in <code>bracket_map</code>. We simply push it onto the stack: <code>stack.append(char)</code>. This records that we are "inside" a parenthesis.</li>
+<li><strong><code>return len(stack) == 0</code></strong>: After the loop finishes, the stack represents any unclosed brackets. If it's empty, every opener found its matching closer in the correct order.</li>
+</ol>
+<h2>Dry Run: Tracing <code>([)]</code></h2>
+<p>Let's manually walk through the algorithm with the tricky input <code>([)]</code>.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Step</th>
+<th style="text-align: left;">Character</th>
+<th style="text-align: left;">Action Taken</th>
+<th style="text-align: left;">Stack Content (Visual)</th>
+<th style="text-align: left;">Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">1</td>
+<td style="text-align: left;"><code>(</code></td>
+<td style="text-align: left;">Open bracket detected. Push to stack.</td>
+<td style="text-align: left;"><code>[</code><br><code>(</code> ]</td>
+<td style="text-align: left;">Top is <code>(</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">2</td>
+<td style="text-align: left;"><code>[</code></td>
+<td style="text-align: left;">Open bracket detected. Push to stack.</td>
+<td style="text-align: left;"><code>[</code><br><code>[</code><br><code>(</code> ]</td>
+<td style="text-align: left;">Top is <code>[</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">3</td>
+<td style="text-align: left;"><code>)</code></td>
+<td style="text-align: left;"><strong>Closer</strong> detected. Check stack top.</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: left;">Stack top is <code>[</code>. Map says <code>)</code> expects <code>(</code>. <code>[</code> != <code>(</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;">4</td>
+<td style="text-align: left;"><strong>Fail</strong></td>
+<td style="text-align: left;">Mismatch found! Return <code>False</code>.</td>
+<td style="text-align: left;">-</td>
+<td style="text-align: left;">Invalid immediately.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Contrast with Valid Input <code>([{}])</code>:</strong>
+1.  <code>(</code> -&gt; Push. Stack: <code>['(']</code>
+2.  <code>[</code> -&gt; Push. Stack: <code>['(', '[']</code>
+3.  <code>{</code> -&gt; Push. Stack: <code>['(', '[', '{']</code>
+4.  <code>}</code> -&gt; Closer. Top is <code>{</code>. Match! Pop. Stack: <code>['(', '[']</code>
+5.  <code>]</code> -&gt; Closer. Top is <code>[</code>. Match! Pop. Stack: <code>['(']</code>
+6.  <code>)</code> -&gt; Closer. Top is <code>(</code>. Match! Pop. Stack: <code>[]</code>
+7.  <strong>End.</strong> Stack is empty. Return <code>True</code>.</p>
+<h2>Complexity Analysis</h2>
+<p>The performance of this solution is highly efficient, suitable for large-scale inputs.</p>
+<ul>
+<li>
+<p><strong>Time Complexity: $O(n)$</strong></p>
+<ul>
+<li>We iterate through the string exactly once.</li>
+<li>Every operation inside the loop (checking dictionary membership, popping a list, pushing to a list) takes constant time $O(1)$.</li>
+<li>Therefore, the total time is linear with respect to the input length $n$.</li>
+</ul>
+</li>
+<li>
+<p><strong>Space Complexity: $O(n)$</strong></p>
+<ul>
+<li>In the worst-case scenario—such as an input string of only opening brackets like <code>"((((("</code>—we push every single character onto the stack.</li>
+<li>We cannot optimize this to $O(1)$ space because we must store the state of unmatched brackets to verify correct closing order.</li>
+<li>Thus, space usage grows linearly with the input size.</li>
+</ul>
+</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p>While the Stack solution is the standard and most efficient approach for interview settings, let's briefly discuss other possibilities and why they fall short.</p>
+<ol>
+<li>
+<p><strong>Recursive Parsing:</strong></p>
+<ul>
+<li>One could write a recursive function that checks if the first character matches the last, then recurses on the substring between them.</li>
+<li><em>Pros:</em> Elegant logic.</li>
+<li><em>Cons:</em> Recursion depth limits (Python hits <code>RecursionError</code> deep quickly) and overhead make it slower than an iterative stack approach. It also struggles with complex nesting like <code>( [ { } ] )</code> unless carefully balanced.</li>
+</ul>
+</li>
+<li>
+<p><strong>Counter with Regex:</strong></p>
+<ul>
+<li>Using regex to match patterns like <code>\((?:[^()]|\((?:[^()]|\(...))\))*\)</code>.</li>
+<li><em>Pros:</em> Concise code for specific patterns.</li>
+<li><em>Cons:</em> Regular expressions do not natively handle "counters" or "nested matching" efficiently for all cases (regex engines have limits on recursion depth). It's harder to read and debug than a stack-based algorithm.</li>
+</ul>
+</li>
+</ol>
+<p>The stack approach remains the gold standard because it directly models the problem's constraint: <strong>LIFO ordering</strong>.</p>
+<h2>Edge Cases</h2>
+<p>A robust solution must handle scenarios that naive counters often miss.</p>
+<ol>
+<li><strong>Empty String (<code>""</code>):</strong><ul>
+<li>The loop runs zero times. The stack remains empty.</li>
+<li>Result: <code>True</code>. (Correct, an empty string has no invalid brackets).</li>
+</ul>
+</li>
+<li><strong>Single Opening Bracket (<code>"("</code>, <code>"["</code>, <code>"{</code>):</strong>
+    *</li>
+</ol></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>What is the algorithmic pattern for Valid Parentheses?</summary><p>Use a stack (Last-In-First-Out) to track opening brackets and match them with closing ones.</p></details><details class='card2'><summary>What is the time complexity of this solution?</summary><p>O(n) because each character is pushed onto and popped from the stack exactly once.</p></details><details class='card2'><summary>What is the space complexity for this approach?</summary><p>O(n) in the worst case where all characters are opening brackets, requiring a stack of size n.</p></details><details class='card2'><summary>Which edge case causes a simple counter to fail?</summary><p>Nested or interleaved types like &#x27;([)]&#x27; pass a simple count but fail structural validation; order matters, not just quantity.</p></details><details class='card2'><summary>What is a common bug when implementing this with a stack?</summary><p>Forgetting to check if the stack is empty before popping, or returning true incorrectly if the stack isn&#x27;t empty at the end.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
