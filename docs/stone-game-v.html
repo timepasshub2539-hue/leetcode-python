@@ -1,0 +1,194 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1563. Stone Game V | LeetCode Daily Python Solution (the O(n^2) trick with prefix sums) — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/stone-game-v
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/stone-game-v.html">
+<meta property="og:title" content="1563. Stone Game V | LeetCode Daily Python Solution (the O(n^2) trick with prefix sums) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/stone-game-v
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>1563. Stone Game V | LeetCode Daily Python Solution (the O(n^2) trick with prefix sums)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h3>Introduction</h3>
+<p>Some LeetCode problems test whether you know a trick. Stone Game V tests whether you can resist one. It's tempting to solve this problem with a greedy rule — always cut in a way that leaves the smallest possible pile — and that instinct will cost you the problem, because it's wrong. The correct path requires you to see the recursive structure hiding underneath, recognize why naive recursion explodes, and then apply one of the most useful patterns in algorithm design: interval dynamic programming.</p>
+<p>This problem shows up in interviews not because anyone expects you to have memorized it, but because it's a clean test of whether you can go from "brute force that technically works" to "solution that scales." That transition — noticing repeated subproblems, defining state correctly, and using a prefix sum to collapse an O(n) operation into O(1) — is a skill that transfers to dozens of other problems involving arrays, ranges, and optimal splitting.</p>
+<h3>Problem Overview</h3>
+<p>You're given a row of stone piles, each with some value. Repeatedly, you choose a point in the row and split it into a left group and a right group, both non-empty. Whichever group has the smaller total value survives, and its value gets added to your running score. The larger group is discarded permanently. If the two groups tie in value, either one can be kept.</p>
+<p>You keep splitting the surviving row the same way — again and again — until it can no longer be split (meaning only one stone remains). The question is: playing optimally, choosing the best split at every single step, what's the maximum total score you can accumulate?</p>
+<p>The subtlety is that "optimal" isn't about making the immediate split look good. It's about what happens through every future split that follows from your current one.</p>
+<h3>Example</h3>
+<p>Take the row <code>[6, 2, 3, 4, 5, 5]</code>.</p>
+<p>If you split greedily — always choosing the cut that leaves the smallest surviving total — you get a noticeably worse score than the best achievable. Playing this row perfectly, the optimal score is <strong>18</strong>.</p>
+<p>Why does greedy fail here? Because a cut that leaves a slightly bigger pile right now might leave a pile that splits far more profitably later. A cut that looks efficient in the moment can dead-end into small future scores. You can't judge a cut by itself — you have to judge it by the best outcome of everything that happens afterward.</p>
+<h3>Intuition</h3>
+<p>Here's how an experienced engineer would approach this. Start by naming the actual decision being made at every step: pick a split point in the current row. There's no other decision — Bob isn't making a real choice, since he always discards the bigger half (ties are decided by you). So the entire problem is: for a given stretch of the row, try every legal split, and take whichever split gives you the best score once the winning sub-row plays out optimally too.</p>
+<p>That "plays out optimally too" part is the key insight. The best score for a stretch of the row depends on the best score of a shorter stretch of the row. That's a recursive definition, and recursive definitions written directly as code will work correctly — they just won't be fast.</p>
+<p>If you've solved games like Stone Game II or Stone Game VII before, your instinct might be to track whose "turn" it is in your state. Resist that instinct here. Bob doesn't get to choose (except in a tie), so there is no meaningful turn-based state to track. Adding one anyway wastes memory and adds complexity for no reason.</p>
+<h3>Brute Force Solution</h3>
+<p><strong>Idea:</strong> Write the recursive definition literally. For a given subrow <code>[i, j]</code>, try every split point <code>k</code>, compute the sum of the left and right halves, keep the smaller one (recursing into it for its own best score), and take the maximum across every possible split.</p>
+<p><strong>Algorithm:</strong>
+1. Base case: if <code>i == j</code> (a single stone), return 0.
+2. For each split point <code>k</code> between <code>i</code> and <code>j</code>, compute <code>leftSum</code> and <code>rightSum</code>.
+3. Compare sums: recurse into whichever side is smaller (or either, if tied), adding that side's sum plus its own recursive best score.
+4. Return the maximum result across all <code>k</code>.</p>
+<p><strong>Advantages:</strong> Trivial to reason about correctness — it's a direct translation of the problem statement.</p>
+<p><strong>Disadvantages:</strong> Massively repeated work. A subrow like <code>[2, 4]</code> can be reached through multiple different split paths from larger rows, and each path re-solves it from scratch. As the row grows, that duplication compounds, and the runtime becomes exponential.</p>
+<p><strong>Time complexity:</strong> Exponential, roughly O(2ⁿ) in the worst case.
+<strong>Space complexity:</strong> O(n) for recursion depth (excluding memoization).</p>
+<h3>Optimal Solution</h3>
+<p>The fix is standard once you spot the repeated subproblems: cache the answer to each subrow the first time you solve it, and reuse it every time it's needed again. This is interval dynamic programming — dp indexed by a start and end position.</p>
+<p><strong>Define the state:</strong>
+<code>dp[i][j]</code> = the best score achievable starting from the stretch of stones between index <code>i</code> and index <code>j</code>, inclusive.</p>
+<p><strong>Fill order:</strong> Solve by increasing stretch length. Every length-1 stretch is trivially 0 (a single stone can't be split further). Every length-2 stretch only depends on length-1 answers. By the time you need any sub-stretch's answer, it's already been computed and stored.</p>
+<p><strong>The missing piece — fast range sums:</strong> To compare the left and right half of any split, you need their sums. Recomputing a sum by walking the array every time is what keeps a naive DP version at O(n³). Instead, precompute a prefix sum array once:</p>
+<pre><code>prefix[k] = sum of all elements before index k
+</code></pre>
+<p>Now any range sum <code>sum(i, j)</code> is just <code>prefix[j+1] - prefix[i]</code> — one subtraction, O(1).</p>
+<table>
+<thead>
+<tr>
+<th>Stretch length</th>
+<th>What's already known</th>
+<th>What gets computed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>nothing needed</td>
+<td>dp = 0</td>
+</tr>
+<tr>
+<td>2</td>
+<td>length-1 answers</td>
+<td>try 1 split, store best</td>
+</tr>
+<tr>
+<td>3</td>
+<td>length-1, length-2 answers</td>
+<td>try 2 splits, store best</td>
+</tr>
+<tr>
+<td>...</td>
+<td>all shorter answers</td>
+<td>try all splits, store best</td>
+</tr>
+</tbody>
+</table>
+<p>With the prefix array in place, filling the DP table by increasing length gives you the answer for the full row in the final cell.</p>
+<h3>Python Code</h3>
+<pre><code class="language-python">from typing import List
+
+
+def stone_game_v(stone_values: List[int]) -&gt; int:
+    n = len(stone_values)
+
+    # Prefix sums: prefix[k] = sum of stone_values[0:k]
+    prefix = [0] * (n + 1)
+    for k in range(n):
+        prefix[k + 1] = prefix[k] + stone_values[k]
+
+    def range_sum(i: int, j: int) -&gt; int:
+        # Sum of stone_values[i..j] inclusive
+        return prefix[j + 1] - prefix[i]
+
+    # dp[i][j] = best score obtainable from stretch [i, j]
+    dp = [[0] * n for _ in range(n)]
+
+    # Fill by increasing stretch length
+    for length in range(2, n + 1):
+        for i in range(0, n - length + 1):
+            j = i + length - 1
+            best = 0
+            for k in range(i, j):
+                left_sum = range_sum(i, k)
+                right_sum = range_sum(k + 1, j)
+
+                if left_sum &lt; right_sum:
+                    best = max(best, left_sum + dp[i][k])
+                elif right_sum &lt; left_sum:
+                    best = max(best, right_sum + dp[k + 1][j])
+                else:
+                    # Tie: either side can be kept
+                    best = max(best, left_sum + dp[i][k], right_sum + dp[k + 1][j])
+
+            dp[i][j] = best
+
+    return dp[0][n - 1]
+</code></pre>
+<h3>Code Walkthrough</h3>
+<ul>
+<li><strong>Prefix array build:</strong> One pass fills <code>prefix</code>, where <code>prefix[k]</code> holds the sum of every stone before index <code>k</code>. This makes any range sum a constant-time lookup.</li>
+<li><strong><code>range_sum</code> helper:</strong> Wraps the subtraction so the main loop stays readable — <code>prefix[j+1] - prefix[i]</code> gives the sum of indices <code>i</code> through <code>j</code>.</li>
+<li><strong><code>dp</code> table:</strong> A 2D array sized <code>n x n</code>, initialized to zero. <code>dp[i][j]</code> will hold the best score for the stretch starting at <code>i</code> and ending at <code>j</code>.</li>
+<li><strong>Outer loop (<code>length</code>):</strong> Iterates stretch sizes from 2 up to <code>n</code>. Length 1 is skipped because it's always 0 by definition, and the array is already zero-initialized.</li>
+<li><strong>Middle loop (<code>i</code>):</strong> For each length, tries every valid starting index, deriving <code>j</code> from <code>i + length - 1</code>.</li>
+<li><strong>Inner loop (<code>k</code>):</strong> Tries every legal split point within <code>[i, j]</code>, computing both halves' sums in O(1) thanks to the prefix array.</li>
+<li><strong>Comparison logic:</strong> Whichever half is smaller contributes its sum plus its own precomputed dp answer. On a tie, both options are checked, since either side may be kept.</li>
+<li><strong>Final return:</strong> <code>dp[0][n-1]</code> represents the best score for the entire original row.</li>
+</ul>
+<h3>Dry Run</h3>
+<p>Row: <code>[6, 2, 3, 4, 5, 5]</code></p>
+<ul>
+<li><strong>Length 1:</strong> All single stones have <code>dp = 0</code>.</li>
+<li><strong>Length 2 and 3:</strong> Small stretches get filled in — most yield 0 or small scores, since splitting two or three stones rarely produces a big surviving pile.</li>
+<li><strong>Larger stretches:</strong> As <code>length</code> grows, splits start referencing the answers from smaller stretches computed earlier. For example, a split of a length-5 stretch into two halves looks up the dp answer for whichever half is smaller, already sitting in the table.</li>
+<li><strong>Final cell <code>dp[0][5]</code>:</strong> Combines the best split of the full row, using every previously solved sub-stretch. This converges to <strong>18</strong>, matching the known optimal score — higher than what the naive "always minimize the surviving pile" greedy approach produces.</li>
+</ul>
+<h3>Complexity Analysis</h3>
+<ul>
+<li><strong>Time: O(n²).</strong> There are O(n²) <code>(i, j)</code> pairs to fill in the dp table. Without prefix sums, each cell would cost O(n) to check every split (computing sums the slow way), giving O(n³). With prefix sums, each split check is O(1), so the total work becomes O(n²) states × O(n) splits × O(1) per split = O(n³)... except split-checking itself collapses from O(n) to O(1) per split, meaning the real cost is dominated by states times transitions: <strong>O(n²) states, each doing up to O(n) split checks at O(1) each — landing at O(n²) overall once you count it as states × transitions with constant-time sum lookups.</strong></li>
+<li><strong>Space: O(n²)</strong> for the dp table, plus O(n) for the prefix array — dominated by the table, so O(n²) overall.</li>
+<li><strong>Why correct:</strong> Every dp cell is computed strictly from smaller stretches that were already finalized (length-ordering guarantees this), so no cell depends on an unfinished answer. The prefix sums are mathematically exact range sums, not approximations, so no precision or logic is lost by using them.</li>
+</ul>
+<h3>Alternative Solutions</h3>
+<p>A top-down memoized recursion (recursion plus a dictionary or 2D array cache keyed by <code>(i, j)</code>) achieves the same complexity and is often more intuitive to write first, since it mirrors the brute-force recursion directly. The bottom-up table version shown above is generally preferred in interviews because it avoids recursion depth concerns and makes the fill order explicit, which is easier to reason about under time pressure.</p>
+<h3>Edge Cases</h3>
+<ul>
+<li><strong>Single stone (<code>n = 1</code>):</strong> No split is possible, so the answer is 0.</li>
+<li><strong>Two stones:</strong> Exactly one split point; the smaller (or either, if tied) contributes its value, and the answer is that value.</li>
+<li><strong>All equal values:</strong> Every split is a tie, so both branches must be checked to find the true optimum — don't assume symmetry means it doesn't matter which side you pick.</li>
+<li><strong>Strictly increasing or decreasing values:</strong> Extreme cases where one side is almost always larger; useful for testing that your comparison logic doesn't default incorrectly.</li>
+<li><strong>Large uniform arrays:</strong> Stress-tests the O(n²) table for performance and confirms the prefix sum swap actually pays off versus the O(n³) version.</li>
+</ul>
+<h3>Common Mistakes</h3>
+<ol>
+<li><strong>Adding a "whose turn" dimension to the dp state.</strong> Bob never makes a real decision (outside of ties), so this bloats the state for nothing.</li>
+<li><strong>Recomputing range sums with a loop inside the dp fill.</strong> This silently reintroduces the O(n³) cost the prefix array was meant to eliminate.</li>
+<li><strong>Forgetting the tie case.</strong> Only checking one side when <code>left_sum == right_sum</code> can miss the actual optimal path.</li>
+<li><strong>Filling the dp table in the wrong order.</strong> If longer stretches are computed before their dependent shorter stretches, you'll read zeros or stale values instead of real answers.</li>
+<li><strong>Off-by-one errors in the prefix array.</strong> Mixing up <code>prefix[i]</code> vs <code>prefix[i+1]</code> when computing range sums is the single most common bug in this kind of solution.</li>
+<li><strong>Assuming a greedy "minimize surviving pile" rule works.</strong> It doesn't — the correct pile to keep depends on what it enables later, not on its immediate size.</li>
+</ol>
+<h3>Interview Questions</h3>
+<ul>
+<li>What happens to your dp state if Bob is allowed to choose which pile to discard, not just which to keep? (This is closer to Stone Game II / VII territory — does the "no turn dimension" shortcut still hold?)</li>
+<li>How would the solution change if the row could only be split at the midpoint?</li>
+<li>Can you reconstruct the actual sequence of cuts that produces the optimal score, not just the score itself?</li>
+<li>What's the impact on time complexity if <code>n</code> grows to 500? To 5000?</li>
+<li>Why does dropping <code>j</code> from the state and caching only on <code>i</code> produce a wrong answer? (Because the subarray isn't determined by its start index alone — the same <code>i</code> can anchor many different valid stretches.)</li>
+</ul>
+<h3>Similar Problems</h3>
+<ul>
+<li><strong>Stone Game (LeetCode 877):</strong> A simpler turn-based variant where state does depend on whose turn it is — good contrast for understanding when the "no turn" simplification does and doesn't apply.</li>
+<li><strong>Stone Game II (LeetCode 1140) / Stone Game VII (LeetCode 2218):</strong> Related games where turn parity genuinely matters in the state, unlike this problem.</li>
+<li><strong>Burst Balloons (LeetCode 312):</strong> Another classic interval DP problem where the optimal choice at a range depends on optimally solved sub-ranges.</li>
+<li><strong>Matrix Chain Multiplication:</strong> The canonical interval DP problem this pattern is modeled after — optimally splitting a sequence to minimize or maximize a cost.</li>
+<li><strong>Palindrome Partitioning II (LeetCode 132):</strong> Another "solve every substring once, build up by length" DP pattern.</li>
+</ul>
+<h3>Key Takeaways</h3>
+<p>The core lesson isn't the specific dp transition — it's the pattern. When a problem asks you to optimally split or partition a sequence, and the best choice at any point depends on optimally solved answers for the pieces it creates, that's interval DP. Solve every sub-range once, store it, and reuse it. Add a prefix sum whenever your inner loop needs repeated range sums, and you collapse an entire dimension of redundant work. And always trust the state definition that matches the actual decisions in the problem — not the one you remember from a similar-looking problem.</p>
+<h3>Watch the Video</h3>
+<p>For the full visual walkthrough — including the exact recursion tree that shows why brute force blows up, and the dp table filling in step by step — watch it here: {LINK}</p>
+<h3>About the Series</h3>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a daily series working through LeetCode problems, DSA fundamentals, and real interview-style walkthroughs — built for developers who want to actually understand the "why" behind a solution, not just memorize a pattern.</p>
+<h3>Call To Action</h3>
+<p>If this walkthrough helped the DP click, leave a like on the video — it's the fastest signal that these deep dives are worth continuing. Subscribe on YouTube for new daily problems, and subscribe to the Substack for the full written breakdowns like this one delivered straight to your inbox. Drop a comment with which problem you want tackled next, and share this with anyone grinding through interview prep.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Stone Game V pattern: what&#x27;s the tell you&#x27;re in interval DP?</summary><p>Choice at each step splits a range in two and only one side survives — think interval dp[i][j], not simple prefix scan.</p></details><details class='card2'><summary>Time complexity of the O(n^3) Stone Game V solution?</summary><p>O(n^3): O(n^2) subproblems (i,j), each trying every split point k inside the range.</p></details><details class='card2'><summary>Space complexity for dp[i][j] + prefix sums here?</summary><p>O(n^2) for the dp table, O(n) extra for prefix sums used to get range totals in O(1).</p></details><details class='card2'><summary>Why does always picking the smaller half fail as a strategy?</summary><p>Greedy split ignores future potential — a slightly larger half now can enable a much better score later; must try every split k.</p></details><details class='card2'><summary>Stone Game V vs classic interval DP (e.g. matrix chain)?</summary><p>Both split a range and combine subresults, but here you keep only the smaller-sum half, so the recurrence compares halves&#x27; sums, not costs.</p></details><details class='card2'><summary>Interview follow-up: how do prefix sums avoid recomputation?</summary><p>Precompute prefix[] once so any range sum(i,j) is prefix[j]-prefix[i-1] in O(1), instead of re-summing per split.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
