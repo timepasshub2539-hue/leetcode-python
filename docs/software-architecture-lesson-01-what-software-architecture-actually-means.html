@@ -1,13 +1,188 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Software-Architecture Lesson 1: Software Architecture Lesson 1: 4 Questions Before You Write One Lin — Python LeetCode Solution</title><meta name="description" content="Lesson 1 of the software architecture series: what architecture actually is, and why it&#x27;s different from design and implementation. We walk through a single login screen to expose the four questions e">
+<title>Software-Architecture Lesson 1: Software Architecture Lesson 1: Why &#x27;Just Start Coding&#x27; Breaks at Fi — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/software-architecture-lesson-01-what-software-architecture-actually-means
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode">
 <meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/software-architecture-lesson-01-what-software-architecture-actually-means.html">
-<meta property="og:title" content="Software-Architecture Lesson 1: Software Architecture Lesson 1: 4 Questions Before You Write One Lin — Python LeetCode Solution"><meta property="og:type" content="website">
-<meta property="og:description" content="Lesson 1 of the software architecture series: what architecture actually is, and why it&#x27;s different from design and implementation. We walk through a single login screen to expose the four questions e">
+<meta property="og:title" content="Software-Architecture Lesson 1: Software Architecture Lesson 1: Why &#x27;Just Start Coding&#x27; Breaks at Fi — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/software-architecture-lesson-01-what-software-architecture-actually-means
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Software-Architecture Lesson 1: Software Architecture Lesson 1: 4 Questions Before You Write One Lin</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><p>Lesson 1 of the software architecture series: what architecture actually is, and why it&#x27;s different from design and implementation. We walk through a single login screen to expose the four questions e</p></article>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Software-Architecture Lesson 1: Software Architecture Lesson 1: Why &#x27;Just Start Coding&#x27; Breaks at Fi</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Why "Just Start Coding" Breaks Down</h2>
+<p>Every developer has lived this: a task that should take thirty minutes eats three days instead. Not because the feature was hard — because the codebase fought back. You touch one file and three others quietly break. You spend more time figuring out what's <em>safe</em> to change than actually changing it.</p>
+<p>This isn't a skill problem. It's an architecture problem, and it's one of the most common things that separates engineers who can ship confidently in a large codebase from those who can only move fast in a small one. Interviewers test this constantly — not by asking you to define "architecture," but by watching whether the code you write in a 45-minute session would survive being touched by five other people six months from now.</p>
+<p>This lesson isn't about diagrams or buzzwords. It's about three concrete layers of a codebase and one decision that determines whether your project stays easy to change or slowly turns into a minefield.</p>
+<h2>Problem Overview</h2>
+<p>Here's the situation in plain terms: a codebase starts small. One file, two hundred lines, one person writing it. At that size, you can hold the entire thing in your head. If you need to add a button, you just add it — call a function, wire it up, done. There's nothing to plan because there's nothing you can't see.</p>
+<p>Now fast-forward. The same project is fifty files deep, three people are contributing, and it's been six months. Nobody holds the whole system in their head anymore. Every change is now a bet on what you <em>can't</em> see — and that bet is exactly where the three days went.</p>
+<p>The core problem: code that was organized for "add a function, call it" no longer works once the system is too big to see all at once. Something has to replace your mental model of the whole codebase. That something is architecture.</p>
+<h2>Example</h2>
+<p>Say you're building a feature: a "Save Draft" button on a blog editor.</p>
+<ul>
+<li><strong>At 200 lines:</strong> the button's click handler directly calls <code>save_to_db(content)</code>. One file. It works, and it's the fastest way to ship it.</li>
+<li><strong>At 50 files:</strong> that same pattern — UI code calling the database directly — is now duplicated across a dozen screens: the editor, the admin panel, the mobile sync job. Someone changes the <code>drafts</code> table schema to add a <code>version</code> column, and now six unrelated screens break, because they all reached into the database independently instead of going through one shared path.</li>
+</ul>
+<p>The first version isn't wrong. It's just sized for its context. The second version is where the boundary should have existed and didn't.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer thinks about this, before writing a single line of a new feature.</p>
+<p>They separate three questions that are easy to blur together:</p>
+<ol>
+<li><strong>What does this one function do?</strong> (Implementation)</li>
+<li><strong>How do the functions in this one file cooperate?</strong> (Design)</li>
+<li><strong>Which files are allowed to call which other files?</strong> (Architecture)</li>
+</ol>
+<p>These are zoom levels on the same codebase, not different topics.</p>
+<p><strong>Implementation</strong> is the innermost layer — the click handler, the API call inside it. One function, one job. Change it, and only that function moves.</p>
+<p><strong>Design</strong> zooms out to the file that function lives in. It's how the functions inside <em>that file</em> cooperate — validate input, call the API, update the UI. Still one file, still one concern, but now it's about the relationships between several small pieces.</p>
+<p><strong>Architecture</strong> zooms out past the file entirely. It's about which parts of the codebase are <em>allowed</em> to depend on which other parts. The button's file can call a service. The service can hit the database. The button's file should never reach into the database directly. That's not a style preference — it's a rule about what's allowed to know about what.</p>
+<p>The moment you skip that last layer — when UI code reaches straight into the database — you haven't made a coding mistake. You've made an architecture mistake. The code runs fine today. The cost shows up later, when two unrelated screens turn out to be secretly connected through a table they both touch directly.</p>
+<h2>Brute Force Solution ("No Boundaries")</h2>
+<p><strong>Idea:</strong> Let any file call any other file directly. No service layer, no interfaces, no rules about what's allowed to depend on what.</p>
+<p><strong>Algorithm:</strong>
+1. Need data? Query the database from wherever you are.
+2. Need a computation? Call whatever function has it, regardless of which "layer" it's in.
+3. Ship it.</p>
+<p><strong>Advantages:</strong>
+- Zero setup cost. No interfaces to write, no extra files to create.
+- Fastest possible path to a working feature — genuinely correct for prototypes, solo projects, or throwaway scripts.</p>
+<p><strong>Disadvantages:</strong>
+- Every file becomes a hidden dependency of every other file. Changing one table's schema can silently break screens that have nothing to do with each other.
+- No single place to change <em>how</em> data is fetched — validation, caching, and logic get copy-pasted everywhere it's needed.
+- The cost doesn't show up immediately, which is what makes it dangerous. It compounds silently until a routine change becomes a three-day investigation.</p>
+<p><strong>Time complexity (cost per change):</strong> O(1) today, but the <em>effective</em> cost per change grows over the life of the project as more code takes the same shortcut — closer to O(n) or worse, where n is the number of places that shortcut was taken.</p>
+<p><strong>Space complexity:</strong> N/A — this is a structural cost, not a memory cost, but the "space" of undocumented dependencies grows unbounded.</p>
+<h2>Optimal Solution: Enforced Boundaries</h2>
+<p>The fix isn't more code — it's a rule about which files are allowed to call which. Concretely:</p>
+<pre><code>UI layer  →  Service layer  →  Database layer
+</code></pre>
+<p>The UI is allowed to call the service. The service is allowed to call the database. The UI is <em>not</em> allowed to skip the service and touch the database directly.</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Responsibility</th>
+<th>Can call</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UI (handler)</td>
+<td>Collect input, trigger action, render result</td>
+<td>Service layer only</td>
+</tr>
+<tr>
+<td>Service</td>
+<td>Business logic, validation, orchestration</td>
+<td>Database layer, other services</td>
+</tr>
+<tr>
+<td>Database</td>
+<td>Storage and retrieval</td>
+<td>Nothing above it</td>
+</tr>
+</tbody>
+</table>
+<p>Why this works: when the <code>drafts</code> table changes shape, there's exactly one place that needs to know — the service function that talks to it. Every UI screen that calls that service keeps working unchanged. The boundary turned a schema change from "find every place that touches this table" into "update one function."</p>
+<p>This costs something real. You now have an extra file, an extra function call, a place you have to open instead of just scrolling down in the same file. That cost is worth paying once a module's internals actually need to change without dragging the rest of the app along with it — not before.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python"># db.py — database layer: knows how to talk to storage, nothing else
+def fetch_draft(draft_id: str) -&gt; dict:
+    # Actual query implementation lives here.
+    ...
+
+def save_draft(draft_id: str, content: str) -&gt; None:
+    ...
+
+
+# draft_service.py — service layer: business rules, the only caller of db.py
+from db import fetch_draft, save_draft
+
+MAX_LENGTH = 50_000
+
+def save_draft_content(draft_id: str, content: str) -&gt; None:
+    if len(content) &gt; MAX_LENGTH:
+        raise ValueError(&quot;Draft exceeds maximum length&quot;)
+    save_draft(draft_id, content)
+
+
+# editor_handler.py — UI layer: never imports db.py directly
+from draft_service import save_draft_content
+
+def on_save_click(draft_id: str, content: str) -&gt; None:
+    save_draft_content(draft_id, content)
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>db.py</code> is the only file that imports a database driver. Nothing else needs to know <em>how</em> storage works.</li>
+<li><code>draft_service.py</code> imports <code>db.py</code>, and owns the business rule (<code>MAX_LENGTH</code>). This is where validation lives so it isn't duplicated across every screen that saves a draft.</li>
+<li><code>editor_handler.py</code> imports only <code>draft_service.py</code>. It has no idea a database exists. If storage moves from Postgres to something else, this file doesn't change at all.</li>
+<li>The import statements <em>are</em> the architecture. If you can trace the boundary just by reading imports, the rule is being enforced; if <code>editor_handler.py</code> ever imports <code>db.py</code>, the boundary has already been broken.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>A user clicks "Save Draft" with content <code>"Hello world"</code>.</p>
+<ol>
+<li><code>on_save_click("draft-42", "Hello world")</code> runs in <code>editor_handler.py</code>.</li>
+<li>It calls <code>save_draft_content("draft-42", "Hello world")</code> in <code>draft_service.py</code>.</li>
+<li>The service checks <code>len("Hello world") &gt; 50_000</code> → false, so it proceeds.</li>
+<li>It calls <code>save_draft("draft-42", "Hello world")</code> in <code>db.py</code>, which writes to storage.</li>
+<li>Control returns to the UI. No layer skipped a step; each layer only talked to the one directly below it.</li>
+</ol>
+<p>Now imagine the admin panel needs to save drafts too — it calls <code>save_draft_content</code>, gets the same validation for free, and the database layer never had to be touched or duplicated.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> Adding a layer adds one function call per boundary crossed — O(1) overhead per call, which is negligible at runtime.</li>
+<li><strong>Space:</strong> One extra file per layer. Fixed, small overhead, not proportional to project size.</li>
+<li><strong>Why this is correct:</strong> The real cost being optimized isn't runtime — it's <em>change cost</em>. Without boundaries, a schema change is O(number of callers) because every direct caller needs updating. With a service layer, it's O(1) because there's exactly one caller to fix.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p><strong>Feature-based folders instead of layer-based folders:</strong> group by feature (<code>drafts/</code>, <code>comments/</code>) rather than by layer (<code>ui/</code>, <code>services/</code>, <code>db/</code>). Still enforces "which file can call which" — just organizes it around features instead of technical layers. Reasonable when features rarely share logic; worse when a lot of shared business logic exists across features, since that logic has nowhere obvious to live.</p>
+<p><strong>Dependency injection / interfaces between layers:</strong> instead of the service importing <code>db.py</code> directly, it depends on an abstract interface. Useful for swapping implementations (e.g., testing with a fake database) but adds real complexity — not worth it until you actually need to swap implementations.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Solo project, throwaway prototype:</strong> skip the boundaries entirely. The cost of architecture only pays off once more than one person or more than a few months are involved.</li>
+<li><strong>A boundary that's crossed exactly once:</strong> if only one screen ever needs direct database access, a service layer might be overkill — but be honest about whether "once" will stay true.</li>
+<li><strong>A service that needs to call another service:</strong> this is fine and common; the rule is about layers, not about a strict single path.</li>
+<li><strong>Legacy code with no boundaries at all:</strong> don't try to fix it everywhere at once — enforce the boundary only at the piece of the codebase you're currently changing.</li>
+<li><strong>A boundary you added but nothing ever needs to change independently:</strong> this is wasted cost — remove it if a module never needs to move without dragging others.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Confusing "adding a function" with "having an architecture."</strong> Implementation-level changes don't require architectural decisions — the mistake is applying the same instinct at 50 files that worked at 200 lines.</li>
+<li><strong>Treating architecture as a diagram drawn once at the start.</strong> It's an ongoing decision about what's allowed to depend on what, not a document you file away.</li>
+<li><strong>Adding boundaries to a prototype that will be thrown away.</strong> This is premature cost with no payoff — the codebase never lives long enough to need it.</li>
+<li><strong>Letting the UI query the database "just this once."</strong> That "once" becomes the template every future contributor copies.</li>
+<li><strong>Discovering the boundary after the mess, instead of deciding it on purpose.</strong> Architecture problems are almost always retroactive fixes for a decision that was never made explicitly.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you decide where to draw a boundary in a new service?</li>
+<li>What's the difference between a design pattern and an architectural decision?</li>
+<li>When is skipping a service layer the <em>right</em> call?</li>
+<li>How do you refactor a codebase where boundaries were never enforced, without a full rewrite?</li>
+<li>What signals tell you a module's internals need to change independently of the rest of the app?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Layered Architecture / N-Tier Architecture:</strong> the general pattern this lesson demonstrates — presentation, business logic, and data layers.</li>
+<li><strong>Dependency Inversion Principle (SOLID):</strong> a stricter version of the same idea — high-level modules shouldn't depend on low-level implementation details.</li>
+<li><strong>Repository Pattern:</strong> a common way to implement the database layer shown here, abstracting storage behind a consistent interface.</li>
+<li><strong>Microservices boundary design:</strong> the same "who's allowed to call whom" question, at the scale of entire services instead of files.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Implementation, design, and architecture are three different zoom levels on the same codebase — not three separate topics.</li>
+<li>"Just start coding" is correct at small scale and wrong at large scale — the failure isn't a skill regression, it's a missing decision about boundaries.</li>
+<li>Boundaries cost real overhead. Pay that cost once a module's internals need to change independently — not before.</li>
+<li>Skipping a boundary doesn't cost you today. It compounds, silently, until a small change takes days instead of minutes.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This lesson is easier to follow watching it end to end — the UI-to-database example is walked through visually. {LINK}</p>
+<h2>About the Series</h2>
+<p>This is part of <strong>Fun with Learning Technology</strong>, a series built for developers who want to actually understand <em>why</em> something works — not just memorize a pattern. Each lesson breaks a real engineering concept down to the decision underneath it, whether that's architecture, algorithms, or interview-ready problem solving.</p>
+<h2>Call To Action</h2>
+<p>If this clicked for you, the video has the full walkthrough — give it a like on YouTube, it genuinely helps the channel reach more developers. Subscribe to catch the next lesson in the series, and if you want these delivered straight to your inbox, subscribe to the Substack newsletter. Drop a comment with the boundary decision you're currently wrestling with — real questions shape future lessons. And if this helped, share it with someone untangling their own fifty-file codebase.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When code stops being &#x27;just write it&#x27; — what&#x27;s the tell?</summary><p>Past a size where you can&#x27;t hold the whole system in your head at once; changes start breaking things you didn&#x27;t touch.</p></details><details class='card2'><summary>Implementation vs Design vs Architecture — what&#x27;s the split?</summary><p>Implementation = inside one handler. Design = how files near it fit together. Architecture = which files may call which.</p></details><details class='card2'><summary>Why does &#x27;200 lines is easy&#x27; stop applying at 50 files?</summary><p>A single file has no call-graph problem; many files add coupling decisions no line count captures — that&#x27;s architecture&#x27;s job.</p></details><details class='card2'><summary>What breaks when &#x27;nobody&#x27;s head&#x27; holds the whole system?</summary><p>No one predicts side effects across modules, so small changes cause distant, unexpected breakage.</p></details><details class='card2'><summary>What does &#x27;boundaries keep change local&#x27; mean, with a violation example?</summary><p>A rule confining a change&#x27;s blast radius to one module; broken when the UI reaches directly into the database, skipping layers.</p></details><details class='card2'><summary>Interview follow-up: why not just let any file call any file?</summary><p>Unrestricted calling turns every edit into a system-wide risk; explicit allowed-caller rules let you reason locally again.</p></details></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>
