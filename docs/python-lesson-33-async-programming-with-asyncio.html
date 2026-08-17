@@ -1,0 +1,214 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Python Lesson 33: Your Scraper Isn&#x27;t Slow, It&#x27;s Just Waiting — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-33-async-programming-with-asyncio
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-l">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-33-async-programming-with-asyncio.html">
+<meta property="og:title" content="Python Lesson 33: Your Scraper Isn&#x27;t Slow, It&#x27;s Just Waiting — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-33-async-programming-with-asyncio
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-l">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 33: Your Scraper Isn&#x27;t Slow, It&#x27;s Just Waiting</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every developer eventually writes a loop that hits an API a hundred times and watches it crawl. The instinct is to blame the network, or blame Python, or reach for threads because "that's what concurrency means." None of those instincts are wrong exactly — they're just aimed at the wrong problem.</p>
+<p>The real issue in most I/O-heavy code is that the CPU is doing nothing at all. It fired off a request and is now just sitting there, waiting for bytes to come back over the wire. That distinction — "slow" versus "waiting" — is one of the more useful mental models you'll pick up as a Python developer, and it's also a favorite interview topic, because it separates people who've memorized <code>async def</code> syntax from people who understand what a coroutine is actually buying them.</p>
+<p>This lesson walks through a real scraper: sequential requests, a naive multithreaded fix, and then the <code>asyncio</code> rewrite that gets the same speedup as threading without the memory cost. Along the way we'll cover why <code>async</code> has to propagate all the way up your call stack, what <code>await</code> really does under the hood, and where async falls apart completely — because it's not a universal performance upgrade, it's a fix for one very specific kind of slowness.</p>
+<h2>Problem Overview</h2>
+<p>You have a list of 100 URLs. You need to fetch all of them and process the results. The naive approach is a <code>for</code> loop: request URL 1, wait for the response, request URL 2, wait for the response, and so on until all 100 are done.</p>
+<p>Each individual request might take under a second. But because you're doing them one after another, the total time is roughly the sum of all of them — somewhere around 100 seconds for 100 requests. The catch is that during each of those waits, your CPU isn't computing anything. It's idle. You're paying wall-clock time for work the processor isn't even doing.</p>
+<p>The task: restructure this so the waiting overlaps instead of stacking up, without exploding memory usage or introducing race conditions.</p>
+<h2>Example</h2>
+<p>Say each request takes about 1 second to get a response.</p>
+<p><strong>Sequential:</strong></p>
+<pre><code>Request 1 → wait 1s → Request 2 → wait 1s → ... → Request 100 → wait 1s
+Total: ~100 seconds
+</code></pre>
+<p><strong>Threaded (100 threads):</strong></p>
+<pre><code>All 100 requests fired at roughly the same time, each on its own thread
+Total: ~1-2 seconds, but 100 threads' worth of memory and OS scheduling overhead
+</code></pre>
+<p><strong>Async (one loop, one thread):</strong></p>
+<pre><code>All 100 requests kicked off as tasks, the loop switches between whichever isn't currently waiting
+Total: ~1-2 seconds, no extra threads, no extra memory per request
+</code></pre>
+<p>The output speed of threading and async converges. The cost to get there does not.</p>
+<h2>Intuition</h2>
+<p>Here's how an engineer actually arrives at this solution rather than just memorizing it.</p>
+<p>Start by asking: during a network request, what is the CPU doing? Nothing. It handed the request off to the OS's networking stack and now it's parked, waiting for a response to land in a buffer. That parked time is dead time — the CPU could be doing something else, but in a simple sequential script, it isn't.</p>
+<p>The threading instinct — "give every request its own thread" — is a reasonable next Stephen, because now the waits overlap. Thread 1 is parked waiting on request 1, thread 2 is parked waiting on request 2, and the OS switches between them. But each thread carries a real cost: a stack allocation, kernel scheduling overhead, context-switch cost. Fine for 100 requests. A disaster at 10,000.</p>
+<p>The insight that gets you to <code>asyncio</code> is realizing you don't need 100 separate execution contexts — you need one execution context that's smart enough to notice "this task is currently waiting, let me go run a different task while I wait." That's it. That's the entire idea. One thread, one loop, and a cooperative handoff every time a task would otherwise block.</p>
+<p>The mechanism for that handoff is <code>await</code>. It's not "pause and do nothing" — it's "I'm about to wait, so give control back to the loop and let it find something useful to do until I'm ready again."</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Fire requests one at a time, in a simple loop, waiting for each to complete before starting the next.</p>
+<p><strong>Algorithm:</strong>
+1. For each URL in the list, call the fetch function.
+2. Block until that fetch returns.
+3. Store the result.
+4. Move to the next URL.</p>
+<p><strong>Advantages:</strong>
+- Trivially simple to write and reason about.
+- No concurrency bugs possible — everything happens in a strict, predictable order.</p>
+<p><strong>Disadvantages:</strong>
+- Total time scales linearly with the number of requests, dominated entirely by network latency the CPU isn't even using.
+- Doesn't scale past a handful of requests before runtime becomes unacceptable.</p>
+<p><strong>Complexity:</strong>
+- Time: O(n × latency) — n requests, each contributing its full round-trip time to the total.
+- Space: O(1) beyond storing results — no extra threads or tasks in flight.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach uses <code>asyncio</code> to run all requests on a single thread, letting the event loop switch between tasks whenever one of them is waiting on I/O.</p>
+<p>Three pieces make this work:</p>
+<p><strong>1. <code>async def</code> marks a pausable function.</strong> Any function that might need to hand control back to the loop mid-execution gets defined as a coroutine with <code>async def</code>.</p>
+<p><strong>2. <code>await</code> is the handoff point.</strong> When you <code>await</code> something, you're telling the loop "this is where I might need to wait — feel free to run someone else until I'm ready." Because <code>await</code> can only be called inside an <code>async def</code> function, the "async-ness" of a call chain is contagious: if <code>fetch</code> is async, whatever calls <code>fetch</code> and awaits it must also be async, all the way up to <code>main</code>.</p>
+<p><strong>3. <code>asyncio.gather</code> starts everything up front, not one at a time.</strong> Instead of looping and waiting on each URL sequentially, you build a list of coroutine calls — none running yet — and hand the whole batch to <code>gather</code>. The loop then runs all of them concurrently, switching to whichever task isn't currently blocked on I/O.</p>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Threads used</th>
+<th>Memory overhead</th>
+<th>Time for 100 requests</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sequential</td>
+<td>1</td>
+<td>Minimal</td>
+<td>~100s</td>
+</tr>
+<tr>
+<td>Threading</td>
+<td>100</td>
+<td>High (per-thread stack)</td>
+<td>Single-digit seconds</td>
+</tr>
+<tr>
+<td>asyncio</td>
+<td>1</td>
+<td>Minimal</td>
+<td>Single-digit seconds</td>
+</tr>
+</tbody>
+</table>
+<p>Async gets you threading's speed without threading's memory bill, because there's only ever one thread — the loop is just very good at not sitting idle.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">import asyncio
+import aiohttp
+import time
+
+
+async def fetch(session: aiohttp.ClientSession, url: str) -&gt; str:
+    &quot;&quot;&quot;Fetch a single URL and return its response text.&quot;&quot;&quot;
+    async with session.get(url) as response:
+        return await response.text()
+
+
+async def fetch_all(urls: list[str]) -&gt; list[str]:
+    &quot;&quot;&quot;Fetch every URL concurrently and return results in order.&quot;&quot;&quot;
+    async with aiohttp.ClientSession() as session:
+        tasks = [fetch(session, url) for url in urls]
+        return await asyncio.gather(*tasks, return_exceptions=True)
+
+
+async def main() -&gt; None:
+    urls = [f&quot;https://example.com/page/{i}&quot; for i in range(100)]
+
+    start = time.perf_counter()
+    results = await fetch_all(urls)
+    elapsed = time.perf_counter() - start
+
+    succeeded = [r for r in results if not isinstance(r, Exception)]
+    failed = [r for r in results if isinstance(r, Exception)]
+
+    print(f&quot;Fetched {len(succeeded)} pages in {elapsed:.2f}s&quot;)
+    if failed:
+        print(f&quot;{len(failed)} requests failed: {failed[:3]}&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    asyncio.run(main())
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><strong><code>fetch</code></strong>: Defined with <code>async def</code> because it awaits a network call. <code>session.get(url)</code> returns an async context manager; entering it and reading <code>.text()</code> are both points where the coroutine yields control back to the loop.</li>
+<li><strong><code>fetch_all</code></strong>: Builds a list of coroutine objects — calling <code>fetch(session, url)</code> doesn't run anything yet, it just creates a coroutine. <code>asyncio.gather(*tasks, ...)</code> is what actually schedules and runs them concurrently.</li>
+<li><strong><code>return_exceptions=True</code></strong>: Without this, the first exception raised by any task propagates immediately out of <code>gather</code>, but the other tasks keep running in the background unless explicitly cancelled. With it, exceptions are captured as objects in the results list instead, so you can inspect successes and failures side by side.</li>
+<li><strong><code>main</code></strong>: Also <code>async def</code>, because it awaits <code>fetch_all</code>. This is the propagation rule in practice — you can't call <code>await</code> from a regular synchronous function.</li>
+<li><strong><code>asyncio.run(main())</code></strong>: The single entry point that creates the event loop, runs <code>main</code> to completion, and tears the loop down.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Take three URLs instead of a hundred, each taking roughly 1 second to respond.</p>
+<ol>
+<li><code>fetch_all</code> builds three coroutine objects — <code>fetch(session, url1)</code>, <code>fetch(session, url2)</code>, <code>fetch(session, url3)</code> — none have run yet.</li>
+<li><code>asyncio.gather</code> schedules all three as tasks and starts running the first one.</li>
+<li>Task 1 hits <code>await session.get(url1)</code>. This is a wait point, so it hands control back to the loop.</li>
+<li>The loop starts task 2. Task 2 hits its own <code>await</code> and also hands control back.</li>
+<li>The loop starts task 3. Same thing — it awaits and yields.</li>
+<li>Now all three are "in flight" waiting on the network simultaneously. As each response arrives, the loop resumes that specific task, finishes reading its response text, and marks it done.</li>
+<li>Once all three are complete, <code>gather</code> returns a list of three results, in the same order the tasks were submitted — not necessarily the order they finished in.</li>
+<li>Total elapsed time: roughly 1 second, not 3, because the waits overlapped instead of stacking.</li>
+</ol>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> O(max(latency) + processing) rather than O(n × latency). Since all requests are in flight concurrently, total wall-clock time is bounded by the slowest single request plus whatever CPU work is needed to process results — not the sum of every request's latency. This holds as long as the event loop and connection pool aren't themselves saturated.</li>
+<li><strong>Space:</strong> O(n) for the task list and buffered results, same as any approach that holds n items — but crucially, no per-request thread stack. A thread typically reserves megabytes of stack space; a coroutine object is a few hundred bytes. That's the actual space win over threading, not asymptotic complexity but constant-factor memory cost.</li>
+<li><strong>Why this is correct:</strong> the event loop guarantees that only one coroutine is <em>executing</em> Python bytecode at any instant — there's no need for locks around shared state the way there is with threads, because a context switch only happens at <code>await</code> points, which are visible in the code.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p><strong>Threading (<code>concurrent.futures.ThreadPoolExecutor</code>):</strong> Also achieves overlapping waits, and works fine for moderate request counts. Simpler to bolt onto existing synchronous code that uses <code>requests</code> instead of <code>aiohttp</code>. Loses to asyncio at scale because of per-thread memory and OS scheduling cost — 10,000 threads will bring a machine down; 10,000 coroutines won't.</p>
+<p><strong>Multiprocessing:</strong> Wrong tool here entirely — it solves CPU-bound problems by using multiple cores, but I/O-bound waiting doesn't need more cores, it needs better scheduling of the waiting itself.</p>
+<p><strong><code>asyncio.as_completed</code> instead of <code>gather</code>:</strong> Useful when you want to process results as they arrive rather than waiting for the whole batch — same underlying mechanism, different consumption pattern.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty URL list:</strong> <code>gather()</code> with no tasks returns an empty list immediately — no special-casing needed, but worth a test so a future refactor doesn't break it silently.</li>
+<li><strong>A single request times out:</strong> <code>gather</code> raises that exception at the point you <code>await</code> it (without <code>return_exceptions=True</code>), but does <strong>not</strong> cancel the other in-flight tasks — they keep running unless you cancel them yourself.</li>
+<li><strong>All requests fail:</strong> With <code>return_exceptions=True</code>, you get a list entirely composed of exception objects — filter carefully before processing, since an unfiltered list will crash downstream code expecting strings.</li>
+<li><strong>Duplicate URLs:</strong> Handled the same as any other URL; <code>asyncio</code> doesn't deduplicate for you, so add that logic yourself if it matters.</li>
+<li><strong>Extremely large URL list (10,000+):</strong> Un-bounded <code>gather</code> will try to open that many connections at once; pair it with an <code>asyncio.Semaphore</code> to cap concurrency and avoid overwhelming the target server or your own connection pool.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting <code>main</code> needs to be <code>async</code> too.</strong> <code>await</code> only works inside <code>async def</code> functions — the async-ness has to run all the way up the call chain.</li>
+<li><strong>Calling a coroutine without awaiting or scheduling it.</strong> <code>fetch(session, url)</code> alone just creates a coroutine object; it does nothing until it's awaited or passed to <code>gather</code>/<code>create_task</code>.</li>
+<li><strong>Looping and awaiting one at a time instead of batching with <code>gather</code>.</strong> This defeats the entire purpose — you're back to sequential waiting, just wrapped in <code>async</code> syntax.</li>
+<li><strong>Using <code>asyncio</code> for CPU-bound work.</strong> A tight numeric loop has no <code>await</code> points, so it blocks the entire loop — every other task waits behind it. That's a job for threads (if I/O is also involved) or multiprocessing (if it's pure computation).</li>
+<li><strong>Not capping concurrency for very large batches.</strong> Firing off thousands of requests simultaneously without a semaphore can crash your own client or get you rate-limited by the server.</li>
+<li><strong>Assuming <code>gather</code> cancels sibling tasks on the first failure.</strong> It doesn't — the exception is raised at the await point, but the other 99 tasks keep running in the background.</li>
+<li><strong>Mixing blocking calls (like <code>requests.get</code>) inside async code.</strong> A synchronous blocking call inside an <code>async def</code> function still blocks the whole event loop — you need an async-native client like <code>aiohttp</code>.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What's the difference between concurrency and parallelism, and where does <code>asyncio</code> fall?</li>
+<li>Why doesn't <code>asyncio</code> help with CPU-bound work?</li>
+<li>What happens if you call an <code>async def</code> function without <code>await</code>ing it?</li>
+<li>How does the GIL relate to why threading doesn't help CPU-bound Python code either?</li>
+<li>What does <code>return_exceptions=True</code> change about <code>asyncio.gather</code>'s behavior?</li>
+<li>How would you limit concurrency to, say, 20 simultaneous requests out of a list of 10,000?</li>
+<li>What's the difference between <code>asyncio.gather</code> and <code>asyncio.create_task</code>?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Design a rate-limited API client</strong> — extends this pattern with a <code>Semaphore</code> to cap concurrent requests.</li>
+<li><strong>Producer-consumer with <code>asyncio.Queue</code></strong> — same event-loop model, different coordination pattern between tasks.</li>
+<li><strong>Implement a connection pool</strong> — related to how <code>aiohttp.ClientSession</code> manages reusable connections under the hood.</li>
+<li><strong>Timeout handling with <code>asyncio.wait_for</code></strong> — a natural follow-up to the "what if one request hangs" question raised here.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>I/O-bound slowness is waiting, not computing — the CPU is idle the entire time.</li>
+<li>Threads fix the waiting problem too, but each one costs real memory and OS overhead.</li>
+<li><code>asyncio</code> gets the same overlap as threading using a single thread, because <code>await</code> is a cooperative handoff, not a blocking wait.</li>
+<li><code>async def</code> has to propagate all the way up your call stack — you can't <code>await</code> from a regular function.</li>
+<li><code>asyncio.gather</code> starts a batch of tasks together rather than looping and waiting one at a time; a failure in one task doesn't cancel the rest.</li>
+<li>Async is not a general performance tool — it does nothing for CPU-bound work, since there's no waiting to hand off during.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This lesson is easier to absorb watching the scraper actually run — sequential, threaded, and async, side by side with real timings. Watch it here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This is part of <strong>Fun with Learning Technology</strong>, a series built around teaching real software engineering concepts the way they come up on the job and in interviews — not just syntax, but the reasoning that gets you from "why is this slow" to a solution you can defend to another engineer.</p>
+<h2>Call To Action</h2>
+<p>If this cleared up something that's been fuzzy, drop a like on the video and subscribe on YouTube — new lessons go up regularly. For deeper written breakdowns like this one, subscribe to the Substack newsletter. And if you've got a guess on what <code>gather</code> does when one task times out, or a question about where this breaks down, leave a comment — always good to see how others are reasoning through it.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When would you reach for asyncio over threads?</summary><p>I/O-bound waiting (network/scraper calls), not CPU-bound work — one thread runs many tasks while each awaits I/O.</p></details><details class='card2'><summary>What does &#x27;await&#x27; actually do at a checkpoint?</summary><p>Pauses that task, hands control back to the event loop, which runs another ready task until the awaited I/O completes.</p></details><details class='card2'><summary>Time cost of running 100 async I/O tasks concurrently?</summary><p>Roughly the duration of the slowest single wait, not the sum — tasks overlap during idle I/O time.</p></details><details class='card2'><summary>Common bug: calling a blocking function inside async def</summary><p>A sync call (e.g. requests.get) blocks the whole event loop, freezing every other task until it returns.</p></details><details class='card2'><summary>Threads vs asyncio for concurrency — key tradeoff?</summary><p>Threads: OS-managed, memory-heavy, context-switch overhead. Asyncio: single thread, cooperative, needs async-aware libraries.</p></details><details class='card2'><summary>Interview: why doesn&#x27;t async help CPU-bound code?</summary><p>No waiting to overlap — the event loop can&#x27;t run other tasks while one hogs the CPU; use multiprocessing instead.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
