@@ -1,0 +1,248 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Head, Tail, One Wraparound Trick: Ring Buffers for Wearables Explained — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/circular-queues-ring-buffers-for-streaming-sensor-data-in-wearables
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-pytho">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/circular-queues-ring-buffers-for-streaming-sensor-data-in-wearables.html">
+<meta property="og:title" content="Head, Tail, One Wraparound Trick: Ring Buffers for Wearables Explained — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/circular-queues-ring-buffers-for-streaming-sensor-data-in-wearables
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-pytho">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Head, Tail, One Wraparound Trick: Ring Buffers for Wearables Explained</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every technical interview eventually circles back to one uncomfortable question: how do you store data when you can't afford to keep all of it? Arrays and lists are the default answer to "where do I put things," but they carry an assumption most people never question — that storage can always grow. Take that assumption away, and you're forced to think differently.</p>
+<p>That's exactly the constraint embedded engineers live with. A wearable's microcontroller might have 64 kilobytes of RAM total, not gigabytes. A step-counting algorithm running on that chip still needs a rolling window of recent sensor readings, updated dozens of times a second, without ever asking the OS for more memory.</p>
+<p>This is why the <strong>ring buffer</strong> (also called a circular buffer or circular queue) shows up constantly in interviews — it's one of the few data structures that's both a genuinely common LeetCode "design" problem (see <code>Design Circular Queue</code>, LeetCode 622) and something you'll actually implement on the job if you touch embedded systems, audio processing, networking, or logging infrastructure. Interviewers use it to test whether you can reason about pointer arithmetic, off-by-one edge cases, and space complexity simultaneously — not just whether you memorized an API.</p>
+<p>By the end of this article, you'll understand not just how to implement a ring buffer, but why every design decision inside it exists.</p>
+<h2>Problem Overview</h2>
+<p>Design a fixed-capacity data structure that supports:</p>
+<ul>
+<li><strong>Enqueue(value)</strong> — add a new value, evicting the oldest value automatically if the structure is full.</li>
+<li><strong>Dequeue()</strong> — remove and return the oldest value.</li>
+<li><strong>Front()</strong> / <strong>Rear()</strong> — peek at the oldest and newest values without removing them.</li>
+<li><strong>isEmpty()</strong> / <strong>isFull()</strong> — report the current state.</li>
+</ul>
+<p>The catch: the underlying storage must never resize. Whether you've inserted 10 values or 10 million, memory usage stays exactly the same. New values must overwrite the oldest ones once the buffer fills, and every operation must run in constant time — no shifting, no copying.</p>
+<p>This is fundamentally different from a normal queue built on a Python list, where popping from the front is O(n) because everything behind it has to shift down.</p>
+<h2>Example</h2>
+<p>Imagine a ring buffer with capacity 5, tracking the last 5 heart-rate readings.</p>
+<pre><code>Insert: 72, 75, 74, 78, 80
+Buffer: [72, 75, 74, 78, 80]   &lt;- full
+</code></pre>
+<p>Now a new reading comes in: <code>76</code>.</p>
+<pre><code>Insert: 76
+Buffer: [76, 75, 74, 78, 80]   &lt;- 72 was overwritten
+</code></pre>
+<p>The oldest value (<code>72</code>) is silently discarded to make room. The buffer's size never changed — only its contents did. If you asked "what are the last 5 readings?" before and after, you'd get a correct, up-to-date answer both times, with zero memory reallocation in between.</p>
+<h2>Intuition</h2>
+<p>Start from the wrong-but-tempting solution: a plain Python list, where you <code>append()</code> new readings and <code>pop(0)</code> the oldest one once you exceed your window size. It's correct. It's also quietly expensive — <code>pop(0)</code> on a list is O(n) because every remaining element has to shift left by one. If you're sampling a sensor 100 times a second, you're doing that shift 100 times a second, forever.</p>
+<p>The fix starts with a reframe: you don't actually need the list to shrink and grow. You need a <strong>fixed number of slots</strong> that get reused. Picture a physical row of exactly 5 slots on a shelf. You always write to the "next open" slot. When you run out of shelf space, you don't build a new shelf — you go back to the beginning and start overwriting, because the oldest item on the shelf is, by definition, the one you care about least.</p>
+<p>That's the entire idea. Two pointers do the bookkeeping:</p>
+<ul>
+<li><strong>head</strong> — points to the oldest value (what gets dequeued next).</li>
+<li><strong>tail</strong> — points to the next empty slot (where the next value gets written).</li>
+</ul>
+<p>Writing a value is <code>buffer[tail] = value</code>, then advancing tail. When tail walks off the end of the array, it needs to come back to index 0 — that's the "wraparound." Instead of an <code>if tail == capacity: tail = 0</code> check, you get the same result with one arithmetic expression:</p>
+<pre><code>tail = (tail + 1) % capacity
+</code></pre>
+<p>The modulo operator gives you the remainder after division. As long as <code>tail</code> is less than <code>capacity</code>, <code>tail % capacity</code> just returns <code>tail</code> unchanged. The moment <code>tail</code> would equal <code>capacity</code>, the modulo operation snaps it back to <code>0</code>. One line replaces a branch, and it works identically for <code>head</code> once the buffer is full and old entries start getting evicted.</p>
+<p>Here's the part that trips almost everyone up the first time: what happens when <code>head</code> and <code>tail</code> land on the exact same index? That position alone is ambiguous — it means either the buffer is completely empty (nothing written yet) or completely full (every slot occupied, next write would overwrite the oldest unread value). The pointers can't tell you which. You need a third piece of state — typically a <code>size</code> counter — to break the tie.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Use a plain Python list. Append new values to the end; once the list exceeds the window size, remove from the front.</p>
+<pre><code class="language-python">window = []
+window.append(new_reading)
+if len(window) &gt; WINDOW_SIZE:
+    window.pop(0)
+</code></pre>
+<p><strong>Advantages:</strong>
+- Trivial to write and reason about.
+- No pointer math, no edge cases around wraparound.</p>
+<p><strong>Disadvantages:</strong>
+- <code>pop(0)</code> is O(n) — every element shifts down one index.
+- Memory can spike temporarily during resizing operations under the hood.
+- Doesn't reflect how memory-constrained hardware actually needs to behave.</p>
+<p><strong>Time complexity:</strong> O(n) per insertion once the window is full.
+<strong>Space complexity:</strong> O(n) where n is the window size — same as the ring buffer, but the <em>time</em> cost is the real problem here.</p>
+<h2>Optimal Solution</h2>
+<p>The ring buffer solves the same problem with:</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>buffer</code></td>
+<td>Fixed-size list, pre-allocated to <code>capacity</code></td>
+</tr>
+<tr>
+<td><code>head</code></td>
+<td>Index of the oldest element</td>
+</tr>
+<tr>
+<td><code>tail</code></td>
+<td>Index of the next write position</td>
+</tr>
+<tr>
+<td><code>size</code></td>
+<td>Current count of elements (resolves the head==tail ambiguity)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Enqueue:</strong>
+1. Write the new value at <code>buffer[tail]</code>.
+2. Advance <code>tail = (tail + 1) % capacity</code>.
+3. If the buffer was already full, advance <code>head</code> too (the oldest value is overwritten) — <code>size</code> stays at <code>capacity</code>.
+4. Otherwise, increment <code>size</code>.</p>
+<p><strong>Dequeue:</strong>
+1. Read the value at <code>buffer[head]</code>.
+2. Advance <code>head = (head + 1) % capacity</code>.
+3. Decrement <code>size</code>.</p>
+<p>Every operation touches a fixed number of array slots and integer variables — no loops, no shifting, no reallocation. That's what makes it O(1).</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">class RingBuffer:
+    &quot;&quot;&quot;Fixed-capacity circular buffer with O(1) enqueue/dequeue.&quot;&quot;&quot;
+
+    def __init__(self, capacity: int):
+        if capacity &lt;= 0:
+            raise ValueError(&quot;capacity must be positive&quot;)
+        self.capacity = capacity
+        self.buffer = [None] * capacity
+        self.head = 0
+        self.tail = 0
+        self.size = 0
+
+    def is_empty(self) -&gt; bool:
+        return self.size == 0
+
+    def is_full(self) -&gt; bool:
+        return self.size == self.capacity
+
+    def enqueue(self, value) -&gt; None:
+        self.buffer[self.tail] = value
+        self.tail = (self.tail + 1) % self.capacity
+        if self.is_full():
+            # Buffer was already full: the write above overwrote
+            # the oldest slot, so head must advance too.
+            self.head = (self.head + 1) % self.capacity
+        else:
+            self.size += 1
+
+    def dequeue(self):
+        if self.is_empty():
+            raise IndexError(&quot;dequeue from empty buffer&quot;)
+        value = self.buffer[self.head]
+        self.buffer[self.head] = None
+        self.head = (self.head + 1) % self.capacity
+        self.size -= 1
+        return value
+
+    def front(self):
+        if self.is_empty():
+            raise IndexError(&quot;front of empty buffer&quot;)
+        return self.buffer[self.head]
+
+    def rear(self):
+        if self.is_empty():
+            raise IndexError(&quot;rear of empty buffer&quot;)
+        return self.buffer[(self.tail - 1) % self.capacity]
+
+    def to_list(self) -&gt; list:
+        &quot;&quot;&quot;Oldest-to-newest snapshot of current contents.&quot;&quot;&quot;
+        return [self.buffer[(self.head + i) % self.capacity] for i in range(self.size)]
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><strong><code>__init__</code></strong>: Pre-allocates the full array up front (<code>[None] * capacity</code>) — this is the "fixed memory" guarantee in code form. <code>head</code>, <code>tail</code>, and <code>size</code> all start at zero.</li>
+<li><strong><code>is_full</code></strong>: Uses <code>size</code>, not pointer comparison, precisely because <code>head == tail</code> is ambiguous on its own.</li>
+<li><strong><code>enqueue</code></strong>: Writes first, advances <code>tail</code> second. The <code>is_full()</code> check happens <em>after</em> the write but reflects state <em>before</em> the write — that ordering is what correctly detects "the buffer was already full when this call started."</li>
+<li><strong><code>dequeue</code></strong>: Reads from <code>head</code>, clears the slot (optional, but avoids holding a stale reference), then advances <code>head</code> with the same wraparound formula.</li>
+<li><strong><code>rear</code></strong>: Since <code>tail</code> always points to the <em>next</em> empty slot, the actual last-written value lives at <code>tail - 1</code>. The <code>% capacity</code> handles the case where <code>tail</code> is currently <code>0</code> (wraps to <code>capacity - 1</code>) — Python's modulo of a negative number stays non-negative, so this is safe without extra branching.</li>
+<li><strong><code>to_list</code></strong>: Walks <code>size</code> elements starting at <code>head</code>, using modulo to stay in bounds regardless of where <code>head</code> currently sits in the underlying array.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Capacity 3. Start empty: <code>head=0, tail=0, size=0</code>.</p>
+<pre><code>enqueue(10)
+  buffer = [10, None, None]
+  tail = 1, size = 1 (not full yet)
+
+enqueue(20)
+  buffer = [10, 20, None]
+  tail = 2, size = 2
+
+enqueue(30)
+  buffer = [10, 20, 30]
+  tail = 0 (wrapped), buffer now full -&gt; head advances to 1
+  size stays 3
+
+enqueue(40)
+  buffer[0] = 40 -&gt; buffer = [40, 20, 30]
+  tail = 1
+  already full -&gt; head advances to 2
+  size stays 3
+
+to_list() reads starting at head=2:
+  index 2 -&gt; 30, index 0 -&gt; 40, index 1 -&gt; 20
+  result: [30, 40, 20]
+</code></pre>
+<p>Notice <code>10</code> and <code>20</code>'s original slot got reused without ever resizing the list — and <code>to_list()</code> still returns values in correct oldest-to-newest order despite the physical array being "scrambled" by wraparound.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time — Enqueue/Dequeue: O(1).</strong> Every operation performs a fixed number of index writes and modulo operations, regardless of how many elements have ever passed through the buffer.</li>
+<li><strong>Time — to_list(): O(n)</strong> where n is <code>size</code>, since you're materializing a snapshot.</li>
+<li><strong>Space: O(capacity).</strong> The array is allocated once, at construction, and never resized — this is the entire point of the structure, and it's exactly what makes it viable on memory-constrained hardware.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p>Python's <code>collections.deque</code> with a <code>maxlen</code> argument gives you nearly identical behavior out of the box:</p>
+<pre><code class="language-python">from collections import deque
+window = deque(maxlen=5)
+window.append(new_reading)  # oldest auto-evicted once full
+</code></pre>
+<p><code>deque</code> is implemented as a doubly linked list of blocks internally, giving O(1) append/pop from both ends. For most application-level Python code, reach for <code>deque(maxlen=n)</code> — it's battle-tested and less code to maintain. The manual ring buffer earns its place when you need explicit control over the underlying array (embedded/C-like environments, custom memory layouts, or when an interviewer specifically wants to see you reason about pointers and modulo arithmetic instead of calling a library).</p>
+<h2>Edge Cases</h2>
+<ol>
+<li><strong>Empty buffer dequeue/front/rear</strong> — must raise or signal an error rather than returning stale/<code>None</code> data silently.</li>
+<li><strong>Capacity of 1</strong> — <code>head</code> and <code>tail</code> collide immediately on the first enqueue; verify <code>is_full()</code> triggers correctly at size 1.</li>
+<li><strong>Enqueue exactly <code>capacity</code> times, no more</strong> — buffer should be full but head/tail should not have wrapped past their starting relationship incorrectly.</li>
+<li><strong>Enqueue far beyond capacity</strong> (e.g., 10x capacity) — confirms wraparound math holds under repeated cycling, not just on the first wrap.</li>
+<li><strong>Duplicate values</strong> — the structure doesn't care about value identity, only position; make sure equality checks in tests don't assume uniqueness.</li>
+</ol>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Using <code>head == tail</code> alone to mean "empty."</strong> This silently misreports a full buffer as empty, corrupting every subsequent read.</li>
+<li><strong>Forgetting the wraparound on <code>head</code>, not just <code>tail</code>.</strong> Many implementations correctly wrap <code>tail</code> but forget <code>head</code> needs the same treatment once the buffer starts evicting.</li>
+<li><strong>Off-by-one in <code>rear()</code>.</strong> Since <code>tail</code> points to the <em>next</em> empty slot, forgetting to subtract 1 before reading returns garbage or <code>None</code>.</li>
+<li><strong>Growing the array anyway.</strong> Appending to a Python list instead of pre-allocating with <code>[None] * capacity</code> quietly reintroduces O(n) resizing behavior, defeating the purpose.</li>
+<li><strong>Negative modulo assumptions from other languages.</strong> In C, <code>-1 % 3</code> can be <code>-1</code>; in Python it's <code>2</code>. Code ported from another language may need adjustment.</li>
+<li><strong>Not clearing evicted slots when it matters.</strong> If buffer values hold large objects or sensitive data, leaving stale references in overwritten-but-unreached slots can cause memory leaks or data exposure in long-lived processes.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you make this thread-safe for a producer/consumer scenario?</li>
+<li>How does this compare to <code>collections.deque(maxlen=n)</code> under the hood?</li>
+<li>Could you implement this without an explicit <code>size</code> counter, using one wasted slot instead? (Yes — a common variant sacrifices one array slot so <code>head == tail</code> unambiguously means empty, and <code>(tail + 1) % capacity == head</code> means full.)</li>
+<li>How would you generalize this to support dynamic resizing when capacity needs change at runtime?</li>
+<li>What happens to this design under multiple concurrent producers?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 622 — Design Circular Queue</strong>: Nearly identical to this implementation, testing the same head/tail/size mechanics directly.</li>
+<li><strong>LeetCode 641 — Design Circular Deque</strong>: Extends the same idea to insertion/removal from both ends.</li>
+<li><strong>LeetCode 359 — Logger Rate Limiter</strong>: Uses a similar fixed-window idea, though typically solved with a hash map rather than an array.</li>
+<li><strong>LeetCode 239 — Sliding Window Maximum</strong>: A different sliding-window problem, but shares the "only care about the last k elements" framing.</li>
+<li><strong>LRU Cache (LeetCode 146)</strong>: Different eviction policy (least-recently-used instead of oldest-inserted), but same underlying instinct — fixed capacity, constant-time operations, explicit eviction logic.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>A ring buffer trades the illusion of infinite storage for something better in constrained environments: guaranteed, predictable memory usage combined with guaranteed, predictable speed. The wraparound trick — <code>(index + 1) % capacity</code> — replaces a conditional with arithmetic, and the head/tail/size trio resolves the one genuine ambiguity in the design. Once you've built one from scratch, you'll recognize the same pattern in audio buffers, network packet queues, and log rotation systems — anywhere a live stream meets a fixed memory budget.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with visuals of the wraparound in motion, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This article is part of <strong>Fun with Learning Technology</strong>, a series that pulls apart the everyday technology you use — from the data structures inside your smartwatch to the systems powering the apps on your phone — and rebuilds the intuition from first principles. No shortcuts to "just memorize this," just the actual reasoning an engineer goes through to arrive at the solution.</p>
+<h2>Call To Action</h2>
+<p>If this helped the ring buffer finally click, drop a like on the video and subscribe on YouTube for more deep dives like this one. For the full written breakdowns before anyone else sees them, subscribe to the Substack. And if you've got a data structure or system you want cracked open next, leave it in the comments — that's genuinely how future topics get picked.</p>
+<hr /></article>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
