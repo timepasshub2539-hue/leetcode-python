@@ -1,0 +1,244 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maximum Subarray Sum With Length Divisible by K — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/maximum-subarray-sum-with-length-divisible-by-k
+💻 Code on GitHub: https://githu">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/maximum-subarray-sum-with-length-divisible-by-k.html">
+<meta property="og:title" content="Maximum Subarray Sum With Length Divisible by K — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/maximum-subarray-sum-with-length-divisible-by-k
+💻 Code on GitHub: https://githu">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Maximum Subarray Sum With Length Divisible by K</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Kadane's algorithm is one of the first "aha" moments most people have with dynamic programming. Track a running sum, reset it when it goes negative, keep the best value you've seen — done. It solves maximum subarray sum in one clean pass, and because it works so reliably, it becomes the reflexive answer any time "maximum subarray sum" shows up in a problem statement.</p>
+<p>That reflex is exactly what breaks here. Add one constraint — the subarray's length has to be a multiple of k — and Kadane's algorithm keeps producing an answer, it just produces the <em>wrong</em> one. It has no concept of length at all; it only cares about sum. That gap between "runs without error" and "runs correctly" is what makes this problem worth sitting with. It's a good test of whether you actually understand why Kadane's algorithm works, or whether you've just memorized the five lines of code.</p>
+<p>This pattern — prefix sums bucketed by a property of the index rather than scanned as one flat array — shows up again in interviews under different disguises: subarrays with sum divisible by k, subarrays of exactly length k, subarrays where two elements must be a fixed distance apart. Once you see the "lane" idea once, you start recognizing it everywhere.</p>
+<h2>Problem Overview</h2>
+<p>You're given an array of integers and an integer <code>k</code>. You need to find the maximum possible sum of a contiguous subarray, but with one restriction: the subarray's <em>length</em> must be divisible by <code>k</code>. So valid lengths are <code>k</code>, <code>2k</code>, <code>3k</code>, and so on — never anything in between.</p>
+<p>The array can hold up to 200,000 elements, which rules out any solution that checks subarrays one at a time. You need something close to linear time.</p>
+<p>If the array has fewer than <code>k</code> elements, there's no valid subarray at all — there isn't even one slice of length <code>k</code> to pick. Return null or raise, depending on your API's convention.</p>
+<h2>Example</h2>
+<pre><code>nums = [2, -1, 5, -3, 4]
+k = 2
+</code></pre>
+<p>Valid lengths: 2 or 4 (the array only has 5 elements, so 2 or 4 are the only multiples of k that fit).</p>
+<ul>
+<li>Length 2 candidates: <code>[2,-1]=1</code>, <code>[-1,5]=4</code>, <code>[5,-3]=2</code>, <code>[-3,4]=1</code></li>
+<li>Length 4 candidates: <code>[2,-1,5,-3]=3</code>, <code>[-1,5,-3,4]=5</code></li>
+</ul>
+<p>Best overall: <code>[-1, 5, -3, 4]</code> with sum <code>5</code>.</p>
+<p>Notice Kadane's algorithm, run unmodified on this array, would greedily assemble <code>[2,-1,5]</code> or similar length-3 windows if they scored higher — a length that isn't a multiple of <code>k</code> at all, and therefore not a legal answer.</p>
+<h2>Intuition</h2>
+<p>The instinct when you see "subarray sum" is to reach for Kadane. Resist it here — Kadane collapses every subarray into a single running value and forgets what length it corresponds to. Once length itself is part of the constraint, you need a technique that can filter by length cheaply, and rescanning every possible length is where the n² brute force comes from.</p>
+<p>The move that unlocks this is prefix sums. Build <code>prefix[i]</code> as the sum of the first <code>i</code> elements, with <code>prefix[0] = 0</code> representing the empty prefix. Now the sum of any subarray from index <code>i</code> to <code>j-1</code> (inclusive) is just:</p>
+<pre><code>subarray_sum(i, j) = prefix[j] - prefix[i]
+</code></pre>
+<p>That turns "find the best subarray" into "find the best pair of prefix values to subtract." And the length of that subarray is simply <code>j - i</code>.</p>
+<p>Here's the part that makes the constraint tractable: <code>j - i</code> is divisible by <code>k</code> exactly when <code>i</code> and <code>j</code> share the same remainder mod <code>k</code>. That's just modular arithmetic — if two numbers differ by a multiple of <code>k</code>, they land on the same point going around a clock with <code>k</code> hours on it.</p>
+<p>So instead of comparing every prefix index against every other prefix index, you only ever need to compare indices that share a remainder. Split the indices into <code>k</code> separate "lanes," one per remainder value. Within a lane, the problem is now the classic "maximize prefix[j] - prefix[i] for i &lt; j" — which you solve by keeping a running minimum as you scan left to right.</p>
+<p>It's worth being explicit about a trap here: this is <em>not</em> the same setup as Continuous Subarray Sum, where you track the running sum's value mod k. There, the sum's divisibility is what matters, so you bucket by <code>sum mod k</code>. Here, it's the <em>length</em> that must divide k, so you bucket by <code>index mod k</code> — the running sum itself stays a normal, un-modded total. Mixing these two up is the single most common way people get this problem wrong.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> For every valid length (multiples of <code>k</code> up to <code>n</code>), slide a window of that length across the array and track the best sum found.</p>
+<p><strong>Algorithm:</strong>
+1. For each length <code>L</code> in <code>{k, 2k, 3k, ...}</code> up to <code>n</code>
+2. For each starting index, sum the <code>L</code> elements starting there
+3. Track the running maximum</p>
+<p><strong>Advantages:</strong> Trivial to reason about and verify by hand; no modular arithmetic to get wrong.</p>
+<p><strong>Disadvantages:</strong> Recomputing each window's sum from scratch is <code>O(n)</code> per window and there are <code>O(n)</code> windows per length, with <code>O(n/k)</code> valid lengths — worst case (<code>k</code> small) this is <code>O(n²)</code>. On 200,000 elements that's tens of billions of operations, far past what runs in a reasonable time limit.</p>
+<p><strong>Complexity:</strong> Time <code>O(n²)</code> in the worst case, space <code>O(1)</code>.</p>
+<p>(You can shave this to <code>O(n²/k)</code> with a sliding sum per length, but it's still quadratic-shaped for small <code>k</code>, so it doesn't change the fundamental problem.)</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach has three pieces, all built on the intuition above:</p>
+<ol>
+<li><strong>Prefix array</strong> — <code>prefix[0] = 0</code>, then <code>prefix[i] = prefix[i-1] + nums[i-1]</code>.</li>
+<li><strong>One minimum tracker per remainder lane</strong> — <code>lane_min[r]</code> holds the smallest prefix value seen so far among indices where <code>index % k == r</code>.</li>
+<li><strong>A single forward pass</strong> — at each index <code>j</code>, compute its lane <code>r = j % k</code>. If that lane already has a recorded minimum, <code>prefix[j] - lane_min[r]</code> is a candidate answer for a subarray ending at <code>j</code>. Then update <code>lane_min[r]</code> with <code>prefix[j]</code> if it's smaller than what's stored.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happens</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Seed</td>
+<td><code>lane_min[0] = 0</code></td>
+<td><code>prefix[0]</code> belongs to remainder <code>0</code> and must be seedable immediately</td>
+</tr>
+<tr>
+<td>Scan</td>
+<td>Walk <code>j</code> from <code>1</code> to <code>n</code></td>
+<td>Each <code>j</code> is a candidate "end" of a subarray</td>
+</tr>
+<tr>
+<td>Compare</td>
+<td><code>prefix[j] - lane_min[j % k]</code></td>
+<td>Only ever compares against an earlier index in the <em>same</em> lane, guaranteeing the length divides <code>k</code></td>
+</tr>
+<tr>
+<td>Update</td>
+<td><code>lane_min[j % k] = min(lane_min[j % k], prefix[j])</code></td>
+<td>Keeps the lane's minimum current for future comparisons</td>
+</tr>
+</tbody>
+</table>
+<p>Because each lane only ever needs its running minimum — not every value it has ever seen — the whole thing collapses into one pass with <code>k</code> numbers of extra memory.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def max_subarray_sum_div_by_k(nums: list[int], k: int) -&gt; int | None:
+    &quot;&quot;&quot;Max sum of a contiguous subarray whose length is a multiple of k.&quot;&quot;&quot;
+    n = len(nums)
+    if k &lt;= 0 or n &lt; k:
+        return None
+
+    lane_min = [None] * k
+    lane_min[0] = 0  # prefix[0] = 0, remainder 0
+
+    prefix = 0
+    best = float(&quot;-inf&quot;)
+
+    for j in range(1, n + 1):
+        prefix += nums[j - 1]
+        lane = j % k
+
+        if lane_min[lane] is not None:
+            best = max(best, prefix - lane_min[lane])
+
+        if lane_min[lane] is None or prefix &lt; lane_min[lane]:
+            lane_min[lane] = prefix
+
+    return best if best != float(&quot;-inf&quot;) else None
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>lane_min = [None] * k</code> — one slot per remainder; <code>None</code> means "no prefix has landed in this lane yet."</li>
+<li><code>lane_min[0] = 0</code> — seeds the empty-prefix case so a subarray starting at index 0 is comparable from the very first iteration.</li>
+<li>The loop runs <code>j</code> from <code>1</code> to <code>n</code> inclusive, representing <code>prefix[j]</code> — the sum of the first <code>j</code> elements.</li>
+<li><code>prefix += nums[j - 1]</code> extends the running total by the newest element.</li>
+<li><code>lane = j % k</code> decides which bucket this prefix belongs to.</li>
+<li>The candidate check <code>prefix - lane_min[lane]</code> only fires once that lane has a recorded minimum — otherwise there's no earlier index to pair with.</li>
+<li>The update at the end always keeps <code>lane_min[lane]</code> as the smallest prefix seen so far in that lane, which is what makes future subtractions maximal.</li>
+</ul>
+<h2>Dry Run</h2>
+<p><code>nums = [2, -1, 5, -3, 4]</code>, <code>k = 2</code></p>
+<table>
+<thead>
+<tr>
+<th>j</th>
+<th>nums[j-1]</th>
+<th>prefix</th>
+<th>lane (j%2)</th>
+<th>lane_min before</th>
+<th>candidate</th>
+<th>best</th>
+<th>lane_min after</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>2</td>
+<td>2</td>
+<td>1</td>
+<td>None</td>
+<td>—</td>
+<td>-inf</td>
+<td>lane1=2</td>
+</tr>
+<tr>
+<td>2</td>
+<td>-1</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td>1-0=1</td>
+<td>1</td>
+<td>lane0=0 (unchanged)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>5</td>
+<td>6</td>
+<td>1</td>
+<td>2</td>
+<td>6-2=4</td>
+<td>4</td>
+<td>lane1=2 (unchanged)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>-3</td>
+<td>3</td>
+<td>0</td>
+<td>0</td>
+<td>3-0=3</td>
+<td>4</td>
+<td>lane0=0 (unchanged)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>4</td>
+<td>7</td>
+<td>1</td>
+<td>2</td>
+<td>7-2=5</td>
+<td>5</td>
+<td>lane1=2 (unchanged)</td>
+</tr>
+</tbody>
+</table>
+<p>Final answer: <code>5</code>, matching <code>[-1, 5, -3, 4]</code> from the earlier example.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> <code>O(n)</code> — a single forward pass, constant work per index.</p>
+<p><strong>Space:</strong> <code>O(k)</code> — one minimum value stored per remainder lane, independent of <code>n</code>.</p>
+<p>Both are correct because the algorithm never revisits an index and never needs more than the running minimum per lane — it doesn't need to remember every prefix value, just the smallest one in each bucket, since only the smallest can ever produce the maximum difference.</p>
+<h2>Alternative Solutions</h2>
+<p>For the <em>fixed-length</em> version of this problem (subarray length exactly <code>k</code>, not a multiple of <code>k</code>), a plain sliding window is the right tool — add the incoming element, drop the outgoing one, no prefix sums needed. It's tempting to reach for that here too, but sliding window assumes a single known length; once the length is "any multiple of k," you'd need a separate window per length, which regresses back toward brute force. The remainder-lane trick only earns its keep once the length is unknown ahead of time.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Array shorter than k</strong> — no valid subarray exists; return <code>None</code>/raise, don't silently return 0.</li>
+<li><strong>All negative numbers</strong> — you still must return a subarray of valid length; the algorithm naturally finds the "least bad" option since it just maximizes the difference, without ever skipping the requirement.</li>
+<li><strong>k equals the array length</strong> — only one valid length exists (the whole array), so the answer is simply <code>sum(nums)</code>.</li>
+<li><strong>Best answer is the entire array</strong> — the lane logic handles this without special-casing; it's just the largest possible gap between <code>prefix[0]</code> and <code>prefix[n]</code> if they share a lane.</li>
+<li><strong>k = 1</strong> — every length is valid, degenerating into the classic unconstrained maximum subarray sum problem.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Applying Kadane's directly</strong> — it ignores length entirely and will happily return an invalid-length subarray.</li>
+<li><strong>Bucketing prefix sums by <code>sum mod k</code> instead of <code>index mod k</code></strong> — that's the setup for Continuous Subarray Sum, a different problem with a different divisibility target.</li>
+<li><strong>Forgetting to seed <code>lane_min[0] = 0</code></strong> — without it, subarrays starting at index 0 in remainder-0 positions get silently skipped.</li>
+<li><strong>Off-by-one on the prefix array</strong> — using <code>nums[j]</code> instead of <code>nums[j-1]</code>, or looping <code>j</code> from <code>0</code> instead of <code>1</code>, throws off every remainder calculation.</li>
+<li><strong>Not guarding <code>n &lt; k</code></strong> — the loop will run without error but return a meaningless or misleading result instead of signaling "no valid subarray."</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would this change if you needed the length to be <em>exactly</em> a multiple of k, but with an upper bound?</li>
+<li>What if instead of "length divisible by k," the constraint were "length at least k"?</li>
+<li>Can you reconstruct the actual subarray (indices), not just the sum?</li>
+<li>How would you handle a streaming input where you can't hold the whole array in memory?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Maximum Subarray (LeetCode 53)</strong> — the unconstrained base case; Kadane's algorithm alone.</li>
+<li><strong>Continuous Subarray Sum (LeetCode 523)</strong> — bucket by <code>sum mod k</code> instead of <code>index mod k</code>; easy to conflate with this problem.</li>
+<li><strong>Subarray Sum Equals K (LeetCode 560)</strong> — prefix sums plus a hashmap of counts, same prefix-difference idea in a different shape.</li>
+<li><strong>Maximum Sum of Subarray with Length K (fixed-length sliding window)</strong> — the simpler sibling this problem is often mistaken for.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>A tool working correctly and a tool being the <em>right</em> tool are different things — Kadane's algorithm runs fine here, it just answers a question you didn't ask. The fix isn't a new algorithm from scratch; it's reframing the sum constraint as a prefix-difference problem, then noticing that the length constraint becomes a remainder constraint on the indices. Once indices are grouped into lanes by <code>index % k</code>, the rest is the same running-minimum trick that solves plain maximum subarray sum, applied <code>k</code> times over instead of once.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough — including a live trace over three official test cases plus extra edge cases, and a real timing comparison between brute force and the optimal solution — watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This is part of Fun with Learning Technology, a series that breaks down one coding interview problem at a time — not just the solution, but the reasoning that gets you there, the wrong turns that look tempting, and why they fail. New problem every episode, same format: understand the trap first, then the fix.</p>
+<h2>Call To Action</h2>
+<p>If this pattern clicked, the video walks through it visually with a live trace and timing comparison — worth a watch on YouTube, and hitting subscribe means you won't miss the next one. For deeper write-ups like this one delivered straight to your inbox, subscribe to the Substack. Questions, corrections, or a case this doesn't cover? Drop a comment — and if this saved you from a debugging rabbit hole, share it with someone prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Kadane&#x27;s Trick fails here — why?</summary><p>Kadane greedily extends/resets any subarray, but it can&#x27;t enforce a length constraint like &#x27;length % k == 0&#x27;.</p></details><details class='card2'><summary>Core reframe: subarray sum via prefix sums?</summary><p>sum(i..j) = prefix[j] - prefix[i-1]. Fixing length%k means i-1 and j must land in the same remainder class mod k.</p></details><details class='card2'><summary>&#x27;Same remainder, same lane&#x27; — what&#x27;s the trick?</summary><p>Group prefix sums by index%k into k lanes; track min prefix seen per lane, maximize prefix[j]-minPrefix[lane] as j scans.</p></details><details class='card2'><summary>Time and space complexity of the prefix-lanes solution?</summary><p>O(n) time — one pass building prefix sums and updating per-lane minimums; O(k) space for the lane minimums array.</p></details><details class='card2'><summary>Trickiest edge case in the lane-minimum trick?</summary><p>Must initialize lane 0 with prefix[0]=0 (empty prefix) before scanning, or you miss subarrays starting at index 0.</p></details><details class='card2'><summary>This lane-by-remainder trick vs plain prefix-sum + hashmap (subarray sum equals k)?</summary><p>Both index prefix sums by a key; here the key is index%k (fixed k lanes), not the sum value itself.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
