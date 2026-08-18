@@ -1,0 +1,256 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3471. Find the Largest Almost Missing Integer | LeetCode Daily Python Solution (3 windows, 1 answer) — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/find-the-largest-almost-missing-integer
+💻 Code on GitHub: https://github.com/ti">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/find-the-largest-almost-missing-integer.html">
+<meta property="og:title" content="3471. Find the Largest Almost Missing Integer | LeetCode Daily Python Solution (3 windows, 1 answer) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/find-the-largest-almost-missing-integer
+💻 Code on GitHub: https://github.com/ti">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>3471. Find the Largest Almost Missing Integer | LeetCode Daily Python Solution (3 windows, 1 answer)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Sliding window problems show up constantly in coding interviews because they test something more valuable than syntax: can you notice when you're doing repeated work you don't actually need? LeetCode 3471, Find the Largest Almost Missing Integer, looks like a straightforward "scan every window" problem on the surface. The brute force is obvious and easy to write. But it's also a trap — it runs in O(n·k) time, and the moment an interviewer bumps up the constraints, that solution falls over.</p>
+<p>What makes this problem worth your time isn't the final code — it's the reasoning that gets you there. You'll practice a skill that transfers to dozens of other sliding window problems: proving that most of your input is irrelevant to the answer, so you never have to touch it. That's the kind of insight interviewers are actually screening for when they hand you a window problem.</p>
+<h2>Problem Overview</h2>
+<p>You're given an array of integers <code>nums</code> and an integer <code>k</code>. Look at every contiguous window of exactly <code>k</code> elements in the array. A number is called "almost missing" if it appears in exactly one of those windows — not zero, not two or more, exactly one.</p>
+<p>Your task is to return the largest value in the array that qualifies as almost missing. If no value appears in exactly one window, return <code>-1</code>.</p>
+<p>The subtlety is that a value can appear at multiple positions in the array. Every one of those positions contributes to that value's total window coverage, and you have to add all of them up before deciding whether it's really "almost missing."</p>
+<h2>Example</h2>
+<p>Take <code>nums = [3, 9, 2, 1, 7]</code> with <code>k = 3</code>.</p>
+<p>The windows are:</p>
+<table>
+<thead>
+<tr>
+<th>Window</th>
+<th>Elements</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>[3, 9, 2]</td>
+</tr>
+<tr>
+<td>2</td>
+<td>[9, 2, 1]</td>
+</tr>
+<tr>
+<td>3</td>
+<td>[2, 1, 7]</td>
+</tr>
+</tbody>
+</table>
+<p>Count how many windows each value appears in:</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Windows it appears in</th>
+<th>Count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3</td>
+<td>Window 1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Windows 1, 2</td>
+<td>2</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Windows 1, 2, 3</td>
+<td>3</td>
+</tr>
+<tr>
+<td>1</td>
+<td>Windows 2, 3</td>
+<td>2</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Window 3</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p>Only <code>3</code> and <code>7</code> appear in exactly one window. Between them, <code>7</code> is larger, so the answer is <code>7</code>.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer would approach this rather than just diving into code.</p>
+<p>Start with the honest question: what does the brute force actually cost you? For every window, you scan up to <code>k</code> elements to count occurrences. With <code>n - k + 1</code> windows, that's O(n·k) work, and every window overlaps heavily with its neighbor — you're re-doing almost the same count over and over.</p>
+<p>The real insight comes from asking a different question: which positions in the array can <em>ever</em> be almost missing, regardless of their value? Picture the array split into three zones:</p>
+<ul>
+<li>A <strong>left edge zone</strong>: the first <code>k - 1</code> positions.</li>
+<li>A <strong>big middle zone</strong>: everything else.</li>
+<li>A <strong>right edge zone</strong>: the last <code>k - 1</code> positions.</li>
+</ul>
+<p>Any position in the middle zone gets covered by every window that could possibly contain it, and because of how sliding windows overlap, that's always exactly <code>k</code> windows. So a middle element is touched <code>k</code> times minimum — it can only be "almost missing" if <code>k = 1</code>, which is a degenerate case handled separately. For any <code>k &gt; 1</code>, the middle is dead weight. You never need to check it.</p>
+<p>That leaves only the two edges. A position near the start of the array is included in fewer windows because there aren't enough windows early enough to reach it — the same logic applies in mirror at the end. So the number of candidates you actually need to examine collapses from <code>n</code> down to roughly <code>2k</code>.</p>
+<p>There's one more wrinkle: duplicates. If the same value appears at two different indices, each occurrence contributes its own window coverage. You have to sum coverage across <em>all</em> occurrences of a value, not just look at one, or you'll wrongly call a duplicate "almost missing" when its combined coverage is actually two or more.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> For every window, count how many times each value appears across all windows, using a dictionary. At the end, scan the dictionary for values that appear exactly once, and take the max.</p>
+<p><strong>Algorithm:</strong>
+1. For each starting index <code>i</code> from <code>0</code> to <code>n - k</code>, slice out the window <code>nums[i:i+k]</code>.
+2. For each value in that window, increment its count in a global dictionary.
+3. After processing all windows, find the largest key with a count of exactly 1.</p>
+<p><strong>Advantages:</strong> Simple to write, easy to reason about, hard to get wrong.</p>
+<p><strong>Disadvantages:</strong> Re-scans overlapping data on every window. Doesn't take advantage of the structural insight that only edge elements matter.</p>
+<p><strong>Time complexity:</strong> O(n·k) — <code>n - k + 1</code> windows, each costing up to <code>k</code> work.
+<strong>Space complexity:</strong> O(n) for the counting dictionary in the worst case.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach never builds or scans windows directly. Instead, it computes each candidate's <em>total window coverage</em> using a formula, and only checks candidates that could possibly qualify.</p>
+<p><strong>Step 1 — Handle the giant-<code>k</code> case.</strong> If <code>k &gt;= n</code>, there's at most one window in existence (or none). Every value is automatically "almost missing" in that case, so the answer is simply the maximum of the array.</p>
+<p><strong>Step 2 — Coverage formula for a single index.</strong> For an index <code>i</code> (0-indexed) in an array of length <code>n</code> with window size <code>k</code>, the number of windows that include index <code>i</code> is:</p>
+<pre><code>coverage(i) = min(i, k - 1, n - k, n - 1 - i) + 1
+</code></pre>
+<p>This works because a window's start position <code>s</code> must satisfy <code>s &lt;= i</code> and <code>s &gt;= i - k + 1</code>, combined with the valid range <code>0 &lt;= s &lt;= n - k</code>. The formula folds all four boundary constraints into one expression using whichever limit is tightest — left edge, right edge, or window size.</p>
+<p><strong>Step 3 — Collect edge candidates.</strong> Only positions in the first <code>k - 1</code> and last <code>k - 1</code> indices can have coverage less than <code>k</code> (and therefore possibly equal to 1). Build this candidate index set instead of scanning the whole array.</p>
+<p><strong>Step 4 — Sum coverage per value.</strong> For each <em>value</em> that appears at one or more candidate indices, sum <code>coverage(i)</code> over <strong>every</strong> index where that value occurs anywhere in the array (not just edge positions) — this is what correctly handles duplicates.</p>
+<p><strong>Step 5 — Pick the answer.</strong> Among values whose total coverage equals exactly 1, return the largest. If none qualify, return <code>-1</code>.</p>
+<p>Visually, the candidate zones look like this:</p>
+<pre><code>[ left edge: k-1 positions ] [        middle (skipped)        ] [ right edge: k-1 positions ]
+        candidates                     never checked                     candidates
+</code></pre>
+<h2>Python Code</h2>
+<pre><code class="language-python">from typing import List
+
+
+def largest_almost_missing_integer(nums: List[int], k: int) -&gt; int:
+    n = len(nums)
+
+    # Every value is a candidate if k spans the whole array (or more).
+    if k &gt;= n:
+        return max(nums)
+
+    def window_coverage(index: int) -&gt; int:
+        &quot;&quot;&quot;Number of windows of size k that include this index.&quot;&quot;&quot;
+        return min(index, k - 1, n - k, n - 1 - index) + 1
+
+    # Only the first k-1 and last k-1 positions can ever be almost missing.
+    edge_indices = set(range(k - 1)) | set(range(n - k + 1, n))
+
+    # Map each candidate value to every index where it occurs in the array.
+    value_to_indices = {}
+    for i, val in enumerate(nums):
+        value_to_indices.setdefault(val, []).append(i)
+
+    best = -1
+    seen_values = {nums[i] for i in edge_indices}
+
+    for val in seen_values:
+        total_coverage = sum(window_coverage(i) for i in value_to_indices[val])
+        if total_coverage == 1:
+            best = max(best, val)
+
+    return best
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>if k &gt;= n: return max(nums)</code> — handles the case where there's effectively one window or none; everything qualifies, so the largest value wins outright.</li>
+<li><code>window_coverage(index)</code> — a single formula replacing the need to actually simulate windows. It takes the tightest of four constraints: how far the index is from the start, from the end, and how <code>k</code> limits things on both sides.</li>
+<li><code>edge_indices</code> — a set built from the first <code>k - 1</code> and last <code>k - 1</code> positions. This is the only part of the array we'll ever inspect for candidacy.</li>
+<li><code>value_to_indices</code> — a dictionary mapping every value to <em>all</em> its positions in the array, so that once we decide a value is worth checking, we can sum its true total coverage, duplicates included.</li>
+<li><code>seen_values</code> — the set of distinct values sitting at edge positions; these are the only values that can possibly have total coverage of 1.</li>
+<li>The final loop sums each candidate value's coverage across all its occurrences and keeps the largest value whose total lands on exactly 1.</li>
+</ul>
+<h2>Dry Run</h2>
+<p><code>nums = [3, 9, 2, 1, 7]</code>, <code>k = 3</code>, <code>n = 5</code>.</p>
+<p><code>k &lt; n</code>, so we proceed past the giant-<code>k</code> check.</p>
+<p><code>edge_indices = {0, 1} | {3, 4} = {0, 1, 3, 4}</code> — index <code>2</code> (the middle) is skipped entirely.</p>
+<p><code>seen_values = {3, 9, 1, 7}</code> (the values sitting at those edge indices).</p>
+<p>Compute coverage for each:</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Indices</th>
+<th>coverage(i) per index</th>
+<th>Total</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3</td>
+<td>[0]</td>
+<td>min(0, 2, 2, 4)+1 = 1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>9</td>
+<td>[1]</td>
+<td>min(1, 2, 2, 3)+1 = 2</td>
+<td>2</td>
+</tr>
+<tr>
+<td>1</td>
+<td>[3]</td>
+<td>min(3, 2, 2, 1)+1 = 2</td>
+<td>2</td>
+</tr>
+<tr>
+<td>7</td>
+<td>[4]</td>
+<td>min(4, 2, 2, 0)+1 = 1</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p>Values with total coverage exactly 1: <code>3</code> and <code>7</code>. The larger is <code>7</code>, matching the expected output.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(n). Building <code>edge_indices</code> and <code>value_to_indices</code> is O(n). The candidate set has at most <code>2(k-1)</code> distinct values, and summing their coverage touches each occurrence of each candidate value at most once across the whole array — bounded by O(n) total work, since no index is processed more than a constant number of times in aggregate.</p>
+<p><strong>Space:</strong> O(n) for <code>value_to_indices</code>, which in the worst case stores every index of the array.</p>
+<p>This is correct because the key structural fact — middle elements always have coverage <code>k</code>, which can only equal 1 when <code>k = 1</code> — lets us discard the vast majority of the array without ever looking at it.</p>
+<h2>Alternative Solutions</h2>
+<p>You could also compute coverage using a prefix-sum / difference-array trick: increment a delta array at each window's start and decrement just past its end, then take a running sum to get per-index coverage in one pass, and separately track duplicates. This is mathematically equivalent to the closed-form <code>window_coverage</code> formula above but does the work with array increments instead of a <code>min()</code> call. Both are O(n); the closed-form version is slightly simpler to read and avoids allocating an extra array, so it's the better default here.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong><code>k == 1</code></strong>: every window is a single element, so every value technically has coverage equal to its own frequency. Values appearing exactly once in the whole array qualify.</li>
+<li><strong><code>k == n</code></strong>: handled explicitly — there's exactly one window (or, if <code>k &gt; n</code>, conceptually "the whole array"), so every value is almost missing and the answer is <code>max(nums)</code>.</li>
+<li><strong>All duplicate values</strong>: e.g., <code>[5, 5, 5, 5]</code> — coverage sums will almost always exceed 1 unless <code>k</code> is large enough to collapse to the giant-<code>k</code> case.</li>
+<li><strong>No qualifying value</strong>: return <code>-1</code> — this happens when every value's total coverage is 0 (impossible if it's in the array) or 2+.</li>
+<li><strong>Negative numbers</strong>: the algorithm doesn't care about sign; comparisons and <code>max()</code> work identically.</li>
+<li><strong>Minimum array size</strong>: <code>n == 1</code> with <code>k == 1</code> — trivially returns that single element via the giant-<code>k</code> path.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting to sum coverage across all occurrences of a duplicate value.</strong> Checking only the edge occurrence and ignoring a middle occurrence of the same value will wrongly mark it as almost missing.</li>
+<li><strong>Scanning the whole array for candidates instead of just the edges.</strong> This silently degrades your solution back toward O(n·k) or at least wastes unnecessary work.</li>
+<li><strong>Off-by-one errors in the coverage formula.</strong> Mixing up <code>k - 1</code> vs <code>k</code>, or forgetting the <code>+1</code> at the end, produces coverage counts that are systematically wrong by one.</li>
+<li><strong>Not special-casing <code>k &gt;= n</code>.</strong> The edge-index logic assumes <code>k &lt; n</code>; skipping the guard can cause negative ranges or index errors.</li>
+<li><strong>Assuming "largest value" means "largest index."</strong> The problem asks for the largest <em>value</em>, not the rightmost qualifying position — easy to swap by accident when writing the final comparison.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would this change if you needed the <em>smallest</em> almost missing integer instead of the largest?</li>
+<li>Can you derive the <code>window_coverage</code> formula from first principles on a whiteboard, without me giving it to you?</li>
+<li>What if <code>k</code> could be 0? How would you handle that as a precondition?</li>
+<li>How would you adapt this if windows could wrap around the array circularly?</li>
+<li>Can you solve this using a difference array instead of the closed-form formula, and what's the tradeoff?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 239 — Sliding Window Maximum</strong>: another problem about extracting information from every window efficiently, using a monotonic deque instead of a coverage formula.</li>
+<li><strong>LeetCode 1004 — Max Consecutive Ones III</strong>: a two-pointer sliding window problem that also relies on recognizing which parts of the array actually matter.</li>
+<li><strong>LeetCode 76 — Minimum Window Substring</strong>: teaches the same discipline of avoiding re-scanning overlapping windows, applied to strings.</li>
+<li><strong>LeetCode 2461 — Maximum Sum of Distinct Subarrays With Length K</strong>: reinforces reasoning about fixed-size windows and per-element contribution.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The brute force here isn't wrong, it's just blind — it treats every element as equally worth checking. The optimal solution comes from asking which elements <em>can't possibly</em> be the answer and eliminating them entirely, rather than optimizing how you check each one. Once you see that only the edges matter, and that duplicates need their coverage summed rather than checked once, the rest is arithmetic. This pattern — proving a large chunk of your input is structurally irrelevant — is one of the highest-leverage habits you can build for sliding window problems.</p>
+<h2>Watch the Video</h2>
+<p>Prefer to see this solved step by step, with a live dry run and timing comparison against the brute force? Watch the full walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series where I work through the LeetCode Daily Challenge in Python, one problem at a time. The goal isn't just to get to a working answer — it's to build the reasoning skills that let you spot the optimal approach on your own, in an interview or otherwise. New problems drop regularly, always with the brute force, the reasoning, and the optimized solution side by side.</p>
+<h2>Call To Action</h2>
+<p>If this walkthrough helped the problem click, the video version has the full dry run and a live timing comparison — go like it and subscribe on YouTube so you don't miss the next daily problem. For deeper write-ups like this one delivered straight to your inbox, subscribe to the Substack. And if you've got a cleaner approach or a follow-up question, drop it in the comments — I read all of them.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Trigger: array, need max value that&#x27;s covered by ≤k of the other windows. Pattern?</summary><p>Sliding window with a count array — check window coverage per index, not per window.</p></details><details class='card2'><summary>Time complexity of this almost-missing-integer solution?</summary><p>O(n·k) — for each of n candidate values, scan up to k windows containing it.</p></details><details class='card2'><summary>Space complexity?</summary><p>O(1) extra beyond input — just a few counters and the answer variable, no auxiliary array needed.</p></details><details class='card2'><summary>Trickiest bug: which indices can even be &#x27;almost missing&#x27;?</summary><p>Only elements near the array edges (first k-1 and last k-1) can appear in &lt;k windows; middle ones can&#x27;t qualify.</p></details><details class='card2'><summary>Brute force vs edge-only scan — why does brute force struggle?</summary><p>Brute force checks every window for every value (O(n²)); edge-only exploits that interior values always hit all k windows, so skip them.</p></details><details class='card2'><summary>Follow-up: how would duplicates of the target value affect the answer?</summary><p>If a value repeats, it&#x27;s &#x27;almost missing&#x27; only if every occurrence individually is covered by &lt;k windows.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
