@@ -1,0 +1,203 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>n8n Lesson 13: Why Your API Key Just Leaked in a Log File — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/n8n-lesson-13-authentication-with-http-request
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/n8n-lesso">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/n8n-lesson-13-authentication-with-http-request.html">
+<meta property="og:title" content="n8n Lesson 13: Why Your API Key Just Leaked in a Log File — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/n8n-lesson-13-authentication-with-http-request
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/n8n-lesso">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>n8n Lesson 13: Why Your API Key Just Leaked in a Log File</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every automation platform eventually asks the same question: how do you call an authenticated API without handing your secret to everyone who touches the workflow afterward? In n8n, that question has a very specific failure mode. The HTTP Request node has a plain text field right there in the header configuration, and typing a key directly into it is the path of least resistance. It works immediately. The request succeeds, the demo runs, and nothing about the workflow looks broken.</p>
+<p>The problem surfaces later — when that workflow gets exported for backup, checked into a git repo, or shared with a teammate over Slack. At that point the API key travels with it, sitting in plain text inside the JSON. This is not a theoretical risk. It's the default behavior unless you deliberately route secrets through n8n's credential system instead.</p>
+<p>This matters beyond n8n specifically. Understanding the three shapes that API authentication takes — API keys, Bearer tokens, and Basic auth — is foundational knowledge for anyone building against external services, whether you're writing Python with <code>requests</code>, calling a REST API from a backend service, or wiring up a no-code tool. The mechanics are the same everywhere; only the surface changes.</p>
+<h2>Problem Overview</h2>
+<p>You're building a workflow that calls a paid, authenticated API. The API requires proof of identity on every request — some kind of credential attached to the HTTP call. There are three common ways an API asks for that proof:</p>
+<ol>
+<li><strong>API key auth</strong> — a static key sent in a custom header or query parameter.</li>
+<li><strong>Bearer token auth</strong> — a token sent in the <code>Authorization</code> header, prefixed with the word <code>Bearer</code>.</li>
+<li><strong>Basic auth</strong> — a username and password combined and base64-encoded, sent in the <code>Authorization</code> header.</li>
+</ol>
+<p>The naive approach is to type the credential directly into the HTTP Request node's parameter field. It authenticates correctly. But that field is just a string, and n8n serializes node parameters into the workflow's exported JSON verbatim. Anywhere that JSON goes, the secret goes with it — version control, backups, shared files, all of it.</p>
+<p>The actual problem to solve isn't "how do I authenticate this request." It's "how do I authenticate this request without the secret ever becoming part of the artifact I hand to other people."</p>
+<h2>Example</h2>
+<p>Suppose you're calling a weather API that expects an API key in a header called <code>X-API-Key</code>.</p>
+<p><strong>Naive setup</strong>: In the HTTP Request node, under Headers, you add <code>X-API-Key</code> with the value <code>wx_live_9f8a2...</code> typed directly in.</p>
+<ul>
+<li>Output when you run it: the request succeeds, you get weather data back.</li>
+<li>Output when you export the workflow: the JSON file contains <code>"value": "wx_live_9f8a2..."</code> in plain text, sitting inside a file now living in your downloads folder, your teammate's inbox, or your repo's history.</li>
+</ul>
+<p><strong>Credential-backed setup</strong>: You create a Header Auth credential named <code>Weather API Key</code>, set the header name to <code>X-API-Key</code> and the value to your key — once, inside the credential form, not the node.</p>
+<ul>
+<li>Output when you run it: identical. The request still succeeds.</li>
+<li>Output when you export the workflow: the JSON contains a reference like <code>"credentialsId": "Weather API Key"</code> — no key, just a name pointing at something that lives outside the file.</li>
+</ul>
+<p>Same result at execution time, completely different result at export time. That's the entire point.</p>
+<h2>Intuition</h2>
+<p>The mistake isn't a knowledge gap about HTTP — most people building these workflows know exactly what a header is and what an <code>Authorization</code> value looks like. The mistake is architectural: treating a secret like any other configuration value, when it needs to live somewhere that doesn't get serialized and passed around.</p>
+<p>An experienced engineer approaches this by asking a different question than "how do I send this key?" They ask "where does this secret live at rest, and what travels when this artifact moves?" Any time configuration and secrets are stored in the same file, that file becomes something you can't safely export, commit, or share — which defeats half the reason you'd want a portable workflow definition in the first place.</p>
+<p>The fix follows directly from that framing: separate the two concerns. Configuration (which credential to use, which header to inject it into) stays in the workflow. The secret itself lives in a separate, encrypted store, referenced by name. n8n's credential system is exactly that separation, and once you see the pattern, it maps onto how every serious system handles secrets — environment variables instead of hardcoded config, secret managers instead of <code>.env</code> files in git, vault services instead of connection strings in code.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea</strong>: Type the API key, Bearer token, or Basic auth value directly into the relevant field on the HTTP Request node (a header value, or inline in the Authorization header).</p>
+<p><strong>Algorithm</strong>:
+1. Open the HTTP Request node.
+2. Add a header (or set Basic Auth fields) with the raw secret value.
+3. Save and run.</p>
+<p><strong>Advantages</strong>:
+- Fastest possible setup — no credential dialog, no extra clicks.
+- Fine for a one-off, throwaway test that never leaves your machine.</p>
+<p><strong>Disadvantages</strong>:
+- The secret is serialized into the workflow's exported JSON in plain text.
+- Any export, git commit, backup, or "let me send you this workflow" leaks it.
+- No central place to rotate the key — if it's compromised, you have to hunt down every workflow that references it.
+- Time complexity: O(1) to set up. Space complexity: the secret now occupies space in every copy of the file, forever, until manually scrubbed.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach uses n8n's built-in credential store, which is encrypted and stored separately from workflow definitions.</p>
+<p><strong>Step-by-step</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Create a new credential, choosing the type that matches the API: Header Auth (API key), Bearer, or Basic Auth</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Enter the secret value once, into the credential form — never into the node</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Give the credential a name (e.g., <code>Weather API Key</code>)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>In the HTTP Request node, select that credential from a dropdown instead of typing a value</td>
+</tr>
+<tr>
+<td>5</td>
+<td>At execution time, n8n pulls the secret from the credential store and substitutes it into the outgoing request</td>
+</tr>
+<tr>
+<td>6</td>
+<td>When you export the workflow, only the credential <em>name</em> is serialized — the secret stays in the store</td>
+</tr>
+</tbody>
+</table>
+<p>The three credential types map directly to how the target API expects proof of identity:</p>
+<ul>
+<li><strong>Header Auth</strong>: you supply a header name and value. Use this for a static API key sent in a custom header (or query param, depending on the API).</li>
+<li><strong>Bearer</strong>: you supply only the raw token. n8n prepends the literal word <code>Bearer</code> when it builds the <code>Authorization</code> header — type the token alone, or you'll end up with a broken double-prefixed header.</li>
+<li><strong>Basic Auth</strong>: you supply a plain username and password in two separate fields. n8n combines and base64-encodes them when building the request; you never encode anything by hand.</li>
+</ul>
+<p>The workflow file, at every point in its life — mid-edit, exported, committed, re-shared — contains only the pointer. The secret is materialized exactly once, at execution time, inside n8n's runtime, and never written back into the definition.</p>
+<h2>Python Code</h2>
+<p>The same separation-of-concerns pattern applies outside n8n. Here's how it looks calling the same three auth types directly with Python's <code>requests</code> library, pulling secrets from environment variables instead of hardcoding them — the same principle, different runtime.</p>
+<pre><code class="language-python">import os
+import base64
+import requests
+
+
+def call_with_api_key(url: str) -&gt; requests.Response:
+    &quot;&quot;&quot;API key auth: static key in a custom header.&quot;&quot;&quot;
+    api_key = os.environ[&quot;WEATHER_API_KEY&quot;]  # never hardcoded
+    headers = {&quot;X-API-Key&quot;: api_key}
+    return requests.get(url, headers=headers)
+
+
+def call_with_bearer_token(url: str) -&gt; requests.Response:
+    &quot;&quot;&quot;Bearer auth: token in the Authorization header, prefixed once.&quot;&quot;&quot;
+    token = os.environ[&quot;SERVICE_BEARER_TOKEN&quot;]
+    headers = {&quot;Authorization&quot;: f&quot;Bearer {token}&quot;}
+    return requests.get(url, headers=headers)
+
+
+def call_with_basic_auth(url: str) -&gt; requests.Response:
+    &quot;&quot;&quot;Basic auth: username:password, base64-encoded automatically.&quot;&quot;&quot;
+    username = os.environ[&quot;SERVICE_USERNAME&quot;]
+    password = os.environ[&quot;SERVICE_PASSWORD&quot;]
+    # requests handles the base64 encoding internally
+    return requests.get(url, auth=(username, password))
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>os.environ["WEATHER_API_KEY"]</code> — the key is read from the environment at call time, never written into source. This is the Python equivalent of n8n's credential reference: the code contains a <em>name</em> (<code>WEATHER_API_KEY</code>), not a value.</li>
+<li><code>call_with_api_key</code> builds the header manually because API key placement (header name, query param) varies by provider — there's no universal standard.</li>
+<li><code>call_with_bearer_token</code> constructs the <code>Bearer &lt;token&gt;</code> string exactly once. This mirrors the n8n gotcha directly: if you stored <code>Bearer xyz123</code> as the token value instead of just <code>xyz123</code>, you'd get a broken double-prefixed header.</li>
+<li><code>call_with_basic_auth</code> passes a tuple to <code>requests</code>' <code>auth</code> parameter. The library base64-encodes <code>username:password</code> internally — you never touch encoding logic yourself, same as n8n's Basic Auth credential form.</li>
+<li>None of these functions ever return or log the secret, and none of them accept it as a parameter — it's sourced internally, close to where it's used, which limits how far it can accidentally propagate (into logs, stack traces, or a return value that gets serialized somewhere).</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Trace <code>call_with_bearer_token("https://api.example.com/data")</code> with <code>SERVICE_BEARER_TOKEN=tok_abc123</code> set in the environment:</p>
+<ol>
+<li><code>os.environ["SERVICE_BEARER_TOKEN"]</code> reads <code>"tok_abc123"</code>.</li>
+<li><code>headers</code> becomes <code>{"Authorization": "Bearer tok_abc123"}</code>.</li>
+<li><code>requests.get(url, headers=headers)</code> sends the GET request with that header attached.</li>
+<li>The API validates <code>tok_abc123</code> against its own records and returns a 200 with the requested data.</li>
+<li>At no point does <code>tok_abc123</code> appear anywhere except the outgoing request — not in the function signature, not in a log line, not in a return value.</li>
+</ol>
+<p>Compare this to what would happen if the token were hardcoded as a string literal in the function body: it would now exist in source control history permanently, even if removed in a later commit.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time</strong>: O(1) per request — reading an environment variable and attaching a header is constant-time work, identical to the brute-force version. The credential-backed approach costs nothing extra at execution time.</li>
+<li><strong>Space</strong>: O(1) in the workflow/source artifact — the artifact stores a name or a reference, not the secret itself, regardless of how many times the credential is reused across nodes or functions.</li>
+<li><strong>Why this is correct</strong>: correctness here isn't about big-O, it's about invariants. The invariant you want is "the secret only exists in one place, and that place is not the thing that gets copied around." Both the n8n credential store and environment-variable-based config in Python preserve that invariant; inlining the value anywhere breaks it.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p>For teams beyond a single environment variable or n8n instance, a dedicated secrets manager (AWS Secrets Manager, HashiCorp Vault, Google Secret Manager) adds rotation policies, access auditing, and per-environment scoping on top of the same core pattern. It's worth reaching for once you have multiple services, multiple environments (staging/prod), or compliance requirements around key rotation — n8n's built-in credential store and a <code>.env</code> file both solve the "don't hardcode it" problem, but neither gives you rotation history or access logs out of the box.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty or missing credential</strong>: if the environment variable or n8n credential doesn't exist, the request should fail loudly (a <code>KeyError</code> in Python, a clear error in n8n) rather than silently sending an unauthenticated request.</li>
+<li><strong>Re-importing a workflow on a new n8n instance</strong>: the workflow imports successfully and still references the credential by name, but since the credential doesn't exist on the new instance, the node errors at execution until you recreate it there. This is expected behavior, not a bug — it's the pointer/secret separation working as designed.</li>
+<li><strong>Token already includes "Bearer"</strong>: typing <code>Bearer tok_abc123</code> into a Bearer credential produces <code>Authorization: Bearer Bearer tok_abc123</code>, which the API will reject. Store the raw token only.</li>
+<li><strong>Basic auth with special characters in the password</strong>: base64 encoding handles arbitrary bytes correctly, but if you're building the header manually instead of letting n8n or <code>requests</code> do it, forgetting to encode will silently corrupt the header.</li>
+<li><strong>Basic auth over plain HTTP</strong>: base64 is an encoding, not encryption — it's trivially reversible. Basic auth only offers real protection when the connection itself is HTTPS.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Typing the secret directly into the HTTP Request node's parameter field instead of a credential, because it's faster for a quick test.</li>
+<li>Including the word <code>Bearer</code> in the token value when the platform already prepends it, producing a double-prefixed header.</li>
+<li>Assuming Basic auth is inherently less secure than the other two — the risk is the same for all three if the connection isn't HTTPS; base64 is not encryption.</li>
+<li>Reusing the same credential name across unrelated projects, making rotation confusing when one key needs to change and others don't.</li>
+<li>Committing a workflow export to version control without checking whether any field still contains a literal secret from before the credential was wired up.</li>
+<li>Not checking the API's documentation for which <code>Authorization</code> scheme it expects before guessing — a username/password pair means Basic auth, a raw token means Bearer, anything else in a custom header usually means API key auth.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you design a system so that exporting or serializing configuration never leaks a secret?</li>
+<li>What's the difference between encoding and encryption, and why does that matter for Basic auth?</li>
+<li>If a workflow or config file references a credential that doesn't exist in the current environment, what should happen, and why is failing loudly better than failing silently?</li>
+<li>How would you rotate an API key with zero downtime if it's referenced by name across many services?</li>
+<li>Walk through what actually gets sent over the wire for each of the three auth types.</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Environment variable management in CI/CD pipelines</strong> — the same secret/config separation problem, solved with pipeline secret stores instead of a credential UI.</li>
+<li><strong>OAuth2 token refresh flows</strong> — a related but more complex auth shape where the "secret" is short-lived and needs automatic renewal.</li>
+<li><strong>Secrets scanning in git repositories</strong> (e.g., detecting leaked keys in commit history) — the defensive counterpart to this lesson, for catching leaks after the fact.</li>
+<li><strong>Database connection string management</strong> — the exact same pattern (pointer in config, secret in a vault) applied to database credentials instead of API auth.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Secrets belong in one place, referenced everywhere else by name — never duplicated into whatever artifact you're about to export or share.</li>
+<li>The three common API auth shapes are API key, Bearer token, and Basic auth; the docs will tell you which one to use if you look for the word "Authorization."</li>
+<li>n8n's credential store enforces this separation automatically once you use it — the discipline is choosing to use it instead of the faster inline field.</li>
+<li>Base64 encoding is not encryption; Basic auth's safety depends entirely on the connection being HTTPS.</li>
+<li>A credential reference failing after an import to a new environment is the system working correctly, not a bug to work around.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This lesson is easier to follow with the live node setup in front of you — watch the full walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This is part of <strong>Fun with Learning Technology</strong>, a series that takes the tools developers actually build with — n8n, APIs, databases, and whatever else shows up in a real project — and breaks down not just how to use them, but why they work the way they do. Each lesson picks a real mistake or a real design decision and unpacks it until it clicks.</p>
+<h2>Call To Action</h2>
+<p>If this lesson saved you from shipping a leaked key, like the video, subscribe on YouTube for the rest of the series, and subscribe to the Substack for written breakdowns like this one delivered straight to your inbox. Drop a comment with the auth type you got wrong first — every experienced engineer has a story here. Share this with a teammate before their next workflow export.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Trigger for Basic Auth over Bearer/API key?</summary><p>Legacy/internal API needing username+password on every request, not token-issuing.</p></details><details class='card2'><summary>What actually travels in an HTTP Bearer Auth header?</summary><p>&#x27;Authorization: Bearer &lt;token&gt;&#x27;, base64-plain, visible to anyone sniffing unencrypted traffic.</p></details><details class='card2'><summary>Why does n8n&#x27;s credential system exist instead of hardcoding keys in nodes?</summary><p>Keeps secrets encrypted/centralized, reusable across workflows, and out of exported JSON.</p></details><details class='card2'><summary>Common bug: API key auth request fails with 401 despite correct key.</summary><p>Key sent in wrong slot — query param vs header vs custom header name mismatch.</p></details><details class='card2'><summary>API Key auth vs Bearer Token auth — key difference?</summary><p>API key is a static shared secret in header/query; Bearer token is often short-lived, issued by an auth flow.</p></details><details class='card2'><summary>Interview: why is Basic Auth considered weak without HTTPS?</summary><p>Credentials are base64-encoded, not encrypted — trivially decoded if intercepted over plain HTTP.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
