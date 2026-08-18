@@ -1,0 +1,218 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Python Lesson 34: The Six-Hour Hang timeit and cProfile Could&#x27;ve Stopped — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-34-performance-and-profiling
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesson">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-34-performance-and-profiling.html">
+<meta property="og:title" content="Python Lesson 34: The Six-Hour Hang timeit and cProfile Could&#x27;ve Stopped — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-34-performance-and-profiling
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-lesson">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 34: The Six-Hour Hang timeit and cProfile Could&#x27;ve Stopped</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every developer has shipped code that worked perfectly on a laptop and then fell over in production. Not because the logic was wrong — the output was correct every time — but because nobody checked what happens when the input grows from a hundred rows to a hundred thousand. That gap between "it works" and "it works at scale" is one of the most common ways a quiet Tuesday afternoon turns into a six-hour incident.</p>
+<p>This matters far beyond any one script. It's also one of the most reliable ways interviewers separate candidates who can write correct code from candidates who understand what their code actually costs. Anyone can nest two loops and get the right answer on a small example. The harder skill, and the one that shows up on real teams, is knowing <em>before</em> you ship whether that nested loop is going to be fine or going to be a pager alert.</p>
+<p>The good news is that you don't need a computer science degree to reason about this. You need two tools that ship with Python — <code>timeit</code> and <code>cProfile</code> — and a habit of using them before performance becomes a fire.</p>
+<h2>Problem Overview</h2>
+<p>Here's the scenario, stripped down to its essence: you write a script that processes a list of records. For each record, it needs to check whether that record has already been seen — maybe to avoid duplicates, maybe to look up a related customer. You reach for a list, because a list is simple and it's what you already have. The script runs against your test data, a hundred rows or so, and it finishes instantly.</p>
+<p>Then it runs against the real dataset. Not a hundred rows — hundreds of thousands. And the script that took a fraction of a second now takes hours, with no indication of whether it's close to done or stuck forever.</p>
+<p>The underlying problem isn't a typo or a logic error. The code is <em>correct</em>. The problem is that the amount of work it does per item grows with the size of the data it's already processed, and nobody measured that growth curve before it mattered.</p>
+<h2>Example</h2>
+<p>Say you're deduplicating a stream of user IDs:</p>
+<pre><code class="language-python">seen = []
+unique_users = []
+
+for user_id in incoming_ids:
+    if user_id not in seen:      # scans the entire list
+        unique_users.append(user_id)
+        seen.append(user_id)
+</code></pre>
+<p>At 100 incoming IDs, <code>seen</code> never gets larger than 100 items, and checking <code>user_id not in seen</code> means scanning at most 100 entries. That's fast enough that you'd never notice it in testing.</p>
+<p>At 500,000 incoming IDs, by the time you're near the end, <code>seen</code> might hold 400,000 entries, and <em>every single new ID</em> triggers a scan through all of them. You're not doing 500,000 units of work. You're doing something closer to 500,000 × 400,000 in the worst case. That's the six-hour hang.</p>
+<h2>Intuition</h2>
+<p>The way an experienced engineer catches this isn't by staring at the code and intuiting the runtime — it's by asking a specific question: <strong>as the input doubles, does the work roughly double, or does it do something worse?</strong></p>
+<p>Think of it like a party. If everyone at the party has to shake hands with everyone else, that's a lot of handshakes — and every time you add one more guest, everyone else has to shake their hand too. That's the <code>in</code> check against a list: for every new item, you re-scan everyone who came before.</p>
+<p>Now compare that to a guest list at the door. Each person signs in once. Checking whether someone already signed in means looking at one list, not shaking every hand. That's the difference between scanning a list and checking membership in a set. Same <em>result</em> — you know who's already been seen — but a completely different amount of work as the guest list grows.</p>
+<p>This is the intuition behind Big O notation, and it's the honest way to think about it: it's not an abstract academic exercise, it's a shorthand for "how does this get worse as data grows." O(n²) means the work grows roughly with the square of the input — double the data, quadruple the work. O(n) means the work grows in a straight line with the input — double the data, double the work. At small scale, both look instant. At production scale, only one of them survives.</p>
+<p>The tools that turn this intuition into evidence are <code>timeit</code>, for comparing small snippets, and <code>cProfile</code>, for finding which function in a larger program is actually responsible.</p>
+<h2>Brute Force Solution</h2>
+<p>The brute-force version of the deduplication problem is the list-based approach above: keep a growing list of everything you've seen, and check membership with <code>in</code>.</p>
+<p><strong>Idea:</strong> maintain a list, and for every new item, scan the list to see if it's already there.</p>
+<p><strong>Algorithm:</strong>
+1. Initialize an empty list <code>seen</code>.
+2. For each incoming item, check <code>item in seen</code>.
+3. If not present, add it to both <code>seen</code> and the output.</p>
+<p><strong>Advantages:</strong>
+- Trivial to write and reason about.
+- Preserves insertion order without extra work.
+- Fine for small, bounded inputs.</p>
+<p><strong>Disadvantages:</strong>
+- Membership checking against a list is O(n) per check.
+- Across n items, that's O(n²) total — and it's the exact shape of bug that hides in testing and explodes in production.</p>
+<p><strong>Time complexity:</strong> O(n²) worst case.
+<strong>Space complexity:</strong> O(n) for the <code>seen</code> list.</p>
+<h2>Optimal Solution</h2>
+<p>The fix isn't cleverer logic — it's a different data structure. Swap the list for a set.</p>
+<p>A Python set is backed by a hash table. Checking whether an item is in a set doesn't mean scanning every existing entry; it means computing a hash and jumping directly to where that item would live. That turns an O(n) scan into an O(1) average-case lookup.</p>
+<table>
+<thead>
+<tr>
+<th>Structure</th>
+<th>Membership check</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>list</code></td>
+<td>O(n)</td>
+<td>Has to walk through items one by one</td>
+</tr>
+<tr>
+<td><code>set</code></td>
+<td>O(1) average</td>
+<td>Hashes directly to a location</td>
+</tr>
+</tbody>
+</table>
+<p>The measured difference backs this up. Using <code>timeit</code> to compare checking membership in a list of 10,000 items versus a set of the same size:</p>
+<pre><code class="language-python">import timeit
+
+data_list = list(range(10_000))
+data_set = set(range(10_000))
+
+list_time = timeit.timeit(lambda: 9_999 in data_list, number=1000)
+set_time = timeit.timeit(lambda: 9_999 in data_set, number=1000)
+
+print(f&quot;list: {list_time:.4f}s&quot;)   # ~0.006s
+print(f&quot;set:  {set_time:.4f}s&quot;)    # ~0.001s
+</code></pre>
+<p><code>timeit</code> doesn't just run the snippet once — it runs it repeatedly and averages the result, so a single lucky (or unlucky) run doesn't mislead you. The gap here — roughly 6x — only gets more dramatic as the collection grows, because the list's cost keeps climbing while the set's stays flat.</p>
+<p>Rewriting the deduplication logic with this in mind:</p>
+<pre><code class="language-python">seen = set()
+unique_users = []
+
+for user_id in incoming_ids:
+    if user_id not in seen:      # O(1) average lookup
+        unique_users.append(user_id)
+        seen.add(user_id)
+</code></pre>
+<p>Same logic, same output, one loop instead of an effectively nested one. That single change is what turns a six-hour job into a job that finishes while you're still watching it.</p>
+<h2>Python Code</h2>
+<p>Here's a complete, self-contained version, including the profiling step that would have caught the original problem:</p>
+<pre><code class="language-python">import cProfile
+import pstats
+
+
+def dedupe_slow(ids):
+    &quot;&quot;&quot;O(n^2): list-based membership check.&quot;&quot;&quot;
+    seen = []
+    unique = []
+    for uid in ids:
+        if uid not in seen:
+            unique.append(uid)
+            seen.append(uid)
+    return unique
+
+
+def dedupe_fast(ids):
+    &quot;&quot;&quot;O(n): set-based membership check.&quot;&quot;&quot;
+    seen = set()
+    unique = []
+    for uid in ids:
+        if uid not in seen:
+            unique.append(uid)
+            seen.add(uid)
+    return unique
+
+
+def profile_function(func, data):
+    profiler = cProfile.Profile()
+    profiler.enable()
+    func(data)
+    profiler.disable()
+
+    stats = pstats.Stats(profiler)
+    stats.sort_stats(&quot;tottime&quot;)
+    stats.print_stats(10)
+
+
+if __name__ == &quot;__main__&quot;:
+    sample_data = list(range(20_000)) * 2  # duplicates included
+    profile_function(dedupe_slow, sample_data)
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>dedupe_slow</code> is the brute-force version: a plain list holding everything seen so far, checked with <code>in</code>.</li>
+<li><code>dedupe_fast</code> is the optimal version: identical structure, but <code>seen</code> is a set, so the <code>in</code> check and the <code>add</code> call are both average O(1).</li>
+<li><code>profile_function</code> wraps <code>cProfile.Profile()</code> around any call. <code>enable()</code> and <code>disable()</code> bracket the code you want measured — everything inside runs at normal speed while the profiler records timing per function call.</li>
+<li><code>pstats.Stats(profiler).sort_stats("tottime")</code> is the critical line. Sorting by <code>tottime</code> — time spent <em>inside</em> a function, excluding time spent in functions it calls — is what tells you the real bottleneck. Sorting by <code>cumtime</code> (cumulative time, including everything a function calls) will often point you at a top-level function that's just a thin wrapper around the actual expensive work.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Running <code>profile_function(dedupe_slow, sample_data)</code> against 40,000 items (20,000 unique values, each duplicated once) produces output roughly shaped like this:</p>
+<pre><code>   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    5.812    5.812    5.812    5.812  script.py:7(dedupe_slow)
+</code></pre>
+<p>Nearly all of the time is <code>tottime</code> inside <code>dedupe_slow</code> itself — because the cost is the repeated <code>uid not in seen</code> scan, not a call out to some other function. Compare that against <code>dedupe_fast</code> on the same input, and the <code>tottime</code> drops to a small fraction of a second. That side-by-side is the entire diagnosis: same output, wildly different cost, and the cause is the data structure, not the surrounding code.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Brute force:</strong> O(n²) time, because each of the n membership checks costs O(n) in the worst case. O(n) space for the <code>seen</code> list.</li>
+<li><strong>Optimal:</strong> O(n) time, because each membership check against a set is O(1) on average (hash collisions can degrade this, but Python's set implementation makes worst-case behavior rare in practice). O(n) space for the set — same space class as the list, just a different access pattern.</li>
+</ul>
+<p>The time complexity is what actually determines whether this script finishes in seconds or hours once the input crosses from "test data" to "real data." Space complexity here is a secondary concern, though it becomes the primary one in the next section.</p>
+<h2>Alternative Solutions</h2>
+<p>If order doesn't need to be preserved, <code>list(set(incoming_ids))</code> deduplicates in a single expression, letting the set handle uniqueness and skipping the manual loop entirely. It's the same underlying algorithm, just less code, and it's a reasonable choice when you don't need to track the first-seen order.</p>
+<p>A <code>dict</code> (using items as keys) is another valid option and was the standard trick before sets were common, since dict keys also hash. In modern Python, a set is the clearer choice when you don't need associated values.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty input:</strong> both versions return an empty list immediately; no special-casing needed.</li>
+<li><strong>All duplicates:</strong> the brute-force version still pays the full O(n²) scanning cost even though the output is a single item, because every duplicate still triggers a full scan of <code>seen</code>.</li>
+<li><strong>All unique values:</strong> this is actually the worst case for the list version, since <code>seen</code> grows to its maximum size and every check scans the largest possible list.</li>
+<li><strong>Unhashable items:</strong> if you're deduping something like a list of dictionaries, the set-based fix won't work directly, since dict objects aren't hashable — you'd need to convert to a hashable representation (like a tuple of sorted items) first.</li>
+<li><strong>Very large datasets that don't fit in memory:</strong> even the set-based fix keeps everything in memory; if the working set itself is too large, you need an external or streaming approach, not just a different in-memory structure.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Testing only on small data.</strong> A hundred rows can't reveal an O(n²) growth curve — you need either a realistic dataset or a deliberate scaling test.</li>
+<li><strong>Reading <code>cumtime</code> instead of <code>tottime</code> in a profiler.</strong> A high <code>cumtime</code> often just means a function calls something expensive, not that the function itself is slow.</li>
+<li><strong>Assuming the first function listed in profiler output is the bottleneck</strong>, when the list is actually sorted by call order or alphabetically rather than by cost.</li>
+<li><strong>Optimizing code that isn't the bottleneck.</strong> Rewriting a function that takes 2% of total runtime doesn't move the needle if another function owns 90% of it.</li>
+<li><strong>Reaching for algorithmic cleverness before checking the data structure.</strong> Most real-world slowdowns like this one are fixed by picking the right container, not by writing smarter logic.</li>
+<li><strong>Loading an entire large file into a list</strong> when a generator would process it incrementally, causing memory pressure that looks like a performance bug but is actually a memory bug.</li>
+<li><strong>Trusting a single timed run instead of using <code>timeit</code></strong>, which averages multiple runs and avoids being fooled by one anomalously fast or slow execution.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What's the time complexity of checking membership in a list versus a set, and why?</li>
+<li>How would you profile a Python script to find its actual bottleneck?</li>
+<li>What's the difference between <code>tottime</code> and <code>cumtime</code> in <code>cProfile</code> output?</li>
+<li>When would a generator be preferable to a list, and what does it cost you in exchange for the memory savings?</li>
+<li>Walk through why an algorithm that looks fast on a small test case can fail at scale.</li>
+<li>How would you deduplicate a stream of data while preserving order, and what's the complexity of your approach?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Two Sum (LeetCode 1):</strong> the canonical example of trading an O(n²) nested-loop check for an O(n) hash-based lookup — the exact same underlying pattern as this lesson.</li>
+<li><strong>Contains Duplicate (LeetCode 217):</strong> directly tests whether you reach for a set instead of nested list comparisons.</li>
+<li><strong>Intersection of Two Arrays (LeetCode 349):</strong> another membership-checking problem where set operations beat list scanning.</li>
+<li><strong>Group Anagrams (LeetCode 49):</strong> uses hashing to avoid O(n²) pairwise comparisons, reinforcing the same data-structure-over-cleverness lesson.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Correct code and <em>fast enough</em> code are two different bars, and only measuring tells you which one you've built.</li>
+<li><code>timeit</code> compares small snippets by running them repeatedly and averaging, so you're not fooled by one lucky run.</li>
+<li><code>cProfile</code> finds which function in a larger program actually deserves your attention — sort by <code>tottime</code>, not <code>cumtime</code>.</li>
+<li>Most real slowdowns aren't fixed with cleverer code; they're fixed by picking a data structure whose cost doesn't grow with everything that came before it.</li>
+<li>Generators solve the memory side of this same problem: don't hold what you don't need yet.</li>
+<li>Profile before it's on fire, not after.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This lesson is easier to absorb watching the profiler output and the timeit comparisons run live. Catch the full walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This is part of <strong>Fun with Learning Technology</strong>, a series that takes real Python problems apart until they actually make sense — no unnecessary theory, just the reasoning an experienced engineer actually uses when something breaks or slows down in production.</p>
+<h2>Call To Action</h2>
+<p>If this saved you from a future six-hour production incident, give the video a like on YouTube and subscribe for more lessons like it. For deeper written breakdowns like this one, subscribe to the Substack. And if there's a Python performance topic you want covered next, drop it in the comments — I read every one.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Slow code trigger: what do you do before optimizing anything?</summary><p>Profile first — measure with timeit/cProfile to find the actual bottleneck, don&#x27;t guess.</p></details><details class='card2'><summary>Time complexity of a lookup in a list vs a set/dict?</summary><p>List: O(n) linear scan. Set/dict: O(1) average via hashing.</p></details><details class='card2'><summary>Space complexity tradeoff: list comprehension vs generator?</summary><p>List comprehension is O(n) memory; generator is O(1), yielding one item at a time.</p></details><details class='card2'><summary>Common bug when swapping list for dict/set for speed?</summary><p>Forgetting duplicates get silently dropped, or losing insertion order semantics (pre-3.7 assumptions).</p></details><details class='card2'><summary>cProfile vs timeit — when to use which?</summary><p>timeit measures a small snippet&#x27;s total time; cProfile breaks a whole program into per-function call counts and time.</p></details><details class='card2'><summary>Interview follow-up: why can 100-row test data mislead you about performance?</summary><p>Small inputs hide O(n^2)+ growth; algorithmic cost only shows up at realistic/large scale.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
