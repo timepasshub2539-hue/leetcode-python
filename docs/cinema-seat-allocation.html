@@ -1,0 +1,193 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1386. Cinema Seat Allocation | LeetCode Daily Python Solution: 3 fixed blocks, one AND — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/cinema-seat-allocation
+💻 Code on GitHub: https://github.com/timepasshub2539-hue">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/cinema-seat-allocation.html">
+<meta property="og:title" content="1386. Cinema Seat Allocation | LeetCode Daily Python Solution: 3 fixed blocks, one AND — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/cinema-seat-allocation
+💻 Code on GitHub: https://github.com/timepasshub2539-hue">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>1386. Cinema Seat Allocation | LeetCode Daily Python Solution: 3 fixed blocks, one AND</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Booking systems look simple from the outside: pick a seat, pay, done. Underneath, most cinema and airline booking UIs don't let you pick <em>any</em> four adjacent seats — they restrict you to a small number of fixed blocks, because fixed blocks are dramatically cheaper to search and validate than arbitrary ranges. LeetCode 1386, Cinema Seat Allocation, is a distilled version of that real constraint, and it's a great interview problem because it rewards you for noticing the restriction rather than brute-forcing a general "four consecutive free seats" scan.</p>
+<p>This problem shows up in interviews because it tests three separate skills at once: can you spot when a search space is smaller than it looks, can you represent state compactly (bitmasking), and can you reason about which parts of a grid actually matter versus which can be skipped entirely. It's also a natural bridge into system design — the same problem, extended slightly, is exactly what a real seat-locking service has to solve under concurrent bookings.</p>
+<h2>Problem Overview</h2>
+<p>You're given a cinema with <code>n</code> rows, each containing exactly ten seats, numbered 1 through 10. Some seats are already reserved, given to you as a list of <code>[row, seat]</code> pairs. Your job is to compute the maximum number of four-person groups that can be seated together, where "together" has a specific meaning: each group must occupy one of exactly three fixed four-seat blocks within a row:</p>
+<ul>
+<li>Block A: seats 2, 3, 4, 5</li>
+<li>Block B: seats 4, 5, 6, 7</li>
+<li>Block C: seats 6, 7, 8, 9</li>
+</ul>
+<p>Seats 1 and 10 are never part of any block — they exist, but no group can ever sit there, and a reservation on either of them never affects anything.</p>
+<p>You need to return the total number of groups across all rows.</p>
+<h2>Example</h2>
+<p>Take a small cinema with three rows and these reservations:</p>
+<ul>
+<li>Row 1: seats 2, 3, 8</li>
+<li>Row 2: seat 6</li>
+<li>Row 3: seats 1, 10</li>
+</ul>
+<p><strong>Row 1:</strong> Block A needs seat 2, which is reserved — Block A is dead. Block B needs seats 4–7, all open — that's one group. Block C needs seats 6–9, but seat 8 is reserved — Block C is dead. Row 1 contributes 1 group.</p>
+<p><strong>Row 2:</strong> Block A needs seats 2–5, all open — one group. Block B needs seat 6, reserved — dead. Block C needs seat 6, reserved — dead. Row 2 contributes 1 group.</p>
+<p><strong>Row 3:</strong> Seats 1 and 10 are reserved, but neither one touches any block. The row is effectively empty for our purposes, so it seats two full groups (Block A and Block C, which never overlap). Row 3 contributes 2 groups.</p>
+<p>Total: 1 + 1 + 2 = <strong>4 groups</strong>, which matches the expected output for this classic case.</p>
+<h2>Intuition</h2>
+<p>The naive instinct is to scan every row left to right, looking for any run of four consecutive free seats. That's a reasonable algorithm for a <em>general</em> version of this problem, but it's solving a harder problem than the one being asked. Here, groups can only sit in three specific places, so instead of scanning ten seats for arbitrary runs, you only ever need to check three fixed positions per row.</p>
+<p>The next trap is assuming a row can hold at most one group, because Block B overlaps both Block A and Block C on shared seats (4, 5 and 6, 7 respectively). That's true for B, but Block A and Block C themselves share nothing — they occupy seats 2–5 and 6–9 with no overlap. So a fully open row seats two groups, not one. The only reason a row is capped at one group is if a reservation happens to knock out enough blocks that only one non-overlapping option survives.</p>
+<p>Once you see the row is really just "check three fixed windows, take the best non-conflicting combination," the natural representation is: for each row, only the seats between 2 and 9 matter — pack their reserved/free state into a single number, and each block becomes a fixed set of bits. Checking "is this block fully free" becomes checking whether a fixed bitmask ANDed with the row's reservation mask is zero.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> For every row that has at least one reservation, build a boolean array of the ten seats. For each of the three block starting points (2, 4, 6), check whether all four seats in that range are unreserved.</p>
+<p><strong>Algorithm:</strong>
+1. Group reservations by row.
+2. For each row with reservations, build a 10-element boolean array.
+3. For each block (start at 2, 4, 6), check if all four seats in that range are free.
+4. Track which blocks are free, then count non-overlapping combinations (A+C is always compatible, B is only usable alone).
+5. Rows with no reservations get 2 groups automatically.</p>
+<p><strong>Advantages:</strong> Easy to reason about, no bit tricks required, trivial to verify by hand.</p>
+<p><strong>Disadvantages:</strong> Building and scanning a 10-element array per row is unnecessary overhead — you're paying array allocation and iteration cost for information that only ever depends on 8 bits.</p>
+<p><strong>Time complexity:</strong> O(n) where n is the number of reservations, since only rows with reservations get processed, and each check is O(1) work against a fixed-size array.</p>
+<p><strong>Space complexity:</strong> O(k) where k is the number of distinct rows with reservations, for storing the boolean arrays.</p>
+<p>The brute force approach is already close to optimal in big-O terms — the real win of the optimized version is a smaller constant factor and cleaner logic, which matters a lot in a live interview where clarity is being judged alongside correctness.</p>
+<h2>Optimal Solution</h2>
+<p>The optimization replaces the boolean array with a single integer bitmask per row, and the array scan with a bitwise AND.</p>
+<p><strong>Step 1 — Only track rows that matter.</strong> Use a dictionary keyed by row number. If a row never appears in the reservation list, it's fully empty and worth exactly 2 groups — no need to store or process it at all.</p>
+<p><strong>Step 2 — Build a mask per row.</strong> For each reservation at seat <code>s</code> in row <code>r</code>, if <code>2 &lt;= s &lt;= 9</code>, set bit <code>(s - 2)</code> in that row's mask. Seats 1 and 10 are skipped entirely since they never affect any block.</p>
+<p><strong>Step 3 — Represent the blocks as constant masks.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Block</th>
+<th>Seats</th>
+<th>Bit positions (seat - 2)</th>
+<th>Mask (binary)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>2–5</td>
+<td>0,1,2,3</td>
+<td><code>0b00001111</code></td>
+</tr>
+<tr>
+<td>B</td>
+<td>4–7</td>
+<td>2,3,4,5</td>
+<td><code>0b00111100</code></td>
+</tr>
+<tr>
+<td>C</td>
+<td>6–9</td>
+<td>4,5,6,7</td>
+<td><code>0b11110000</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Step 4 — Check availability with AND.</strong> For a row's mask <code>m</code>, block <code>X</code> is fully free exactly when <code>m &amp; X == 0</code>. Since Block A and Block C never share bits, if both are free, that row scores 2. Otherwise, check B, and score at most 1 for the row.</p>
+<p><strong>Step 5 — Sum it up.</strong> Every row not in the dictionary contributes 2. Every row in the dictionary contributes 0, 1, or 2 depending on which blocks survive the AND check.</p>
+<p>This collapses the ten-seat scan into a handful of integer operations per reserved row.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from collections import defaultdict
+from typing import List
+
+
+def max_number_of_families(n: int, reserved_seats: List[List[int]]) -&gt; int:
+    BLOCK_A = 0b00001111  # seats 2-5
+    BLOCK_B = 0b00111100  # seats 4-7
+    BLOCK_C = 0b11110000  # seats 6-9
+
+    row_masks = defaultdict(int)
+
+    for row, seat in reserved_seats:
+        if 2 &lt;= seat &lt;= 9:
+            row_masks[row] |= 1 &lt;&lt; (seat - 2)
+
+    # Every row without a reservation seats two full groups.
+    total_groups = (n - len(row_masks)) * 2
+
+    for mask in row_masks.values():
+        if mask &amp; BLOCK_A == 0 and mask &amp; BLOCK_C == 0:
+            total_groups += 2
+        elif (mask &amp; BLOCK_A == 0) or (mask &amp; BLOCK_B == 0) or (mask &amp; BLOCK_C == 0):
+            total_groups += 1
+
+    return total_groups
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>BLOCK_A</code>, <code>BLOCK_B</code>, <code>BLOCK_C</code> are constant bitmasks representing which of the 8 tracked seats (2 through 9) each block occupies. Bit 0 corresponds to seat 2, bit 7 to seat 9.</li>
+<li><code>row_masks</code> is a <code>defaultdict(int)</code> so any row we touch starts at mask <code>0</code> (fully free) and we never need an explicit "row exists" check.</li>
+<li>The main loop over <code>reserved_seats</code> filters out seats 1 and 10 with the <code>2 &lt;= seat &lt;= 9</code> guard, then sets the corresponding bit with <code>|= 1 &lt;&lt; (seat - 2)</code>.</li>
+<li><code>total_groups</code> is initialized using every row that <em>never</em> appears in <code>row_masks</code> — those are fully empty and worth 2 groups each, computed in O(1) instead of iterated.</li>
+<li>The final loop only runs over rows that actually have reservations. <code>mask &amp; BLOCK_X == 0</code> tests whether none of that block's seats are set in the reservation mask — i.e., the block is fully open.</li>
+<li>The <code>elif</code> only fires if the A-and-C combo failed, and checks each block independently since at most one can be free at that point (if two of A, B, C were free without A-and-C both being free, that would only happen with B and one of A/C, and B overlaps both, so a row with B and A free would already have hit the first branch's logic if C is also free — the elif safely picks up the single-block case).</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Reservations: <code>[(1,2), (1,3), (1,8), (2,6), (3,1), (3,10)]</code>, <code>n = 3</code>.</p>
+<ul>
+<li>Row 1: seat 2 → bit 0, seat 3 → bit 1, seat 8 → bit 6. Mask = <code>0b01000011</code>.</li>
+<li>Row 2: seat 6 → bit 4. Mask = <code>0b00010000</code>.</li>
+<li>Row 3: seats 1 and 10 are skipped (outside 2–9). Row 3 never enters <code>row_masks</code>.</li>
+</ul>
+<p><code>row_masks</code> has 2 entries (rows 1 and 2), so rows without reservations = <code>3 - 2 = 1</code> → contributes <code>1 * 2 = 2</code>.</p>
+<p>Row 1, mask <code>0b01000011</code>:
+- <code>mask &amp; BLOCK_A</code> = <code>0b01000011 &amp; 0b00001111</code> = <code>0b00000011</code> ≠ 0 → A blocked.
+- <code>mask &amp; BLOCK_B</code> = <code>0b01000011 &amp; 0b00111100</code> = <code>0</code> → B free! Row 1 contributes 1.</p>
+<p>Row 2, mask <code>0b00010000</code>:
+- <code>mask &amp; BLOCK_A</code> = <code>0</code> → A free.
+- <code>mask &amp; BLOCK_C</code> = <code>0b00010000 &amp; 0b11110000</code> = <code>0b00010000</code> ≠ 0 → C blocked.
+- A-and-C combo fails. <code>elif</code>: A is free → contributes 1.</p>
+<p>Total: <code>2 + 1 + 1 = 4</code>, matching the expected result.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time: O(k)</strong> where <code>k</code> is the number of reservations. We touch each reservation exactly once to build masks, then iterate the dictionary once, whose size is bounded by <code>k</code>. This is correct because rows without reservations are never visited — they're accounted for with a single arithmetic subtraction.</p>
+<p><strong>Space: O(k)</strong> for the dictionary, since only rows with at least one reservation get an entry. In the worst case (every row has a reservation), this is O(n), but it never exceeds the number of distinct rows touched.</p>
+<h2>Alternative Solutions</h2>
+<p>A boolean-array-per-row approach (the brute force above) has the same asymptotic complexity but worse constants — array allocation and per-seat iteration versus integer bit operations. Another alternative is precomputing all 256 possible 8-bit masks into a lookup table of group counts, trading a small amount of preprocessing for O(1) lookups per row instead of a few AND operations. For this problem size, the bitmask-with-AND approach already runs fast enough that the lookup table is unnecessary complexity.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>No reservations at all:</strong> every row scores 2, total is <code>2n</code>. The main loop never runs.</li>
+<li><strong>All reservations on seats 1 or 10:</strong> they're filtered out, every affected row still counts as empty and scores 2.</li>
+<li><strong>Duplicate reservations for the same seat:</strong> setting the same bit twice with <code>|=</code> is idempotent — no effect on correctness.</li>
+<li><strong>A row with every seat from 2–9 reserved:</strong> mask is <code>0b11111111</code>, all three block checks fail, row contributes 0.</li>
+<li><strong>n = 1 with minimal reservations:</strong> works the same as any other row; the dictionary might hold just one entry.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Assuming a row caps out at one group</strong> because B overlaps A and C — missing that A and C are independent of each other.</li>
+<li><strong>Including seats 1 and 10 in the mask</strong>, wasting bits and complicating the block constants for seats that can never affect a block.</li>
+<li><strong>Iterating all n rows explicitly</strong> instead of computing empty-row contributions with a single multiplication.</li>
+<li><strong>Off-by-one errors in bit positions</strong> when mapping seat number to bit index — seat 2 must map to bit 0, not bit 2.</li>
+<li><strong>Checking blocks with equality instead of AND-with-zero</strong>, e.g., comparing against a fixed "free" pattern instead of testing <code>mask &amp; BLOCK == 0</code>, which breaks if seats outside the block happen to be reserved.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would this change if blocks weren't fixed and any four consecutive seats counted?</li>
+<li>How would you extend this to handle concurrent bookings safely?</li>
+<li>What if row length changed from 10 seats to an arbitrary number, breaking the fixed 8-bit mask?</li>
+<li>Can you solve this without a dictionary, using a different data structure, and what are the tradeoffs?</li>
+<li>How would you test this function, including adversarial inputs?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Seat Reservation Manager (LeetCode 1845)</strong> — different structure but same theme of tracking seat availability efficiently.</li>
+<li><strong>Bitwise AND of Numbers Range (LeetCode 201)</strong> — good practice for bitmask reasoning and AND semantics.</li>
+<li><strong>Number of Provinces / Islands problems</strong> — different domain, but similar "only process what's marked, skip the rest" optimization pattern.</li>
+<li><strong>Design Parking System (LeetCode 1603)</strong> — another counting-with-constraints problem that rewards a compact state representation.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The core lesson isn't bitmasking itself — it's recognizing when a problem's search space is smaller than it first appears. Once you see there are only three fixed blocks per row, and that two of those three never conflict, the rest of the solution falls out naturally. Bitmasking is just the cleanest way to express that reduced search space in code.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough, including the timing-gap story about real double-bookings and a live run against LeetCode's test cases, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of Fun with Learning Technology, a series where we take LeetCode Daily Challenge problems and dig past the accepted solution into the reasoning that gets you there — the same reasoning that shows up in real system design when these patterns extend past a single interview question.</p>
+<h2>Call To Action</h2>
+<p>If this helped the block trick click, leave a like on the video and subscribe for more daily LeetCode breakdowns. Subscribe to the Substack for the written version of every episode, drop a comment with the problem you want covered next, and share this with someone prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Cinema Seat Allocation smells like which pattern? Trigger?</summary><p>Bitmask row scan. Trigger: fixed-width rows, need contiguous free blocks of size k per row.</p></details><details class='card2'><summary>Time complexity for scanning all rows for valid seat blocks?</summary><p>O(n) where n = number of reservations/rows touched, since each row has fixed width (10 seats).</p></details><details class='card2'><summary>Space complexity of the row-bitmask approach?</summary><p>O(n) for the hashmap of row→occupied-seat-bitmask, not O(rows × seats).</p></details><details class='card2'><summary>Trickiest bug in this problem?</summary><p>Checking only pre-defined 4-seat blocks misses valid group-of-4 seats spanning two adjacent fixed blocks (e.g. seats 4-7).</p></details><details class='card2'><summary>Why must reservations be grouped/locked per row before scanning?</summary><p>A single global lock lets concurrent bookings race on different rows; the real fix is per-row state, not one broad lock.</p></details><details class='card2'><summary>Follow-up: how to extend for arbitrary group size k, not just 4?</summary><p>Generalize the bitmask check to a sliding window of width k across the row, not just the 3 fixed blocks.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
