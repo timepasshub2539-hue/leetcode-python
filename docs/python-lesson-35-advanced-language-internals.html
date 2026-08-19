@@ -1,0 +1,188 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Python Lesson 35: The 5-Line Descriptor That Controls Every Dot — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-35-advanced-language-internals
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-less">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-35-advanced-language-internals.html">
+<meta property="og:title" content="Python Lesson 35: The 5-Line Descriptor That Controls Every Dot — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-35-advanced-language-internals
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-less">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 35: The 5-Line Descriptor That Controls Every Dot</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Most Python developers write <code>obj.attr</code> thousands of times without ever asking what actually happens when that line executes. It looks like a dictionary lookup. It isn't. Python runs a small, deterministic search across the object's type and the object's instance state, and at any point in that search, a class can install a hook that intercepts the whole process. That hook is called a descriptor, and it's the exact mechanism behind <code>@property</code>, Django model fields, <code>functools.cached_property</code>, and a good chunk of what makes ORMs feel like magic.</p>
+<p>This matters for two overlapping reasons. First, it shows up constantly in interviews — not usually as "implement a descriptor" cold, but as "why did this attribute assignment fail" or "explain what <code>@property</code> actually does under the hood." Second, it's one of those topics that, once it clicks, makes a dozen previously-mysterious framework behaviors suddenly obvious. You stop treating <code>__slots__</code>, <code>super()</code>, and custom metaclasses as separate tricks and start seeing them as four expressions of the same underlying protocol.</p>
+<p>By the end of this article you'll have built a working validating descriptor, understood exactly why <code>__slots__</code> can silently fail to save memory, know how Python computes a single deterministic method resolution order when multiple parents define the same method, and written a small metaclass that auto-registers every subclass the moment it's defined.</p>
+<h2>Problem Overview</h2>
+<p>Here's the puzzle that kicks this off: take two classes that look nearly identical. Create an instance of the first one and assign it a brand-new attribute it was never given in <code>__init__</code>. That works — Python happily adds it. Do the exact same thing to an instance of the second class, and Python raises an <code>AttributeError</code>, even though nothing about the syntax changed.</p>
+<p>The instinct is to assume a bug. It isn't one. The second class made a deliberate choice — probably via <code>__slots__</code> — to opt out of the flexible, per-instance dictionary that normally backs every Python object. Understanding why requires understanding what <code>obj.attr</code> is actually doing, which is where descriptors, <code>__dict__</code>, and the MRO all come in.</p>
+<p>We'll build this up piece by piece: first the attribute-lookup protocol itself, then the specific mechanism (<code>__slots__</code>) that explains the two-classes puzzle, then MRO for the "which parent method wins" question, and finally metaclasses, which control how classes themselves get built.</p>
+<h2>Example</h2>
+<p>Start with the attribute puzzle concretely:</p>
+<pre><code class="language-python">class Flexible:
+    def __init__(self, value):
+        self.value = value
+
+class Rigid:
+    __slots__ = (&quot;value&quot;,)
+    def __init__(self, value):
+        self.value = value
+
+f = Flexible(1)
+f.extra = &quot;this works fine&quot;
+
+r = Rigid(1)
+r.extra = &quot;this raises AttributeError&quot;
+</code></pre>
+<p><code>f.extra = ...</code> succeeds because <code>Flexible</code> instances carry a <code>__dict__</code> — an ordinary dictionary that Python is free to add new keys to at any time. <code>r.extra = ...</code> fails because <code>Rigid</code> declared <code>__slots__ = ("value",)</code>, which tells Python: don't allocate a <code>__dict__</code> for this class at all, only allocate fixed storage for the named slots. There is no dictionary left for <code>extra</code> to land in, so the assignment has nowhere to go and Python raises immediately.</p>
+<p>That single difference — dict or no dict — is the entire explanation for the opening puzzle. But it only makes sense once you know what <code>__dict__</code> is doing in the lookup process to begin with.</p>
+<h2>Intuition</h2>
+<p>Think of <code>obj.attr</code> not as a lookup but as a small search with an order of priority, and think of that search as passing through a front desk before it reaches the object's own storage. Some class-level attributes are ordinary values sitting there. Others are special objects — descriptors — that implement <code>__get__</code> and, optionally, <code>__set__</code>. When Python's search finds one of those, it doesn't hand you the descriptor object itself; it calls the descriptor's method and gives you whatever that method returns (or does).</p>
+<p>The practical value of this shows up the moment you need validation on an attribute. Say you have an <code>Account</code> class with a <code>balance</code>, and balance must never go negative. Without a descriptor, you'd scatter <code>if value &lt; 0: raise ValueError(...)</code> at every point in your codebase that sets <code>balance</code>, and it only takes one missed spot for a negative balance to slip through with no error at all. A descriptor closes that gap once, in one place, because every single assignment to <code>balance</code> — no matter where in the codebase it happens — is forced to route through the same <code>__set__</code> method.</p>
+<p>This is the intuition an experienced engineer reaches for: any time "this rule must hold no matter how the attribute is touched" comes up, that's a signal to centralize the check at the attribute-access layer instead of relying on every caller to remember it.</p>
+<h2>Brute Force Solution</h2>
+<p>The brute-force version of "enforce this invariant everywhere" is exactly what was just described: manual guards repeated at every call site.</p>
+<p><strong>Idea:</strong> Every place in the code that assigns to <code>balance</code> includes an explicit check before the assignment.</p>
+<pre><code class="language-python">if new_balance &lt; 0:
+    raise ValueError(&quot;balance cannot be negative&quot;)
+account.balance = new_balance
+</code></pre>
+<p><strong>Advantages:</strong>
+- No new concepts required — plain conditionals anyone can read.
+- Works fine in a script with one or two assignment sites.</p>
+<p><strong>Disadvantages:</strong>
+- Not enforced by the language — it's enforced by discipline, and discipline doesn't scale across a team or a growing codebase.
+- Every new call site is a chance to forget the check, and the failure mode is silent (a bad value just gets stored).
+- Duplicated logic means a change to the rule (say, adding a maximum limit) has to be found and updated everywhere.</p>
+<p><strong>Time complexity:</strong> O(1) per assignment, same as the descriptor version — the cost here isn't runtime, it's maintainability.
+<strong>Space complexity:</strong> O(1) — no extra structures, which is also why it's tempting to skip building anything more robust.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach moves the check into a descriptor, so the language itself enforces it instead of relying on every call site to remember.</p>
+<p>A data descriptor is any object that defines <code>__get__</code> and <code>__set__</code> and is placed as a <strong>class attribute</strong>. When Python resolves <code>instance.attr</code>, it checks the type first; if what it finds there is a data descriptor, that descriptor's methods run instead of touching the instance's <code>__dict__</code> directly — even before the instance dict is consulted. That priority order (data descriptor on the type overrides instance <code>__dict__</code>) is what makes this reliable: there's no way to route around it by poking at the instance dictionary directly.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>account.balance</code> (read)</td>
+<td>Python finds <code>balance</code> is a descriptor on the class → calls its <code>__get__</code> → returns the stored value</td>
+</tr>
+<tr>
+<td><code>account.balance = -5</code> (write)</td>
+<td>Python finds the descriptor's <code>__set__</code> → validation runs → raises before anything is stored</td>
+</tr>
+<tr>
+<td><code>account.balance = 100</code> (write)</td>
+<td><code>__set__</code> validation passes → value is stored in the descriptor's own backing storage</td>
+</tr>
+</tbody>
+</table>
+<p>Because the descriptor lives on the class and every instance shares it, there's exactly one place the rule can be defined and exactly one place it needs to change.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">class NonNegative:
+    &quot;&quot;&quot;Descriptor enforcing that an attribute never goes negative.&quot;&quot;&quot;
+
+    def __set_name__(self, owner, name):
+        self._name = &quot;_&quot; + name
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        return getattr(instance, self._name)
+
+    def __set__(self, instance, value):
+        if value &lt; 0:
+            raise ValueError(f&quot;{self._name.lstrip('_')} cannot be negative&quot;)
+        setattr(instance, self._name, value)
+
+
+class Account:
+    balance = NonNegative()
+
+    def __init__(self, balance):
+        self.balance = balance
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>__set_name__(self, owner, name)</code> is called automatically by Python once, when the class body finishes executing, and tells the descriptor what name it was assigned to (<code>balance</code>). It's used here to pick a private backing-attribute name (<code>_balance</code>) so the descriptor doesn't collide with itself.</li>
+<li><code>__get__(self, instance, owner)</code> runs on every read of <code>account.balance</code>. The <code>instance is None</code> check handles the case where the descriptor is accessed on the class itself (<code>Account.balance</code>) rather than an instance; returning <code>self</code> there is the standard convention.</li>
+<li><code>__set__(self, instance, value)</code> runs on every write, including the one inside <code>__init__</code>. It validates before storing anything, which is the entire point — there is no code path that stores a value without passing through this check.</li>
+<li><code>Account.balance = NonNegative()</code> replaces what would otherwise be a plain instance attribute with a class-level descriptor. This is the swap that routes every future <code>self.balance = x</code> through <code>__set__</code> instead of writing straight into <code>self.__dict__</code>.</li>
+</ul>
+<h2>Dry Run</h2>
+<pre><code class="language-python">a = Account(50)
+</code></pre>
+<p><code>__init__</code> runs <code>self.balance = 50</code>. Python sees <code>balance</code> is a data descriptor on <code>Account</code>, so it calls <code>NonNegative.__set__(descriptor, a, 50)</code>. <code>50 &lt; 0</code> is false, so it stores <code>50</code> under <code>a._balance</code>.</p>
+<pre><code class="language-python">print(a.balance)
+</code></pre>
+<p>Python sees the descriptor again, calls <code>__get__(descriptor, a, Account)</code>, which returns <code>getattr(a, "_balance")</code> → <code>50</code>.</p>
+<pre><code class="language-python">a.balance = -10
+</code></pre>
+<p><code>__set__</code> runs again, <code>-10 &lt; 0</code> is true, and a <code>ValueError</code> is raised before <code>_balance</code> is ever touched — the object's state stays exactly as it was.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(1) for both read and write — the descriptor adds one extra method call over a plain attribute access, no loops or scans involved.
+<strong>Space:</strong> O(1) additional per instance — one extra attribute (<code>_balance</code>) instead of <code>balance</code>, no growth with input size.
+These are correct because the descriptor doesn't introduce any data-dependent branching or storage; it's a fixed, constant amount of indirection layered on top of ordinary attribute storage.</p>
+<h2>Alternative Solutions</h2>
+<p><code>@property</code> is the built-in shorthand for exactly this pattern when the logic is specific to one class:</p>
+<pre><code class="language-python">class Account:
+    def __init__(self, balance):
+        self._balance = balance
+
+    @property
+    def balance(self):
+        return self._balance
+
+    @balance.setter
+    def balance(self, value):
+        if value &lt; 0:
+            raise ValueError(&quot;balance cannot be negative&quot;)
+        self._balance = value
+</code></pre>
+<p><code>property</code> is itself implemented as a descriptor, so this isn't really a different mechanism — it's the same protocol with less boilerplate. The custom descriptor class is worth writing instead when the same validation rule needs to be reused across multiple unrelated classes and attributes (<code>NonNegative()</code> can be dropped onto any class), whereas <code>property</code> is naturally a one-off per class.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Assigning during <code>__init__</code> before validation exists:</strong> if <code>__set_name__</code> hasn't run yet (rare, but possible with dynamic class construction), <code>self._name</code> may not be set — always define descriptors at class-definition time, not dynamically after the fact.</li>
+<li><strong>Zero as a boundary value:</strong> <code>0 &lt; 0</code> is <code>False</code>, so zero is correctly accepted — worth testing explicitly since off-by-one mistakes here are common.</li>
+<li><strong>Subclassing without re-declaring <code>__slots__</code>:</strong> every class in an inheritance chain must declare <code>__slots__</code> for the memory savings to hold; one class without it reintroduces a <code>__dict__</code> for the whole chain, silently.</li>
+<li><strong>Multiple inheritance with same-named methods:</strong> resolved by MRO, not by declaration order guesswork — always verify with <code>ClassName.__mro__</code> rather than assuming.</li>
+<li><strong>Accessing the descriptor via the class, not an instance:</strong> must be handled (<code>instance is None</code> check) or <code>ClassName.balance</code> will crash instead of returning the descriptor object.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Storing the value directly on <code>self.balance</code> inside the descriptor's <code>__set__</code>.</strong> This creates infinite recursion, since setting <code>self.balance</code> re-triggers the descriptor. Always store under a different name (<code>_balance</code>).</li>
+<li><strong>Forgetting <code>__set_name__</code> and hardcoding the backing attribute name.</strong> Breaks the moment the descriptor is reused for a second attribute on the same class.</li>
+<li><strong>Assuming <code>__slots__</code> savings apply automatically to subclasses.</strong> If any parent in the chain omits <code>__slots__</code>, the subclass gets a <code>__dict__</code> anyway, with no warning.</li>
+<li><strong>Confusing non-data descriptors (only <code>__get__</code>) with data descriptors (<code>__get__</code> + <code>__set__</code>).</strong> Only data descriptors take priority over instance <code>__dict__</code>; a non-data descriptor can be silently shadowed by an instance attribute of the same name.</li>
+<li><strong>Assuming <code>super()</code> looks at "the parent class."</strong> It walks the MRO, which in multiple inheritance is not necessarily the direct parent — it depends on the full hierarchy.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What's the difference between a data descriptor and a non-data descriptor, and why does the distinction affect lookup priority?</li>
+<li>Why does <code>__slots__</code> prevent adding new attributes, and what happens if a subclass forgets to declare it?</li>
+<li>Two parent classes define the same method — which one runs, and how would you verify it without guessing?</li>
+<li>What does a metaclass control that a regular class doesn't?</li>
+<li>How is <code>@property</code> implemented internally?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode-style "design" problems (e.g., Design HashMap, LRU Cache):</strong> share the same underlying skill of exposing a clean interface (<code>obj[key]</code>, <code>obj.attr</code>) while controlling what happens underneath it — descriptors are Python's built-in version of that same idea for attribute access.</li>
+<li><strong>Implementing a custom context manager (<code>__enter__</code>/<code>__exit__</code>):</strong> another case where Python calls specific dunder methods in a fixed protocol, reinforcing the "protocol, not magic" mental model.</li>
+<li><strong>Singleton pattern via metaclass:</strong> a natural follow-up exercise once <code>__new__</code> on a metaclass is understood — restricting instantiation instead of registering classes.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p><code>obj.attr</code> is a search, not a direct grab — it checks the type first, then the instance, and descriptors on the type can intercept that search entirely. <code>__slots__</code> removes the instance <code>__dict__</code> that flexible attribute assignment depends on, and that removal must be opted into by every class in an inheritance chain to actually save memory. When multiple parents define the same method, Python's MRO — not guesswork — decides which one runs, and <code>super()</code> always follows that same order. A metaclass controls how a class itself gets built, which is what lets patterns like auto-registration happen without any class remembering to call a registration function. All four of these are expressions of one idea: attribute and class construction in Python are protocols you can hook into, not fixed rules.</p>
+<h2>Watch the Video</h2>
+<p>This entire walkthrough — including the live two-class attribute error, the descriptor build, and the auto-registering metaclass — is demonstrated step by step in the video. Watch it here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <strong>Fun with Learning Technology</strong>, a daily series that takes developer topics — Python internals, algorithms, interview-style problems, and real framework mechanics — and breaks them down from first principles instead of treating them as memorized tricks. New lessons land every day on the same channel.</p>
+<h2>Call To Action</h2>
+<p>If this made Python's object model click a little more, give the video a like on YouTube and subscribe to catch new lessons as they land. For the written breakdowns and code samples like this one, subscribe to the Substack. Drop your MRO guess in the comments before checking it against the video, and share this with anyone still treating <code>@property</code> as unexplainable magic.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Descriptor: define __get__/__set__ on a class attribute. Trigger?</summary><p>Instance dict lookup finds an attribute defined on the class that has __get__/__set__ — Python calls those instead of returning it plain.</p></details><details class='card2'><summary>Attribute lookup cost: obj.attr time complexity?</summary><p>O(MRO length) worst case — walks instance dict, then each class in MRO until found or AttributeError.</p></details><details class='card2'><summary>__slots__ space effect vs normal __dict__?</summary><p>Removes per-instance __dict__, saving ~memory per object; O(1) fixed attribute slots instead of a dynamic dict.</p></details><details class='card2'><summary>Trickiest bug: __slots__ subclass with no __slots__ itself?</summary><p>Child class without __slots__ silently regains a __dict__, cancelling the parent&#x27;s memory savings — easy to miss.</p></details><details class='card2'><summary>Data descriptor vs non-data descriptor: what changes lookup order?</summary><p>Data descriptor (has __set__) always wins over instance dict; non-data descriptor (only __get__) loses to instance dict if attr present there.</p></details><details class='card2'><summary>Follow-up: why does a class behave like &#x27;just an object&#x27;?</summary><p>Classes are instances of a metaclass (type); metaclass&#x27;s __call__/__new__ controls class creation, same as instances of a normal class.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
