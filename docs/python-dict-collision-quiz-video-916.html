@@ -1,0 +1,167 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Python Dict Collision Quiz: Can You Guess the Output? #shorts — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-dict-collision-quiz-video-916
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-dict-collisi">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-dict-collision-quiz-video-916.html">
+<meta property="og:title" content="Python Dict Collision Quiz: Can You Guess the Output? #shorts — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-dict-collision-quiz-video-916
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/python-dict-collisi">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Dict Collision Quiz: Can You Guess the Output? #shorts</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every Python developer uses dictionaries daily, but very few can explain what actually happens inside one when two different-looking keys turn out to be the same key underneath. That gap in understanding is exactly what interviewers like to probe, because it separates people who memorized dict syntax from people who understand how dict <em>works</em>.</p>
+<p>This is one of those small, sharp examples: three lines of code that look completely predictable until you actually run them. Understanding why <code>1</code> and <code>True</code> collide as dictionary keys teaches you something bigger than a party trick — it teaches you how Python defines equality, how that definition drives hashing, and how a hash table decides whether to store a new entry or silently merge it into an existing one. That's core computer science, and it shows up constantly in interviews that touch data structures.</p>
+<h2>Problem Overview</h2>
+<p>Here's the setup, in plain terms: you create an empty dictionary. You set the key <code>1</code> to the value <code>"one"</code>. Then you set the key <code>True</code> to the value <code>"yes"</code>. Finally, you print the dictionary.</p>
+<p>The question is simple to state and hard to guess correctly on the first try: what does the dictionary contain after both assignments? Does it have two entries, one for <code>1</code> and one for <code>True</code>? Or does something else happen?</p>
+<h2>Example</h2>
+<pre><code class="language-python">d = {}
+d[1] = &quot;one&quot;
+d[True] = &quot;yes&quot;
+print(d)
+</code></pre>
+<p><strong>Output:</strong></p>
+<pre><code class="language-python">{1: 'yes'}
+</code></pre>
+<p>Only one entry exists. The key printed is <code>1</code> (not <code>True</code>), but the value is <code>"yes"</code> — the value from the <em>second</em> assignment. That's the part that trips people up: the key identity from the first insertion survives, but the value gets overwritten by the second insertion.</p>
+<h2>Intuition</h2>
+<p>The instinct most developers have is to think about keys the way they think about variable names — as distinct labels. <code>1</code> "looks like" an integer and <code>True</code> "looks like" a boolean, so surely they're different keys, right?</p>
+<p>But a dictionary doesn't compare keys by what type they are. It compares them by two things: their hash value, and their equality. Python's rule is that objects which compare equal must produce the same hash — this is a hard requirement of the language, not an implementation detail. So the real question isn't "are <code>1</code> and <code>True</code> different types?" It's "does <code>1 == True</code> evaluate to <code>True</code>?"</p>
+<p>In Python, <code>bool</code> is literally a subclass of <code>int</code>. <code>True</code> is <code>1</code>, and <code>False</code> is <code>0</code>, at the value level. So:</p>
+<pre><code class="language-python">&gt;&gt;&gt; 1 == True
+True
+&gt;&gt;&gt; hash(1) == hash(True)
+True
+</code></pre>
+<p>Since they're equal and hash equal, a dictionary treats them as the <em>same key</em>. When you insert <code>d[1] = "one"</code>, Python creates a slot for that hash/equality bucket, remembers the key object <code>1</code>, and stores <code>"one"</code>. When you then insert <code>d[True] = "yes"</code>, Python computes the hash, finds that slot already occupied by an equal key, and does what dictionaries always do on a duplicate key: it keeps the original key object and updates the value in place. That's why the printed key stays <code>1</code> but the value becomes <code>"yes"</code>.</p>
+<p>This is the same mental model you'd use to reason about any hash table — the value part is mutable per key, but the key identity, once inserted, doesn't get replaced by a later "equal" key.</p>
+<h2>Brute Force Solution</h2>
+<p>There isn't really a "brute force vs optimal" algorithm here — this is a language-semantics question, not an optimization problem. But it's useful to think about the brute-force way you'd verify this behavior without any dictionary tricks: manually track insertions in a list of <code>(key, value)</code> pairs, and only add a new pair if no existing pair's key compares equal to the new key.</p>
+<pre><code class="language-python">def brute_force_set(pairs, key, value):
+    for i, (k, v) in enumerate(pairs):
+        if k == key:
+            pairs[i] = (k, value)  # keep original key, update value
+            return
+    pairs.append((key, value))
+</code></pre>
+<p><strong>Advantages:</strong> dead simple, easy to reason about, no need to understand hashing at all.
+<strong>Disadvantages:</strong> this is O(n) per insertion because you scan every existing pair to check for equality. A real dictionary does not do this.</p>
+<p><strong>Time complexity:</strong> O(n) per insert, O(n²) for n insertions.
+<strong>Space complexity:</strong> O(n).</p>
+<h2>Optimal Solution</h2>
+<p>Python's dict is a hash table under the hood, so lookups and insertions are O(1) on average. The optimal "solution" here is really just understanding the mechanism CPython uses:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>d[1] = "one"</code></td>
+<td><code>hash(1)</code> is computed, an empty slot is found in the internal table, <code>(1, "one")</code> is stored there</td>
+</tr>
+<tr>
+<td><code>d[True] = "yes"</code></td>
+<td><code>hash(True)</code> is computed — same value as <code>hash(1)</code> — table probes that slot, finds an entry whose key (<code>1</code>) compares equal to <code>True</code>, and <strong>updates the value only</strong></td>
+</tr>
+<tr>
+<td><code>print(d)</code></td>
+<td>Iterates stored entries; shows the <em>original</em> key object (<code>1</code>) mapped to the <em>latest</em> value (<code>"yes"</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>The key insight: a dict never asks "is this the exact same object?" — it asks "does this hash to the same bucket, and does it compare equal?" Both conditions are satisfied by <code>1</code> and <code>True</code>, so as far as the dictionary is concerned, they are the same key, full stop.</p>
+<p><strong>Time complexity:</strong> O(1) average per operation (hash table).
+<strong>Space complexity:</strong> O(n) for n unique keys.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def demonstrate_dict_collision() -&gt; dict:
+    &quot;&quot;&quot;Show that 1 and True collide as dictionary keys.&quot;&quot;&quot;
+    d = {}
+    d[1] = &quot;one&quot;
+    d[True] = &quot;yes&quot;
+    return d
+
+
+if __name__ == &quot;__main__&quot;:
+    result = demonstrate_dict_collision()
+    print(result)          # {1: 'yes'}
+    print(len(result))     # 1
+    print(1 in result)     # True
+    print(True in result)  # True
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>d = {}</code> creates an empty hash table with no entries.</li>
+<li><code>d[1] = "one"</code> computes <code>hash(1)</code>, finds an open slot, and stores the key object <code>1</code> alongside <code>"one"</code>.</li>
+<li><code>d[True] = "yes"</code> computes <code>hash(True)</code>. Since <code>hash(True) == hash(1)</code>, Python probes that slot, checks <code>True == 1</code> (which is <code>True</code>), and concludes this is the same key. It overwrites the stored value with <code>"yes"</code> but leaves the stored key object (<code>1</code>) untouched.</li>
+<li><code>return d</code> gives back a dict with exactly one entry.</li>
+<li>The <code>__main__</code> block confirms the behavior three ways: printing the dict, checking its length, and checking membership for both <code>1</code> and <code>True</code>.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Starting state: <code>d = {}</code></p>
+<ol>
+<li><code>d[1] = "one"</code> → table: <code>{1: "one"}</code></li>
+<li><code>d[True] = "yes"</code> → hash matches existing slot for <code>1</code>; equality check <code>True == 1</code> passes → value replaced → table: <code>{1: "yes"}</code></li>
+<li><code>print(d)</code> → <code>{1: 'yes'}</code></li>
+<li><code>len(d)</code> → <code>1</code></li>
+<li><code>True in d</code> → <code>True</code>, because membership testing uses the same hash+equality rule</li>
+</ol>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> O(1) average for each <code>dict</code> insertion and lookup, because CPython's dict is implemented as an open-addressed hash table. This is correct because hashing an <code>int</code>/<code>bool</code> is O(1), and probing a nearly-empty table resolves in a constant number of steps on average.</li>
+<li><strong>Space:</strong> O(n) for n unique keys stored, since <code>1</code> and <code>True</code> collapse into a single stored entry rather than two.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p>If you actually wanted two independent entries for "1" and "True" conceptually, you'd need to break the equality tie — for example, by using string keys (<code>"1"</code> and <code>"True"</code>) or a tuple that includes the type (<code>(int, 1)</code> vs <code>(bool, True)</code>):</p>
+<pre><code class="language-python">d = {}
+d[(int, 1)] = &quot;one&quot;
+d[(bool, True)] = &quot;yes&quot;
+print(d)  # {(int, 1): 'one', (bool, True): 'yes'}
+</code></pre>
+<p>This works because tuples compare element-wise, and <code>int != bool</code> as types even though <code>1 == True</code> as values. It's a useful pattern any time you need to key on both a value and its type.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty dict:</strong> inserting into <code>{}</code> always succeeds; no collision possible on the first key.</li>
+<li><strong><code>0</code> and <code>False</code>:</strong> same collision as <code>1</code>/<code>True</code>, since <code>hash(0) == hash(False)</code> and <code>0 == False</code>.</li>
+<li><strong>Floats that equal ints:</strong> <code>1.0 == 1</code> is <code>True</code> and <code>hash(1.0) == hash(1)</code>, so <code>d[1.0]</code> and <code>d[1]</code> also collide.</li>
+<li><strong>Custom objects with overridden <code>__eq__</code>/<code>__hash__</code>:</strong> the same rule applies — if two objects compare equal and hash equal, they collapse into one key, regardless of type.</li>
+<li><strong>Objects that are equal but hash differently:</strong> this violates Python's data model and leads to undefined/broken dict behavior — always keep <code>__eq__</code> and <code>__hash__</code> consistent on custom classes.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Assuming dict keys are compared by type instead of by value and hash.</li>
+<li>Assuming the <em>last</em> inserted key object replaces the <em>first</em> — it doesn't; only the value updates, the original key stays.</li>
+<li>Overriding <code>__eq__</code> on a custom class without also overriding <code>__hash__</code>, breaking dict behavior entirely.</li>
+<li>Using mutable objects (like lists) as dict keys, which isn't just a style issue — it's disallowed because hashes must stay stable.</li>
+<li>Forgetting that <code>bool</code> is a subclass of <code>int</code> in Python, leading to unexpected collisions in real code (e.g., using flags as dict keys alongside integer IDs).</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Why must equal objects have equal hashes in Python?</li>
+<li>What happens if you override <code>__eq__</code> but not <code>__hash__</code> on a class?</li>
+<li>How does CPython resolve hash collisions internally (open addressing vs chaining)?</li>
+<li>Why is <code>bool</code> a subclass of <code>int</code> in Python's type hierarchy?</li>
+<li>Can you use a tuple as a dictionary key? What about a list?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 1. Two Sum</strong> — relies on hashing values to indices in O(1) lookups.</li>
+<li><strong>LeetCode 49. Group Anagrams</strong> — uses a dict keyed by a canonical form (sorted string or tuple) to bucket collisions intentionally.</li>
+<li><strong>LeetCode 205. Isomorphic Strings</strong> — depends on correct key equality semantics between two dicts.</li>
+<li><strong>LeetCode 242. Valid Anagram</strong> — another hash-counting problem where key equality determines correctness.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Python dictionaries key on hash <strong>and</strong> equality, never on type. Because <code>bool</code> is a subclass of <code>int</code> and <code>True == 1</code>, they collide as dict keys — the second insertion overwrites the value but keeps the first key object. This isn't a quirk to memorize in isolation; it's a direct consequence of Python's data model, and understanding it makes you better at predicting dict behavior in real production code.</p>
+<h2>Watch the Video</h2>
+<p>Prefer to see it explained live? Watch the full breakdown here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This is part of <strong>Fun with Learning Technology</strong>, a series that breaks down the kind of Python and data-structure details that look small but reveal how the language really works under the hood — the same details that come up in coding interviews and in real bugs.</p>
+<h2>Call To Action</h2>
+<p>If this cleared something up, drop a like on the video and subscribe on YouTube for more of these deep dives. For longer breakdowns and interview prep delivered straight to your inbox, subscribe to the Substack newsletter. Got a Python gotcha you want explained next? Drop it in the comments, and share this with a dev who's still surprised by it.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Python dict collisions: when you see &#x27;same hash, different key&#x27;, think open addressing probing.</summary><p>CPython dicts use open addressing, not chaining; colliding keys probe alternate slots via perturbation.</p></details><details class='card2'><summary>Time complexity of dict get/set under heavy collisions?</summary><p>Average O(1), but worst case degrades to O(n) if many keys collide into the same probe sequence.</p></details><details class='card2'><summary>Space complexity of a Python dict with n entries?</summary><p>O(n), though CPython over-allocates the table (resizes at ~2/3 load factor) for fewer collisions.</p></details><details class='card2'><summary>Trickiest bug when relying on dict key hashing?</summary><p>Using mutable or badly-implemented __hash__/__eq__ causes unequal objects to collide or equal objects to hash differently.</p></details><details class='card2'><summary>Dict collision handling vs Java HashMap&#x27;s approach?</summary><p>Python probes to a new slot (open addressing); Java chains colliding entries in a linked list/tree per bucket.</p></details><details class='card2'><summary>Interview follow-up: why does dict order look insertion-preserved despite collisions?</summary><p>Since 3.7, a separate dense array tracks insertion order; the hash table only stores indices into it.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
