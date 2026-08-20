@@ -1,0 +1,204 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3069. Distribute Elements Into Two Arrays I | LeetCode Daily Python Solution (the trick nobody sees) — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/distribute-elements-into-two-arrays-i
+💻 Code on GitHub: https://github.com/time">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/distribute-elements-into-two-arrays-i.html">
+<meta property="og:title" content="3069. Distribute Elements Into Two Arrays I | LeetCode Daily Python Solution (the trick nobody sees) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/distribute-elements-into-two-arrays-i
+💻 Code on GitHub: https://github.com/time">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>3069. Distribute Elements Into Two Arrays I | LeetCode Daily Python Solution (the trick nobody sees)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Every so often LeetCode hands you a problem that sounds harder than it is, and 3069, Distribute Elements Into Two Arrays I, is a textbook example. The name alone — "distribute" — nudges a lot of people toward heaps, priority queues, or a sort step before they've even read the constraints. That instinct is worth examining, because it's the same instinct that costs candidates time in real interviews: reaching for a heavier tool before checking whether the problem already handed you a shortcut.</p>
+<p>This one matters less for its difficulty and more for what it tests. Interviewers use problems like this to see whether you actually read the rule before writing code, or whether you pattern-match to "distribute numbers" → "sort and split" → wrong answer. Once you see the trick, the implementation is almost trivial. Getting there is the real skill, and it's a skill that transfers directly to harder greedy and simulation problems later in your prep.</p>
+<h2>Problem Overview</h2>
+<p>You're given an array of <code>n</code> distinct integers, 1-indexed conceptually but processed in order. You need to distribute every number into one of two arrays, <code>arr1</code> and <code>arr2</code>, following one rule:</p>
+<ul>
+<li>The first number always goes into <code>arr1</code>.</li>
+<li>The second number always goes into <code>arr2</code>.</li>
+<li>For every number after that, look at the <strong>last element currently in <code>arr1</code></strong> and the <strong>last element currently in <code>arr2</code></strong>. Whichever one is bigger, the new number joins that array.</li>
+</ul>
+<p>Once every number has been placed, the answer is <code>arr1</code> concatenated with <code>arr2</code>, in that order.</p>
+<p>The constraint that trips people up is subtle: this is not about the size of the piles, and it's not about the numbers overall — it's only ever about the two most recent "tail" values. Nothing else in either array matters for the decision.</p>
+<h2>Example</h2>
+<p>Take <code>nums = [2, 1, 3]</code>.</p>
+<ul>
+<li><code>2</code> is the first number, so it seeds <code>arr1</code>. <code>arr1 = [2]</code>.</li>
+<li><code>1</code> is the second number, so it seeds <code>arr2</code>. <code>arr2 = [1]</code>.</li>
+<li><code>3</code> is next. Compare tails: <code>arr1</code>'s last value is <code>2</code>, <code>arr2</code>'s last value is <code>1</code>. <code>2 &gt; 1</code>, so <code>arr1</code> wins and <code>3</code> joins it. <code>arr1 = [2, 3]</code>.</li>
+</ul>
+<p>Final answer: <code>arr1 = [2, 3]</code>, <code>arr2 = [1]</code>, concatenated as <code>[2, 3, 1]</code>.</p>
+<p>Now compare that to what happens if you sort first. Sorted, <code>nums</code> becomes <code>[1, 2, 3]</code>, and splitting evenly gives <code>arr1 = [1, 2]</code>, <code>arr2 = [3]</code> — a completely different, and wrong, result. Sorting throws away the one thing this problem actually cares about: the order the numbers arrive in. The rule is defined entirely in terms of arrival order and running tail comparisons, so any transformation that disturbs order breaks it.</p>
+<p>A second example makes the mechanics clearer: <code>nums = [5, 4, 3, 8]</code>.</p>
+<ul>
+<li><code>5</code> seeds <code>arr1</code>. <code>arr1 = [5]</code>.</li>
+<li><code>4</code> seeds <code>arr2</code>. <code>arr2 = [4]</code>.</li>
+<li><code>3</code> compares: <code>arr1</code>'s last is <code>5</code>, <code>arr2</code>'s last is <code>4</code>. <code>5</code> wins, so <code>3</code> joins <code>arr1</code>. <code>arr1 = [5, 3]</code>.</li>
+<li><code>8</code> compares: <code>arr1</code>'s last is now <code>3</code>, <code>arr2</code>'s last is <code>4</code>. <code>4</code> wins, so <code>8</code> joins <code>arr2</code>. <code>arr2 = [4, 8]</code>.</li>
+</ul>
+<p>Final: <code>arr1 = [5, 3]</code>, <code>arr2 = [4, 8]</code>, concatenated as <code>[5, 3, 4, 8]</code>.</p>
+<h2>Intuition</h2>
+<p>The mental trap here is that "distribute into two groups" sounds like a partitioning problem, and partitioning problems often want you to sort first so you can split evenly or by rank. But read the rule again: it never says anything about the final size of each pile, the sum, or the overall value distribution. It only ever asks "which array's most recent number is bigger, right now, at this exact moment in the sequence?"</p>
+<p>That's a strong hint. A decision that depends only on the two most recent values, and never on anything further back, is a signal that you don't need a data structure that gives you sorted order, minimum/maximum across the whole set, or random access into the middle. You need exactly one thing, fast: the last element of two growing collections.</p>
+<p>Once you frame it that way, the problem stops being about "distribution strategy" and becomes a straightforward simulation: walk the array once, in order, and make one comparison per element. Whatever list is winning at each step gets the append.</p>
+<p>This is a useful pattern to internalize for interviews generally — before reaching for a heap, a sorted structure, or a two-pass approach, check whether the rule you're implementing only ever needs the <em>most recent</em> state. If it does, a plain pass with simple containers is usually enough, and it's almost always faster to write and easier to reason about than the "advanced" version.</p>
+<h2>Brute Force Solution</h2>
+<p>There isn't really a meaningfully different "brute force" here in the traditional sense — this problem's structure basically forces you toward the simulation from the start unless you try something misguided like sorting first.</p>
+<p><strong>Idea:</strong> Simulate the exact rule as stated: seed the two arrays with the first two elements, then for each subsequent element check both tails and append accordingly.</p>
+<p><strong>Algorithm:</strong>
+1. Initialize <code>arr1</code> with <code>nums[0]</code>, <code>arr2</code> with <code>nums[1]</code>.
+2. For each remaining number, compare <code>arr1[-1]</code> and <code>arr2[-1]</code>.
+3. Append to whichever array has the bigger last value.
+4. Return <code>arr1 + arr2</code>.</p>
+<p><strong>Advantages:</strong> Simple, direct translation of the problem statement, no wasted work.</p>
+<p><strong>Disadvantages:</strong> None really — this "brute force" already is the optimal approach because the problem doesn't leave room for a smarter algorithm underneath it. There's no redundant computation to eliminate.</p>
+<p><strong>Time complexity:</strong> O(n) — one pass, one comparison per element.
+<strong>Space complexity:</strong> O(n) — for the two output arrays.</p>
+<h2>Optimal Solution</h2>
+<p>Because the naive simulation is already optimal, the "optimal solution" and the brute force are the same algorithm. The only real design decision is the data structure choice.</p>
+<p>You need constant-time access to the last element of two growing collections, and constant-time append. A plain Python list gives you both: <code>list[-1]</code> for the tail, <code>list.append(x)</code> for insertion, both O(1) amortized. There's no reason to reach for a deque, heap, or any specialized structure — none of them offer anything a list doesn't already give you here, and they'd add overhead for no benefit.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>arr1</th>
+<th>arr2</th>
+<th>New number</th>
+<th>Comparison</th>
+<th>Goes to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>seed</td>
+<td>[5]</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>arr1</td>
+</tr>
+<tr>
+<td>seed</td>
+<td>[5]</td>
+<td>[4]</td>
+<td>—</td>
+<td>—</td>
+<td>arr2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>[5]</td>
+<td>[4]</td>
+<td>3</td>
+<td>5 &gt; 4</td>
+<td>arr1</td>
+</tr>
+<tr>
+<td>4</td>
+<td>[5, 3]</td>
+<td>[4]</td>
+<td>8</td>
+<td>3 &lt; 4</td>
+<td>arr2</td>
+</tr>
+</tbody>
+</table>
+<h2>Python Code</h2>
+<pre><code class="language-python">from typing import List
+
+
+class Solution:
+    def resultArray(self, nums: List[int]) -&gt; List[int]:
+        arr1 = [nums[0]]
+        arr2 = [nums[1]]
+
+        for num in nums[2:]:
+            if arr1[-1] &gt; arr2[-1]:
+                arr1.append(num)
+            else:
+                arr2.append(num)
+
+        return arr1 + arr2
+
+
+def demo() -&gt; None:
+    assert Solution().resultArray([2, 1, 3]) == [2, 3, 1]
+    assert Solution().resultArray([5, 4, 3, 8]) == [5, 3, 4, 8]
+    print(&quot;all assertions passed&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    demo()
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>arr1 = [nums[0]]</code> and <code>arr2 = [nums[1]]</code> handle the seeding rule directly — the first number always starts <code>arr1</code>, the second always starts <code>arr2</code>. This also sidesteps a subtle edge case: if you tried to loop from index 0 with empty lists, your very first comparison would hit an empty list and crash. Seeding first means the loop body never has to special-case "what if a pile is empty."</li>
+<li><code>for num in nums[2:]</code> iterates over everything after the two seed values, in original order — order is the entire point of this problem, so nothing here reorders or re-groups the input.</li>
+<li><code>arr1[-1] &gt; arr2[-1]</code> is the whole decision rule: negative indexing gives O(1) access to the last element without searching.</li>
+<li><code>arr1.append(num)</code> / <code>arr2.append(num)</code> grows whichever pile is currently ahead.</li>
+<li><code>return arr1 + arr2</code> concatenates the two finished piles into the single output array the problem expects.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using <code>nums = [5, 4, 3, 8]</code>:</p>
+<ol>
+<li><code>arr1 = [5]</code>, <code>arr2 = [4]</code> after seeding.</li>
+<li><code>num = 3</code>: <code>arr1[-1] = 5</code>, <code>arr2[-1] = 4</code>. <code>5 &gt; 4</code> → append to <code>arr1</code>. <code>arr1 = [5, 3]</code>.</li>
+<li><code>num = 8</code>: <code>arr1[-1] = 3</code>, <code>arr2[-1] = 4</code>. <code>3 &gt; 4</code> is false → append to <code>arr2</code>. <code>arr2 = [4, 8]</code>.</li>
+<li>Return <code>arr1 + arr2 = [5, 3, 4, 8]</code>.</li>
+</ol>
+<p>Matches the expected result.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time: O(n).</strong> Every element in <code>nums</code> is visited exactly once, and each visit does a fixed amount of work — one comparison, one append. There's no nested loop, no re-scanning, and no hidden cost in <code>arr[-1]</code> (Python lists give O(1) access to any index, including negative ones).</p>
+<p><strong>Space: O(n).</strong> The two output arrays together hold every element from the input exactly once. There's no auxiliary structure beyond that.</p>
+<p>Both bounds are tight — you can't do better than O(n) time because every element must be read and placed at least once, and you can't do better than O(n) space because the problem requires you to return all n elements.</p>
+<h2>Alternative Solutions</h2>
+<p>The only "alternative" worth mentioning is the wrong one: sorting <code>nums</code> first and splitting it some way. As shown in the example above, this produces a different result because the rule is order-dependent, not value-dependent. It's included here specifically because it's the most common mistake, not because it's a valid approach — there is no legitimate alternative algorithm that beats or matches the direct simulation, since the simulation is already both correct and asymptotically optimal.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Minimum size input:</strong> The problem guarantees at least 2 elements (since both arrays need a seed), so you don't need to guard against <code>nums</code> having fewer than 2 elements — but if you were to receive one, indexing <code>nums[1]</code> would throw, which is the correct behavior for an invalid input under the problem's constraints.</li>
+<li><strong>Two-element input:</strong> With exactly <code>[a, b]</code>, the loop body never executes; the result is just <code>[a] + [b]</code>.</li>
+<li><strong>Strictly increasing sequence:</strong> Since values are distinct and each new max will always exceed the current tail of one array, watch how ties never occur here — no special tie-break logic is exercised.</li>
+<li><strong>Strictly decreasing sequence:</strong> Every new number is smaller than both tails, so the comparison still resolves cleanly since it only checks relative size, not whether the new number itself is larger than anything.</li>
+<li><strong>All numbers distinct is guaranteed by constraints</strong> — but if you ever reused this pattern where equal tail values were possible, you'd need to decide a tie-break rule; this problem doesn't require one.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Sorting <code>nums</code> before processing.</strong> This destroys the arrival order the rule depends on and produces a different, wrong result.</li>
+<li><strong>Comparing the full arrays instead of just the last elements</strong> — e.g., comparing sums or lengths of <code>arr1</code> and <code>arr2</code>. The rule only cares about the two most recent tail values.</li>
+<li><strong>Forgetting to seed both arrays before the loop</strong>, then hitting an index error or wrong comparison on an empty list.</li>
+<li><strong>Off-by-one in the loop start</strong>, iterating from <code>nums[1:]</code> or <code>nums[0:]</code> instead of <code>nums[2:]</code>, which reprocesses an already-seeded number.</li>
+<li><strong>Returning <code>arr2 + arr1</code> instead of <code>arr1 + arr2</code></strong> — the order of concatenation matters for the expected output.</li>
+<li><strong>Using a data structure that doesn't give O(1) last-element access</strong>, like a set, which would drop ordering information entirely.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What would change if the rule allowed ties (equal tail values)? How would you decide where the number goes?</li>
+<li>Could you solve this without seeding — i.e., handle it with a single uniform loop from index 0? What extra condition would you need?</li>
+<li>How would the approach change if you needed to support three arrays instead of two?</li>
+<li>Can you do this in O(1) extra space beyond the output arrays?</li>
+<li>What's the difference between this problem and a "greedy load balancing" problem where you assign to the currently smaller pile instead?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 2894, Divisible and Non-divisible Sums Difference</strong> — another single-pass simulation problem where reading the rule carefully beats reaching for a heavier structure.</li>
+<li><strong>LeetCode 1046, Last Stone Weight</strong> — also compares "tail" or "top" values repeatedly, though it needs a max-heap since it's not order-preserving.</li>
+<li><strong>LeetCode 921, Minimum Add to Make Parentheses Valid</strong> — another greedy single-pass problem where only the most recent state matters at each step.</li>
+<li><strong>LeetCode 3070, Distribute Elements Into Two Arrays II</strong> — the harder follow-up version of this exact problem, where the comparison rule gets more complex.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The lesson here isn't really about this specific problem — it's about recognizing when a rule only depends on recent state. Once you notice that a decision only ever looks at the last value in two growing collections, you know you need O(1) tail access and nothing fancier. Seed first to avoid special-casing empty containers, then loop once, compare, and append. That's the entire solution, and it's a pattern worth carrying into other greedy and simulation problems.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with the trace through both examples, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of Fun with Learning Technology, a series where Kai works through a LeetCode problem a day in Python, focused on building the intuition behind each solution rather than just memorizing the code.</p>
+<h2>Call To Action</h2>
+<p>If this cleared things up, like the video on YouTube and subscribe so tomorrow's problem lands in your feed. For the full written breakdown and future deep dives, subscribe to the Substack. Drop a comment with your own solution or a problem you'd like covered next, and share this with anyone prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Two-pile distribution problem: what&#x27;s the tell for this pattern?</summary><p>Compare-last-element-of-each-pile pattern: when placement depends on comparing new item to the tail of two growing groups.</p></details><details class='card2'><summary>Time complexity of distributing n elements one-by-one by comparing pile tails?</summary><p>O(n) — one constant-time comparison and append per element after the fixed 2-element seed.</p></details><details class='card2'><summary>Space complexity for arr1/arr2 in this distribution approach?</summary><p>O(n) — both output arrays together hold all n elements; no extra structures needed.</p></details><details class='card2'><summary>Common bug when seeding arr1 and arr2 from nums?</summary><p>Forgetting arr1=[nums[0]], arr2=[nums[1]] before the loop, then comparing against an empty array on the first real element.</p></details><details class='card2'><summary>How does this differ from a sorting problem despite comparing values?</summary><p>You never reorder elements within a pile — you only decide which pile an element joins, based on its last-element comparison.</p></details><details class='card2'><summary>Interview follow-up: what if arr1 and arr2 tie on last element?</summary><p>Tie goes to the pile with fewer elements (or per problem spec — clarify the tie-break rule before coding).</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
