@@ -1,0 +1,344 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>n8n Lesson 15: Why &#x27;50&#x27; and 50 Break Your IF Node — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/n8n-lesson-15-conditional-logic-with-if-node
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/n8n-lesson-">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/n8n-lesson-15-conditional-logic-with-if-node.html">
+<meta property="og:title" content="n8n Lesson 15: Why &#x27;50&#x27; and 50 Break Your IF Node — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/n8n-lesson-15-conditional-logic-with-if-node
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/n8n-lesson-">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>n8n Lesson 15: Why &#x27;50&#x27; and 50 Break Your IF Node</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h1>SEO Package</h1>
+<h2>SEO Title</h2>
+<p>n8n IF Node Explained: Fix the String vs Number Comparison Bug That Breaks Branches</p>
+<h2>SEO Subtitle</h2>
+<p>A practical walkthrough of n8n's IF node, from condition anatomy to the silent type-mismatch bug that makes true/false branching fail without an error.</p>
+<h2>Featured Quote</h2>
+<p>"n8n only executes the branch that fired; the other one just never runs, so there's nothing to show. No error, no red X, just silence."</p>
+<h2>Meta Description</h2>
+<p>Learn how n8n's IF node routes workflows on real conditions, why "50" and 50 break branches silently, and how to build multi-condition logic that actually works.</p>
+<h2>URL Slug</h2>
+<p>n8n-if-node-string-vs-number-comparison-bug</p>
+<h2>Keywords</h2>
+<p>n8n IF node, n8n tutorial, workflow automation, no-code automation, n8n conditions, n8n branching, n8n Switch node, string vs number comparison, n8n type coercion, n8n Slack integration, automation logic, conditional workflows, n8n AND OR conditions, n8n debugging, low-code automation, n8n beginners guide, workflow orchestration, n8n data types, business process automation, n8n error handling</p>
+<h2>Tags</h2>
+<p>n8n, automation, no-code, workflow-automation, IF-node, low-code, integration, Slack-automation, business-automation, tutorial, beginners, data-types, debugging, workflow-design, tech-education</p>
+<hr />
+<h1>Why "50" and 50 Break Your IF Node</h1>
+<h2>Introduction</h2>
+<p>Most people's first n8n workflow looks the same: a trigger fires, and one action runs every single time. It works fine in a demo. It falls apart the moment real data hits it, because real data isn't uniform. A $50,000 deal and a $5 deal are not the same event, and a workflow that treats them identically will eventually get ignored by the humans downstream of it.</p>
+<p>This is where conditional branching becomes non-negotiable, and it's also where a surprising number of automations quietly break. The IF node is the simplest branching tool n8n offers, and it looks foolproof: check a field, get true or false, move on. But there's a specific, common bug hiding inside that simplicity — a string being compared to a number — that produces no error, no warning, and no obvious symptom. The workflow just silently takes the wrong path.</p>
+<p>If you're building automations that gate expensive actions (a Slack ping, an email, a paid API call) behind a condition, understanding exactly how the IF node evaluates data isn't optional. This is also a pattern that shows up constantly in technical interviews and system design discussions: a single trigger needing to behave differently based on payload contents is the same problem whether you're wiring no-code nodes or writing a Python <code>if/elif</code> chain against a webhook payload.</p>
+<h2>Problem Overview</h2>
+<p>You have a single trigger — say, a new deal record — and you need the automation's behavior to depend on the data in that record, not just on the fact that the trigger fired. Specifically:</p>
+<ul>
+<li>Deals above a certain dollar amount should notify a human immediately.</li>
+<li>Deals below that amount should be logged quietly, with no interruption.</li>
+<li>The rule might need more than one condition (amount AND region, for example).</li>
+<li>The field you're checking might arrive as the wrong data type, which can make an otherwise-correct condition evaluate incorrectly without throwing any error.</li>
+</ul>
+<p>The goal is a workflow that reliably splits execution into different paths based on the actual content of the data, and that fails loudly (or not at all) rather than failing silently.</p>
+<h2>Example</h2>
+<p>Say every new deal comes in as a record with two fields: <code>deal_amount</code> and <code>region</code>.</p>
+<p><strong>Case A:</strong> <code>deal_amount = 5000</code>, <code>region = "US"</code>
+A condition like "deal_amount greater than 1000" evaluates to <code>true</code>. The workflow follows the true branch, which is wired to a Slack node — your sales manager gets pinged.</p>
+<p><strong>Case B:</strong> <code>deal_amount = 50</code>, <code>region = "US"</code>
+The same condition evaluates to <code>false</code>. The workflow follows the false branch, wired to a logging step. No Slack message. No error. The Slack node in the canvas simply never lights up or gets a checkmark, because it never ran.</p>
+<p><strong>Case C:</strong> <code>deal_amount = "1000"</code> (a string, not a number), condition is "greater than 1000"
+This is the trap. You'd expect <code>true</code>, since 1000 is not greater than 1000... actually you'd expect this to correctly evaluate as <code>false</code> either way — but the real danger case is <code>deal_amount = "5000"</code> compared against <code>1000</code>. Depending on how the comparison is typed, a string "5000" can silently fail a numeric "greater than" check that a real number 5000 would pass. The condition doesn't throw an error; it just returns the wrong boolean.</p>
+<h2>Intuition</h2>
+<p>Before touching the node, think about what a condition actually <em>is</em>. It isn't a general-purpose script — it's closer to a single yes/no gate. A useful mental model: an IF node is a bouncer at a club door. One look, one decision, then you're in or you're not. There's no in-between and no partial credit.</p>
+<p>That mental model does two things for you. First, it tells you where the "expensive" action belongs — directly on the branch that fires only when the condition truly holds. You don't sprinkle side effects across both branches; you put the costly, visible action (a notification, a paid API call) exactly on the branch that's supposed to be rare or significant, and you let the other branch do something cheap and silent, like logging.</p>
+<p>Second, it forces you to ask a question before you ever click "execute": what type is this data, really? A bouncer checking a birthdate can't do their job if the ID is handed over as a smudged photocopy — they need the value in a comparable form. n8n's IF node has the same requirement. If a field is technically a string that <em>looks</em> like a number, a numeric comparison operator can behave unpredictably, and there's no red flag telling you it happened. This is the single most common way IF-node logic silently drifts from what you intended, and it's why experienced automation builders get in the habit of checking (or explicitly forcing) a field's type before wiring a condition to it, rather than assuming the trigger delivers clean data.</p>
+<p>Once you internalize "one field, one comparison, one boolean, no in-between," building correct conditions becomes mechanical. The remaining skill is just being suspicious of data types and knowing when two conditions need to be combined with AND versus OR.</p>
+<h2>Brute Force Solution</h2>
+<p>The brute-force version of "different behavior for different data" is building two (or more) entirely separate workflows, each triggered independently, with the routing logic reimplemented outside n8n — for example, a webhook receiver written in Python that inspects the payload and calls a different n8n webhook URL depending on the value.</p>
+<p><strong>Idea:</strong> Push the branching decision upstream, before the workflow tool ever sees the data.</p>
+<p><strong>Algorithm:</strong>
+1. Receive the raw payload in custom code (a script, a serverless function).
+2. Inspect the relevant field.
+3. Forward the payload to Workflow A's webhook or Workflow B's webhook based on that inspection.</p>
+<p><strong>Advantages:</strong>
+- Full control over comparison logic, including explicit type coercion.
+- Easy to unit test outside of n8n.</p>
+<p><strong>Disadvantages:</strong>
+- Duplicates infrastructure you already have inside n8n.
+- Now you're maintaining a second codebase just to make a decision the IF node was built for.
+- Adds a network hop and a new failure point.
+- Loses the visual, at-a-glance auditability that's the entire reason to use a workflow tool in the first place.</p>
+<p><strong>Complexity:</strong> Time is O(1) per request either way — this isn't a performance problem, it's an architecture problem. The "cost" here is maintenance and operational surface area, not runtime.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal solution is to let the IF node do exactly the job it's designed for, and be deliberate about the three things every condition is built from:</p>
+<table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Question it answers</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Field</td>
+<td>Which value are you checking?</td>
+<td><code>deal_amount</code></td>
+</tr>
+<tr>
+<td>Operator</td>
+<td>How are you comparing it?</td>
+<td>greater than, equals, contains</td>
+</tr>
+<tr>
+<td>Value</td>
+<td>What are you comparing it to?</td>
+<td><code>1000</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Step 1 — Wire the true branch to the expensive action.</strong>
+The true output only fires the instant the condition holds. That's exactly where a Slack ping, an email, or any action that interrupts a human belongs — and nothing else needs to sit on that branch.</p>
+<p><strong>Step 2 — Wire the false branch to something quiet.</strong>
+Everything that doesn't clear the bar still gets recorded, it just doesn't interrupt anyone. A logging step is enough.</p>
+<p><strong>Step 3 — Stack conditions when a single field isn't enough.</strong>
+Real rules rarely hinge on one field. Add a second condition — <code>deal_amount over 1000</code> AND <code>region equals "US"</code> — and both have to hold. Switch the combinator to OR if only one of the two needs to match.</p>
+<p><strong>Step 4 — Force the type before comparing.</strong>
+This is the step that prevents the silent-failure bug. If a field might arrive as a string that looks numeric (a very common outcome from web forms), explicitly coerce it to a number inside the condition rather than trusting the incoming type. n8n exposes this as an option in the condition settings specifically because this failure mode is common enough to need a built-in fix.</p>
+<p><strong>Step 5 — Know when IF isn't enough.</strong>
+IF only ever produces two outputs: true or false. The moment a single field needs to drive three or four different outcomes, that's a signal to reach for the Switch node instead of chaining multiple IF nodes together.</p>
+<h2>Python Code</h2>
+<p>Here's the equivalent logic expressed in Python, which is useful both for understanding what the IF node does under the hood and for anyone routing this decision through custom code (a webhook handler, a serverless function, or a test harness):</p>
+<pre><code class="language-python">from dataclasses import dataclass
+
+
+@dataclass
+class Deal:
+    deal_amount: float
+    region: str
+
+
+def should_notify_manager(deal: Deal, threshold: float = 1000, target_region: str = &quot;US&quot;) -&gt; bool:
+    &quot;&quot;&quot;Return True if the deal should trigger an immediate notification.&quot;&quot;&quot;
+    # Force numeric comparison explicitly -- mirrors n8n's &quot;force type&quot; option.
+    amount = float(deal.deal_amount)
+    return amount &gt; threshold and deal.region == target_region
+
+
+def route_deal(deal: Deal) -&gt; str:
+    &quot;&quot;&quot;Return which branch this deal takes: 'notify' or 'log'.&quot;&quot;&quot;
+    return &quot;notify&quot; if should_notify_manager(deal) else &quot;log&quot;
+
+
+def handle_deal(raw_payload: dict) -&gt; str:
+    # Payloads from web forms often arrive with numeric fields as strings.
+    deal = Deal(deal_amount=raw_payload[&quot;deal_amount&quot;], region=raw_payload[&quot;region&quot;])
+    branch = route_deal(deal)
+
+    if branch == &quot;notify&quot;:
+        send_slack_alert(deal)
+    else:
+        log_deal(deal)
+
+    return branch
+
+
+def send_slack_alert(deal: Deal) -&gt; None:
+    print(f&quot;[SLACK] New deal ${deal.deal_amount} in {deal.region} needs review&quot;)
+
+
+def log_deal(deal: Deal) -&gt; None:
+    print(f&quot;[LOG] Deal recorded: ${deal.deal_amount} in {deal.region}&quot;)
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>Deal</code> is a small dataclass standing in for the record your trigger receives — this mirrors the "field" concept from the IF node.</li>
+<li><code>should_notify_manager</code> is the condition itself. <code>float(deal.deal_amount)</code> is the critical line: it forces the type conversion explicitly, the same job n8n's "force type" toggle does inside a condition. Without it, a string <code>"5000"</code> compared against a numeric <code>1000</code> can behave inconsistently depending on how the comparison is evaluated.</li>
+<li>The <code>and</code> in the return statement is the AND combinator — both conditions must hold, exactly like stacking two conditions in the IF node.</li>
+<li><code>route_deal</code> is the branch decision itself — the true/false split, made explicit as a string instead of an implicit graph edge.</li>
+<li><code>handle_deal</code> is the trigger handler: it receives the raw payload (where the type problem originates), builds a typed <code>Deal</code>, and only then evaluates the condition. This ordering — normalize first, decide second — is the whole fix for the silent bug.</li>
+<li><code>send_slack_alert</code> and <code>log_deal</code> are the two branch outcomes, deliberately asymmetric in cost: one interrupts a human, one doesn't.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Input: <code>raw_payload = {"deal_amount": "5000", "region": "US"}</code></p>
+<ol>
+<li><code>handle_deal</code> builds <code>Deal(deal_amount="5000", region="US")</code> — note <code>deal_amount</code> is still a string here.</li>
+<li><code>route_deal</code> calls <code>should_notify_manager(deal)</code>.</li>
+<li>Inside that function, <code>float(deal.deal_amount)</code> converts <code>"5000"</code> to <code>5000.0</code>.</li>
+<li><code>5000.0 &gt; 1000</code> → <code>True</code>. <code>deal.region == "US"</code> → <code>True</code>. <code>True and True</code> → <code>True</code>.</li>
+<li><code>should_notify_manager</code> returns <code>True</code>, so <code>route_deal</code> returns <code>"notify"</code>.</li>
+<li><code>handle_deal</code> calls <code>send_slack_alert(deal)</code>, printing the alert.</li>
+<li>Function returns <code>"notify"</code>.</li>
+</ol>
+<p>Now compare: if the <code>float()</code> conversion were missing and the comparison were done as a raw string vs. int comparison in a language/tool that doesn't coerce, <code>"5000" &gt; 1000</code> could raise an error or silently evaluate in a way that doesn't match numeric intuition — which is precisely the bug the video walks through.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> O(1) per deal evaluated — a fixed number of field lookups, one type conversion, and two comparisons regardless of input size.</li>
+<li><strong>Space:</strong> O(1) — no data structures scale with input; each deal is evaluated independently.</li>
+<li>These bounds hold because the condition never iterates over a collection; it only ever inspects a fixed, small set of fields on a single record.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p>If you need more than two outcomes from one field (small / medium / large deal, for instance), chaining multiple IF nodes works but gets messy fast — each additional outcome adds another node and another wire to track. The Switch node is the better fit once you're past two branches: it takes one field and routes to N outputs based on multiple matching rules, which is a closer match to a Python <code>match</code> statement or <code>if/elif/elif/else</code> chain than two IF nodes bolted together.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Missing field:</strong> if <code>deal_amount</code> isn't present on the payload at all, <code>float(deal.deal_amount)</code> raises a <code>KeyError</code>/<code>TypeError</code> rather than silently defaulting — decide explicitly whether a missing field should fail loudly or fall back to a default.</li>
+<li><strong>Non-numeric string:</strong> a value like <code>"N/A"</code> passed to <code>float()</code> raises <code>ValueError</code> — worth validating upstream if the field isn't guaranteed clean.</li>
+<li><strong>Boundary value:</strong> a deal at exactly the threshold (<code>deal_amount = 1000</code>) needs a clear decision on whether "greater than" should be "greater than or equal to."</li>
+<li><strong>Negative or zero amounts:</strong> make sure the condition doesn't assume all amounts are positive if refunds or corrections can produce negative values.</li>
+<li><strong>Case sensitivity in the region field:</strong> <code>"us"</code> vs <code>"US"</code> will fail an exact-match condition silently — normalize casing before comparing.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Comparing a numeric-looking string against a number without forcing the type, and trusting the result.</li>
+<li>Wiring extra actions onto the true branch "just in case," turning a clean condition into a tangle of side effects.</li>
+<li>Assuming a workflow "failed" because a branch's nodes show no checkmark — they simply never executed, which is expected behavior, not an error.</li>
+<li>Using AND when the intent was OR (or vice versa) when stacking multiple conditions.</li>
+<li>Chaining several IF nodes for what's really a multi-outcome decision, instead of switching to the Switch node.</li>
+<li>Not testing both branches with real boundary values before trusting the workflow with live data.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you design a system where a single event needs different downstream handling based on payload content?</li>
+<li>What's the risk of comparing values of different types, and how do you defend against it in a language like Python versus a no-code tool?</li>
+<li>When would you choose a chain of if/elif statements versus a dictionary-based dispatch or a match statement?</li>
+<li>How do you test that both branches of a conditional pipeline behave correctly, including edge cases at the boundary?</li>
+<li>What's the tradeoff between building branching logic inside a workflow tool versus handling it in custom code upstream?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 88 (Merge Sorted Array)</strong> — not branching-related directly, but a good companion for practicing careful boundary-condition handling, the same discipline that catches the string/number bug here.</li>
+<li><strong>LeetCode 20 (Valid Parentheses)</strong> — another problem where a single comparison type-mismatch (character vs. expected symbol) causes silent logical errors if not checked carefully.</li>
+<li><strong>Any "route by payload type" system design question</strong> — the underlying pattern (one trigger, multiple behaviors based on data) is identical to designing a webhook dispatcher or event router.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>A condition is one field, one operator, one comparison value — nothing more.</li>
+<li>Put expensive, human-interrupting actions strictly on the branch that's supposed to be rare.</li>
+<li>A branch with no checkmark isn't a failure — it simply didn't run.</li>
+<li>Type mismatches (string vs. number) are the most common source of silently wrong branching, and they never throw an error on their own.</li>
+<li>Once one field needs more than two outcomes, reach for a Switch node instead of chaining IFs.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This gets a lot clearer watching it run live and seeing exactly which nodes light up on each branch. Watch the full walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This is part of <strong>Fun with Learning Technology</strong>, a series where real automations and real code get built end to end instead of narrated over slides — n8n workflows, algorithms, and the everyday engineering problems that trip people up in production.</p>
+<h2>Call To Action</h2>
+<p>If this saved you from a silent branching bug, drop a like on the video and subscribe on YouTube so future workflow breakdowns land in your feed. For deeper dives and written companions to every episode, subscribe to the Substack. Got a workflow that's misbehaving in a way you can't explain? Comment with what you're seeing — these episodes are picked from what people are actually stuck on.</p>
+<hr />
+<h1>Social Media</h1>
+<h2>LinkedIn Post</h2>
+<p>Most automation bugs aren't logic errors — they're type errors wearing a logic-error costume.</p>
+<p>Built an n8n workflow this week that routes deals based on amount: big deals ping the sales manager on Slack, small deals log quietly. Straightforward IF node, one condition, two branches.</p>
+<p>Then I hit the bug that gets everyone eventually: the form was sending <code>deal_amount</code> as a string, <code>"1000"</code>, not a number. The condition compared it against a numeric threshold, expected <code>true</code>, and silently returned <code>false</code> instead. No error. No red X. The workflow just took the wrong branch and nobody noticed until deals stopped generating alerts.</p>
+<p>This is a pattern that shows up everywhere, not just in no-code tools — Python, JavaScript, SQL, all of them have some version of "this comparison looked right but the types didn't match." The fix is always the same: normalize types explicitly before comparing, don't assume the data arrived clean.</p>
+<p>The other lesson worth internalizing: a branch that doesn't fire isn't a failure state. If your workflow tool shows one path lit up and the other dim with no error, that's the design working correctly — only the branch that matched actually runs.</p>
+<p>Full breakdown (with the fix) in the video and companion article. Curious what type-mismatch bugs have burned other people building automations — drop them below.</p>
+<h2>Twitter/X Thread</h2>
+<p>1/ Built an n8n workflow this week: big deals ping Slack, small deals get logged quietly. One IF node, one condition. Then it broke in a way that looked like nothing happened.</p>
+<p>2/ The setup: <code>deal_amount &gt; 1000</code> → notify. Everything else → log. Simple. Tested it with a $5,000 deal, worked perfectly, lit up the Slack branch.</p>
+<p>3/ Then a $50 deal came through. Correctly took the false branch, logged quietly. No Slack ping. Looked exactly like it should.</p>
+<p>4/ Except the Slack node showed no checkmark at all — just grey. First time you see that, it looks like the run failed. It didn't. n8n only executes the branch that actually fired.</p>
+<p>5/ The real bug showed up later: the form was sending <code>deal_amount</code> as a string — <code>"1000"</code>, not <code>1000</code>. Compared against a numeric threshold, it silently evaluated wrong. No error thrown anywhere.</p>
+<p>6/ This is the trap with type coercion in any comparison logic — no-code tool or full codebase. "1000" and 1000 look identical to a human reading a screen. They are not identical to a comparison operator.</p>
+<p>7/ The fix: force the type explicitly before comparing. n8n has a setting for exactly this in the condition. In Python, that's just <code>float(value)</code> before your comparison — same idea, different syntax.</p>
+<p>8/ Bigger lesson underneath: IF only gives you two outputs, true or false. The moment you need three or four outcomes off one field, that's your signal to reach for a Switch node instead of chaining IFs.</p>
+<p>9/ None of this is really about n8n. It's about the general shape of "one trigger, multiple behaviors based on data" — which is the same problem whether you're wiring nodes or writing an <code>if/elif</code> chain against a webhook payload.</p>
+<p>10/ Full write-up + Python equivalent + video walkthrough linked below. If you've been burned by a silent string-vs-number bug in your own automations, reply — collecting these.</p>
+<h2>Facebook Post</h2>
+<p>Had a fun (read: mildly infuriating) bug this week building an n8n automation. Wired up a workflow so big deals ping the sales manager and small deals just get logged quietly — should've been a five-minute IF node setup.</p>
+<p>Turns out the form was sending deal amounts as text ("1000") instead of actual numbers, and the comparison silently returned the wrong answer. No error message, nothing red, just a workflow quietly doing the wrong thing.</p>
+<p>Fixed it by forcing the field to a real number before comparing. New video + article walk through the whole thing, including why a "branch that didn't fire" isn't actually a bug — that one tripped me up the first time too. Link in comments if you want the full breakdown.</p>
+<h2>Reddit Summary</h2>
+<p>Wired up an n8n IF node to branch a workflow based on deal size — over a threshold pings Slack, under it just logs quietly. Ran into the classic string-vs-number trap: the incoming field was <code>"1000"</code> (string) instead of <code>1000</code> (number), and the numeric comparison silently evaluated wrong with zero error output.</p>
+<p>Two things worth knowing if you're new to n8n's IF node:</p>
+<ol>
+<li>A branch that doesn't fire shows no checkmark on its downstream nodes — that's expected, not a failure. Only the matching branch executes.</li>
+<li>There's a "force type" option inside the condition specifically for the string/number mismatch case — worth turning on any time your trigger data comes from a web form, since those almost always send everything as strings.</li>
+</ol>
+<p>Also worth knowing: IF is strictly two-output (true/false). Once you need 3+ outcomes off a single field, the Switch node is the right tool instead of chaining multiple IFs together.</p>
+<p>Wrote up the full pattern with a Python equivalent (for anyone who wants to see the same logic outside of n8n) if useful — happy to answer questions about the setup in comments.</p>
+<hr />
+<h1>GitHub README</h1>
+<pre><code class="language-markdown"># Deal Routing with n8n's IF Node
+
+## Problem
+
+A single &quot;new deal&quot; trigger needs to produce different behavior depending on
+the deal's data: large deals should notify a sales manager immediately, small
+deals should be logged without interrupting anyone. A naive workflow that
+fires the same action for every deal regardless of size gets ignored.
+
+## Intuition
+
+Treat the condition like a bouncer at a door: one field, one comparison, one
+yes/no answer, then the workflow splits. Put the expensive/interrupting
+action strictly on the branch that fires only when it should be rare. The
+branch that doesn't fire shows no output — that's correct behavior, not a
+failure.
+
+The most common silent bug: a field arriving as a string (`&quot;1000&quot;`) being
+compared against a number (`1000`). No error is thrown; the condition just
+evaluates incorrectly. Force the type before comparing.
+
+## Approach
+
+1. Define the condition: field, operator, comparison value.
+2. Wire the true branch to the notification step (Slack, email).
+3. Wire the false branch to a quiet logging step.
+4. Stack conditions with AND/OR when one field isn't enough
+   (`deal_amount &gt; 1000 AND region == &quot;US&quot;`).
+5. Explicitly force numeric type on fields that might arrive as strings.
+6. Once a single field needs more than two outcomes, switch to the Switch
+   node instead of chaining IF nodes.
+
+## Python Solution
+
+```python
+from dataclasses import dataclass
+
+
+@dataclass
+class Deal:
+    deal_amount: float
+    region: str
+
+
+def should_notify_manager(deal: Deal, threshold: float = 1000, target_region: str = &quot;US&quot;) -&gt; bool:
+    amount = float(deal.deal_amount)
+    return amount &gt; threshold and deal.region == target_region
+
+
+def route_deal(deal: Deal) -&gt; str:
+    return &quot;notify&quot; if should_notify_manager(deal) else &quot;log&quot;
+
+
+def handle_deal(raw_payload: dict) -&gt; str:
+    deal = Deal(deal_amount=raw_payload[&quot;deal_amount&quot;], region=raw_payload[&quot;region&quot;])
+    branch = route_deal(deal)
+    if branch == &quot;notify&quot;:
+        send_slack_alert(deal)
+    else:
+        log_deal(deal)
+    return branch
+
+
+def send_slack_alert(deal: Deal) -&gt; None:
+    print(f&quot;[SLACK] New deal ${deal.deal_amount} in {deal.region} needs review&quot;)
+
+
+def log_deal(deal: Deal) -&gt; None:
+    print(f&quot;[LOG] Deal recorded: ${deal.deal_amount} in {deal.region}&quot;)
+</code></pre>
+<h2>Complexity</h2>
+<ul>
+<li>Time: O(1) per deal — fixed number of field checks and comparisons.</li>
+<li>Space: O(1) — no data structures scale with input size.</li>
+</ul>
+<h2>Video</h2>
+<p>Full walkthrough, including the live true/false branch demo: {LINK}</p>
+<h2>Article</h2>
+<p>Full written companion with dry run, edge cases, and common mistakes:
+see the linked article for this episode.
+```</p></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>n8n IF node: when to use it?</summary><p>When a workflow must branch into two paths based on a field condition — e.g., deal value above/below a threshold.</p></details><details class='card2'><summary>IF node condition anatomy: three parts?</summary><p>Left value (field/expression), operator (equals, contains, larger, etc.), right value (comparison target).</p></details><details class='card2'><summary>IF node outputs: what do they mean?</summary><p>Top output = condition true; bottom output = condition false. Wire different actions to each.</p></details><details class='card2'><summary>String vs Number trap in IF conditions?</summary><p>A numeric-looking string (&#x27;50&#x27;) fails numeric comparisons unless the operand type matches — cast/convert before comparing.</p></details><details class='card2'><summary>More than two outcomes needed — IF vs Switch?</summary><p>IF only gives true/false; use the Switch node when a field can route to three or more distinct branches.</p></details><details class='card2'><summary>Interview follow-up: why guess the outcome before running?</summary><p>Forces you to trace the condition logic manually, catching type-mismatch or wrong-operator bugs before they run live.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
