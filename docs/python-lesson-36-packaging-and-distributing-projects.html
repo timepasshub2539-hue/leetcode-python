@@ -1,0 +1,179 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Python Lesson 36: Your Script Broke In Their Email -- pyproject.toml Fixes That — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-36-packaging-and-distributing-projects
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/pyt">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-36-packaging-and-distributing-projects.html">
+<meta property="og:title" content="Python Lesson 36: Your Script Broke In Their Email -- pyproject.toml Fixes That — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-36-packaging-and-distributing-projects
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/pyt">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 36: Your Script Broke In Their Email -- pyproject.toml Fixes That</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every Python developer hits this wall eventually: you write something useful, you send the <code>.py</code> file to a friend or coworker, and it just doesn't run on their machine. Maybe it's <code>ModuleNotFoundError</code>. Maybe it's a hardcoded import path that only resolves on your filesystem. Either way, the problem isn't their setup — it's that you never actually packaged your code, you just moved a file.</p>
+<p>This matters far beyond "sharing a script with a friend." Every library you <code>pip install</code> — requests, numpy, flask — got to your machine through exactly the mechanism this lesson covers. Understanding packaging means understanding how the entire Python ecosystem distributes code, and it's a skill that separates someone who writes scripts from someone who ships software. It also comes up in real engineering work constantly: internal tools, shared utilities, anything more than one person needs to run.</p>
+<p>By the end of this lesson you'll understand why <code>pip install</code> works at all, and you'll have built and published a package of your own.</p>
+<h2>Problem Overview</h2>
+<p>Here's the situation in plain terms: you have a folder of <code>.py</code> files that work fine when you run them yourself. You zip them up, or email one file, or push a folder to GitHub, and hand it to someone else. It doesn't run.</p>
+<p>The reason is that your local success was an accident of context. Your imports resolve because you're standing in the right directory. Your dependencies are installed because you installed them at some point and forgot. None of that context travels with the file. <code>pip</code> — the tool responsible for installing Python code — has nothing to work with, because a folder of loose <code>.py</code> files carries no name, no version, and no dependency list. There's no contract for it to read.</p>
+<p>Packaging is the act of writing that contract down, in a format every tool agrees on, so installation becomes mechanical instead of guesswork.</p>
+<h2>Example</h2>
+<p>Picture two versions of the same tiny library — a couple of functions for formatting text.</p>
+<p><strong>Version A:</strong> a folder called <code>textutils</code> with two <code>.py</code> files inside, pushed to GitHub. To use it, someone has to clone the repo, <code>cd</code> into it, and hope their working directory lines up with your imports. If your code imports <code>dateutil</code> and they don't have it installed, they find out at runtime, mid-function, with a traceback.</p>
+<p><strong>Version B:</strong> the same code, but with a <code>pyproject.toml</code> declaring the name <code>textutils</code>, version <code>0.1.0</code>, and <code>dateutil&gt;=2.8</code> as a dependency. Someone runs:</p>
+<pre><code>pip install textutils
+</code></pre>
+<p><code>pip</code> reads the file, sees the dependency list, installs <code>dateutil</code> first, then installs your code into the right place on their system. No cloning, no working-directory guesswork, no missing-package surprise.</p>
+<p>Same code. The difference is entirely the presence of that one file and what it declares.</p>
+<h2>Intuition</h2>
+<p>Think about how you'd solve this if no tooling existed at all. You'd need to answer three questions before anyone else could run your code: what is this thing called, what does it need to run, and where does the code actually live relative to everything else in the project.</p>
+<p>An experienced engineer doesn't start by picking a build tool — they start by asking what breaks first. And what breaks first is almost always dependencies: your code silently assumes libraries are present because you installed them once, months ago, and forgot. The second thing that breaks is structure: your imports work because your test scripts sit right next to your source files, and that adjacency is invisible until it's gone.</p>
+<p>So the intuition is: packaging is just making those two invisible assumptions — "what this needs" and "where this lives" — explicit and machine-readable. Once they're explicit, any tool, on any machine, can reconstruct your working setup from scratch. That's the whole idea. Everything else — <code>pyproject.toml</code>, <code>src</code> layout, wheels, TestPyPI — is just the concrete mechanism for writing that down and verifying it before you commit to it publicly.</p>
+<h2>Brute Force Solution</h2>
+<p>The "brute force" version of packaging is what most people do without realizing it's a workaround: <code>setup.py</code>, plus a separate <code>requirements.txt</code>, plus README instructions telling people to <code>pip install -r requirements.txt</code> and hope the imports line up.</p>
+<p><strong>Idea:</strong> cobble together the contract using multiple files that different tools read differently — <code>setup.py</code> for build metadata (often with arbitrary executable code in it), <code>requirements.txt</code> for dependencies, and tribal knowledge for everything else.</p>
+<p><strong>Algorithm:</strong>
+1. Write a <code>setup.py</code> with a <code>setup()</code> call describing the package.
+2. Maintain a separate <code>requirements.txt</code> by hand.
+3. Tell users to run both <code>pip install -r requirements.txt</code> and <code>pip install .</code> or similar.
+4. Hope the two files stay in sync as the project evolves.</p>
+<p><strong>Advantages:</strong> it's the historical standard, and there's a lot of legacy tooling built around it.</p>
+<p><strong>Disadvantages:</strong> <code>setup.py</code> runs arbitrary Python during install — slower and a real security concern, since installing a package means executing code someone else wrote. The dependency list lives in two places that can drift apart. There's no single, static, tool-agnostic source of truth.</p>
+<p><strong>Complexity:</strong> not a runtime complexity question, but a maintenance one — every additional file describing your project is another place for the description to go stale. Time cost is mostly at install time (running setup code), and "space cost" is really cognitive: more files to keep consistent.</p>
+<h2>Optimal Solution</h2>
+<p><code>pyproject.toml</code> replaces all of that fragmentation with one static, declarative file. It's not executed — it's read. That alone removes the security and consistency problems of <code>setup.py</code>.</p>
+<p><strong>The core contract</strong>, under the <code>[project]</code> section, has three parts that matter most:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>What it answers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>What does someone type after <code>pip install</code>?</td>
+</tr>
+<tr>
+<td><code>version</code></td>
+<td>Which release is this?</td>
+</tr>
+<tr>
+<td><code>dependencies</code></td>
+<td>What has to be installed before this code runs?</td>
+</tr>
+</tbody>
+</table>
+<p>That's the whole thing any install tool needs to read.</p>
+<p><strong>Layout matters just as much as the file.</strong> The standard structure moves your actual package code into a <code>src/</code> folder, separate from tests and project files sitting at the top level:</p>
+<pre><code>my-project/
+├── pyproject.toml
+├── src/
+│   └── mypackage/
+│       ├── __init__.py
+│       └── core.py
+└── tests/
+    └── test_core.py
+</code></pre>
+<p>This isn't cosmetic. In a flat layout — package code sitting right next to your test scripts — your tests can accidentally import the local source files directly, because they're right there in the same directory. That works, but it's testing the wrong thing: it proves your <em>local files</em> work, not that your <em>installed package</em> works. Move the code under <code>src/</code>, and there's no accidental path to it — your tests are forced to import the version pip actually installed. That's the exact gap that lets a broken package pass all your tests and still fail for the first person who installs it for real.</p>
+<p><strong>Naming and versioning are permanent decisions.</strong> The <code>name</code> field is globally unique across all of PyPI — pick something already taken and your upload just fails. And once a version is published, it's published; PyPI won't let you overwrite <code>0.1.0</code> with a fix. You bump to <code>0.1.1</code> instead. This is why testing before the real publish matters so much — there's no undo button.</p>
+<p><strong>Dependencies close the loop.</strong> Everything your code imports that isn't the standard library goes in <code>dependencies</code>, ideally with a minimum version if your code relies on a feature from a particular release. When someone runs <code>pip install</code>, this list is what pip resolves and installs <em>before</em> your code executes — which is precisely the step that was missing when you emailed a raw <code>.py</code> file.</p>
+<h2>Python Code</h2>
+<pre><code class="language-toml"># pyproject.toml
+[build-system]
+requires = [&quot;setuptools&gt;=68.0&quot;]
+build-backend = &quot;setuptools.build_meta&quot;
+
+[project]
+name = &quot;textutils-yourname&quot;          # must be unique on PyPI
+version = &quot;0.1.0&quot;
+description = &quot;Small text formatting helpers&quot;
+requires-python = &quot;&gt;=3.9&quot;
+dependencies = [
+    &quot;python-dateutil&gt;=2.8&quot;,
+]
+
+[tool.setuptools.packages.find]
+where = [&quot;src&quot;]
+</code></pre>
+<pre><code class="language-python"># src/textutils/core.py
+def title_case(text: str) -&gt; str:
+    &quot;&quot;&quot;Return text with each word capitalized.&quot;&quot;&quot;
+    return &quot; &quot;.join(word.capitalize() for word in text.split())
+</code></pre>
+<pre><code class="language-python"># src/textutils/__init__.py
+from .core import title_case
+
+__all__ = [&quot;title_case&quot;]
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>[build-system]</code> tells the build tool (<code>python -m build</code>) which backend to use to actually construct the wheel — <code>setuptools</code> here, the most common choice.</li>
+<li><code>[project].name</code> is the literal string someone types into <code>pip install</code>. It has to be unique across all of PyPI, which is why real projects often suffix or prefix a name (<code>textutils-yourname</code> in the example).</li>
+<li><code>[project].version</code> follows semantic-versioning-style conventions (<code>major.minor.patch</code>) and must increase on every publish — PyPI rejects re-uploads of an existing version number.</li>
+<li><code>dependencies</code> is the list <code>pip</code> resolves and installs first, before your package's own code is placed. This is the line that directly fixes <code>ModuleNotFoundError</code> for anyone installing your package.</li>
+<li><code>[tool.setuptools.packages.find]</code> with <code>where = ["src"]</code> tells setuptools to look inside <code>src/</code> for importable packages — this is what enforces the src layout at build time, not just by convention.</li>
+<li><code>src/textutils/__init__.py</code> re-exports <code>title_case</code> so users can write <code>from textutils import title_case</code> instead of reaching into <code>textutils.core</code>.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Say you've written the files above and want to get <code>textutils</code> installable end to end.</p>
+<ol>
+<li><code>python -m build</code> — reads <code>pyproject.toml</code>, finds <code>src/textutils</code>, and produces <code>dist/textutils_yourname-0.1.0-py3-none-any.whl</code> plus a source archive. The wheel is just a zip file in a shape every Python installer knows how to unpack — no code execution required to install it.</li>
+<li><code>twine upload --repository testpypi dist/*</code> — uploads the wheel to TestPyPI, the practice index, using twine to handle authentication and the upload protocol so you don't hand-roll HTTP requests against PyPI's API.</li>
+<li>In a fresh virtual environment: <code>pip install --index-url https://test.pypi.org/simple/ textutils-yourname</code>. If it installs and <code>from textutils import title_case</code> works, your contract is correct.</li>
+<li>Confident it works, run <code>twine upload dist/*</code> to push the same wheel to the real PyPI index. Now anyone, anywhere, runs <code>pip install textutils-yourname</code> and gets exactly what you tested.</li>
+</ol>
+<h2>Complexity Analysis</h2>
+<p>There's no algorithmic time/space complexity here — packaging isn't an algorithm, it's a build and distribution process. The relevant "cost" is operational:</p>
+<ul>
+<li><strong>Build time:</strong> <code>python -m build</code> does one static pass over your source tree and metadata — proportional to project size, and effectively instant for small projects.</li>
+<li><strong>Install time:</strong> dominated by dependency resolution and download, not your code. This is the cost you're paying to eliminate a much bigger cost — a broken install that a user has to debug themselves.</li>
+<li><strong>Irreversibility, not complexity, is the real constraint:</strong> a taken name or a published version number is permanent. That's why TestPyPI exists — it converts an unrecoverable mistake into a recoverable one.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p><strong>Poetry</strong> and <strong>Hatch</strong> are alternative build backends that also read (their own extensions of) <code>pyproject.toml</code> but add their own dependency resolution, virtual environment management, and publishing commands. They're worth adopting if you want an opinionated, all-in-one workflow. For a single package with a short dependency list, plain <code>setuptools</code> plus <code>build</code> and <code>twine</code> — what this lesson covers — is simpler and has fewer moving parts, which matters more when you're learning what's actually happening under the hood.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>No dependencies at all:</strong> <code>dependencies = []</code> or omit the key — still valid, still worth declaring <code>name</code> and <code>version</code> explicitly.</li>
+<li><strong>Duplicate package name on PyPI:</strong> upload fails outright; you find out immediately, which is exactly why you should check availability (or just try the TestPyPI upload) before committing to a name in documentation.</li>
+<li><strong>Version already published:</strong> re-uploading the same version number fails; you must bump the version even for a one-line fix.</li>
+<li><strong>Missing <code>src/__init__.py</code>:</strong> without it, <code>setuptools.packages.find</code> won't discover your package, and the build silently produces an empty or broken wheel.</li>
+<li><strong>Unpinned dependency that changes behavior:</strong> omitting a minimum version on a dependency that introduced a breaking change in a later release can make your package fail for users who happen to get a newer version pip resolves.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Publishing straight to real PyPI without testing on TestPyPI first — and discovering the name is taken or the wheel is broken, permanently, on the record.</li>
+<li>Leaving code in a flat layout, so local tests pass against the working directory instead of the installed package, masking real install bugs.</li>
+<li>Forgetting to bump the version number after a fix and having the upload rejected.</li>
+<li>Missing a dependency in <code>pyproject.toml</code> because it "was already installed" in your own environment, reproducing the exact <code>ModuleNotFoundError</code> you were trying to fix.</li>
+<li>Treating <code>requirements.txt</code> as the dependency source of truth instead of <code>pyproject.toml</code>, letting the two drift out of sync.</li>
+<li>Picking a package name without checking availability first, then having to rename mid-project.</li>
+<li>Assuming <code>python -m build</code> needs a <code>setup.py</code> — under <code>pyproject.toml</code> it doesn't, and keeping a stale one around can cause backend conflicts.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What's the difference between <code>pyproject.toml</code> and <code>setup.py</code>, and why did the ecosystem move toward the former?</li>
+<li>Why does a <code>src</code> layout catch import bugs that a flat layout hides?</li>
+<li>What's actually inside a <code>.whl</code> file, and why do installers prefer it over running arbitrary build scripts?</li>
+<li>Why can't you overwrite a published version on PyPI, and what workflow does that constraint force?</li>
+<li>What role does <code>twine</code> play that <code>pip</code> or <code>build</code> don't already handle?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Understanding Python virtual environments</strong> — the companion piece to packaging; isolates dependencies so <code>pip install</code> results are reproducible per project.</li>
+<li><strong>Semantic versioning in practice</strong> — directly relevant, since PyPI's "no overwrite" rule only makes sense once you understand what major/minor/patch bumps are supposed to signal.</li>
+<li><strong>Writing a <code>.gitignore</code> and <code>MANIFEST.in</code> for Python projects</strong> — the adjacent problem of controlling exactly what ships inside your wheel versus your source repo.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Packaging is just making two things explicit that used to be invisible: what your code needs, and where it lives relative to everything else. <code>pyproject.toml</code> is the single file that answers both. The <code>src</code> layout forces you to test what you actually ship. TestPyPI exists because PyPI's permanence — unique names, non-overwritable versions — means mistakes there are forever, so you rehearse first. Once that contract is written, <code>pip install your-project-name</code> behaves exactly like <code>pip install requests</code>, because it's the same mechanism.</p>
+<h2>Watch the Video</h2>
+<p>This lesson is easier to follow end to end on video, where every step — writing the file, running the build, testing on TestPyPI, and the real upload — happens in order. Watch it here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This is part of <strong>Fun with Learning Technology</strong>, a series that walks through the parts of software engineering that don't show up in algorithm practice but come up constantly in real work — packaging, tooling, project structure, and the habits that separate a script from a shippable project. Each lesson builds toward being able to hand someone a working project, not just a file.</p>
+<h2>Call To Action</h2>
+<p>If this saved you from a future <code>ModuleNotFoundError</code>, the best way to support the series is simple: like the video on YouTube, subscribe so you don't miss the next one, and subscribe to the Substack for the written breakdown of every lesson. Drop a comment with what you're packaging next, and share this with anyone still emailing <code>.py</code> files around.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Why does a script that works locally break on another machine?</summary><p>It relies on unpinned dependencies or system state that only exists on your machine — no declared, installed package list.</p></details><details class='card2'><summary>What does pip actually read to install a package correctly?</summary><p>pyproject.toml — the standardized contract declaring metadata, dependencies, and build system for the project.</p></details><details class='card2'><summary>src layout vs flat layout — key difference?</summary><p>src/ nests the package under a src/ folder, forcing an install to import it; flat layout imports directly from the repo root, risking accidental local imports.</p></details><details class='card2'><summary>Trickiest gotcha when picking a package name?</summary><p>Name must be unique on PyPI and unchangeable once claimed heavily — check availability before writing code around it.</p></details><details class='card2'><summary>Why upload to TestPyPI before the real PyPI?</summary><p>Lets you verify the built wheel installs and imports correctly without permanently consuming your real package name/version slot.</p></details><details class='card2'><summary>Interview follow-up: what does twine actually do vs build?</summary><p>build creates the wheel/sdist artifacts; twine uploads those artifacts securely (HTTPS, auth) to PyPI/TestPyPI.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
