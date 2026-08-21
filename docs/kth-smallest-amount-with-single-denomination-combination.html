@@ -1,0 +1,190 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3116. Kth Smallest Amount With Single Denomination Combination — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/kth-smallest-amount-with-single-denomination-combination
+💻 Code on GitHub: http">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/kth-smallest-amount-with-single-denomination-combination.html">
+<meta property="og:title" content="3116. Kth Smallest Amount With Single Denomination Combination — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/kth-smallest-amount-with-single-denomination-combination
+💻 Code on GitHub: http">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>3116. Kth Smallest Amount With Single Denomination Combination</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Some problems look like a data structures exercise until you actually try to run your solution at scale — then they turn into a math problem in disguise. LeetCode 3116, <em>Kth Smallest Amount With Single Denomination Combination</em>, is exactly that kind of problem, and it's a favorite in hard-tier interview rounds because it tests something more valuable than syntax: can you recognize when brute force is structurally doomed, and can you reframe a problem you can't solve directly into one you can?</p>
+<p>The setup sounds simple. You have a coin machine that only takes one denomination per payment — no mixing 3s and 4s in the same transaction. Across every denomination, sorted from smallest to largest, you need the k-th amount that could ever be paid. It's a clean question with a nasty catch: k can be up to two billion, which immediately rules out any approach that tries to construct the answer directly.</p>
+<p>Interviewers like this problem because it forces a mental shift that shows up constantly in real systems — from rate limiters to search ranking to inventory queries. When you can't enumerate the answer space, you count instead, and you binary search on the count. Once you've internalized that pattern, a whole category of "find the k-th X" problems stops being intimidating.</p>
+<h2>Problem Overview</h2>
+<p>You're given an array of coin values, and you can use unlimited coins of any single denomination in one payment — but you can never combine two different denominations. So if 3 is one of your coins, valid amounts are 3, 6, 9, 12, and so on. If 4 is also a coin, 4, 8, 12, 16 join the list too.</p>
+<p>Now take every amount payable by <em>any</em> denomination, merge them all into one sorted list with duplicates removed, and return the k-th smallest value in that merged list.</p>
+<p>Two constraints define the shape of the solution:</p>
+<ul>
+<li>The coin array has at most 15 elements, which matters because 2^15 is only about 32,000 — small enough to iterate over every subset of coins.</li>
+<li>k can be as large as 2 billion, which rules out building any list of amounts, since that list would need to hold billions of entries before you could even sort it.</li>
+</ul>
+<h2>Example</h2>
+<p>Take coins <code>[3, 6, 9]</code> with <code>k = 3</code>.</p>
+<ul>
+<li>Multiples of 3: 3, 6, 9, 12...</li>
+<li>Multiples of 6: 6, 12, 18...</li>
+<li>Multiples of 9: 9, 18, 27...</li>
+</ul>
+<p>Merge and dedupe: 3, 6, 9, 12, 15, 18... Notice that 6 and 9 don't add anything new before 12 — they're both multiples of 3, so they were already going to appear as multiples of 3 anyway. The third smallest amount in the merged list is 9.</p>
+<p>That overlap — 6 and 9 already showing up as multiples of 3 — is the whole crux of the problem. The more coins you add, the messier this overlap gets, and untangling it by brute-force merging is where the naive approach falls apart.</p>
+<h2>Intuition</h2>
+<p>The instinct most people reach for first is: generate multiples of every coin, throw them in a set to kill duplicates, sort, and index into position k. It works on the example. It will not work on the actual constraints, because k can be 2 billion — you'd be building and sorting a list with billions of entries before you could even answer the question.</p>
+<p>The way out is to stop thinking about <em>generating</em> amounts and start thinking about <em>counting</em> them. Instead of asking "what is the k-th amount?", ask a different, answerable question: "how many valid amounts are less than or equal to some number x?" If you can answer that count quickly for any x, you can binary search for the smallest x where the count reaches k — and that x is your answer.</p>
+<p>This is the same shift that shows up in "find the k-th smallest element in a sorted matrix" or "find the smallest capacity that lets you ship packages within D days" — whenever direct enumeration is too expensive but a counting function is cheap and monotonic, binary search on the answer becomes the tool.</p>
+<p>The remaining puzzle is how to count correctly. If you naively count multiples of 3 up to x, then add multiples of 4 up to x, you double-count anything that's a multiple of both — like 12. This is the classic overlap problem: 5 people won prize A, 4 people won prize B, but 2 people won both, so the real total of distinct winners is 5 + 4 − 2, not 9. Multiples of 3 and 4 overlap exactly on multiples of their least common multiple (LCM), which is 12. Subtract those once, and the count is exact.</p>
+<p>With more than two coins, this generalizes into inclusion-exclusion: add the counts for each single coin, subtract the counts for each pair (using their LCM), add back the counts for each triple, and so on, alternating sign by subset size. Every subset's LCM tells you which multiples were over- or under-counted, and the alternating signs cancel out every duplicate exactly once.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Generate multiples of every coin up to some bound, merge them into a set to remove duplicates, sort, and return the k-th element.</p>
+<p><strong>Algorithm:</strong>
+1. Pick an upper bound large enough to guarantee at least k valid amounts exist below it.
+2. For each coin, generate every multiple up to that bound.
+3. Insert all multiples into a set (this naturally deduplicates overlapping multiples like 12).
+4. Sort the set and index into position <code>k - 1</code>.</p>
+<p><strong>Advantages:</strong> Trivial to reason about, easy to verify against small examples, no math beyond basic multiplication.</p>
+<p><strong>Disadvantages:</strong> The list size scales with k itself, and k can reach 2 billion — the set and the sort both become infeasible in both time and memory.</p>
+<p><strong>Complexity:</strong> Time is roughly O(k log k) for building and sorting, and space is O(k) for storing the amounts. Both are unworkable at the given constraints.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal solution has two parts working together: a <strong>count function</strong> that answers "how many valid amounts are ≤ x" using inclusion-exclusion, and a <strong>binary search</strong> that uses that count function to home in on the exact k-th value.</p>
+<p><strong>Count function (inclusion-exclusion over subsets of coins):</strong></p>
+<p>For every non-empty subset of coins, compute the LCM of that subset. The number of multiples of that LCM up to x is <code>x // lcm</code>. Add this count if the subset size is odd, subtract it if the subset size is even. Summing over all subsets gives the exact count of amounts ≤ x that are payable by at least one coin, with no double-counting.</p>
+<table>
+<thead>
+<tr>
+<th>Subset</th>
+<th>LCM</th>
+<th>Sign</th>
+<th>Contribution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>{3}</td>
+<td>3</td>
+<td>+</td>
+<td>x // 3</td>
+</tr>
+<tr>
+<td>{4}</td>
+<td>4</td>
+<td>+</td>
+<td>x // 4</td>
+</tr>
+<tr>
+<td>{3, 4}</td>
+<td>12</td>
+<td>−</td>
+<td>x // 12</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Binary search on x:</strong></p>
+<ol>
+<li>Set <code>lo = 1</code> and <code>hi</code> to a value large enough to guarantee the count reaches k (the smallest coin times k is a safe upper bound).</li>
+<li>While <code>lo &lt; hi</code>, compute <code>mid = (lo + hi) // 2</code>.</li>
+<li>If <code>count(mid) &gt;= k</code>, the answer is at or below <code>mid</code>, so set <code>hi = mid</code>.</li>
+<li>Otherwise set <code>lo = mid + 1</code>.</li>
+<li>When <code>lo == hi</code>, that value is the k-th smallest valid amount.</li>
+</ol>
+<p>This works because the count function is <strong>monotonically non-decreasing</strong> as x grows — larger x can only include more valid amounts, never fewer. That monotonicity is exactly what makes binary search valid here.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from itertools import combinations
+from math import lcm
+from typing import List
+
+
+def findKthSmallest(coins: List[int], k: int) -&gt; int:
+    n = len(coins)
+
+    def count_at_most(x: int) -&gt; int:
+        total = 0
+        for size in range(1, n + 1):
+            sign = 1 if size % 2 == 1 else -1
+            for combo in combinations(coins, size):
+                total += sign * (x // lcm(*combo))
+        return total
+
+    lo, hi = 1, min(coins) * k
+    while lo &lt; hi:
+        mid = (lo + hi) // 2
+        if count_at_most(mid) &gt;= k:
+            hi = mid
+        else:
+            lo = mid + 1
+    return lo
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>count_at_most(x)</code> implements inclusion-exclusion: it loops over every subset size from 1 to n, and within each size, over every combination of coins of that size.</li>
+<li><code>sign</code> alternates based on subset size — positive for odd sizes (single coins, triples...), negative for even sizes (pairs, quadruples...), which is exactly what cancels out double-counted multiples.</li>
+<li><code>lcm(*combo)</code> computes the least common multiple of the coins in that subset; Python's <code>math.lcm</code> accepts multiple arguments directly, so no manual GCD chaining is needed.</li>
+<li><code>x // lcm(*combo)</code> counts how many multiples of that LCM are ≤ x — the raw count for that subset's contribution.</li>
+<li>The binary search bounds <code>lo = 1</code> and <code>hi = min(coins) * k</code> guarantee the answer is inside the range, since the k-th multiple of the smallest coin is always an upper bound on the true answer.</li>
+<li>The loop narrows <code>[lo, hi]</code> until they meet, using the standard "search for smallest x where predicate is true" binary search template.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Coins <code>[3, 4]</code>, <code>k = 5</code>.</p>
+<ul>
+<li><code>lo = 1</code>, <code>hi = 3 * 5 = 15</code>.</li>
+<li><code>mid = 8</code>: count = (8//3) + (8//4) − (8//12) = 2 + 2 − 0 = 4. That's less than 5, so <code>lo = 9</code>.</li>
+<li><code>mid = 12</code>: count = (12//3) + (12//4) − (12//12) = 4 + 3 − 1 = 6. That's ≥ 5, so <code>hi = 12</code>.</li>
+<li><code>mid = 10</code>: count = (10//3) + (10//4) − (10//12) = 3 + 2 − 0 = 5. That's ≥ 5, so <code>hi = 10</code>.</li>
+<li><code>mid = 9</code>: count = (9//3) + (9//4) − (9//12) = 3 + 2 − 0 = 5. That's ≥ 5, so <code>hi = 9</code>.</li>
+<li><code>lo == hi == 9</code>. The answer is 9.</li>
+</ul>
+<p>Checking by hand: multiples of 3 are 3, 6, 9, 12...; multiples of 4 are 4, 8, 12...; merged and sorted: 3, 4, 6, 8, 9 — the 5th value is 9. Matches.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> For each binary search step, <code>count_at_most</code> iterates over all 2^n − 1 non-empty subsets of coins, computing an LCM per subset. With n up to 15, that's roughly 32,000 subsets per check. Binary search runs in about O(log(range)) steps — around 40 iterations for a range up to <code>min(coins) * k</code> with k up to 2 billion. Total time is O(2^n · log(range)), comfortably fast because n is capped small.</p>
+<p><strong>Space:</strong> Only O(n) for tracking the current subset during combination generation — no list of amounts is ever built.</p>
+<p><strong>Why it's correct:</strong> Inclusion-exclusion guarantees an exact count with no double-counting, and the count function is monotonic in x, which is the exact precondition binary search requires to converge on the correct boundary.</p>
+<h2>Alternative Solutions</h2>
+<p>A heap-based k-way merge (repeatedly popping the smallest unseen multiple across all coins, skipping duplicates) is a middle ground — it avoids generating a fully sorted list upfront, but it still does O(k) pop operations, which is a dealbreaker when k reaches 2 billion. It's worth mentioning in an interview as a "better than brute force but still not good enough" step, since it shows you understand the scaling problem before landing on the binary-search-on-count approach.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Single coin:</strong> With only one denomination, the count function reduces to <code>x // coin</code>, and the answer is simply <code>coin * k</code>.</li>
+<li><strong>k = 1:</strong> The answer is always the smallest coin value, since it's the smallest amount payable by definition.</li>
+<li><strong>Coins sharing a common factor:</strong> If every coin shares a factor (like 6, 10, 14 all being even), the LCMs and counts shift, but the binary search bounds stay valid — the smallest coin times k is still a safe upper bound.</li>
+<li><strong>Maximum coins (15) and maximum k (2×10^9):</strong> This is the stress case that breaks brute force; the optimal solution stays fast because its cost depends on 2^n, not k.</li>
+<li><strong>Duplicate LCMs across different subsets:</strong> Since coins are guaranteed distinct, this doesn't cause incorrect cancellation, but it's worth double-checking your subset generation doesn't accidentally skip or repeat a combination.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Forgetting to alternate the sign by subset size, which causes systematic over- or under-counting.</li>
+<li>Computing LCM incorrectly by summing or averaging instead of using the proper <code>lcm(a, b) = a * b // gcd(a, b)</code> relationship (or <code>math.lcm</code> directly).</li>
+<li>Setting the binary search upper bound too low, so the true answer falls outside the search range.</li>
+<li>Using <code>count(mid) &gt; k</code> instead of <code>count(mid) &gt;= k</code> in the binary search condition, which breaks the "smallest x satisfying the predicate" invariant.</li>
+<li>Attempting to actually build and sort the merged list of amounts, which silently works on small examples but times out or exhausts memory on the real constraints.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What property must <code>count_at_most(x)</code> have for binary search to be valid here, and why?</li>
+<li>How does the time complexity change if the number of coins grows from 15 to, say, 30?</li>
+<li>Could you solve this with a min-heap instead of inclusion-exclusion? What's the tradeoff?</li>
+<li>If all coins are guaranteed to share a common factor, does that change your binary search bounds or just your counting logic?</li>
+<li>How would you extend this to answer "how many valid amounts exist in a range [a, b]" instead of just up to x?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 1201 — Ugly Number III:</strong> Nearly identical structure — count multiples of up to three numbers using inclusion-exclusion, then binary search for the k-th ugly number.</li>
+<li><strong>LeetCode 1283 — Find the Smallest Divisor Given a Threshold:</strong> Same "binary search on the answer with a monotonic check function" pattern, applied to a division-sum constraint instead of counting.</li>
+<li><strong>LeetCode 719 — Find K-th Smallest Pair Distance:</strong> Another k-th-value problem where direct enumeration is too slow, solved by binary searching a distance and counting pairs within it.</li>
+<li><strong>LeetCode 378 — Kth Smallest Element in a Sorted Matrix:</strong> The same counting-instead-of-generating idea, applied to a 2D sorted grid.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>When the answer space is too large to enumerate but you can cheaply count how many candidates satisfy "at most x," binary search on x is almost always the move. Inclusion-exclusion is the tool for counting union sizes without double-counting overlaps, and it pairs naturally with problems built on multiples, divisors, or LCMs. The subset count (2^n) being small here is what makes the whole approach tractable — always check which variable in the problem is actually small before deciding your algorithm's complexity around it.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough — including a live timing comparison between brute force and the optimal solution on a real 15-coin input — watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <em>Fun with Learning Technology</em>, a series dedicated to building real algorithmic intuition instead of memorized solutions — tracing how an experienced engineer actually arrives at an optimal approach, one problem at a time.</p>
+<h2>Call To Action</h2>
+<p>If this helped the inclusion-exclusion and binary-search-on-answer pattern click, give the video a like on YouTube and subscribe for more deep dives like this one. For the full write-ups delivered straight to your inbox, subscribe to the Substack. Drop a comment with your own approach or a problem you'd like covered next, and share this with anyone prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>LeetCode 3116 — what pattern does &#x27;kth smallest sum of subset sums&#x27; trigger?</summary><p>Binary search on the answer value + counting via inclusion-exclusion, not enumeration.</p></details><details class='card2'><summary>Time complexity of the binary search + count approach here?</summary><p>O(2^m * log(k * maxCoin)) where m = number of coin denominations (small, since 2^m subsets).</p></details><details class='card2'><summary>Space complexity for this solution?</summary><p>O(m) for the subset enumeration/recursion stack; no large auxiliary storage needed.</p></details><details class='card2'><summary>Trickiest bug when counting payable amounts ≤ mid?</summary><p>Double-counting overlaps between coin multiples — must use inclusion-exclusion over LCMs of coin subsets, with sign flips.</p></details><details class='card2'><summary>This problem vs plain &#x27;kth smallest element in sorted array&#x27; pattern?</summary><p>Can&#x27;t merge/heap because the set is implicit and huge; must flip to counting how many values ≤ x exist.</p></details><details class='card2'><summary>Interview follow-up: why binary search on the answer instead of generating amounts directly?</summary><p>Amount space is exponential/unbounded; counting &#x27;how many ≤ x&#x27; is cheap and monotonic, enabling search instead of enumeration.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
