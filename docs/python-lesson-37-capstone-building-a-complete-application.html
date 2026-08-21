@@ -1,0 +1,240 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Python Lesson 37: The Install Problem Nobody Warns You About — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-37-capstone-building-a-complete-application
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/mai">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/python-lesson-37-capstone-building-a-complete-application.html">
+<meta property="og:title" content="Python Lesson 37: The Install Problem Nobody Warns You About — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/python-lesson-37-capstone-building-a-complete-application
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/mai">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Python Lesson 37: The Install Problem Nobody Warns You About</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Most Python tutorials teach you in isolation. One lesson on classes. One lesson on testing. One lesson on async. You finish each one feeling capable, and then you sit down to build something real and nothing connects. The classes don't know about the tests. The tests don't know about the async layer. And nobody ever gets to the part where you type <code>pip install .</code> and it just works.</p>
+<p>That gap is exactly what shows up in technical interviews and on real engineering teams. Interviewers don't just want to know if you can write a <code>for</code> loop — they want to see if you can structure a small system: model the domain cleanly, protect it with tests, make it fast where it needs to be, and hand it off in a form someone else can actually run. This lesson walks through building one small application — a command-line expense tracker — that does all four, so you can see how the pieces actually fit together instead of living as four separate skills you've never combined.</p>
+<h2>Problem Overview</h2>
+<p>Here's the goal, striped down to its core: build a command-line expense tracker that a stranger could install and run without ever seeing your project folder.</p>
+<p>That means:</p>
+<ul>
+<li>A clean domain model for expenses and a ledger of them.</li>
+<li>Automated tests that catch regressions before a user does.</li>
+<li>Live currency conversion fetched concurrently instead of one request at a time.</li>
+<li>A packaging setup so the whole thing installs as a real command, not a script you run by remembering its file path.</li>
+</ul>
+<p>None of this requires new syntax. It requires knowing how dataclasses, pytest, <code>asyncio</code>, and <code>pyproject.toml</code> sit next to each other in one working project.</p>
+<h2>Example</h2>
+<p>Imagine adding two expenses to the ledger:</p>
+<pre><code>Coffee     — 4.50 USD
+Groceries  — 12.00 USD
+</code></pre>
+<p>Calling <code>ledger.total()</code> should return <code>16.50</code>. That's the obvious case. But two more examples matter just as much:</p>
+<ul>
+<li>An <strong>empty ledger</strong> — <code>total()</code> should return <code>0</code>, not raise an error.</li>
+<li>A ledger with expenses in <strong>different currencies</strong> — the total only makes sense once every amount is converted to one currency, which is exactly where the async layer comes in.</li>
+</ul>
+<p>Each of these is a separate test case later, because each one fails in a different way if the code is wrong.</p>
+<h2>Intuition</h2>
+<p>An experienced engineer doesn't start with tests, async, or packaging. They start with the plainest possible objects that describe the problem, because everything downstream — tests, concurrency, distribution — is easier to reason about when the core domain is simple and honest.</p>
+<p>So the first question is: what are the <em>nouns</em> in this problem? An expense (a description, an amount, a currency) and a ledger (a collection of expenses that can be totaled). Nothing about HTTP requests or currency rates belongs in these classes yet — that's a separate concern that gets layered on later, which is itself a lesson: keep the thing that models your data separate from the thing that fetches data for it.</p>
+<p>Once that core exists, the next question an engineer asks isn't "does it work" — it's "how do I know if I break it later?" That's what pushes you toward tests before you touch anything else. Only after the model is trustworthy does it make sense to make it fast (async) and shippable (packaging), because optimizing or distributing something you don't trust just multiplies the blast radius of a bug.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Skip structure entirely — track expenses as raw tuples or dictionaries in a script, fetch currency rates one at a time with <code>requests</code>, and run everything as <code>python main.py</code>.</p>
+<p><strong>Algorithm:</strong>
+1. Store expenses as <code>list[dict]</code>.
+2. Loop over them to compute a total.
+3. For each unique currency, make a blocking HTTP call to fetch its rate.
+4. Print the result.</p>
+<p><strong>Advantages:</strong> Fast to write for a one-off script; no dependencies beyond <code>requests</code>.</p>
+<p><strong>Disadvantages:</strong> No safety net — a typo in a dict key fails silently. No way to distribute it — anyone who wants to run it needs your folder and the right command memorized. Network calls happen sequentially, so twenty expenses in twenty currencies means twenty round trips stacked end to end.</p>
+<p><strong>Complexity:</strong> Computing the total is O(n) for n expenses. Fetching rates sequentially is O(k × latency) for k unique currencies — that latency term is the whole problem, because it scales with network round-trip time, not CPU work.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal version isn't algorithmically different — it's <em>structurally</em> different, and structure is what makes the same logic testable, fast, and distributable.</p>
+<p><strong>Step 1 — Model the domain with dataclasses.</strong></p>
+<p><code>Expense</code> and <code>Ledger</code> are declared as <code>@dataclass</code> instead of hand-written classes. A dataclass generates <code>__init__</code> and <code>__repr__</code> for you, so the class body only shows the fields and the methods that actually matter — the boilerplate that would otherwise bury the logic is gone.</p>
+<p><strong>Step 2 — Lock behavior in with pytest before adding anything else.</strong></p>
+<p>Three tests, each covering a distinct case:</p>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>What it checks</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Single expense</td>
+<td>Total equals that one amount</td>
+<td>Baseline sanity check</td>
+</tr>
+<tr>
+<td>Multiple expenses</td>
+<td>Total equals their sum</td>
+<td>The case most people remember</td>
+</tr>
+<tr>
+<td>Empty ledger</td>
+<td>Total equals zero, no crash</td>
+<td>The edge case people skip — and the one that breaks silently when <code>total()</code> is refactored later</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Step 3 — Fetch currency rates concurrently with asyncio.</strong></p>
+<p><code>fetch_rate</code> is a single coroutine that awaits one network call for one currency. <code>attach_rates</code> first de-duplicates which currencies actually appear in the ledger — no reason to fetch USD twice — then hands all the resulting coroutines to <code>asyncio.gather</code>, which launches them together and waits for all of them at once instead of one after another.</p>
+<pre><code>Sequential:  [req1]→[req2]→[req3]→...→[req20]   (20x latency)
+Concurrent:  [req1]
+             [req2]
+             [req3]                              (~1x latency)
+             ...
+             [req20]
+</code></pre>
+<p><strong>Step 4 — Package it so it installs like real software.</strong></p>
+<p>A <code>pyproject.toml</code> names the package, lists <code>aiohttp</code> as the one dependency, and — the part that actually matters — defines an entry point mapping the command <code>expenses</code> to the <code>main</code> function in <code>expenses.cli</code>. <code>pip install .</code> reads that entry point and writes an <code>expenses</code> executable into your environment's <code>bin</code> folder. After that, <code>expenses</code> is a command, not a script whose path you have to remember.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python"># expenses/models.py
+from dataclasses import dataclass, field
+
+
+@dataclass
+class Expense:
+    description: str
+    amount: float
+    currency: str = &quot;USD&quot;
+
+
+@dataclass
+class Ledger:
+    expenses: list[Expense] = field(default_factory=list)
+
+    def add(self, expense: Expense) -&gt; None:
+        self.expenses.append(expense)
+
+    def total(self) -&gt; float:
+        return sum(e.amount for e in self.expenses)
+
+    def currencies(self) -&gt; set[str]:
+        return {e.currency for e in self.expenses}
+</code></pre>
+<pre><code class="language-python"># expenses/rates.py
+import asyncio
+import aiohttp
+
+RATE_URL = &quot;https://api.exchangerate.host/latest?base={currency}&quot;
+
+
+async def fetch_rate(session: aiohttp.ClientSession, currency: str) -&gt; tuple[str, float]:
+    async with session.get(RATE_URL.format(currency=currency)) as resp:
+        data = await resp.json()
+        return currency, data[&quot;rates&quot;][&quot;USD&quot;]
+
+
+async def attach_rates(ledger) -&gt; dict[str, float]:
+    currencies = ledger.currencies()
+    async with aiohttp.ClientSession() as session:
+        results = await asyncio.gather(
+            *(fetch_rate(session, c) for c in currencies)
+        )
+    return dict(results)
+</code></pre>
+<pre><code class="language-python"># expenses/cli.py
+import asyncio
+from expenses.models import Expense, Ledger
+from expenses.rates import attach_rates
+
+
+def main() -&gt; None:
+    ledger = Ledger()
+    ledger.add(Expense(&quot;Coffee&quot;, 4.50))
+    ledger.add(Expense(&quot;Groceries&quot;, 12.00))
+    print(f&quot;Total: {ledger.total():.2f}&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    main()
+</code></pre>
+<pre><code class="language-toml"># pyproject.toml
+[project]
+name = &quot;expenses&quot;
+version = &quot;0.1.0&quot;
+dependencies = [&quot;aiohttp&quot;]
+
+[project.scripts]
+expenses = &quot;expenses.cli:main&quot;
+
+[build-system]
+requires = [&quot;setuptools&quot;]
+build-backend = &quot;setuptools.build_meta&quot;
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>@dataclass</code> on <code>Expense</code> and <code>Ledger</code> generates <code>__init__</code>, <code>__repr__</code>, and <code>__eq__</code>, so the class body is just fields and real methods.</li>
+<li><code>field(default_factory=list)</code> avoids the classic mutable-default-argument bug — a bare <code>= []</code> would share one list across every <code>Ledger</code> instance.</li>
+<li><code>Ledger.total()</code> uses a generator expression inside <code>sum()</code>, so an empty list correctly sums to <code>0</code> without a special case.</li>
+<li><code>fetch_rate</code> is a coroutine — calling it doesn't run it, it returns an awaitable that <code>asyncio.gather</code> schedules.</li>
+<li><code>attach_rates</code> de-duplicates currencies with a set comprehension before firing off requests, so fetching the same currency twice never happens.</li>
+<li><code>asyncio.gather(*coroutines)</code> unpacks the coroutines as separate arguments and runs them concurrently on the event loop, returning results in the same order they were passed in.</li>
+<li>The <code>[project.scripts]</code> table in <code>pyproject.toml</code> is what turns <code>expenses.cli:main</code> into a real <code>expenses</code> command after install.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Starting state: empty ledger.</p>
+<ol>
+<li><code>ledger.add(Expense("Coffee", 4.50))</code> → <code>ledger.expenses = [Expense("Coffee", 4.50, "USD")]</code></li>
+<li><code>ledger.add(Expense("Groceries", 12.00))</code> → <code>ledger.expenses</code> now has two entries.</li>
+<li><code>ledger.total()</code> sums <code>4.50 + 12.00</code> → <code>16.50</code>.</li>
+<li>Output: <code>Total: 16.50</code>.</li>
+</ol>
+<p>Every step is backed by a test: the single-add test covers step 1's shape, the multi-add test covers step 3's arithmetic, and the empty-ledger test guarantees step 3 doesn't crash before any <code>add</code> call happens.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> <code>Ledger.total()</code> is O(n) for n expenses — one pass, no way around touching every entry once. Fetching rates concurrently is bounded by the <em>slowest single request</em>, not the sum of all of them, so it's O(max latency) instead of O(k × latency) for k currencies.</li>
+<li><strong>Space:</strong> O(n) for storing n expenses, O(k) for k unique currencies' rates — both linear and both necessary, since you can't total or convert what you haven't stored.</li>
+<li>These bounds are correct because nothing in the design re-scans the ledger more than once per operation, and the concurrency doesn't change how much data you hold, only how long you wait for it.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<ul>
+<li><strong>Threading instead of asyncio:</strong> Works for I/O-bound fetches too, but adds thread-safety concerns for shared state (the ledger) that <code>asyncio</code>'s single-threaded event loop sidesteps entirely. For a small number of network calls, <code>asyncio</code> is simpler and just as fast.</li>
+<li><strong>A database instead of in-memory dataclasses:</strong> Reasonable once the tracker needs to persist across runs, but premature here — it would add a schema and a migration story to a project whose actual bottleneck is structure and shipping, not storage.</li>
+</ul>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty ledger</strong> — <code>total()</code> must return <code>0</code>, not raise.</li>
+<li><strong>Duplicate currencies</strong> — <code>attach_rates</code> must fetch each one exactly once, not once per expense.</li>
+<li><strong>Negative or zero amounts</strong> — a refund or correction entry should still sum correctly.</li>
+<li><strong>A single failing rate request</strong> — <code>asyncio.gather</code> raises the first exception it hits and cancels the rest by default, which silently kills an otherwise-fine batch unless you pass <code>return_exceptions=True</code> and handle failures per-currency.</li>
+<li><strong>Renaming the entry point after install</strong> — <code>expenses</code> keeps running the <em>old</em> function until you <code>pip install .</code> again, because the wrapper script was written at install time, not resolved dynamically.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Using a mutable default argument (<code>expenses: list = []</code>) instead of <code>field(default_factory=list)</code>, causing every <code>Ledger</code> to share one list.</li>
+<li>Writing tests only for the happy path and skipping the empty-input case — exactly the one that breaks silently later.</li>
+<li>Assuming <code>asyncio.gather</code> skips failed requests by default — it doesn't, it cancels the whole batch on the first exception.</li>
+<li>Forgetting to de-duplicate currencies before fetching, wasting requests on the same rate.</li>
+<li>Editing <code>pyproject.toml</code>'s entry point after installing and expecting the change to take effect without reinstalling.</li>
+<li>Mixing async and sync code carelessly — calling a coroutine without <code>await</code> and getting a coroutine object instead of a result.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Why use <code>@dataclass</code> instead of a plain class here, and when would you <em>not</em> use one?</li>
+<li>What does <code>asyncio.gather</code> do differently from running the same coroutines in a loop with <code>await</code>?</li>
+<li>How would you make <code>gather</code> continue past a single failed request instead of cancelling everything?</li>
+<li>Why test the empty-ledger case specifically, and what kind of bug does it catch that the two-item test wouldn't?</li>
+<li>What actually happens when you run <code>pip install .</code> — what does the entry point mechanism do under the hood?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Design a Rate Limiter</strong> — another problem where correctness depends on concurrent behavior, not just sequential logic.</li>
+<li><strong>Design an LRU Cache</strong> — same theme of building a small, self-contained data structure with clear invariants worth testing.</li>
+<li><strong>Merge Intervals</strong> — practicing the habit of identifying the edge case (empty input, single interval) before trusting a solution.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Classes gave the project structure. Tests gave it a safety net. Async gave it speed. Packaging gave it to the world. None of these are separate skills in a real project — they're four angles on the same small system, and the moment you connect them, you've built something a stranger could actually run, not just a snippet that works on your machine.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with live coding and the async gather question worked out on screen, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <strong>Fun with Learning Technology</strong>, a series built around one idea: tutorials teach pieces, but real software is what happens when those pieces are forced to work together. Each lesson takes a concept most developers already know in isolation and shows where it actually lives inside a working project.</p>
+<h2>Call To Action</h2>
+<p>If this connected some dots for you, drop a like on the video — that's genuinely how the channel knows what's landing. Subscribe on YouTube for the rest of the series, and subscribe to the Substack newsletter for the write-ups that go deeper than the video has time for. Comment with your guess on what <code>asyncio.gather</code> does when one request fails, and share this with anyone still writing classes, tests, and async code that never talk to each other.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Why build a capstone before starting a new topic?</summary><p>Forces integrating OOP, tests, async, and packaging together—skills only click when combined, not learned in isolation.</p></details><details class='card2'><summary>Why write pytest tests before adding async fetching?</summary><p>Locks in current behavior as a safety net, so later concurrency changes can&#x27;t silently break existing logic.</p></details><details class='card2'><summary>Sync code vs async code: when does async actually help?</summary><p>Async wins when waiting on I/O (network/disk); it doesn&#x27;t speed up pure CPU-bound work.</p></details><details class='card2'><summary>Trickiest bug when adding async to an existing sync codebase?</summary><p>Mixing blocking calls inside async functions, which silently stalls the whole event loop instead of raising an error.</p></details><details class='card2'><summary>What problem does packaging (pyproject.toml, entry points) solve?</summary><p>Makes the project pip-installable and runnable elsewhere, instead of only working from one developer&#x27;s folder.</p></details><details class='card2'><summary>Interview follow-up: why not just add print statements instead of tests?</summary><p>Prints verify one manual run; tests re-verify automatically on every future change, catching regressions early.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
