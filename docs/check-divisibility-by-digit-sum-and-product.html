@@ -1,0 +1,219 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3622. Check Divisibility by Digit Sum and Product — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/check-divisibility-by-digit-sum-and-product
+💻 Code on GitHub: https://github.co">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/check-divisibility-by-digit-sum-and-product.html">
+<meta property="og:title" content="3622. Check Divisibility by Digit Sum and Product — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/check-divisibility-by-digit-sum-and-product
+💻 Code on GitHub: https://github.co">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>3622. Check Divisibility by Digit Sum and Product</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Digit-manipulation problems show up constantly in coding interviews because they test something narrower and more useful than clever algorithms: can you carefully translate a plain-English rule into precise arithmetic without introducing bugs along the way? LeetCode 3622, Check Divisibility by Digit Sum and Product, is exactly this kind of problem. The algorithm itself is simple — you will not need a single advanced data structure — but the problem rewards engineers who read the rule carefully instead of skimming it and guessing.</p>
+<p>That distinction matters in interviews. A candidate who jumps straight to code often builds something that only handles the "obvious" case, then stumbles when a zero digit or a single-digit input breaks their assumptions. This problem is a good filter for exactly that habit, which is why it's worth understanding deeply rather than just memorizing the solution.</p>
+<h2>Problem Overview</h2>
+<p>You're given a positive integer <code>n</code>. Break <code>n</code> into its individual digits. Compute two values from those digits:</p>
+<ul>
+<li><strong>Digit sum</strong> — add every digit together.</li>
+<li><strong>Digit product</strong> — multiply every digit together.</li>
+</ul>
+<p>Add the digit sum and the digit product into one combined total. Then check whether <code>n</code> divides evenly into that total. If there's no remainder, return <code>true</code>. Otherwise, return <code>false</code>.</p>
+<p>The key detail — and the one people misread — is that you don't check divisibility against the sum alone, or the product alone. You check it against <strong>the sum of the two</strong>, computed once, checked once.</p>
+<h2>Example</h2>
+<p>Take <code>n = 99</code>. Its digits are <code>9</code> and <code>9</code>.</p>
+<ul>
+<li>Digit sum: <code>9 + 9 = 18</code></li>
+<li>Digit product: <code>9 × 9 = 81</code></li>
+<li>Combined total: <code>18 + 81 = 99</code></li>
+<li>Check: <code>99 % 99 == 0</code> → <code>true</code></li>
+</ul>
+<p>It's a satisfying example because the combined total lands exactly back on <code>n</code>, but don't let that coincidence suggest the two pieces are interchangeable. Neither <code>18</code> nor <code>81</code> divides <code>99</code> on its own — only the sum of the two does. That's the rule in action, not a shortcut around it.</p>
+<p>A second example makes the "zero digit" case concrete: <code>n = 105</code>. Digits are <code>1</code>, <code>0</code>, <code>5</code>.</p>
+<ul>
+<li>Digit sum: <code>1 + 0 + 5 = 6</code></li>
+<li>Digit product: <code>1 × 0 × 5 = 0</code></li>
+<li>Combined total: <code>6 + 0 = 6</code></li>
+<li>Check: <code>105 % 6 = 3</code> → <code>false</code></li>
+</ul>
+<p>The zero digit didn't break anything — it just zeroed out the product's contribution, leaving the sum to carry the check on its own.</p>
+<h2>Intuition</h2>
+<p>The first thing an experienced engineer does with a problem like this is separate what's <em>fixed</em> from what's <em>computed</em>. <code>n</code> is fixed — you're not allowed to change it. What you're computing is a single number (sum + product) built entirely from <code>n</code>'s own digits, and then you're asking a basic divisibility question about it.</p>
+<p>That reframing immediately tells you the shape of the solution: this is a single pass over the digits of <code>n</code>, accumulating two running values, followed by one final check. There's no need to store the digits in a list, reverse a string, or recurse — you just need two accumulators and a loop.</p>
+<p>The next thing worth noticing, before writing any code, is a boundary case that trips people up: what if a digit is <code>0</code>? Some engineers reflexively add a guard — "if the digit is zero, skip updating the product, because multiplying by zero would ruin everything." But look at what's actually being divided: it's the <em>sum</em> of digit sum and digit product, not the product by itself. Since <code>n</code> is a positive number, it has at least one digit, and the digit sum of a positive number's digits is always at least <code>1</code>. So even if the product collapses entirely to zero, the sum keeps the combined total above zero. No defensive check needed — the math already handles it.</p>
+<p>This is a useful habit to build: before adding a guard clause, ask whether the guard is protecting against something that can actually happen given the other constraints of the problem. Here it can't, so the guard would just be unnecessary code.</p>
+<h2>Brute Force Solution</h2>
+<p>There isn't really a slower alternative here worth calling "brute force" in the traditional sense — this problem doesn't have a naive recursive or exponential approach to avoid. The one variant worth mentioning is converting <code>n</code> to a string and iterating over its characters instead of peeling digits arithmetically.</p>
+<p><strong>Idea:</strong> Convert <code>n</code> to a string, iterate over each character, convert each back to an integer, and accumulate sum and product.</p>
+<p><strong>Advantages:</strong> Slightly more readable to some engineers; avoids manual <code>% 10</code> / <code>// 10</code> arithmetic.</p>
+<p><strong>Disadvantages:</strong> String conversion and repeated <code>int()</code> casting add overhead that's completely unnecessary given how easy digit extraction is with arithmetic. It also encourages a habit — reaching for string conversion by default — that doesn't generalize well to problems with larger numeric constraints.</p>
+<p><strong>Time complexity:</strong> O(d) where <code>d</code> is the number of digits.
+<strong>Space complexity:</strong> O(d) for the string representation.</p>
+<p>The arithmetic approach below has the same time complexity but true O(1) space, so it's the better default.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach processes <code>n</code>'s digits one at a time using two well-worn tools:</p>
+<ul>
+<li><code>n % 10</code> gives you the last digit.</li>
+<li><code>n // 10</code> drops that last digit (integer division).</li>
+</ul>
+<p>You keep a running <code>sum</code> (starting at <code>0</code>) and a running <code>product</code> (starting at <code>1</code>, since multiplying by zero at the start would erase everything). On each loop iteration:</p>
+<ol>
+<li>Extract the last digit with <code>% 10</code>.</li>
+<li>Add it to <code>sum</code>.</li>
+<li>Multiply it into <code>product</code>.</li>
+<li>Shrink the working number with <code>// 10</code>.</li>
+</ol>
+<p>The loop ends when the working number reaches <code>0</code> — every digit has been visited exactly once. At that point, add <code>sum</code> and <code>product</code> together and check <code>n % (sum + product) == 0</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>temp</th>
+<th>digit</th>
+<th>sum</th>
+<th>product</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>start</td>
+<td>99</td>
+<td>—</td>
+<td>0</td>
+<td>1</td>
+</tr>
+<tr>
+<td>1</td>
+<td>9</td>
+<td>9</td>
+<td>9</td>
+<td>9</td>
+</tr>
+<tr>
+<td>2</td>
+<td>0</td>
+<td>9</td>
+<td>18</td>
+<td>81</td>
+</tr>
+</tbody>
+</table>
+<p>After the loop: <code>sum + product = 99</code>, and <code>99 % 99 == 0</code> → <code>true</code>.</p>
+<p>Note that we work on a copy of <code>n</code> (call it <code>temp</code>) rather than mutating <code>n</code> itself, since the original value of <code>n</code> is needed for the final divisibility check.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def check_divisibility(n: int) -&gt; bool:
+    &quot;&quot;&quot;Return True if n is divisible by (digit sum + digit product) of n.&quot;&quot;&quot;
+    digit_sum = 0
+    digit_product = 1
+    temp = n
+
+    while temp &gt; 0:
+        digit = temp % 10
+        digit_sum += digit
+        digit_product *= digit
+        temp //= 10
+
+    total = digit_sum + digit_product
+    return n % total == 0
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>digit_sum = 0</code>: additive identity — the starting point for a running sum.</li>
+<li><code>digit_product = 1</code>: multiplicative identity — starting at <code>0</code> would zero out every digit multiplied into it.</li>
+<li><code>temp = n</code>: a disposable copy, since <code>n</code> is needed intact for the final check.</li>
+<li><code>while temp &gt; 0</code>: loop continues as long as there are unprocessed digits.</li>
+<li><code>digit = temp % 10</code>: extracts the last digit of the current <code>temp</code>.</li>
+<li><code>digit_sum += digit</code> and <code>digit_product *= digit</code>: fold the digit into both running accumulators in the same pass.</li>
+<li><code>temp //= 10</code>: drops the digit just processed, guaranteeing the loop terminates since <code>temp</code> shrinks by roughly a factor of 10 each iteration.</li>
+<li><code>total = digit_sum + digit_product</code>: the one combination step, performed exactly once.</li>
+<li><code>n % total == 0</code>: the one comparison, performed exactly once.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Let's trace <code>n = 84</code> from the video's opening hook.</p>
+<table>
+<thead>
+<tr>
+<th>temp</th>
+<th>digit</th>
+<th>digit_sum</th>
+<th>digit_product</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>84</td>
+<td>4</td>
+<td>4</td>
+<td>4</td>
+</tr>
+<tr>
+<td>8</td>
+<td>8</td>
+<td>12</td>
+<td>32</td>
+</tr>
+<tr>
+<td>0</td>
+<td>—</td>
+<td>12</td>
+<td>32</td>
+</tr>
+</tbody>
+</table>
+<p><code>total = 12 + 32 = 44</code>. Check: <code>84 % 44 = 40</code> → not zero → <code>false</code>.</p>
+<p>So despite the video's teaser, <code>84</code> does <strong>not</strong> divide evenly by <code>44</code> — the point of that opening was to get you computing digit sum and digit product by hand, not to claim <code>84</code> passes the check.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time complexity:</strong> O(log n), or equivalently O(d) where <code>d</code> is the number of digits in <code>n</code>. Since <code>n ≤ 1,000,000</code>, that's at most 7 digits — the loop runs at most 7 times regardless of the exact value.</p>
+<p><strong>Space complexity:</strong> O(1). Only a handful of integer variables (<code>digit_sum</code>, <code>digit_product</code>, <code>temp</code>, <code>digit</code>) are used, independent of the size of <code>n</code>.</p>
+<p>Both bounds are tight because every digit is visited exactly once, and no auxiliary data structure grows with input size.</p>
+<h2>Alternative Solutions</h2>
+<p>The only reasonable alternative is the string-based version described in the brute force section — converting <code>n</code> to <code>str(n)</code> and iterating over characters with <code>int(ch)</code>. It's functionally equivalent and has the same time complexity, but trades O(1) space for O(d) space and adds string/int conversion overhead. For a constraint this small (≤7 digits) the performance difference is negligible, but the arithmetic version is the more idiomatic choice for digit-manipulation problems in general, and that habit pays off on problems with much larger digit counts.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Single-digit <code>n</code> (e.g., <code>n = 7</code>):</strong> digit sum and digit product both equal <code>7</code>, so total is <code>14</code>. <code>7 % 14 = 7</code> → <code>false</code>. In fact, any single-digit number always produces a total of exactly double itself, so single-digit inputs can never return <code>true</code>.</li>
+<li><strong><code>n</code> containing a zero digit (e.g., <code>n = 105</code>):</strong> the product term vanishes, but the sum still contributes, so the check still runs correctly with no special-casing.</li>
+<li><strong>Minimum input, <code>n = 1</code>:</strong> digit sum <code>1</code>, digit product <code>1</code>, total <code>2</code>. <code>1 % 2 = 1</code> → <code>false</code>.</li>
+<li><strong>Maximum input, <code>n = 1,000,000</code>:</strong> six zero digits collapse the product to <code>0</code>, digit sum is <code>1</code>, total is <code>1</code>. <code>1,000,000 % 1 = 0</code> → <code>true</code>.</li>
+<li><strong>All digits identical (e.g., <code>n = 22</code>):</strong> digit sum <code>4</code>, digit product <code>4</code>, total <code>8</code>. <code>22 % 8 = 6</code> → <code>false</code>.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Adding a zero-guard for the digit product.</strong> As covered above, this is unnecessary — the sum term guarantees the total is never zero, so there's nothing to divide by zero.</li>
+<li><strong>Checking divisibility against the sum and product separately</strong> instead of their combined total. The problem requires one combined check, not two independent ones.</li>
+<li><strong>Initializing <code>digit_product</code> to <code>0</code> instead of <code>1</code>.</strong> This silently zeroes out the entire product on the first multiplication.</li>
+<li><strong>Mutating <code>n</code> directly instead of using a copy.</strong> Since <code>n</code> is needed for the final modulo check, tearing it apart in the loop leaves nothing to check against.</li>
+<li><strong>Off-by-one errors in the loop condition</strong>, such as using <code>while temp &gt;= 0</code>, which causes an infinite loop or an extra spurious "digit" of <code>0</code>.</li>
+<li><strong>Forgetting to handle the loop when <code>n</code> itself is single-digit</strong>, assuming the while loop needs at least two iterations to function correctly (it doesn't — one iteration handles it fine).</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What would you need to change if <code>n</code> could be negative?</li>
+<li>How would your solution change if you needed the digit <em>count</em> as well as sum and product?</li>
+<li>Can this be solved recursively instead of iteratively? What are the tradeoffs?</li>
+<li>How would you adapt this if the base were not 10 (e.g., digit sum/product in base 16)?</li>
+<li>What's the largest <code>n</code> for which digit_product could overflow in a language without arbitrary-precision integers, and how would you defend against that?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 1281 — Subtract the Product and Sum of Digits of an Integer:</strong> nearly identical digit extraction logic, just a different final combination step.</li>
+<li><strong>LeetCode 258 — Add Digits:</strong> repeatedly sums digits until a single digit remains, reinforcing the peel-and-shrink pattern.</li>
+<li><strong>LeetCode 2520 — Count the Digits That Divide a Number:</strong> same digit-peeling loop, different per-digit check.</li>
+<li><strong>LeetCode 9 — Palindrome Number:</strong> uses the same <code>% 10</code> / <code>// 10</code> mechanics to process digits without converting to a string.</li>
+<li><strong>LeetCode 231 — Power of Two:</strong> not digit-based, but a good companion problem for practicing "check a numeric property, then compare once" reasoning.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Digit-manipulation problems live and die on careful reading, not clever algorithms. The pattern here — peel with <code>% 10</code>, shrink with <code>// 10</code>, accumulate as you go, combine and compare exactly once — generalizes to a huge class of interview problems. The real skill being tested isn't the loop; it's resisting the urge to add unnecessary guards for cases the math already rules out, and resisting the urge to combine values in ways the problem statement didn't actually ask for.</p>
+<h2>Watch the Video</h2>
+<p>Prefer to see this traced by hand, digit by digit, with the two quick quizzes included? Watch the full walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series focused on making coding interview problems and core computer science concepts genuinely click — not just memorized, but understood well enough to explain to someone else. Every episode builds intuition first and code second, because that order is what actually sticks in an interview room.</p>
+<h2>Call To Action</h2>
+<p>If this walkthrough helped the logic click, the biggest favor you can do is like the video on YouTube and subscribe — it directly helps more developers find these breakdowns. For deeper dives delivered straight to your inbox, subscribe to the Substack newsletter. And if you spotted a cleaner approach or a case this didn't cover, drop it in the comments — sharing this with someone prepping for interviews helps them too.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Digit-sum/digit-product divisibility check — what&#x27;s the trigger?</summary><p>When a problem needs both sum and product of digits, extract digits with %10 and /10 in one loop, accumulate both.</p></details><details class='card2'><summary>Time complexity of checking divisibility by digit sum and product?</summary><p>O(log10 n) — proportional to the number of digits in n.</p></details><details class='card2'><summary>Space complexity for this digit-peeling approach?</summary><p>O(1) — just a few running accumulators, no extra storage.</p></details><details class='card2'><summary>Tricky edge case: what happens with a zero digit?</summary><p>Product becomes 0 permanently; check n % 0 would crash — but n % (sum+product) is still safe since sum&gt;0 covers it.</p></details><details class='card2'><summary>Why check n % (sum + product) instead of two separate checks?</summary><p>Problem defines divisibility by the combined value sum+product, not by each independently — misreading this gives wrong condition.</p></details><details class='card2'><summary>Follow-up: how would you handle n=0 in this problem?</summary><p>Constraints exclude n=0 (n≥1), so no digit-extraction loop guard is needed for that case.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
