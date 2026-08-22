@@ -1,0 +1,288 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Top 10 Things To Check Before You Ship To Production: Why Your Green Tests Still Lied — Python LeetCode Solution</title><meta name="description" content="A deploy went wrong even though every test passed — this walks through the 10 checks that actually catch it: env vars, migrations, load and scaling, error handling, logging and monitoring, rollback pl">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/top-10-things-to-check-before-you-ship-to-production.html">
+<meta property="og:title" content="Top 10 Things To Check Before You Ship To Production: Why Your Green Tests Still Lied — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="A deploy went wrong even though every test passed — this walks through the 10 checks that actually catch it: env vars, migrations, load and scaling, error handling, logging and monitoring, rollback pl">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>Top 10 Things To Check Before You Ship To Production: Why Your Green Tests Still Lied</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every engineer has shipped a change that passed every test and still broke production. It's one of the more disorienting experiences in software engineering — the pipeline is green, the reviewer approved, and ninety seconds after deploy the pager goes off anyway. This isn't a story about bad luck. It's a story about what a test suite is actually built to check, and what it was never designed to check in the first place.</p>
+<p>This matters for two overlapping reasons. First, it's the difference between a boring deploy and a 3am incident, and most teams learn this checklist the hard way — after the incident, not before. Second, this exact gap between "tests pass" and "production is safe" is a favorite theme in senior and staff-level interviews, because it separates engineers who can write correct code from engineers who understand how systems actually fail in the real world. Interviewers probe this with questions like "walk me through how you'd deploy a risky change" or "tell me about a production incident you handled" — and the strongest answers all circle back to some version of this checklist.</p>
+<p>The goal here isn't to memorize ten bullet points. It's to build the instinct behind them, so that when you're staring at a green pipeline, you know exactly what it isn't telling you.</p>
+<h2>Problem Overview</h2>
+<p>Here's the scenario, stated plainly: you have a fully tested change. Unit tests pass, integration tests pass, maybe you even have decent coverage numbers. You deploy. Shortly after, something breaks in production that no test caught.</p>
+<p>The underlying problem is a mismatch between the environment your tests run in and the environment your code actually runs in. Tests typically run against a database seeded moments ago, with clean, predictable data, low concurrency, and no real user traffic. Production runs against years of accumulated data — nulls that shouldn't exist, duplicate rows nobody cleaned up, edge cases that were never written into a fixture, real network conditions, and real concurrent load. Tests validate <em>logic</em>. They say nothing about <em>environment</em>, <em>scale</em>, <em>configuration</em>, or <em>operational readiness</em>.</p>
+<p>The task, then, is to define a fast, repeatable set of checks that specifically targets this gap — the stuff tests structurally cannot see — and run it before every deploy.</p>
+<h2>Example</h2>
+<p>Picture two deploys of the exact same code change, one hour apart, on two different teams.</p>
+<p><strong>Team A</strong> merges, watches CI go green, and deploys immediately. Ninety seconds later: users can't log in, and the database is dropping writes. The root cause, once found: the production environment variable pointed at a staging database URL, left over from a config change three days earlier. No test caught it, because tests never touch real environment variables — they use a <code>.env.test</code> file that was correctly configured.</p>
+<p><strong>Team B</strong> makes the same change but runs a five-minute pre-deploy pass first. Step one is diffing prod env vars against dev/staging. They immediately spot the stale database URL, fix it, and deploy clean.</p>
+<p>Same code. Same test suite. Same green pipeline. Completely different outcome — because the difference was never in the logic, it was in the environment surrounding it.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer actually thinks about this, and it starts by rejecting a false belief: "tests passed" and "this is safe to run in production" are not the same claim, and treating them as equivalent is the single most common mistake in software delivery.</p>
+<p>The mental model that helps: your test suite answers the question "does this code do what I intended, given the inputs I thought of?" It cannot answer "does this code survive contact with the actual world it's about to run in?" Those are different questions requiring different verification.</p>
+<p>So instead of asking "did tests pass," an experienced engineer asks a single unifying question before every deploy: <strong>what's different between where I just tested this and where it's about to run?</strong></p>
+<p>That one question, applied honestly, surfaces almost everything on this list without needing to memorize it:
+- Different env vars? → config check.
+- Different data shape and volume? → migration and staging-parity check.
+- Different traffic level? → load check.
+- Different failure modes when a dependency goes down? → error-handling check.
+- No visibility into what's happening right now? → logging/monitoring check.
+- No tested way to undo this? → rollback check.
+- Different trust boundary (public internet vs. your laptop)? → auth/security check.
+- Untested safety nets (backups, rate limits)? → those aren't safety nets, they're guesses.</p>
+<p>The list below is just that one question, broken into ten concrete, checkable items.</p>
+<h2>Brute Force Solution</h2>
+<p>The "brute force" approach to deploy safety is: write more tests, and hope coverage eventually catches everything.</p>
+<p><strong>Idea:</strong> if a bug slips through, add a test for that exact case. Over time, the theory goes, your test suite converges toward catching everything.</p>
+<p><strong>Algorithm:</strong>
+1. Ship code.
+2. Wait for something to break.
+3. Write a regression test for it.
+4. Repeat.</p>
+<p><strong>Advantages:</strong>
+- Simple to reason about — one bug, one test.
+- Genuinely does prevent that <em>specific</em> regression from recurring.
+- Requires no process change, no checklist discipline.</p>
+<p><strong>Disadvantages:</strong>
+- It's reactive, not preventive — you pay for every lesson with an incident first.
+- It doesn't scale to environmental problems. You cannot write a unit test that would have caught "someone changed a prod env var three days ago." That class of bug lives outside the code entirely.
+- Test suites grow large and slow without proportionally growing safer, because most production incidents aren't logic bugs — they're environment, scale, and operational bugs.</p>
+<p><strong>Time complexity (informally):</strong> cost grows linearly with the number of incidents you've already survived — O(incidents), which is a bad way to learn.</p>
+<p><strong>Space complexity:</strong> grows with test suite size, much of it low-value regression tests for one-off environmental mismatches that a checklist would have caught in five minutes.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal solution isn't more tests — it's a fast, structural checklist that targets exactly the categories tests can't see. Ten checks, roughly five minutes, run every deploy.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Check</th>
+<th>What it catches</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Environment variables</td>
+<td>Wrong DB URL, test API keys leaking into prod</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Migrations against real data</td>
+<td>Migration that breaks on 3 years of production rows, no rollback plan</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Load and concurrency</td>
+<td>Race conditions, connection pool limits under real traffic</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Graceful degradation</td>
+<td>One dependency outage taking down the whole app</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Logging and monitoring</td>
+<td>No visibility when something breaks at 2am</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Rollback plan</td>
+<td>No fast, tested way to undo a bad deploy</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Security and auth</td>
+<td>Endpoints that trust anyone who asks</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Backup restore (tested)</td>
+<td>A backup nobody has ever actually restored</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Rate limiting (tested)</td>
+<td>A limit that's never held under real spike traffic</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Staging parity</td>
+<td>Staging that's a smaller, friendlier lie vs. real prod shape and scale</td>
+</tr>
+</tbody>
+</table>
+<p>Two of these deserve extra emphasis because they're the ones almost nobody actually tests, not just sets up: backups and rate limits. Having a backup script or a rate-limit config is not the same as knowing it works. A parachute you've never opened isn't a safety net — it's a guess. The only way to know check 8 and check 9 actually hold is to have restored from that backup and watched that rate limit survive a real spike, at least once, deliberately.</p>
+<p>Checks 1–3 target the <em>environment and scale</em> gap. Checks 4–6 target <em>failure behavior and recovery</em>. Checks 7–9 target <em>safety nets</em>, tested or otherwise. Check 10 is the meta-check that keeps the other nine honest — if staging doesn't resemble prod, none of the other checks mean much when run there instead.</p>
+<h2>Python Code</h2>
+<p>None of this checklist requires new infrastructure. Here's a lightweight pre-deploy script that automates the mechanical parts — env var diffing and a rollback-readiness reminder — while the rest (load, security, staging parity) stays a human judgment call the checklist prompts you to make.</p>
+<pre><code class="language-python">&quot;&quot;&quot;Pre-deploy sanity check: diffs env vars and prints the full checklist.&quot;&quot;&quot;
+
+import os
+import sys
+from pathlib import Path
+
+
+def load_env_file(path: str) -&gt; dict[str, str]:
+    &quot;&quot;&quot;Parse a simple KEY=VALUE .env file into a dict.&quot;&quot;&quot;
+    env = {}
+    if not Path(path).exists():
+        return env
+    for line in Path(path).read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith(&quot;#&quot;) or &quot;=&quot; not in line:
+            continue
+        key, _, value = line.partition(&quot;=&quot;)
+        env[key.strip()] = value.strip()
+    return env
+
+
+def diff_env(dev_path: str, prod_path: str) -&gt; None:
+    &quot;&quot;&quot;Flag env vars whose values differ or are missing between dev and prod.&quot;&quot;&quot;
+    dev_env = load_env_file(dev_path)
+    prod_env = load_env_file(prod_path)
+
+    suspicious = []
+    for key in sorted(set(dev_env) | set(prod_env)):
+        dev_val, prod_val = dev_env.get(key), prod_env.get(key)
+        if dev_val is not None and dev_val == prod_val:
+            suspicious.append(key)  # prod matches dev exactly -- likely leaked value
+
+    if suspicious:
+        print(&quot;WARNING: these prod env vars exactly match dev values:&quot;)
+        for key in suspicious:
+            print(f&quot;  - {key}&quot;)
+    else:
+        print(&quot;Env var check: no obvious dev/prod overlap found.&quot;)
+
+
+CHECKLIST = [
+    &quot;Environment variables diffed against dev/staging&quot;,
+    &quot;Migrations tested against a prod-shaped dataset, rollback verified&quot;,
+    &quot;Load/concurrency behavior checked beyond single-user testing&quot;,
+    &quot;Dependency failures degrade gracefully, don't cascade&quot;,
+    &quot;Logging/monitoring in place for this change&quot;,
+    &quot;Rollback tested, not just written&quot;,
+    &quot;Auth/permissions checked on every new or changed endpoint&quot;,
+    &quot;Backup restore actually tested recently&quot;,
+    &quot;Rate limiting actually tested under load recently&quot;,
+    &quot;Staging matches prod data shape and scale&quot;,
+]
+
+
+def print_checklist() -&gt; None:
+    print(&quot;\nPre-deploy checklist:&quot;)
+    for i, item in enumerate(CHECKLIST, 1):
+        print(f&quot;  [{i}] {item}&quot;)
+
+
+def main() -&gt; None:
+    dev_path = sys.argv[1] if len(sys.argv) &gt; 1 else &quot;.env.dev&quot;
+    prod_path = sys.argv[2] if len(sys.argv) &gt; 2 else &quot;.env.prod&quot;
+    diff_env(dev_path, prod_path)
+    print_checklist()
+
+
+if __name__ == &quot;__main__&quot;:
+    main()
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>load_env_file</code> reads a <code>.env</code>-style file line by line, skipping comments and blanks, and returns a plain <code>dict</code>. No dependency needed for this — it's a handful of lines of <code>str</code> parsing.</li>
+<li><code>diff_env</code> loads both dev and prod env files and flags any key where the prod value is identical to the dev value. An identical value in both places is exactly the "dev database URL leaked into prod" failure mode from the transcript's opening story — it's a strong signal, not proof, so it's a warning, not a hard failure.</li>
+<li><code>CHECKLIST</code> is a plain list of strings — no need for a class, enum, or config file for ten static strings that never change.</li>
+<li><code>print_checklist</code> just enumerates and prints them, giving you a physical, glanceable list to walk through by hand for the nine checks that genuinely require human judgment (load, security review, staging parity, and so on).</li>
+<li><code>main</code> wires it together, accepting file paths as optional CLI args so it works in any repo layout without hardcoding paths.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Suppose <code>.env.dev</code> contains:</p>
+<pre><code>DATABASE_URL=postgres://localhost/dev_db
+API_KEY=test_key_123
+DEBUG=true
+</code></pre>
+<p>And someone accidentally left this in <code>.env.prod</code>:</p>
+<pre><code>DATABASE_URL=postgres://localhost/dev_db
+API_KEY=prod_key_live_456
+DEBUG=false
+</code></pre>
+<p>Running <code>python predeploy_check.py .env.dev .env.prod</code>:</p>
+<ol>
+<li><code>load_env_file</code> parses both files into dicts.</li>
+<li><code>diff_env</code> iterates the union of keys: <code>API_KEY</code>, <code>DATABASE_URL</code>, <code>DEBUG</code>.</li>
+<li>For <code>DATABASE_URL</code>, dev and prod values are identical (<code>postgres://localhost/dev_db</code>) → flagged.</li>
+<li>For <code>API_KEY</code> and <code>DEBUG</code>, values differ → not flagged.</li>
+<li>Output:
+   ```
+   WARNING: these prod env vars exactly match dev values:<ul>
+<li>DATABASE_URL
+   ```</li>
+</ul>
+</li>
+<li>The checklist prints below it as a reminder for the other nine checks.</li>
+</ol>
+<p>That single flagged line is exactly the bug that took down Team A's deploy in the earlier example — caught in under a second, before deploy, instead of ninety seconds after.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> <code>load_env_file</code> is O(n) in the number of lines per file. <code>diff_env</code> is O(k) where k is the number of unique keys across both files. Overall the script is linear in the size of the env files — trivially fast, since env files are small (tens of lines, not thousands).</li>
+<li><strong>Space:</strong> O(k) to hold both dicts and the union of keys in memory. Negligible for realistic env file sizes.</li>
+<li>These bounds are correct because there's no nested iteration over the files — each is read once, and the diff is a single pass over a set union, not a cross-product comparison.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p>A reasonable alternative to a standalone script is folding these checks into your CI/CD pipeline as an explicit gate — for example, a GitHub Actions step that runs the env diff automatically before any production deploy job, or a required checklist in your PR template for the manual checks (load, security, staging parity).</p>
+<p><strong>Trade-off:</strong> the standalone script is faster to write and run manually, and works even without CI access. A CI-gated version is slower to set up but removes the human "did I remember to run this" failure mode entirely, which matters more as team size grows. For a solo project or small team, the manual script is the right amount of process. For a team where deploys happen without direct oversight, wiring it into CI is worth the extra setup.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty env files:</strong> <code>load_env_file</code> returns <code>{}</code> for a missing or empty file rather than raising — deploy checks should degrade to "nothing to flag" instead of crashing.</li>
+<li><strong>Duplicate keys in one file:</strong> the last occurrence wins, matching how most <code>.env</code> loaders behave, since <code>dict</code> assignment naturally overwrites.</li>
+<li><strong>Keys present in only one file:</strong> correctly skipped from the "identical value" warning, since <code>dev_val is not None and dev_val == prod_val</code> short-circuits when either side is missing — but worth eyeballing separately, since a prod-only key can be its own red flag (unused legacy config) and a dev-only key might mean prod is missing something it needs.</li>
+<li><strong>Values with <code>=</code> in them</strong> (e.g., a base64 secret): <code>partition("=")</code> splits on the <em>first</em> <code>=</code> only, so the rest of the value stays intact.</li>
+<li><strong>Maximum realistic scale:</strong> even a bloated env file with a few hundred variables runs through this in milliseconds — this isn't a performance-sensitive path.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Treating a green test suite as proof of production safety.</strong> Tests check logic, not environment — conflating the two is the root cause of most "but it passed CI" incidents.</li>
+<li><strong>Never actually testing the rollback.</strong> Writing a rollback plan and testing a rollback are different activities; only the second one tells you it works under pressure.</li>
+<li><strong>Skipping the staging-parity check because staging "basically" matches prod.</strong> A smaller, cleaner staging environment hides exactly the data-shape and scale bugs prod will expose.</li>
+<li><strong>Assuming a backup exists means a backup works.</strong> An untested backup is a guess, not a safety net — restore it before you need it, not during the incident.</li>
+<li><strong>Not diffing environment variables before every deploy</strong>, treating it as a one-time setup step instead of a per-deploy habit — configs drift silently over weeks.</li>
+<li><strong>Building features without graceful degradation</strong>, so one third-party outage (payment API, email service) takes the entire app down instead of just that one feature.</li>
+<li><strong>Deploying without a way to observe what happens next</strong> — no logging or monitoring tied to the change, so if it breaks, you're debugging blind instead of reading a dashboard.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>"Walk me through your deploy process for a risky change." (Tests for exactly this checklist, in your own words.)</li>
+<li>"Tell me about a production incident. What caused it, and what would have caught it earlier?"</li>
+<li>"How do you handle a third-party dependency going down in production?" (Tests understanding of graceful degradation.)</li>
+<li>"What's the difference between a rollback plan and a tested rollback?"</li>
+<li>"How would you design a staging environment that actually mirrors production?"</li>
+<li>"What would you check before enabling a new rate limit or backup policy in production?"</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>"Design a CI/CD pipeline"</strong> (system design) — extends this checklist into an automated gate rather than a manual pass.</li>
+<li><strong>"Design a monitoring and alerting system"</strong> — directly expands check #5 into a full system design problem.</li>
+<li><strong>"Design a feature flag / rollback system"</strong> — expands check #6 into an architectural discussion.</li>
+<li><strong>"Design a rate limiter"</strong> (a classic LeetCode/system-design crossover) — the algorithmic core behind check #9, and a common standalone interview question in its own right.</li>
+<li><strong>"Design an idempotent API"</strong> — related to check #3, since retries under load are a common source of race conditions this checklist is meant to catch.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>A passing test suite proves your logic is correct for the inputs you thought of — nothing more.</li>
+<li>Most production incidents live in the gap between "tested" and "real environment": config, scale, data shape, and untested safety nets.</li>
+<li>The single question that generates this entire checklist: <em>what's different between where I just tested this and where it's about to run?</em></li>
+<li>Untested safety nets — backups, rate limits, rollbacks — aren't safety nets. They're guesses until you've actually exercised them.</li>
+<li>Five minutes of structural checking before deploy is cheaper than any incident it prevents.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This entire checklist is walked through in under five minutes in the original video — worth watching for the pacing and the mall/hotel-key/parachute analogies that make each check stick. {LINK}</p>
+<h2>About the Series</h2>
+<p>This article is part of <strong>Fun with Learning Technology</strong>, a series that breaks down software engineering, algorithms, and real-world production practices in a way that's fast, practical, and genuinely useful — no fluff, no filler, just the stuff that actually helps you ship better and interview better.</p>
+<h2>Call To Action</h2>
+<p>If this checklist saves you from a future 3am page, do three things: like the video on YouTube, subscribe to the channel so you don't miss the next one, and subscribe to the Substack for the deeper written breakdowns like this one. Drop a comment with the deploy check you'd add to this list — and if you want a specific topic covered next, that's exactly where to say so.</p>
+<hr /></article>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
