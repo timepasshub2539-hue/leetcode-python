@@ -1,0 +1,197 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1872. Stone Game VIII | LeetCode Daily Python Solution (the prefix array trick) — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/stone-game-viii
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetco">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/stone-game-viii.html">
+<meta property="og:title" content="1872. Stone Game VIII | LeetCode Daily Python Solution (the prefix array trick) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/stone-game-viii
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetco">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>1872. Stone Game VIII | LeetCode Daily Python Solution (the prefix array trick)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Stone Game VIII looks, at first glance, like just another two-player game problem — the kind LeetCode has a dozen variations of. But it's a favorite in interview prep circles for a specific reason: it punishes the instinct to brute-force a game tree, and it rewards the ability to notice when a problem's <em>real</em> state space is much smaller than it appears.</p>
+<p>That gap — between "what the problem statement makes you think you need to track" and "what you actually need to track" — is exactly what interviewers are testing when they hand you a game-theory DP problem. If you can spot that every move here collapses into a single running number, you demonstrate the kind of algorithmic intuition that separates a candidate who memorized patterns from one who understands them. That's the skill this problem builds, and it's the skill worth carrying into every other DP question you'll face.</p>
+<h2>Problem Overview</h2>
+<p>You're given a row of stones, each with an integer value (positive or negative). Alice and Bob take turns, Alice first. On each turn, as long as more than one stone remains, the current player must:</p>
+<ol>
+<li>Take <strong>at least two stones</strong> from the front of the row.</li>
+<li>Sum their values — that sum becomes the player's score for the turn.</li>
+<li>Replace those stones with a single new stone holding that sum, placed back at the front.</li>
+</ol>
+<p>Play continues until exactly one stone is left. Alice wants to maximize the final difference <code>(Alice's total score) - (Bob's total score)</code>. Bob wants to minimize that same difference. Both play optimally. Return the final difference.</p>
+<h2>Example</h2>
+<p>Take the array <code>[-1, 2, -3, 4, -5]</code>.</p>
+<ul>
+<li>Alice takes the first four stones: <code>-1 + 2 + (-3) + 4 = 2</code>. She scores <code>2</code>. The row becomes <code>[2, -5]</code>.</li>
+<li>Bob has no choice but to take both remaining stones: <code>2 + (-5) = -3</code>. He scores <code>-3</code>. One stone remains.</li>
+<li>Final answer: <code>2 - (-3) = 5</code>.</li>
+</ul>
+<p>Notice Bob wasn't trying to lose — he simply ran out of options once the row shrank to two stones. That's the trap in these problems: sometimes "optimal play" looks identical to "no play." The interesting decisions happen earlier, when a player has real freedom over <em>where</em> to cut.</p>
+<h2>Intuition</h2>
+<p>The instinct most people reach for first is: "track every possible sequence of cuts Alice and Bob could make." That's a mistake, and it's worth understanding <em>why</em> before looking at any code.</p>
+<p>Start by asking what actually determines the outcome of the rest of the game at any point. It isn't the full history of who took what. It's just two things: <strong>how many stones are left</strong>, and <strong>whose turn it is</strong>. Everything before that point is sunk — it already went into someone's score and can't be un-scored. So instead of tracking sequences, you can track a single number: the current index into the array, i.e., "the game continues from here."</p>
+<p>Now think about what a player's <em>score</em> actually is at any cut point. Since the stones removed are always a contiguous prefix (you always take from the front), a player's score for a move ending at index <code>i</code> is just the sum of the array from the start up through <code>i</code>. That's a prefix sum — nothing more exotic.</p>
+<p>Here's the key reframe: forget who explicitly grabbed which stones. All that matters, at any point in the game, is the <strong>running gap</strong> between the two players' totals, assuming both play optimally from there onward. Once you frame the problem as "what's the best achievable gap from index <code>i</code> onward," it stops being a simulation problem and becomes a classic optimal-substructure problem — the exact shape dynamic programming is built for.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Recursively try every valid cut point <code>x</code> for the current player, recurse into the remainder of the array, and combine results according to whether the current player is maximizing (Alice) or minimizing (Bob).</p>
+<p><strong>Algorithm:</strong>
+1. At each recursive call, given a starting index, try every possible endpoint <code>x</code> for the current prefix.
+2. For each choice, compute the prefix sum, then recurse on the remaining suffix with the turn flipped.
+3. Alice's calls take the max over all choices; Bob's take the min.
+4. Base case: one stone left, game over.</p>
+<p><strong>Advantages:</strong> Directly mirrors the problem statement — easy to reason about correctness.</p>
+<p><strong>Disadvantages:</strong> At every index you can branch into every remaining split, so the number of game states explodes combinatorially. For an array of length <code>n</code>, this is <strong>O(2ⁿ)</strong> time in the worst case, and it also carries stack depth proportional to the number of turns. Completely unusable past small toy arrays — a 100-stone array already puts you well beyond a reasonable time budget.</p>
+<p><strong>Complexity:</strong> Time O(2ⁿ), Space O(n) (recursion depth) plus whatever memoization you bolt on.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal solution comes from two separate insights stacked on top of each other.</p>
+<p><strong>Insight 1 — prefix sums replace repeated summation.</strong>
+Every score a player can earn by cutting at index <code>i</code> is the sum of <code>stones[0..i]</code>. Computing that sum from scratch every time you consider a cut costs O(n), and if you do that inside a DP over every index, you're back to O(n²). Precompute the prefix sums once, in a single forward pass, so any prefix sum is a single array lookup:</p>
+<pre><code>prefix[i] = stones[0] + stones[1] + ... + stones[i]
+</code></pre>
+<p><strong>Insight 2 — the DP itself has only one real transition, and it runs backward.</strong>
+Define <code>best[i]</code> as the best achievable score-gap for whichever player is "up" starting from index <code>i</code> (i.e., treating the game as if it begins with the stones <code>stones[i..n-1]</code>, with the current player able to cut anywhere from <code>i</code> to the end).</p>
+<p>At index <code>i</code>, the current player has exactly two meaningful options, not "every possible split":
+- <strong>Cut here:</strong> take everything up to <code>i</code> as your prefix score, then subtract whatever the <em>opponent's</em> best outcome is starting from <code>i+1</code> (because from your perspective, their gain is your loss — this is the classic minimax "your score minus their optimal counter-score" trick).
+- <strong>Don't cut here — let a later, better cut point stand:</strong> carry forward <code>best[i+1]</code>.</p>
+<p>So the recurrence is:</p>
+<pre><code>best[i] = max(prefix[i] - best[i+1], best[i+1])
+</code></pre>
+<p>Why does this not need to branch over every possible <code>x</code> like the brute force? Because the option "cut later instead of now" is already captured by <code>best[i+1]</code> — you don't need to separately consider cutting at <code>i+2</code>, <code>i+3</code>, etc. from position <code>i</code>, because whichever of those was better is already baked into <code>best[i+1]</code>.</p>
+<p>You compute this <strong>from right to left</strong>, because <code>best[i]</code> depends on <code>best[i+1]</code> — the later position must already be solved before the earlier one can be. The last cut point (second-to-last stone) is forced — there's no choice left, since only one stone will remain after — so <code>best</code> starts initialized at the very last prefix sum, and the loop walks backward from there.</p>
+<table>
+<thead>
+<tr>
+<th>Index</th>
+<th>Stone</th>
+<th>Prefix sum</th>
+<th>best[i] (computed right→left)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4</td>
+<td>-5</td>
+<td>-3</td>
+<td>-3 (forced start)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>4</td>
+<td>1</td>
+<td>max(1 - (-3), -3) = 4</td>
+</tr>
+<tr>
+<td>2</td>
+<td>-3</td>
+<td>-2</td>
+<td>max(-2 - 4, 4) = 4</td>
+</tr>
+<tr>
+<td>1</td>
+<td>2</td>
+<td>0</td>
+<td>max(0 - 4, 4) = 4</td>
+</tr>
+<tr>
+<td>0</td>
+<td>-1</td>
+<td>-1</td>
+<td>(not needed — index 0 isn't a valid cut)</td>
+</tr>
+</tbody>
+</table>
+<p>The scan starts from the second-to-last index and stops at index 1, since a cut must take at least two stones (index 0 alone isn't a valid stopping point).</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from itertools import accumulate
+from typing import List
+
+
+def stoneGameVIII(stones: List[int]) -&gt; int:
+    &quot;&quot;&quot;Return Alice's optimal score minus Bob's, both playing optimally.&quot;&quot;&quot;
+    prefix = list(accumulate(stones))
+    n = len(prefix)
+
+    # The last possible cut is forced: only one stone remains after it.
+    best = prefix[-1]
+
+    # Walk backward; each index only needs the result just ahead of it.
+    for i in range(n - 2, 0, -1):
+        best = max(best, prefix[i] - best)
+
+    return best
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>accumulate(stones)</code> builds the running prefix sums in one linear pass — this is the entire "insight 1" step, done in one line via the standard library instead of a hand-rolled loop.</li>
+<li><code>best = prefix[-1]</code> seeds the DP at the last valid cut point. With only two stones left, the current player has no choice, so this value is forced, not chosen.</li>
+<li>The <code>for</code> loop runs from <code>n - 2</code> down to <code>1</code> (inclusive), skipping index <code>0</code> because a cut needs at least two stones, so index 0 can never be a valid stopping point on its own.</li>
+<li>Inside the loop, <code>prefix[i] - best</code> represents "cut here, take this prefix, and subtract the opponent's best continuation." <code>max(best, ...)</code> chooses between cutting now or deferring to a better cut already found further along.</li>
+<li>The final value of <code>best</code> after the loop is the answer — the optimal Alice-minus-Bob gap from the very start of the game.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using <code>stones = [-1, 2, -3, 4, -5]</code>:</p>
+<ol>
+<li><code>prefix = [-1, 1, -2, 2, -3]</code></li>
+<li><code>best = prefix[-1] = -3</code></li>
+<li><code>i = 3</code>: <code>best = max(-3, prefix[3] - best) = max(-3, 2 - (-3)) = max(-3, 5) = 5</code></li>
+<li><code>i = 2</code>: <code>best = max(5, prefix[2] - best) = max(5, -2 - 5) = max(5, -7) = 5</code></li>
+<li><code>i = 1</code>: <code>best = max(5, prefix[1] - best) = max(5, 1 - 5) = max(5, -4) = 5</code></li>
+<li>Loop ends. Return <code>5</code>.</li>
+</ol>
+<p>Matches the hand-traced answer from the Example section: <code>5</code>.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time: O(n).</strong> Building the prefix array is one linear pass; the backward scan is another linear pass. Two passes, no nesting, so the total stays linear in the number of stones.</li>
+<li><strong>Space: O(n).</strong> The prefix array holds <code>n</code> values. The scan itself only needs a single running variable, but the prefix array is unavoidable extra storage (you could shrink this to O(1) by folding the prefix computation into the same backward pass, but keeping them separate keeps the logic clear).</li>
+</ul>
+<p>These bounds are correct because every stone is visited a constant number of times (once to build its prefix sum, once during the backward scan), and no step revisits or re-derives work already done — which is exactly what the brute force failed to guarantee.</p>
+<h2>Alternative Solutions</h2>
+<p>You can fuse the prefix-sum pass and the backward scan into a single reverse pass by accumulating the suffix sum as you go, shaving the code down slightly and dropping to O(1) extra space beyond the input. It's a reasonable micro-optimization once you already understand the two-pass version, but it trades a bit of readability for marginal savings — worth mentioning in an interview as a follow-up, not necessarily worth reaching for first.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Minimum valid array (2 stones):</strong> the loop body never executes; <code>best</code> is just the sum of both stones, which is correct since the only move is forced.</li>
+<li><strong>All negative values:</strong> the max/min logic still holds — "optimal" doesn't mean "positive," it means "best available given both players play to their own advantage."</li>
+<li><strong>All positive values:</strong> greedy "always take more" intuition might work here, but the algorithm doesn't rely on that assumption, which is exactly why it also works when values are mixed.</li>
+<li><strong>Large arrays (near 100,000 stones):</strong> this is where brute force dies and the O(n) solution is required; make sure your prefix sums don't silently overflow in languages without Python's arbitrary-precision integers (not an issue in Python, but worth flagging in interviews).</li>
+<li><strong>Repeated/duplicate values:</strong> no special handling needed — the algorithm only cares about sums, not distinctness.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Trying to branch over every cut point <code>x</code> inside a recursive/DP formulation.</strong> This reintroduces the exponential blowup the prefix-sum trick was designed to eliminate — the recurrence only needs <code>best[i+1]</code>, not every future index.</li>
+<li><strong>Forgetting the backward direction.</strong> Computing <code>best</code> left to right breaks the recurrence, since <code>best[i]</code> depends on a value (<code>best[i+1]</code>) that doesn't exist yet.</li>
+<li><strong>Recomputing prefix sums inside the loop instead of precomputing them.</strong> This silently degrades the algorithm from O(n) to O(n²).</li>
+<li><strong>Always taking the current prefix instead of comparing against the running best.</strong> Without the <code>max(best, prefix[i] - best)</code> comparison, the algorithm forces every cut to happen at the earliest chance, which is wrong whenever an early cut is worse than waiting.</li>
+<li><strong>Off-by-one errors on the loop bounds.</strong> Starting the scan at <code>n - 1</code> instead of <code>n - 2</code>, or not stopping before index 0, either double-counts the forced last move or allows an invalid single-stone cut.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Why must the backward scan start from the <em>second-to-last</em> index rather than the last?</li>
+<li>How would you prove the recurrence <code>best[i] = max(prefix[i] - best[i+1], best[i+1])</code> is correct via induction?</li>
+<li>What changes if a player is allowed to take exactly one stone per turn instead of at least two?</li>
+<li>How would you modify this to return the actual sequence of cut points, not just the final gap?</li>
+<li>Can this problem be solved with O(1) extra space? Walk through how you'd eliminate the prefix array.</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 877 (Stone Game):</strong> the original two-player stone game — good for building minimax/DP intuition before tackling the prefix-sum variant.</li>
+<li><strong>LeetCode 1140 (Stone Game II):</strong> introduces a variable move-size constraint, a good next step in game-theory DP complexity.</li>
+<li><strong>LeetCode 1406 (Stone Game III):</strong> closer in spirit — small fixed choice sets per turn, similar min/max recurrence structure.</li>
+<li><strong>LeetCode 1690 (Stone Game VII):</strong> another prefix/suffix-sum-driven variant, useful for reinforcing the "reduce state to one index" pattern.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Stone Game VIII teaches a pattern that shows up constantly in DP and game-theory problems: the naive state space (full move history) is almost always larger than the <em>true</em> state space (whatever minimal information actually determines the rest of the game). Once you compress "which stones were taken" down to "one running prefix-sum comparison," the exponential game tree collapses into a single O(n) backward scan. That compression instinct — find the smallest sufficient state — is the real skill this problem is testing.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough, including a live benchmark comparing the brute force and optimal versions and two quiz rounds to lock in the intuition, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series focused on building real algorithmic intuition — not just memorizing solutions — for coding interview problems, Python fundamentals, and core computer science concepts. Each video and article pairs together to walk through the reasoning an experienced engineer actually uses when they first see a problem.</p>
+<h2>Call To Action</h2>
+<p>If this walkthrough helped the prefix-sum trick click, give the video a like on YouTube and subscribe for more daily LeetCode breakdowns. For deeper dives and write-ups like this one delivered straight to your inbox, subscribe to the Substack. Drop a comment with the LeetCode problem you'd like covered next, and share this with anyone prepping for coding interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Stone Game VIII: what pattern/tell signals this DP shape?</summary><p>Optional-prefix-take game with running max on suffix — think &#x27;suffix max over cumulative sums&#x27;, not per-move brute force.</p></details><details class='card2'><summary>Time complexity of the optimized solution?</summary><p>O(n) — single backward pass tracking a running best value, after O(n) prefix sums.</p></details><details class='card2'><summary>Space complexity of the optimized solution?</summary><p>O(n) for prefix sums (or O(1) extra if you compute prefix sums in place).</p></details><details class='card2'><summary>Common bug when coding the backward suffix-max pass?</summary><p>Forgetting to seed the running max with the last prefix sum before looping, causing an off-by-one on the final index.</p></details><details class='card2'><summary>Stone Game VIII vs classic interval Stone Game DP — key difference?</summary><p>Classic game uses O(n²) interval DP on take-from-ends; this one collapses to 1D since a move consumes a prefix, not an end.</p></details><details class='card2'><summary>Interview follow-up: why do prefix sums remove the need for nested loops?</summary><p>Each player&#x27;s score for taking prefix i is fixed (prefix_sum[i] minus opponent&#x27;s best future), so no re-summing per choice is needed.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
