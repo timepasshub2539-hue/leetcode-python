@@ -1,0 +1,187 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3718. Smallest Missing Multiple of K | LeetCode Daily Python Solution (one set lookup beats O(n²)) — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/smallest-missing-multiple-of-k
+💻 Code on GitHub: https://github.com/timepasshub">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/smallest-missing-multiple-of-k.html">
+<meta property="og:title" content="3718. Smallest Missing Multiple of K | LeetCode Daily Python Solution (one set lookup beats O(n²)) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/smallest-missing-multiple-of-k
+💻 Code on GitHub: https://github.com/timepasshub">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>3718. Smallest Missing Multiple of K | LeetCode Daily Python Solution (one set lookup beats O(n²))</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Every interview eventually circles back to the same question in disguise: "you have a fixed collection of values — how fast can you check membership?" LeetCode 3718, Smallest Missing Multiple of K, is a clean, small-input problem that quietly tests exactly that instinct. It looks simple on the surface, but the naive approach hides a quadratic trap that a lot of candidates walk straight into.</p>
+<p>What makes this problem worth learning isn't the problem itself — it's the pattern underneath it. Once you see it here, you'll recognize it in dozens of other interview questions: whenever you're repeatedly asking "is this value present?" against a collection that doesn't change, a hash set turns that question from an O(n) scan into an O(1) lookup. That single idea is the difference between a solution that scales and one that times out on a slightly bigger input.</p>
+<h2>Problem Overview</h2>
+<p>You're given an array of integers, <code>nums</code>, and a positive integer <code>k</code>. Think of <code>k</code>'s multiples as a numbered list of tickets: <code>k</code>, <code>2k</code>, <code>3k</code>, <code>4k</code>, and so on, forever. Some of those ticket numbers have already been "claimed" — they show up somewhere in <code>nums</code>. Your job is to find the smallest multiple of <code>k</code> that has <em>not</em> been claimed.</p>
+<p>Formally: return the smallest positive integer <code>x</code> such that <code>x</code> is a multiple of <code>k</code> and <code>x</code> does not appear in <code>nums</code>.</p>
+<p>It's worth being precise about what this problem is <em>not</em>. It's easy to confuse it with the classic "smallest missing positive integer" problem, where you search every integer starting from 1 and bound your search at <code>n + 1</code>. This problem is narrower — you only ever need to test integers that are multiples of <code>k</code>. That narrower search space is exactly what makes the hash set approach so effective here.</p>
+<h2>Example</h2>
+<p>Let's walk through a concrete case. Suppose:</p>
+<pre><code>nums = [8, 2, 3, 4, 6]
+k = 2
+</code></pre>
+<p>The multiples of <code>k</code> we care about, in order, are 2, 4, 6, 8, 10, 12...</p>
+<ul>
+<li>Is 2 in <code>nums</code>? Yes — claimed.</li>
+<li>Is 4 in <code>nums</code>? Yes — claimed.</li>
+<li>Is 6 in <code>nums</code>? Yes — claimed.</li>
+<li>Is 8 in <code>nums</code>? Yes — claimed.</li>
+<li>Is 10 in <code>nums</code>? No — this is our answer.</li>
+</ul>
+<p>Every multiple up to 8 happened to be blocked by some value in the array, but 10 was never claimed, so <code>10</code> is the smallest missing multiple of <code>2</code>.</p>
+<p>Notice something important here: the array contains five numbers, and it took exactly five checks (2 through 10) before we hit a free one. That's not a coincidence — it's the core guarantee the whole algorithm leans on.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer would think through this before writing a line of code.</p>
+<p>First, notice the shape of the search: you're not searching over all integers, you're searching over a specific, evenly spaced sequence — <code>k, 2k, 3k, ...</code>. That already tells you the answer exists and isn't infinite, but it doesn't yet tell you how <em>far</em> you might have to search.</p>
+<p>Second, ask: how many of those multiples can possibly be blocked? Every value in <code>nums</code> can block at most one multiple of <code>k</code> — a given number is only equal to one specific multiple of <code>k</code> (if it's a multiple of <code>k</code> at all). With <code>n</code> numbers in the array, at most <code>n</code> of the multiples <code>k, 2k, 3k, ..., (n+1)k</code> can be claimed. That means the <code>(n+1)</code>th multiple is <em>guaranteed</em> to be free, even in the worst case where every single array value happens to be a distinct multiple of <code>k</code>. This bounds the walk to at most <code>n + 1</code> steps — small and predictable.</p>
+<p>Third, ask what the expensive part of a naive approach actually is. It's not the walk over multiples — that's at most <code>n + 1</code> steps. It's the <em>membership check</em> at each step. If you rescan the whole array every time you ask "is this multiple in <code>nums</code>?", you're paying <code>O(n)</code> per check, <code>O(n)</code> checks, and you land on <code>O(n²)</code> overall.</p>
+<p>The fix falls out naturally once you frame it that way: don't rescan. Load every value from <code>nums</code> into a hash set once, up front. After that, "is this number claimed?" becomes an O(1) lookup, and the total cost collapses to the size of the walk itself — linear time.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> For each candidate multiple of <code>k</code>, scan the entire array to check whether it's present.</p>
+<p><strong>Algorithm:</strong>
+1. Start with <code>multiple = k</code>.
+2. Loop through <code>nums</code> to check if <code>multiple</code> is present.
+3. If it is, increment <code>multiple</code> by <code>k</code> and repeat.
+4. If it isn't, return <code>multiple</code>.</p>
+<p><strong>Advantages:</strong>
+- Extremely simple to write, easy to reason about correctness.
+- No extra data structures — O(1) auxiliary space.</p>
+<p><strong>Disadvantages:</strong>
+- Every membership check costs O(n), and you may need up to <code>n + 1</code> checks, giving O(n²) time in the worst case.
+- Wasteful: the array never changes between checks, so re-scanning it every time throws away work you've already done.</p>
+<p><strong>Time complexity:</strong> O(n²) — up to <code>n + 1</code> candidates, each requiring an O(n) scan.
+<strong>Space complexity:</strong> O(1) — no extra structures beyond a counter.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach separates the problem into two clean phases:</p>
+<p><strong>Phase 1 — Preprocessing:</strong> Convert <code>nums</code> into a hash set called <code>claimed</code>. This costs O(n) time and O(n) space, but it only happens once.</p>
+<p><strong>Phase 2 — Walking:</strong> Starting at <code>multiple = k</code>, repeatedly check <code>multiple in claimed</code>. Each check is now O(1) because hash sets support constant-time average-case membership testing. If <code>multiple</code> is claimed, add <code>k</code> and try again. The first <code>multiple</code> not found in <code>claimed</code> is the answer.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>multiple</th>
+<th>In claimed?</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>2</td>
+<td>Yes</td>
+<td>advance</td>
+</tr>
+<tr>
+<td>2</td>
+<td>4</td>
+<td>Yes</td>
+<td>advance</td>
+</tr>
+<tr>
+<td>3</td>
+<td>6</td>
+<td>Yes</td>
+<td>advance</td>
+</tr>
+<tr>
+<td>4</td>
+<td>8</td>
+<td>Yes</td>
+<td>advance</td>
+</tr>
+<tr>
+<td>5</td>
+<td>10</td>
+<td>No</td>
+<td><strong>return 10</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Why does this terminate quickly? Because — as established in the Intuition section — at most <code>n</code> multiples of <code>k</code> can be blocked by the <code>n</code> values in <code>nums</code>. So the loop runs at most <code>n + 1</code> times, each iteration doing O(1) work. The total walk cost is O(n), and combined with the O(n) set construction, the whole algorithm is O(n) time.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def smallest_missing_multiple(nums: list[int], k: int) -&gt; int:
+    &quot;&quot;&quot;Return the smallest positive multiple of k not present in nums.&quot;&quot;&quot;
+    claimed = set(nums)
+
+    multiple = k
+    while multiple in claimed:
+        multiple += k
+
+    return multiple
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>claimed = set(nums)</code>: Converts the list into a hash set. This is the one-time cost that makes every future lookup O(1).</li>
+<li><code>multiple = k</code>: We start our search at the first multiple of <code>k</code>, since 0 isn't a valid answer (the problem asks for a <em>positive</em> multiple).</li>
+<li><code>while multiple in claimed:</code>: This is the O(1) membership check, repeated until we find a gap.</li>
+<li><code>multiple += k</code>: Advances to the next multiple in the sequence.</li>
+<li><code>return multiple</code>: Once the loop exits, <code>multiple</code> is guaranteed to be the first unclaimed multiple, because we walked the sequence in strictly increasing order.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using <code>nums = [8, 2, 3, 4, 6]</code>, <code>k = 2</code>:</p>
+<ol>
+<li><code>claimed = {8, 2, 3, 4, 6}</code></li>
+<li><code>multiple = 2</code> → <code>2 in claimed</code> → True → <code>multiple = 4</code></li>
+<li><code>4 in claimed</code> → True → <code>multiple = 6</code></li>
+<li><code>6 in claimed</code> → True → <code>multiple = 8</code></li>
+<li><code>8 in claimed</code> → True → <code>multiple = 10</code></li>
+<li><code>10 in claimed</code> → False → loop exits</li>
+<li><code>return 10</code></li>
+</ol>
+<p>Matches the expected result.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(n). Building the set costs O(n). The walk costs at most O(n + 1) iterations (proven in the Intuition section), each doing O(1) work. Total: O(n).</p>
+<p><strong>Space:</strong> O(n), for storing the hash set of claimed values.</p>
+<p>These bounds are correct because they depend only on <code>n</code> (the array size), not on the values themselves or on <code>k</code> — the pigeonhole argument (each array value blocks at most one multiple) is what pins the walk length to <code>n + 1</code>, regardless of how large the numbers get.</p>
+<h2>Alternative Solutions</h2>
+<p>You could sort <code>nums</code> first and use binary search to check membership, giving O(n log n) for the sort and O(log n) per check — worse than the hash set's O(1) checks, with no upside. A hash set is strictly better here since we don't need order, only membership.</p>
+<p>You could also precompute every multiple of <code>k</code> up to some bound and intersect that with <code>claimed</code>, but this does more work than necessary — you'd be generating and checking values you might never need if the answer arrives early.</p>
+<p>The hash set walk is the simplest and asymptotically best option for this problem's constraints.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty array:</strong> <code>nums = []</code>. The set is empty, so <code>k</code> itself is immediately unclaimed and returned.</li>
+<li><strong>All multiples claimed up to a point, one gap far out:</strong> e.g., <code>k = 5</code>, every multiple up to 100 present except 95 — the walk correctly reaches 95 without skipping it, since it checks every multiple in order.</li>
+<li><strong>k itself missing:</strong> If <code>k</code> isn't in <code>nums</code> at all, the answer is <code>k</code> on the very first check.</li>
+<li><strong>Duplicates in nums:</strong> Duplicate values collapse naturally into the set — they don't affect correctness or blow up space beyond O(unique values).</li>
+<li><strong>Maximum constraints:</strong> With <code>nums</code> at 100 elements and <code>k</code> at 100, the walk is bounded to at most 101 steps — trivially fast.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Starting the walk at 0 instead of <code>k</code>.</strong> The problem wants a positive multiple; 0 is not valid.</li>
+<li><strong>Rescanning the array on every check</strong> instead of building a set first — this silently reintroduces the O(n²) behavior the set was meant to avoid.</li>
+<li><strong>Confusing this with the "smallest missing positive integer" problem</strong> and bounding the search at <code>n + 1</code> directly instead of walking multiples of <code>k</code>.</li>
+<li><strong>Using a list instead of a set for <code>claimed</code>,</strong> which makes each <code>in</code> check O(n) again, defeating the entire optimization.</li>
+<li><strong>Off-by-one errors in the loop</strong>, such as incrementing before checking or checking before assigning the first multiple, which can skip or duplicate a candidate.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you prove that the algorithm never runs more than <code>n + 1</code> iterations?</li>
+<li>What's the time complexity if <code>nums</code> could contain up to 10 million elements — does the approach still hold?</li>
+<li>How would this change if you needed the smallest missing multiple of <em>any</em> of several different values, not just one <code>k</code>?</li>
+<li>Can you solve this without extra space, and what would the tradeoff be?</li>
+<li>How does this problem relate to the classic "first missing positive" problem, and where do the techniques diverge?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>First Missing Positive (LeetCode 41):</strong> Same "find the first gap" theme, but over all positive integers rather than multiples of <code>k</code>, and typically solved in O(1) space using in-place array tricks.</li>
+<li><strong>Contains Duplicate (LeetCode 217):</strong> Foundational practice with hash sets for O(1) membership checks.</li>
+<li><strong>Missing Number (LeetCode 268):</strong> Another missing-value problem, solvable with a set, sum formula, or XOR trick.</li>
+<li><strong>Two Sum (LeetCode 1):</strong> The canonical "trade a scan for a hash lookup" problem — same underlying pattern as this one.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>When a problem repeatedly asks "is this value present?" against data that doesn't change, load it into a hash set once and let every subsequent check run in O(1). Here, that one shift took the solution from O(n²) down to O(n), and the pigeonhole argument — each array value can block at most one multiple of <code>k</code> — is what guarantees the search terminates quickly. That combination of a bounded search space and constant-time lookups is a pattern worth recognizing on sight.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with the raffle-ticket analogy, a live test run against real examples, and two in-video quizzes to check your understanding, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <em>Fun with Learning Technology</em>, a series built around making core computer science and software engineering concepts genuinely click — not just memorized for an interview, but understood well enough to reuse anywhere. Each episode takes a real problem, whether from LeetCode, system design, or everyday engineering work, and builds the intuition from the ground up before ever touching code.</p>
+<h2>Call To Action</h2>
+<p>If this explanation helped the problem click, the best way to support the series is to like the video on YouTube and subscribe so future breakdowns land in your feed. For deeper dives, subscribe to the Substack newsletter — it's where the extended write-ups like this one live first. Drop a comment with questions or a problem you'd like covered next, and share this with anyone prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>You need the smallest number ≥ N that&#x27;s both a multiple of K and missing from a given set — what&#x27;s the pattern?</summary><p>Walk multiples of K starting from ceil(N/K)*K, skip any in a fast-lookup set, return first hit.</p></details><details class='card2'><summary>Time complexity of the multiples-walk approach here?</summary><p>O((M/K) + S) where M is the answer&#x27;s magnitude and S is set size for lookups — bounded because gaps can&#x27;t exceed set size.</p></details><details class='card2'><summary>Space complexity of the solution?</summary><p>O(S) for the hash set holding the excluded/used values, plus O(1) extra for the walk.</p></details><details class='card2'><summary>What&#x27;s the trickiest bug when walking multiples of K?</summary><p>Starting below N or forgetting to round up to the next multiple — always start at ceil(N/K)*K, not N itself.</p></details><details class='card2'><summary>Why can&#x27;t the multiples-walk loop forever?</summary><p>At most S multiples can be blocked (set size), so within S+1 steps you must hit a free multiple.</p></details><details class='card2'><summary>Brute-force scan vs instant-lookup approach — what&#x27;s the tradeoff?</summary><p>Scanning every integer is O(M); converting the exclusion list to a hash set first makes each check O(1), so only K-multiples are visited.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
