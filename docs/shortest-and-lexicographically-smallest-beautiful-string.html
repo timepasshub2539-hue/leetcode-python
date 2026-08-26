@@ -1,0 +1,169 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2904. Shortest and Lexicographically Smallest Beautiful String — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/shortest-and-lexicographically-smallest-beautiful-string
+💻 Code on GitHub: http">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/shortest-and-lexicographically-smallest-beautiful-string.html">
+<meta property="og:title" content="2904. Shortest and Lexicographically Smallest Beautiful String — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/shortest-and-lexicographically-smallest-beautiful-string
+💻 Code on GitHub: http">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>2904. Shortest and Lexicographically Smallest Beautiful String</h1><span class='badge' style='background:#9f81c722;color:#9f81c7'>🕸️ Graphs</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Every so often a problem shows up in an interview that looks like a classic pattern on the surface but hides a trap underneath. LeetCode 2904, Shortest and Lexicographically Smallest Beautiful Substring, is exactly that kind of problem. It smells like the well-known "minimum window substring" family, and most engineers reach for a two-pointer sliding window on instinct. That instinct is half right and half dangerous, and understanding exactly where it breaks down is what makes this problem worth studying.</p>
+<p>Interviewers like this problem because it tests three things at once: whether you can correctly define what "shortest" means when there are ties, whether you understand why a greedy two-pointer shrink can silently discard a better answer, and whether you can reason precisely about monotonic counts. It's a small problem with a big lesson about when a "smells like this pattern" instinct needs to be checked against the actual requirements.</p>
+<h2>Problem Overview</h2>
+<p>You're given a binary string made only of <code>0</code>s and <code>1</code>s, along with an integer <code>k</code>. A substring is called <strong>beautiful</strong> if it contains exactly <code>k</code> ones — not more, not fewer.</p>
+<p>Your task has two parts:</p>
+<ol>
+<li>Find the length of the shortest beautiful substring anywhere in the string.</li>
+<li>Among all beautiful substrings of that shortest length, return the one that comes first alphabetically.</li>
+</ol>
+<p>If no substring in the entire string ever contains exactly <code>k</code> ones, return an empty string.</p>
+<p>The key phrase is <strong>exactly</strong> k ones. A window with more ones than k doesn't count, and a window with fewer doesn't count either.</p>
+<h2>Example</h2>
+<p>Take the string <code>100011001</code> with <code>k = 3</code>.</p>
+<ul>
+<li>Starting at index 0, the window needs to grow until it collects three ones. That happens at index 5, giving the substring <code>100011</code>, a window of length 6.</li>
+<li>Starting at index 4, three ones show up by index 8, giving <code>11001</code>, a window of length 5.</li>
+</ul>
+<p>Five turns out to be the shortest length achievable anywhere in this string. Now we check: is there more than one beautiful substring of length 5? In this case <code>11001</code> is the only one, so it's the final answer.</p>
+<p>If there had been two different length-5 windows, we'd compare them character by character and keep the smaller one — the same way you'd alphabetize two words.</p>
+<h2>Intuition</h2>
+<p>The natural first instinct when you see "substring containing exactly k of something" is to reach for a two-pointer sliding window: expand the right pointer until you hit k ones, then shrink from the left to find the minimal window, sliding across the whole string in one pass.</p>
+<p>That pattern is excellent at finding <em>one</em> minimal window. It is not built to compare every minimal window against every other one lexicographically. A shrinking window commits to whichever minimal window it finds first at a given position and moves on — it has no mechanism for reconsidering an equally short but lexicographically smaller window that appears later in the string.</p>
+<p>So the real insight here is narrower and more useful: for <em>any</em> fixed starting index, the first moment the running count of ones hits exactly k is guaranteed to be the shortest beautiful substring starting at that index. Why? Because ones only accumulate as you move right — the count never decreases. Once you've hit k, every additional character can only make the window longer, never shorter. That means you never need to keep growing past the first hit for a given start.</p>
+<p>This gives you a clean plan: try every starting index, grow the window until you hit exactly k ones (or run out of string), record what you found, and compare it against the best answer seen so far — first by length, then by lexicographic order if lengths tie.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> For every starting index <code>i</code>, grow a window forward, counting ones as you go. Stop the instant the count reaches <code>k</code>. Compare that window against the best one found so far.</p>
+<p><strong>Algorithm:</strong>
+1. Initialize <code>best = ""</code>.
+2. For each starting index <code>i</code> from <code>0</code> to <code>n-1</code>:
+   - Reset <code>ones_count = 0</code>.
+   - Walk <code>j</code> from <code>i</code> forward, incrementing <code>ones_count</code> whenever <code>s[j] == '1'</code>.
+   - The moment <code>ones_count == k</code>, compare the substring <code>s[i:j+1]</code> against <code>best</code>: update <code>best</code> if it's shorter, or the same length but alphabetically smaller. Then break out of the inner loop.
+3. Return <code>best</code>.</p>
+<p><strong>Advantages:</strong> Simple to reason about, easy to prove correct, no edge-case juggling around pointer shrinking.</p>
+<p><strong>Disadvantages:</strong> Quadratic time — for large strings this would be too slow, though the constraints here make it a non-issue.</p>
+<p><strong>Time complexity:</strong> O(n²) — every starting index can grow its window up to n steps.
+<strong>Space complexity:</strong> O(n) — for storing the current best substring.</p>
+<h2>Optimal Solution</h2>
+<p>Given the constraint that the string is at most 100 characters, O(n²) is already fast enough — there's no need to reach for anything cleverer for this specific problem. But it's worth walking through <em>why</em> the double loop with an early break is not a shortcut being taken for convenience — it's structurally necessary.</p>
+<table>
+<thead>
+<tr>
+<th>Start index</th>
+<th>First index count hits k</th>
+<th>Window</th>
+<th>Length</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>5</td>
+<td><code>100011</code></td>
+<td>6</td>
+</tr>
+<tr>
+<td>4</td>
+<td>8</td>
+<td><code>11001</code></td>
+<td>5</td>
+</tr>
+</tbody>
+</table>
+<p>The table shows exactly why you can't just take the first shortest window you stumble across — you have to check <em>every</em> starting index's best candidate and then compare across them, because a shorter or equally-short but smaller window can appear starting from any position, not just the first one your scan reaches.</p>
+<p>The proof that the break is safe: once <code>ones_count</code> hits <code>k</code> at some index <code>j</code> for a fixed start <code>i</code>, every subsequent character only extends the window rightward. Since we've already established the window ending at <code>j</code> is the shortest one possible from <code>i</code> (extending it can never shrink it back down), there is nothing to gain by continuing the inner loop. Breaking early doesn't cut corners — it eliminates work that provably cannot produce a better answer for that starting index.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def shortest_beautiful_substring(s: str, k: int) -&gt; str:
+    best = &quot;&quot;
+    n = len(s)
+
+    for i in range(n):
+        ones_count = 0
+        for j in range(i, n):
+            if s[j] == '1':
+                ones_count += 1
+            if ones_count == k:
+                candidate = s[i:j + 1]
+                if not best or len(candidate) &lt; len(best) or (
+                    len(candidate) == len(best) and candidate &lt; best
+                ):
+                    best = candidate
+                break  # further growth from this start can only get longer
+
+    return best
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>best = ""</code> tracks the best beautiful substring found across all starting points, initialized to empty in case no valid substring exists.</li>
+<li>The outer loop <code>for i in range(n)</code> tries every possible starting index.</li>
+<li><code>ones_count = 0</code> resets the running count for each new starting index.</li>
+<li>The inner loop <code>for j in range(i, n)</code> grows the window one character at a time from <code>i</code>.</li>
+<li><code>if s[j] == '1': ones_count += 1</code> is the only bookkeeping needed — the count is monotonic by construction.</li>
+<li><code>if ones_count == k:</code> fires exactly once per starting index — the first time the count reaches <code>k</code>.</li>
+<li>The comparison <code>len(candidate) &lt; len(best) or (len(candidate) == len(best) and candidate &lt; best)</code> enforces the two-tier rule: shorter always wins, and only equal lengths fall back to string comparison. <code>candidate &lt; best</code> uses Python's native lexicographic string comparison.</li>
+<li><code>break</code> stops the inner loop immediately after recording the candidate, since nothing useful can come from continuing.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>String: <code>100011001</code>, <code>k = 3</code></p>
+<ul>
+<li><strong>i = 0:</strong> ones accumulate at indices 0, 4, 5 → count hits 3 at <code>j = 5</code>. Candidate: <code>s[0:6] = "100011"</code>, length 6. <code>best</code> is empty, so <code>best = "100011"</code>.</li>
+<li><strong>i = 1:</strong> ones at 4, 5, count hits 3 at <code>j = 8</code> (index 1 itself is <code>'0'</code>). Candidate: <code>s[1:9] = "0001100"</code>... let's recheck: actually count reaches 3 at index 8. Candidate length 8 — longer than current best, skipped.</li>
+<li><strong>i = 4:</strong> starting from index 4 (<code>'0'</code>), ones show up at indices 4? Let's index the string: <code>1 0 0 0 1 1 0 0 1</code> → indices 0-8. From <code>i = 4</code>, characters are <code>1,1,0,0,1</code> (indices 4-8). Count hits 3 at <code>j = 8</code>. Candidate: <code>s[4:9] = "11001"</code>, length 5. This beats <code>best</code> (length 6), so <code>best = "11001"</code>.</li>
+<li>Remaining starting indices either never reach <code>k = 3</code> ones or produce longer/no windows.</li>
+</ul>
+<p>Final answer: <code>"11001"</code> — matching the expected result.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(n²) in the worst case — n possible starting points, each potentially scanning up to n characters before hitting <code>k</code> ones or exhausting the string.</p>
+<p><strong>Space:</strong> O(n) for storing the current best substring (slicing creates a new string each time).</p>
+<p>These bounds are correct because the algorithm does no redundant work beyond the necessary re-scan per starting index — there's no way to avoid at least considering every starting point, since the answer could begin anywhere. With <code>n</code> capped at 100 by the problem's constraints, this runs effectively instantly.</p>
+<h2>Alternative Solutions</h2>
+<p>A true sliding window (two pointers, amortized O(n)) could theoretically find <em>a</em> minimal window quickly, but as established, it can't correctly track the lexicographically smallest one among ties without additional bookkeeping — you'd need to record and compare every minimal window it produces anyway, which erases most of the speed benefit for this problem's tiny input size. Given <code>n ≤ 100</code>, the O(n²) double loop is the pragmatic choice: it's simpler to write correctly and just as fast in practice.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>All zeros, k ≥ 1:</strong> No window ever reaches <code>k</code> ones. <code>best</code> stays empty, function correctly returns <code>""</code>.</li>
+<li><strong>k = 0:</strong> Every single-character substring of <code>'0'</code>s (or the empty substring, depending on problem convention) would trivially satisfy zero ones — worth checking against the exact problem constraints if this is allowed.</li>
+<li><strong>k equals total ones in string:</strong> The only valid window is the one spanning from the first to the last <code>'1'</code> in the string, possibly with padding zeros trimmed from consideration if a shorter one exists elsewhere.</li>
+<li><strong>String length equal to 1:</strong> Only one starting index to check.</li>
+<li><strong>Multiple length-5 windows tied lexicographically at the first differing character:</strong> Confirms the <code>candidate &lt; best</code> comparison correctly does character-by-character comparison, not length-based shortcuts.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting to check length before lexicographic order.</strong> Comparing strings directly with <code>&lt;</code> without first checking length can pick a smaller-looking but longer substring.</li>
+<li><strong>Reaching for a shrinking two-pointer window</strong> and assuming it'll naturally find the lexicographically smallest among ties — it won't, because it discards windows once it moves past them.</li>
+<li><strong>Removing the <code>break</code> statement</strong>, thinking it's just an optimization — without it, the loop keeps overwriting <code>candidate</code> with longer windows from the same start, corrupting the "shortest from this start" property.</li>
+<li><strong>Off-by-one errors on slicing</strong>, particularly <code>s[i:j]</code> instead of <code>s[i:j+1]</code>, which drops the character that made the count hit <code>k</code>.</li>
+<li><strong>Not handling the no-valid-window case</strong>, returning <code>None</code> or throwing an error instead of an empty string.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you modify this if the input could be very large (e.g., 10^6 characters)? Would the O(n²) approach still work?</li>
+<li>Can you convert this into a true O(n) solution while preserving the lexicographic smallest requirement? (Hint: think about tracking a rolling window of minimal windows and comparing only where necessary.)</li>
+<li>What if the string contained characters other than <code>0</code> and <code>1</code>, and you needed to count occurrences of a specific character?</li>
+<li>How would the solution change if you needed the lexicographically <em>largest</em> beautiful substring instead?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 76 — Minimum Window Substring:</strong> The classic sliding window problem this one is often confused with; useful for understanding where the shrinking window pattern applies cleanly.</li>
+<li><strong>LeetCode 3 — Longest Substring Without Repeating Characters:</strong> Another sliding window problem, but here you're maximizing length instead of minimizing it.</li>
+<li><strong>LeetCode 209 — Minimum Size Subarray Sum:</strong> Same "shrink once you hit a threshold" idea, but over numeric sums instead of counting a specific character.</li>
+<li><strong>LeetCode 1004 — Max Consecutive Ones III:</strong> Reinforces counting a specific value within a sliding window, with a flip allowance twist.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The core lesson of this problem isn't the sliding window pattern itself — it's recognizing when a familiar pattern doesn't fully apply. Exactly-k-count problems tend to look like minimum-window problems, but tie-breaking with lexicographic order changes the requirements enough that a naive two-pointer shrink can silently return a wrong answer. Whenever a count only increases as a window grows, you can stop expanding the moment you hit your target — that shortcut is safe and it's the same principle that keeps this solution fast despite its quadratic upper bound.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with the real trace-through example, the reasoning behind why the break statement matters, and two live quiz rounds to test your understanding before seeing the answer, check out the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series dedicated to teaching real software engineering skills — not just memorized answers. Whether it's LeetCode patterns, system design, or the tools developers use daily, the goal is always the same: build the intuition first, so the code stops feeling like a trick and starts feeling obvious.</p>
+<h2>Call To Action</h2>
+<p>If this explanation helped the problem click, consider liking the video on YouTube and subscribing to the channel for more interview-focused walkthroughs. For deeper dives delivered straight to your inbox, subscribe to the Substack newsletter. Drop a comment with your own approach or questions, and share this with a fellow developer prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When you see &#x27;shortest, lex-smallest string satisfying a condition&#x27;, which pattern applies?</summary><p>Greedy left-to-right construction: at each position pick smallest valid char, backtrack/extend only when forced by the condition.</p></details><details class='card2'><summary>Time complexity of scanning positions and checking the &#x27;beautiful&#x27; condition each step?</summary><p>O(n·k) where n is string length and k is condition-check cost (e.g. counting vowels/palindrome check per window).</p></details><details class='card2'><summary>Space complexity for this greedy scan approach?</summary><p>O(1) extra beyond output, or O(n) if you store character counts/prefix info for the condition check.</p></details><details class='card2'><summary>Trickiest bug: string is short/lex-small locally but fails overall?</summary><p>Being lex-smallest at one prefix doesn&#x27;t guarantee validity later — must verify full condition holds before accepting, not just greedily commit.</p></details><details class='card2'><summary>What happens when no beautiful string exists for given constraints?</summary><p>Return empty string; always check feasibility (e.g. required char counts vs length) before greedy construction starts.</p></details><details class='card2'><summary>Greedy-construction vs sliding-window: when does each apply?</summary><p>Sliding window finds a substring of existing text; greedy construction builds a new string character-by-character from scratch.</p></details></div><h2 class='ph1' style='font-size:1.4rem'>Similar problems</h2><div class='grid'><a class='card' href='short-comparison-130002-916.html'><div class='body'><h3>REST vs GraphQL: The Actual Decision Rule #shorts</h3><span class='badge' style='background:#9f81c722;color:#9f81c7'>🕸️ Graphs</span></div></a><a class='card' href='short-comparison-191129-916.html'><div class='body'><h3>REST vs GraphQL vs gRPC: which one should you actually pick? #shorts</h3><span class='badge' style='background:#9f81c722;color:#9f81c7'>🕸️ Graphs</span></div></a></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
