@@ -1,0 +1,196 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>n8n Lesson 19: Why 10,000 Rows Killed The Workflow At Item 200 — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/n8n-lesson-19-working-with-arrays-and-loops-split-in-batches
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/n8n-lesson-19-working-with-arrays-and-loops-split-in-batches.html">
+<meta property="og:title" content="n8n Lesson 19: Why 10,000 Rows Killed The Workflow At Item 200 — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/n8n-lesson-19-working-with-arrays-and-loops-split-in-batches
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>n8n Lesson 19: Why 10,000 Rows Killed The Workflow At Item 200</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>If you've built more than a couple of n8n workflows, you've probably hit this wall: everything works perfectly against a handful of test rows, then you point the same workflow at real production data and it dies partway through. Not with a helpful error message pointing at your logic — just a blunt <code>429 Too Many Requests</code> from whatever API you're calling, somewhere around item 200 of 10,000.</p>
+<p>This isn't really an n8n problem. It's a systems design problem that shows up constantly once you move from toy datasets to production scale, and it maps almost exactly onto something interviewers love to probe: how do you handle rate-limited, high-volume operations without falling over? Whether you're calling a REST API from a Python script, hitting a third-party service from a backend job, or wiring up a no-code workflow, the underlying mechanism — and the fix — is the same. Understanding it here will save you from re-learning it the hard way in a codebase where the failure is buried three services deep.</p>
+<h2>Problem Overview</h2>
+<p>Picture a workflow that reads rows from a spreadsheet or database and, for each row, fires off a request to an external API — enriching a lead, fetching a price, whatever the use case is. With 10 rows, this is instant and invisible. With 10,000 rows, the loop node inside the workflow doesn't process them one at a time with any natural pacing — it fires all of them essentially simultaneously.</p>
+<p>From the API's point of view, it just got hit with 10,000 requests in the same instant. Every API that matters protects itself from exactly this: it enforces a rate limit, and once you cross it, it starts rejecting requests with a <code>429</code> status code. Some providers go further and temporarily suspend the API key entirely if you keep hammering past the limit after being told to back off.</p>
+<p>The fix isn't a queueing system, a message broker, or some heavyweight infrastructure. It's much simpler: don't send everything at once. Split the list into small batches, process one batch, pause, then move to the next. The API sees a steady trickle instead of a flood, and it never has a reason to reject you.</p>
+<h2>Example</h2>
+<p>Say you have 10,000 rows and the API allows 100 requests per second before it starts throttling.</p>
+<ul>
+<li><strong>Unbatched</strong>: all 10,000 requests fire within the same second or two → the API's rate limiter kicks in almost immediately → you start seeing <code>429</code>s a couple hundred rows in.</li>
+<li><strong>Batched at 100, with a 1-second pause between batches</strong>: you send 100 requests, wait a second, send the next 100, and so on. You finish in roughly 100 seconds, and the API never sees more than 100 requests in any given second.</li>
+</ul>
+<p>Same total work, same total number of requests — the only difference is pacing. That's the entire fix.</p>
+<h2>Intuition</h2>
+<p>The instinct when something "breaks at scale" is to assume the logic is wrong. But nothing about the per-row logic changed between 10 rows and 10,000 rows — the HTTP call, the field mapping, the response handling, all identical. What changed is volume and timing.</p>
+<p>An experienced engineer's first question when a system fails only at scale is: <em>what resource am I contending for, and does it have a limit?</em> Here, the resource is the API's rate limit, and the limit is per second (or per minute), not a hard cap on total requests. That reframes the problem immediately — you don't need to reduce how much data you send, you need to control the <em>rate</em> at which you send it. That's the difference between a batching problem and a data problem, and it's why "just send fewer rows" is the wrong fix while "send the same rows, more slowly" is the right one.</p>
+<p>Once you frame it as a rate problem, the solution follows naturally: chunk the work into batches, and insert a deliberate pause between chunks so the sending rate stays under whatever ceiling the API enforces.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea</strong>: Do nothing — let the loop node process every item as fast as it can.</p>
+<p><strong>Algorithm</strong>: Iterate over all 10,000 rows, fire a request for each, immediately, with no pacing.</p>
+<p><strong>Advantages</strong>: Zero extra setup. Works fine for small datasets, quick prototypes, or APIs with no meaningful rate limit.</p>
+<p><strong>Disadvantages</strong>: Falls over the moment the dataset is large enough or the API strict enough. Failures are non-deterministic in the sense that you don't know exactly how many rows got through before the rejections started, which makes recovery painful.</p>
+<p><strong>Time complexity</strong>: O(n) requests, sent effectively all at once — the wall-clock time is dominated by how fast the API starts rejecting you, not by the actual work.</p>
+<p><strong>Space complexity</strong>: O(1) beyond holding the row list, since nothing is being tracked between iterations.</p>
+<h2>Optimal Solution</h2>
+<p>The fix has two parts working together:</p>
+<ol>
+<li><strong>Split In Batches</strong> — caps how many items go out per pass (volume control).</li>
+<li><strong>A Wait node inside the loop</strong> — caps how often a pass happens (speed control).</li>
+</ol>
+<p>Here's the flow:</p>
+<pre><code>Row List → Split In Batches → HTTP Request → Wait → (back to Split In Batches &quot;loop&quot; output)
+                    │
+                    └── &quot;done&quot; output → (runs once, after all batches finish)
+</code></pre>
+<p>The Split In Batches node has two outputs, and getting them backwards is the single most common mistake:</p>
+<table>
+<thead>
+<tr>
+<th>Output</th>
+<th>Purpose</th>
+<th>Wire it to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>loop</code></td>
+<td>Fires once per batch, with the current batch's items</td>
+<td>Your processing nodes, which then feed back into Split In Batches</td>
+</tr>
+<tr>
+<td><code>done</code></td>
+<td>Fires exactly once, after every batch has been processed</td>
+<td>Whatever should run <em>after</em> the entire run completes</td>
+</tr>
+</tbody>
+</table>
+<p>If you wire <code>loop</code> back into itself without ever routing through <code>done</code>, you get one of two failure modes: an infinite loop that never terminates, or a workflow that only ever processes the first batch and then looks finished when it isn't.</p>
+<p>The row list connects into <code>Split In Batches</code> first — not directly into the HTTP Request node. That's the piece people skip when converting an existing per-row workflow. Set <strong>Batch Size</strong> (say, 100) on the node; the HTTP Request node underneath only ever sees the current batch, pulled in through the item/body expression. Add a <strong>Wait</strong> node inside the loop, after the HTTP Request, with a short pause (e.g., 1 second) before looping back — this is what actually enforces the API's requests-per-second limit, not the batch size alone.</p>
+<h2>Python Code</h2>
+<p>n8n's Split In Batches node is a visual equivalent of this pattern. Here's the same logic expressed in Python, since the concept transfers directly to any script or backend job that has to call a rate-limited API over a large dataset:</p>
+<pre><code class="language-python">import time
+from itertools import islice
+
+
+def chunked(iterable, size):
+    &quot;&quot;&quot;Yield successive chunks of `size` items from `iterable`.&quot;&quot;&quot;
+    it = iter(iterable)
+    while chunk := list(islice(it, size)):
+        yield chunk
+
+
+def process_rows(rows, call_api, batch_size=100, pause_seconds=1.0):
+    &quot;&quot;&quot;
+    Process `rows` in batches, pausing between batches to respect
+    an API's rate limit. Returns the list of results in order.
+    &quot;&quot;&quot;
+    results = []
+
+    for batch_number, batch in enumerate(chunked(rows, batch_size), start=1):
+        for row in batch:
+            results.append(call_api(row))
+
+        # Skip the pause after the final batch — nothing follows it.
+        if batch_number * batch_size &lt; len(rows):
+            time.sleep(pause_seconds)
+
+    return results
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>chunked()</code> is a generator that slices an iterable into fixed-size lists using <code>itertools.islice</code>, without loading batching logic into the caller. This mirrors what <code>Split In Batches</code> does internally — it hands you one batch at a time and remembers where it left off.</li>
+<li>The walrus operator (<code>chunk := list(islice(it, size))</code>) both assigns and tests the chunk in one line, stopping the loop cleanly once the iterator is exhausted.</li>
+<li><code>process_rows()</code> is the equivalent of the whole n8n canvas: the outer <code>for</code> loop is <code>Split In Batches</code>, the inner <code>for</code> loop plus <code>call_api(row)</code> is the <code>HTTP Request</code> node, and <code>time.sleep(pause_seconds)</code> is the <code>Wait</code> node.</li>
+<li>The <code>if batch_number * batch_size &lt; len(rows)</code> guard skips the pause after the last batch — equivalent to the <code>done</code> output firing without another <code>loop</code> pass.</li>
+<li><code>call_api</code> is injected as a parameter rather than hardcoded, so the same batching logic works regardless of what the actual request does — same separation of concerns as n8n keeping <code>Split In Batches</code> and <code>HTTP Request</code> as distinct nodes.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Take 250 rows, <code>batch_size=100</code>, <code>pause_seconds=1.0</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Batch</th>
+<th>Rows processed</th>
+<th>Pause after?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>rows 1–100</td>
+<td>yes, 1s</td>
+</tr>
+<tr>
+<td>2</td>
+<td>rows 101–200</td>
+<td>yes, 1s</td>
+</tr>
+<tr>
+<td>3</td>
+<td>rows 201–250</td>
+<td>no (last batch)</td>
+</tr>
+</tbody>
+</table>
+<p>Total requests: 250, same as sending everything at once. Total added wall-clock time: 2 seconds, in exchange for never exceeding 100 requests in any given window. That trade — a small amount of added latency for guaranteed completion — is the whole point.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time</strong>: O(n) requests total, same as the brute-force approach — batching doesn't change the amount of work, only its distribution over time. Wall-clock time becomes O(n / batch_size) pauses of <code>pause_seconds</code> each, which is a deliberate, bounded cost you control directly.</p>
+<p><strong>Space</strong>: O(batch_size) held in memory at any one time if you're streaming rows, versus O(n) if you load the entire dataset upfront — either way, it's no worse than the brute-force version, and batching doesn't add meaningful memory overhead.</p>
+<p>These bounds are correct because batching is purely a scheduling change: no additional data is created or retained, and no request count changes — only the arrival rate seen by the API.</p>
+<h2>Alternative Solutions</h2>
+<p><strong>Token bucket / leaky bucket rate limiter</strong>: instead of fixed batches with fixed pauses, track a request budget that refills over time and only send when budget is available. More precise, especially for APIs with bursty limits, but overkill for most n8n workflows where batching plus a wait accomplishes the same thing with two nodes instead of custom logic.</p>
+<p><strong>Exponential backoff on 429</strong>: retry failed requests with increasing delays instead of preventing them upfront. This is a reasonable complement (handle the rare 429 that slips through) but a poor primary strategy, since you're still hammering the API and reacting to failures rather than avoiding them.</p>
+<p><strong>Queue-based architecture</strong> (e.g., a message queue with worker consumers): the right choice at genuinely high scale or when multiple producers/consumers are involved, but unnecessary complexity for a single workflow hitting a single API.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty row list</strong>: the loop should exit immediately with zero batches — verify your batching logic doesn't throw on an empty input.</li>
+<li><strong>Row count exactly divisible by batch size</strong>: make sure the last batch doesn't get a redundant pause after it, and doesn't get skipped entirely.</li>
+<li><strong>Row count smaller than batch size</strong>: everything goes out in a single batch — this should still work without special-casing.</li>
+<li><strong>Batch size of 1</strong>: valid but effectively removes the benefit of batching for volume, while still respecting timing if a wait is present.</li>
+<li><strong>API limit changes mid-run</strong> (e.g., you get throttled despite batching): indicates your batch size or wait time is still too aggressive for that provider's actual limits.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Wiring the <code>loop</code> output back into itself while never routing anything through <code>done</code>, causing an infinite loop or a run that silently only processes the first batch.</li>
+<li>Connecting the row list directly into the processing node instead of routing it through <code>Split In Batches</code> first.</li>
+<li>Setting a batch size without adding a <code>Wait</code> node, which controls volume per pass but not requests per second — some APIs care about both.</li>
+<li>Copying a batch size and wait time from a tutorial (e.g., "100 and 1 second") without checking the actual documented rate limit for the API being called.</li>
+<li>Assuming a failed run has no state — in a properly batched workflow, you know exactly which batch and which items were in flight, so don't rebuild recovery logic that ignores that information.</li>
+<li>Testing only against a small sample size (10 rows) and assuming that validates production-scale (10,000 rows) behavior — batching problems only appear at volume.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you handle rate-limited API calls when processing a large dataset?</li>
+<li>What's the difference between a rate limit that's requests-per-second versus requests-per-minute, and how would that change your batching strategy?</li>
+<li>How would you design a system to resume from a partial failure instead of restarting from the beginning?</li>
+<li>What's the tradeoff between batch size and total run time?</li>
+<li>How would you detect and handle a <code>429</code> response gracefully rather than letting the whole job fail?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 239 (Sliding Window Maximum)</strong> — same mental model of processing data in bounded windows rather than all at once.</li>
+<li><strong>LeetCode 622 (Design Circular Queue)</strong> — reinforces the idea of managing fixed-capacity chunks of data with controlled entry and exit.</li>
+<li><strong>Rate limiter design problems</strong> (common in system design interviews) — directly maps to the token bucket / leaky bucket alternatives discussed above.</li>
+<li><strong>Pagination-handling problems</strong> in API client design — the "fetch in chunks, track a cursor" pattern is structurally identical to Split In Batches remembering where it left off.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>A workflow that crashes only at production scale usually isn't a logic bug — it's a rate or resource limit you weren't respecting.</li>
+<li>Batching controls <em>volume</em> per request; a deliberate pause controls <em>speed</em>. You often need both.</li>
+<li>Get the <code>loop</code>/<code>done</code> wiring right, or you'll get an infinite loop or a workflow that silently under-processes.</li>
+<li>Always check the actual documented rate limit for the API you're calling instead of copying default numbers.</li>
+<li>This pattern — chunk, pace, repeat — applies far beyond n8n, to any script or service calling a rate-limited API at scale.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough, including watching the batches execute live and seeing the exact node wiring, check out the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <em>Fun with Learning Technology</em>, a series where workflows and code get pushed until they break in realistic, production-shaped ways — then fixed properly, with the actual mechanism explained rather than a patch that just hides the symptom.</p>
+<h2>Call To Action</h2>
+<p>If this saved you from a future <code>429</code> headache, give the video a like on YouTube and subscribe for the rest of the series. For deeper write-ups like this one delivered straight to your inbox, subscribe to the Substack. Drop a comment with the API you're batching against — I read every one — and share this with anyone on your team still debugging a workflow that "randomly" stops at row 200.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>n8n: 10,000 rows fail around row 200 during item processing—what pattern fixes it?</summary><p>Split In Batches: process items in chunks with a loop-back connection instead of firing all rows at once.</p></details><details class='card2'><summary>Why did the workflow actually break at row 200?</summary><p>Downstream API rate-limited the flood of simultaneous requests; no throttling meant later calls got rejected.</p></details><details class='card2'><summary>Split In Batches vs a plain Loop Over Items node—when to prefer batching?</summary><p>Use Split In Batches when you need chunk size control and rate/delay between chunks, not just per-item iteration.</p></details><details class='card2'><summary>How do you control speed, not just batch size, in the loop?</summary><p>Add a Wait/delay node inside the loop body so each batch pauses before the next iteration fires.</p></details><details class='card2'><summary>Trickiest bug when wiring the Split In Batches loop?</summary><p>Forgetting to connect the loop output back to the Split In Batches input—workflow processes only the first batch.</p></details><details class='card2'><summary>Interview follow-up: how would you make a failure traceable in a batched run?</summary><p>Log batch index/item ID per iteration so a failure points to the exact batch and row, not the whole run.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
