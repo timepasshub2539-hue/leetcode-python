@@ -1,0 +1,224 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>n8n Lesson 20: 50 Pings From One Array — Here&#x27;s Why — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/n8n-lesson-20-item-lists-aggregate-node
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/n8n-lesson-20-it">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/n8n-lesson-20-item-lists-aggregate-node.html">
+<meta property="og:title" content="n8n Lesson 20: 50 Pings From One Array — Here&#x27;s Why — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/n8n-lesson-20-item-lists-aggregate-node
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree/main/n8n-lesson-20-it">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>n8n Lesson 20: 50 Pings From One Array — Here&#x27;s Why</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>If you've ever built an n8n workflow that quietly did <em>less</em> than you expected — sent one Slack message instead of fifty, updated one row instead of a hundred — you've run into one of the most common and least understood behaviors in node-based automation: <strong>n8n executes per item, not per node.</strong></p>
+<p>This isn't a bug. It's the execution model. But if you don't understand it, it looks exactly like a bug, and it's the kind that doesn't throw an error. It just silently does the wrong amount of work. That makes it dangerous in production — the workflow "succeeds," the logs look clean, and you only find out 49 orders never got processed when someone asks why.</p>
+<p>This matters beyond n8n, too. The mental model here — "does this step run once, or once per element in a collection" — is the same question you ask when writing a <code>for</code> loop, mapping over an array in JavaScript, or reasoning about a batch job in any backend system. Understanding it in n8n makes you a better engineer everywhere, and understanding it in code makes n8n click immediately. That overlap is exactly why this kind of problem shows up in interviews and in production incidents alike: the underlying skill is recognizing when you have "one thing" versus "many things," and knowing which operation you actually need.</p>
+<h2>Problem Overview</h2>
+<p>Here's the setup. You have an HTTP Request node that calls an API and gets back a response. That response is a single item — but nested inside it is an array field, say <code>orders</code>, containing 50 individual orders.</p>
+<p>Now you drag a Slack node after it, expecting it to fire once per order. Instead, it fires exactly once — for the first order — and stops. The other 49 are never touched. No error. No warning. The workflow reports success.</p>
+<p>The core issue is a mismatch between two different shapes of data:</p>
+<ul>
+<li><strong>One item containing an array</strong> — a single envelope with 50 letters stuffed inside it.</li>
+<li><strong>Many items, one per array element</strong> — 50 separate envelopes, each with one letter.</li>
+</ul>
+<p>Every node downstream operates on items, not on whatever's nested inside them. If your array is buried inside one item, nodes downstream see <em>one thing to process</em>, not fifty.</p>
+<h2>Example</h2>
+<p>Imagine the HTTP Request node returns this:</p>
+<pre><code class="language-json">[
+  {
+    &quot;customer&quot;: &quot;Acme Corp&quot;,
+    &quot;orders&quot;: [
+      { &quot;id&quot;: 1, &quot;total&quot;: 80 },
+      { &quot;id&quot;: 2, &quot;total&quot;: 95 },
+      { &quot;id&quot;: 3, &quot;total&quot;: 120 }
+      // ...47 more
+    ]
+  }
+]
+</code></pre>
+<p>That's <strong>one item</strong>. The <code>orders</code> array lives <em>inside</em> it. A Slack node placed right after this will run once, using whatever it can find on that single item — and if it's mapped to reference the first order, that's all it will ever send.</p>
+<p>Now compare that to what you actually want: 50 separate items, each shaped like <code>{ "id": 1, "total": 80 }</code>. That's the shape a downstream node needs in order to run once per order.</p>
+<h2>Intuition</h2>
+<p>The way to think about this isn't "n8n is confusing," it's "a node is a mail-sorting machine that handles one envelope at a time." Give it one envelope with 50 letters crammed inside, and it sorts the envelope — once. It never opens it up and looks at the 50 letters individually, because as far as the machine is concerned, there's one envelope in front of it.</p>
+<p>Once you see it that way, the fix designs itself. You don't need custom logic to loop over the array — you need a machine that takes one envelope and outputs 50 separate envelopes, one per letter. And later, when you're done processing each one, you need a machine that does the reverse: collects 50 envelopes back into one.</p>
+<p>n8n ships both of these as built-in nodes, and the trick is realizing they're a matched pair — Split Out breaks one item into many, Aggregate collects many items into one. Nothing in between needs a Function node or a line of JavaScript.</p>
+<h2>Brute Force Solution</h2>
+<p>Before reaching for the built-in nodes, it's worth understanding what the "manual" approach would look like, because it explains why n8n gives you these primitives in the first place.</p>
+<p><strong>Idea:</strong> Drop a Function/Code node right after the HTTP Request, write a JavaScript loop that iterates the <code>orders</code> array, and manually construct a new list of items — one per order — using n8n's item-array format (<code>return orders.map(o =&gt; ({ json: o }))</code>).</p>
+<p><strong>Algorithm:</strong>
+1. Read the input item's <code>orders</code> field.
+2. Loop over it.
+3. Wrap each order as its own item object.
+4. Return the new array of items.</p>
+<p><strong>Advantages:</strong>
+- Full control — you can transform, filter, or rename fields at the same time.
+- No conceptual leap required if you already think in code.</p>
+<p><strong>Disadvantages:</strong>
+- Requires JavaScript knowledge that half your team (or future you, six months later) may not have.
+- Every workflow reinvents the same 4 lines of splitting logic.
+- Doing the reverse (collapsing many items back to one) is a second custom loop with its own edge cases (empty array, key collisions).
+- No visual indication in the workflow of <em>why</em> the item count changes — harder to debug at a glance.</p>
+<p><strong>Complexity:</strong> O(n) time to split, O(n) space to hold n items instead of 1 — same as the built-in approach. The cost isn't performance, it's maintainability and readability.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach uses the two nodes n8n built specifically for this: <strong>Split Out</strong> and <strong>Aggregate</strong>.</p>
+<p><strong>Split Out</strong> takes one item with an array field and turns it into many items — one per array element.</p>
+<pre><code>Input:  1 item  →  { orders: [o1, o2, ..., o50] }
+Output: 50 items → { id: 1, total: 80 }, { id: 2, total: 95 }, ...
+</code></pre>
+<p>You configure it by pointing at the field name (<code>orders</code>). That's the entire setup — no code.</p>
+<p><strong>Aggregate</strong> does the exact opposite: many items in, one item out, with the specified fields collected into a list.</p>
+<pre><code>Input:  50 items → { total: 80 }, { total: 95 }, ...
+Output: 1 item   → { total: [80, 95, ..., 4200-worth of totals] }
+</code></pre>
+<p>Here's the pattern that ties it together, and the one worth memorizing because you'll reuse it constantly:</p>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>What happens</th>
+<th>Item count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HTTP Request</td>
+<td>Fetch data, array buried in one item</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Split Out</td>
+<td>Explode array into individual items</td>
+<td>50</td>
+</tr>
+<tr>
+<td>Process (Slack, DB write, charge, etc.)</td>
+<td>Runs once per item</td>
+<td>50</td>
+</tr>
+<tr>
+<td>Aggregate</td>
+<td>Collapse results back into one summary item</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p>Two details matter enough to call out separately, because they're the parts that bite people silently:</p>
+<ul>
+<li><strong>Empty arrays kill the chain.</strong> If <code>orders</code> comes in empty, Split Out produces zero items — and zero items means everything after it, including Aggregate, simply never executes. No error, no summary, nothing runs. If you need a "processed 0 orders" message, you have to check for the empty case <em>before</em> Split Out and branch explicitly.</li>
+<li><strong>Aggregate does field-name matching, not logic.</strong> It doesn't reconcile which total belongs to which order — it just grabs the exact field name you give it from every item and stacks the values into a list. A typo, a renamed field, or a field that only exists on some items won't throw an error. You'll just get a quietly empty or partial array in the output.</li>
+</ul>
+<h2>Python Code</h2>
+<p>While Split Out and Aggregate are no-code nodes, the underlying operation is worth seeing in Python, because it's the exact same shape of problem you'll hit whenever you're transforming data between "one record with a nested list" and "many records, one per list element."</p>
+<pre><code class="language-python">from typing import Any
+
+
+def split_out(item: dict[str, Any], field: str) -&gt; list[dict[str, Any]]:
+    &quot;&quot;&quot;Equivalent of n8n's Split Out: one item with an array field
+    becomes many items, one per array element.&quot;&quot;&quot;
+    values = item.get(field, [])
+    return [value for value in values]
+
+
+def aggregate(items: list[dict[str, Any]], field: str) -&gt; dict[str, Any]:
+    &quot;&quot;&quot;Equivalent of n8n's Aggregate: many items become one item
+    holding the collected field values as a list.&quot;&quot;&quot;
+    collected = [entry[field] for entry in items if field in entry]
+    return {field: collected}
+
+
+def process_orders(source_item: dict[str, Any]) -&gt; dict[str, Any]:
+    orders = split_out(source_item, &quot;orders&quot;)
+    if not orders:
+        return {&quot;total&quot;: [], &quot;count&quot;: 0}
+
+    # simulate the &quot;process each order&quot; step (charge, log, etc.)
+    processed = orders
+
+    summary = aggregate(processed, &quot;total&quot;)
+    summary[&quot;count&quot;] = len(processed)
+    return summary
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>split_out</code> mirrors the Split Out node: it reads the named field off a single item and returns its contents as a standalone list — the "one envelope becomes many" step.</li>
+<li><code>aggregate</code> mirrors the Aggregate node: it walks a list of items and pulls out just the named field from each, collecting them into a single list under that same key. Note the <code>if field in entry</code> guard — this is exactly the silent-failure behavior from the real node: a missing field just gets skipped, not flagged.</li>
+<li><code>process_orders</code> is the full pipeline: split, process, aggregate — the same three-stage pattern from the workflow. The <code>if not orders</code> check is the piece n8n <em>doesn't</em> give you for free; it's the explicit empty-array guard you have to build yourself if you want a "zero processed" result instead of silence.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Input:</p>
+<pre><code class="language-python">source_item = {
+    &quot;customer&quot;: &quot;Acme Corp&quot;,
+    &quot;orders&quot;: [
+        {&quot;id&quot;: 1, &quot;total&quot;: 80},
+        {&quot;id&quot;: 2, &quot;total&quot;: 95},
+        {&quot;id&quot;: 3, &quot;total&quot;: 120},
+    ],
+}
+</code></pre>
+<ol>
+<li><code>split_out(source_item, "orders")</code> → returns the 3-element list of order dicts. Item count goes from 1 to 3.</li>
+<li><code>process_orders</code> treats <code>orders</code> as non-empty, so it proceeds — <code>processed = orders</code> (in the real workflow, this is where Slack/DB/charge logic would run per item).</li>
+<li><code>aggregate(processed, "total")</code> → pulls <code>80</code>, <code>95</code>, <code>120</code> from each dict → returns <code>{"total": [80, 95, 120]}</code>.</li>
+<li><code>summary["count"] = 3</code> is added.</li>
+<li>Final result: <code>{"total": [80, 95, 120], "count": 3}</code> — one item, item count back down to 1.</li>
+</ol>
+<p>That's the full round trip: 1 → 3 → 1, matching exactly what Split Out → process → Aggregate does inside n8n.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> O(n), where n is the number of elements in the array. Split Out visits each element once to emit it; Aggregate visits each item once to pull its field. There's no nested loop or comparison between items — each is correct because both operations are single linear passes with no matching logic between elements.</li>
+<li><strong>Space:</strong> O(n) — you materialize n items where you previously had 1, and Aggregate materializes an n-length list from those n items. This is unavoidable: you can't represent "50 distinct results" in less than 50 slots of storage if you need them individually addressable at some point in the pipeline.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p><strong>Loop Over Items node (n8n's built-in batching node):</strong> Instead of Split Out, you could use n8n's "Loop Over Items" (SplitInBatches) node, which processes items in configurable batch sizes and loops back. This is the right call when you need rate-limiting or batching (e.g., "call this API 5 orders at a time" to avoid hitting a rate limit) rather than exploding everything at once. For a straightforward "one per item" fan-out with no batching concern, Split Out is simpler and has less configuration surface.</p>
+<p><strong>Code node with a manual loop:</strong> As covered in the brute-force section — viable if you're already comfortable in JavaScript and need to split <em>and</em> transform in the same step, but it reintroduces a maintenance and readability cost that Split Out avoids entirely for the common case.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty array:</strong> Split Out produces zero items, and everything downstream — including Aggregate — never executes. No error is thrown. You must branch and handle this explicitly before Split Out if a "zero results" message matters.</li>
+<li><strong>Field doesn't exist on the item:</strong> Split Out with a missing field name behaves like splitting an empty array — zero output items, same silent stop.</li>
+<li><strong>Field name typo in Aggregate:</strong> Produces an empty or partial array in the output with no error — the classic silent failure mode described above.</li>
+<li><strong>Array with a single element:</strong> Split Out still produces exactly one item; downstream nodes run once, which is correct, but easy to mistake for "nothing changed."</li>
+<li><strong>Mixed items where the field only exists on some:</strong> Aggregate silently drops the items missing the field rather than including a null or throwing — the resulting list will be shorter than the item count, which can be mistaken for a bug elsewhere.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Assuming a node runs once per node, not once per item</strong> — the root misunderstanding behind this entire bug class.</li>
+<li><strong>Forgetting to guard against empty arrays</strong>, then being confused when a workflow "does nothing" with no error in the execution log.</li>
+<li><strong>Aggregating on the wrong field name</strong> (a stale field, a typo, a field only present on some items) and not noticing the output array is empty or short.</li>
+<li><strong>Reaching for a Function node by default</strong> instead of checking whether Split Out / Aggregate already solve the problem with zero code.</li>
+<li><strong>Not verifying item count at each step</strong> while debugging — the item count shown in each node's output panel is the single fastest way to see where a workflow diverged from expectations.</li>
+<li><strong>Expecting Aggregate to do matching or reconciliation</strong> between fields across items, when it only stacks a single named field verbatim.</li>
+<li><strong>Placing Aggregate before the processing step</strong> instead of after — collapsing to one item before you've done per-order work defeats the purpose of splitting in the first place.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>"Walk me through what happens if this API call returns an empty array — trace it through the whole pipeline."</li>
+<li>"How would you rate-limit this if the downstream API only allows 5 requests per second?"</li>
+<li>"What's the difference between 'many items become one' and 'grouping items by a key'? Does Aggregate do the second one?"</li>
+<li>"How would you detect, in production, that Aggregate silently dropped items due to a field mismatch?"</li>
+<li>"If you had to implement Split Out and Aggregate from scratch in Python, what would the function signatures look like?"</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 118 (Pascal's Triangle)</strong> and other list-generation problems — same instinct of "build a new list of records from a single seed structure," which mirrors Split Out.</li>
+<li><strong>LeetCode 49 (Group Anagrams)</strong> — collapsing many items into grouped results by a key is the "smart" version of Aggregate that goes beyond simple field-stacking.</li>
+<li><strong>Flatten Nested List Iterator (LeetCode 341)</strong> — directly analogous to Split Out: turning one nested structure into a flat sequence of individually-processable elements.</li>
+<li><strong>Any MapReduce-style problem</strong> — Split Out is the "map" fan-out, Aggregate is the "reduce" collapse; recognizing that structure transfers directly to distributed data processing.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>n8n nodes run once per <strong>item</strong>, not once per <strong>node</strong> — internalize this and half the "silent" bugs in your workflows stop being mysterious.</li>
+<li>Split Out and Aggregate are exact opposites: one explodes an array into items, the other collapses items into an array.</li>
+<li>Empty arrays are a silent dead end — the chain after Split Out simply never runs, with no error.</li>
+<li>Aggregate matches by field name only, with zero reconciliation logic — a typo produces silence, not a crash.</li>
+<li>The pattern — split, process, aggregate — applies to any situation where an API, webhook, or CSV hands you a batch buried inside a single record.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>If you want to see this bug reproduced live — the Slack node firing once instead of fifty times, then fixed step by step with Split Out and Aggregate — watch the full walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This is part of <strong>Fun with Learning Technology</strong>, a series that takes the kind of mess every developer eventually runs into — a silent bug, a confusing default, a "why is it doing that" moment — and breaks it down until it actually clicks. The goal isn't just to fix the one bug in front of you, it's to build the mental model that stops the next five bugs like it from happening.</p>
+<h2>Call To Action</h2>
+<p>If this saved you from an afternoon of debugging a silent Slack node, do three things: like the video on YouTube so more developers hitting this exact wall can find it, subscribe for the rest of the series, and subscribe to the Substack for the written breakdowns like this one. Drop a comment with what's still fuzzy about Split Out or Aggregate, or what n8n behavior you want covered next — the next lesson is usually pulled straight from those comments.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>n8n: what&#x27;s the tell that you need Split Out + Aggregate?</summary><p>An item holds an array field you must process per-element then recombine — split fans out, aggregate folds back.</p></details><details class='card2'><summary>n8n execution model: runs per what?</summary><p>Every node runs once per incoming item, not once per workflow — 50 items means 50 downstream executions.</p></details><details class='card2'><summary>Split Out on a 50-element array: what happens downstream?</summary><p>Branch executes 50 times, one per array element — e.g. 50 separate API pings if a request node follows.</p></details><details class='card2'><summary>Common bug: array field left unsplit before an HTTP node</summary><p>Node receives one item with a nested array instead of many items, so it only fires once instead of per-element.</p></details><details class='card2'><summary>Split Out vs Aggregate: relationship?</summary><p>Inverse operations — Split Out expands one item&#x27;s array into many items; Aggregate collapses many items back into one array.</p></details><details class='card2'><summary>Interview: why aggregate before sending a single summary email?</summary><p>Downstream node needs one item with the full list, not N separate items each triggering N sends.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
