@@ -1,0 +1,223 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3720. Lexicographically Smallest Permutation Greater Than Target — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/lexicographically-smallest-permutation-greater-than-target
+💻 Code on GitHub: ht">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/lexicographically-smallest-permutation-greater-than-target.html">
+<meta property="og:title" content="3720. Lexicographically Smallest Permutation Greater Than Target — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/lexicographically-smallest-permutation-greater-than-target
+💻 Code on GitHub: ht">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>3720. Lexicographically Smallest Permutation Greater Than Target</h1><span class='badge' style='background:#9f81c722;color:#9f81c7'>🕸️ Graphs</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Every interviewer eventually asks some version of "give me the next best arrangement of this." Sometimes it's phrased as scheduling, sometimes as a combination lock, sometimes — like here — as a string problem. LeetCode 3720, <em>Lexicographically Smallest Permutation Greater Than Target</em>, is a great vehicle for testing whether a candidate actually understands the <strong>next permutation</strong> pattern or has just memorized <code>itertools.permutations</code>.</p>
+<p>The reason this problem is worth your time isn't the specific string manipulation. It's that the underlying technique — find the last position you can still improve, make the smallest possible improvement there, then minimize everything after it — shows up constantly: task scheduling, key ordering, combinatorial search, even the C++ standard library's <code>next_permutation</code>. Once you internalize this pattern, an entire class of "find the next X" problems stops being scary.</p>
+<h2>Problem Overview</h2>
+<p>You're given two lowercase strings of equal length: <code>s</code>, which you're allowed to freely rearrange, and <code>target</code>, which is fixed and never changes. Your job is to rearrange the letters of <code>s</code> into the <strong>lexicographically smallest</strong> string that is <strong>strictly greater</strong> than <code>target</code>. If no rearrangement of <code>s</code> can beat <code>target</code>, return an empty string.</p>
+<p>In plain terms: you have a bag of letters, and someone set a benchmark you need to beat. You want to beat it by the smallest possible margin — not overshoot with something way bigger than necessary.</p>
+<h2>Example</h2>
+<p>Let <code>s = "abc"</code> and <code>target = "bba"</code>.</p>
+<p>All permutations of <code>abc</code>: <code>abc, acb, bac, bca, cab, cba</code>.</p>
+<p>Compare each against <code>bba</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Permutation</th>
+<th>Bigger than "bba"?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>abc</td>
+<td>No</td>
+</tr>
+<tr>
+<td>acb</td>
+<td>No</td>
+</tr>
+<tr>
+<td>bac</td>
+<td>No</td>
+</tr>
+<tr>
+<td>bca</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>cab</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>cba</td>
+<td>Yes</td>
+</tr>
+</tbody>
+</table>
+<p>The smallest one that qualifies is <code>bca</code>. That's the answer.</p>
+<p>Notice something important: <code>s</code> and <code>target</code> don't need to share the same <em>count</em> of each letter. In this example they happen to use the same letters, but in general <code>target</code> can be built from entirely different letters or different quantities — which is exactly what makes this problem harder than a plain "next permutation" question.</p>
+<h2>Intuition</h2>
+<p>Start with the simpler version of this problem: given a single number, find the next-largest permutation of its own digits. This is the classic interview warm-up, and it's worth understanding fully before tackling the letter-frequency version.</p>
+<p>Picture the digits from right to left. As long as each digit is greater than or equal to the one after it, that suffix is already at its maximum value — no rearrangement of it can produce something bigger. The moment you find a digit smaller than something to its right, you've found the <strong>pivot</strong>: the one position where an improvement is actually possible.</p>
+<p>Once you have the pivot, you don't want to jump to just <em>any</em> bigger arrangement — you want the smallest possible one that's still bigger than the original. So you look at everything right of the pivot and pick the smallest value that's still larger than the pivot digit. Swapping it in gives you the smallest possible increase.</p>
+<p>After the swap, the tail (everything right of the pivot) is still sorted in decreasing order — the <em>largest</em> possible arrangement of those digits. Since you want the <em>smallest</em> possible overall result, you reverse that tail, turning it into ascending order.</p>
+<p>This exact routine — scan for the pivot, swap in the smallest valid upgrade, reverse the tail — is what <code>next_permutation</code> does under the hood in the C++ standard library.</p>
+<p>Now, the twist in this problem: <code>target</code> isn't guaranteed to be a rearrangement of <code>s</code>. It can have completely different letters, in different amounts. That means you can't scan <code>target</code>'s own layout for a pivot the way you would with digits — you first have to ask, at every prefix length, "do I even have enough of the right letters in <code>s</code> to match <code>target</code> this far?" That's the extra bookkeeping this problem adds on top of the classic pattern.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Generate every permutation of <code>s</code>, filter to the ones strictly greater than <code>target</code>, sort what's left, and take the smallest.</p>
+<p><strong>Algorithm:</strong>
+1. Generate all permutations of <code>s</code>.
+2. Discard duplicates (if <code>s</code> has repeated letters) and any permutation not strictly greater than <code>target</code>.
+3. Sort the survivors and return the first one.</p>
+<p><strong>Advantages:</strong> Trivial to reason about, easy to verify correctness, no edge-case handling needed.</p>
+<p><strong>Disadvantages:</strong> Permutation count grows as <code>n!</code>. Even a 10-character string produces over 3.6 million permutations. With <code>s</code> allowed up to length 300 in this problem, brute force isn't just slow — it's computationally impossible.</p>
+<p><strong>Time complexity:</strong> O(n! · n log n) (generating and sorting permutations).
+<strong>Space complexity:</strong> O(n! · n) to store them all.</p>
+<h2>Optimal Solution</h2>
+<p>Since checking "is there a bigger letter available" only ever involves 26 lowercase letters, we can replace expensive permutation generation with a <strong>letter-count</strong> approach — the frequency-based cousin of the pivot-scan trick.</p>
+<p><strong>Step 1 — Set up the counts.</strong>
+Count every letter in <code>s</code> using a <code>Counter</code>. This is the "bag of letters" you're allowed to draw from.</p>
+<p><strong>Step 2 — Pre-consume target's prefix.</strong>
+Before scanning, subtract out every letter of <code>target</code> except the last character, as if you were tentatively building <code>target</code> itself out of <code>s</code>. Track a <code>neg</code> counter: every time a letter's count drops below zero, <code>neg</code> increases. <code>neg &gt; 0</code> means "this prefix isn't actually buildable from <code>s</code>."</p>
+<p><strong>Step 3 — Walk backward from the last position.</strong>
+At each position <code>i</code>, moving from the end toward the start:</p>
+<ul>
+<li>If <code>neg == 0</code>, the prefix up to (but not including) position <code>i</code> is genuinely buildable from <code>s</code>. Now search upward from <code>target[i]</code> through the alphabet for the smallest letter you still have in stock that's bigger than <code>target[i]</code>.</li>
+<li>If found: use it at this position, then append every remaining letter you're holding in ascending order. Return the result immediately — this is the answer.</li>
+<li>If <code>neg != 0</code>, or no bigger letter was available at this position, this prefix doesn't work. Give <code>target[i]</code>'s letter back to your count (undoing the pre-consumption), decrement <code>neg</code> if that letter had caused a shortfall, and move one position to the left to try a shorter prefix.</li>
+</ul>
+<p><strong>Step 4 — No match found.</strong>
+If you walk all the way through without returning, no permutation of <code>s</code> can beat <code>target</code>. Return an empty string.</p>
+<p>Here's the mapping back to the digit version, so the pattern clicks:</p>
+<table>
+<thead>
+<tr>
+<th>Digit version</th>
+<th>Letter-frequency version</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Scan right-to-left for a digit smaller than something after it</td>
+<td>Scan right-to-left for a position where the prefix is still buildable (<code>neg == 0</code>)</td>
+</tr>
+<tr>
+<td>Find smallest tail digit bigger than pivot</td>
+<td>Search upward from <code>target[i]</code> for the smallest letter you have in stock</td>
+</tr>
+<tr>
+<td>Reverse the tail</td>
+<td>Append remaining letters in ascending order</td>
+</tr>
+</tbody>
+</table>
+<h2>Python Code</h2>
+<pre><code class="language-python">from collections import Counter
+
+
+def smallest_string_greater_than_target(s: str, target: str) -&gt; str:
+    n = len(s)
+    counts = Counter(s)
+    neg = 0  # number of letters currently short of what's needed
+
+    # Tentatively &quot;use&quot; target's letters for every position except the last
+    for i in range(n - 1):
+        counts[target[i]] -= 1
+        if counts[target[i]] &lt; 0:
+            neg += 1
+
+    # Walk backward, looking for the rightmost position we can improve
+    for i in range(n - 1, -1, -1):
+        if neg == 0:
+            # This prefix is buildable; try to find a bigger letter here
+            for c in range(ord(target[i]) + 1, ord('z') + 1):
+                letter = chr(c)
+                if counts[letter] &gt; 0:
+                    counts[letter] -= 1
+                    remaining = sorted(counts.elements())
+                    return &quot;&quot;.join(target[:i]) + letter + &quot;&quot;.join(remaining)
+
+        # No improvement possible here; undo and try a shorter prefix
+        if i &gt; 0:
+            counts[target[i - 1]] += 1
+            if counts[target[i - 1]] &gt; 0:
+                neg -= 1
+
+    return &quot;&quot;
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>Counter(s)</code> builds the letter inventory we're allowed to draw from.</li>
+<li>The first loop pre-consumes <code>target[0:n-1]</code> from that inventory, simulating "what if we tried to exactly match target up to the last character." Any letter going negative means that prefix isn't buildable, so <code>neg</code> tracks how many such shortfalls currently exist.</li>
+<li>The second loop walks <code>i</code> from <code>n-1</code> down to <code>0</code>. <code>neg == 0</code> is the "is this prefix even reachable" check — the frequency equivalent of the pivot condition in the digit version.</li>
+<li>The inner <code>for c in range(...)</code> loop searches upward through the alphabet from <code>target[i]</code>, which is the frequency-based version of "find the smallest tail value bigger than the pivot."</li>
+<li><code>sorted(counts.elements())</code> produces every remaining letter in ascending order — this replaces the "reverse the tail" step, since sorting ascending is the smallest possible arrangement of what's left.</li>
+<li>If a fix at position <code>i</code> doesn't work, we put <code>target[i-1]</code>'s letter back into <code>counts</code> (undoing our earlier tentative consumption) and adjust <code>neg</code>, then let the loop retry with a shorter prefix.</li>
+<li>Falling through both loops without returning means no valid answer exists, so we return <code>""</code>.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Let's trace <code>s = "abc"</code>, <code>target = "bba"</code>.</p>
+<p><strong>Setup:</strong> <code>counts = {a:1, b:1, c:1}</code>.</p>
+<p>Pre-consume <code>target[0:2] = "bb"</code>:
+- Subtract <code>b</code>: <code>counts[b] = 0</code>.
+- Subtract <code>b</code> again: <code>counts[b] = -1</code> → <code>neg = 1</code>.</p>
+<p><strong>Main loop</strong>, <code>i</code> from 2 down to 0:</p>
+<ul>
+<li><code>i = 2</code>: <code>neg = 1</code>, skip the search. Undo: add back <code>target[1] = 'b'</code> → <code>counts[b] = 0</code>. Since it's no longer negative, <code>neg = 0</code>.</li>
+<li><code>i = 1</code>: <code>neg = 0</code>. Search upward from <code>target[1] = 'b'</code> (i.e., from <code>'c'</code> onward). <code>counts[c] = 1 &gt; 0</code> — found it. Use <code>c</code>: <code>counts[c] = 0</code>. Remaining letters: <code>{a:1, b:0, c:0}</code> → sorted elements = <code>['a']</code>.
+  Result = <code>target[:1]</code> (<code>"b"</code>) + <code>"c"</code> + <code>"a"</code> = <code>"bca"</code>.</li>
+</ul>
+<p>Return <code>"bca"</code> — matches the expected answer from the example.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(n · 26). For each of the <code>n</code> positions, the inner alphabet search does at most 26 checks. Building the sorted remainder is O(n log n) once, at the point we return. Overall: <strong>O(n log n)</strong>, dominated by the final sort — but crucially, this happens <em>once</em>, not per iteration.</p>
+<p><strong>Space:</strong> O(26) for the letter counts, plus O(n) for the output string. Effectively <strong>O(n)</strong>.</p>
+<p>This is correct because the alphabet size is a fixed constant (26), so the per-position work never grows with input size — only the single sort at the end scales with <code>n</code>.</p>
+<h2>Alternative Solutions</h2>
+<p>You could sort <code>s</code> and binary-search for a valid arrangement at each prefix length, but this adds complexity without improving the asymptotic bound — the letter-count approach already does the minimum necessary work per position. Another option is recursively trying every prefix length with backtracking, but that reintroduces exponential blowup in the worst case. The greedy frequency-count method is both the simplest and asymptotically optimal choice here.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong><code>s</code> and <code>target</code> share no letters in common at any usable position:</strong> the algorithm naturally falls through to returning <code>""</code>.</li>
+<li><strong><code>s</code> has repeated letters:</strong> <code>Counter</code> handles this correctly without generating duplicate permutations, unlike the brute-force approach.</li>
+<li><strong><code>target</code> is lexicographically larger than every possible permutation of <code>s</code>:</strong> the loop exhausts all positions without finding a valid swap, returning <code>""</code>.</li>
+<li><strong><code>s</code> is a permutation of <code>target</code> itself:</strong> this degenerates cleanly into the classic single-string next-permutation problem.</li>
+<li><strong>Single-character strings:</strong> <code>n = 1</code> means the pre-consumption loop does nothing, and the main loop either finds a bigger letter or returns <code>""</code> immediately.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Generating all permutations</strong> — works for tiny inputs, times out immediately at scale.</li>
+<li><strong>Forgetting to sort the remaining letters ascending</strong> — appending them in arbitrary order can produce a larger-than-necessary result.</li>
+<li><strong>Not tracking <code>neg</code> correctly when undoing a tentative letter usage</strong> — forgetting to decrement <code>neg</code> when a letter count returns to non-negative causes false rejections later.</li>
+<li><strong>Assuming <code>s</code> and <code>target</code> share letter frequencies</strong> — they don't have to, and code that assumes this will silently produce wrong answers instead of crashing.</li>
+<li><strong>Searching for "any bigger letter" instead of the smallest bigger letter</strong> — this produces <em>a</em> valid answer but not the lexicographically smallest one.</li>
+<li><strong>Off-by-one errors in the prefix pre-consumption</strong> — consuming <code>target[0:n]</code> instead of <code>target[0:n-1]</code> throws off the entire alignment between prefix length and position index.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would this change if <code>s</code> and <code>target</code> could contain uppercase letters or digits too?</li>
+<li>What's the time complexity if the alphabet size were much larger, say Unicode?</li>
+<li>Can you solve the simpler version — where <code>s</code> is a permutation of <code>target</code>'s own digits — without the <code>Counter</code> bookkeeping?</li>
+<li>How would you find the <em>k-th</em> smallest permutation greater than <code>target</code> instead of just the first?</li>
+<li>What changes if you needed the largest permutation <em>smaller</em> than <code>target</code> instead?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 31 — Next Permutation:</strong> the pure digit/array version of this exact pivot-swap-reverse pattern, no letter-frequency complication.</li>
+<li><strong>LeetCode 46 — Permutations:</strong> foundational permutation generation, useful for understanding why brute force explodes.</li>
+<li><strong>LeetCode 60 — Permutation Sequence:</strong> finding the k-th permutation directly, without generating all previous ones.</li>
+<li><strong>LeetCode 556 — Next Greater Element III:</strong> the next-permutation pattern applied directly to integers.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The core lesson is a reusable pattern, not a one-off trick: find the rightmost position where improvement is still possible, make the <em>smallest</em> valid improvement there, then minimize everything after it. Whether you're working with digits in a fixed sequence or letter counts in a bag, the shape of the solution stays the same. Recognizing this pattern turns an intimidating combinatorics problem into a straightforward linear scan.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough — including a live timing comparison between brute force and the optimal solution, and a two-question quiz to check your understanding — watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series dedicated to building real algorithmic intuition rather than memorized solutions. Each episode takes a coding interview problem, strips away the intimidating parts, and rebuilds it from first principles — so the pattern sticks long after the specific problem is forgotten.</p>
+<h2>Call To Action</h2>
+<p>If this explanation helped the pivot-swap-reverse pattern click for you, give the video a like on YouTube and subscribe for more interview-focused breakdowns. For deeper dives and companion write-ups delivered straight to your inbox, subscribe to the Substack. Drop a comment with your own approach or questions, and share this with anyone prepping for coding interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When target permutation isn&#x27;t achievable, what&#x27;s the go-to pattern?</summary><p>Next-permutation-style suffix rearrangement: scan from the right, find the pivot, swap, then sort/reverse the tail.</p></details><details class='card2'><summary>Time complexity for this permutation-search approach?</summary><p>O(n log n) per query (or O(n) with counting sort on digits), dominated by sorting the suffix after the pivot.</p></details><details class='card2'><summary>Space complexity for the pivot-swap approach?</summary><p>O(n) for the array/string copy of the permutation being built; O(1) extra if done in place.</p></details><details class='card2'><summary>Trickiest edge case in this problem?</summary><p>No pivot exists (array is already the largest arrangement) — must correctly report &#x27;no valid permutation&#x27; instead of wrapping around.</p></details><details class='card2'><summary>This pivot/suffix technique vs brute-force permutation generation — when to prefer which?</summary><p>Pivot technique for large n (avoids factorial blowup); brute-force only viable for tiny fixed digit counts like the 3-digit example.</p></details><details class='card2'><summary>Follow-up: how would you extend this to find the smallest permutation greater with duplicate digits allowed?</summary><p>Use a multiset/count array for the suffix instead of distinct swaps, picking the smallest value strictly greater than the pivot.</p></details></div><h2 class='ph1' style='font-size:1.4rem'>Similar problems</h2><div class='grid'><a class='card' href='shortest-and-lexicographically-smallest-beautiful-string.html'><div class='body'><h3>2904. Shortest and Lexicographically Smallest Beautiful String</h3><span class='badge' style='background:#9f81c722;color:#9f81c7'>🕸️ Graphs</span></div></a><a class='card' href='short-comparison-130002-916.html'><div class='body'><h3>REST vs GraphQL: The Actual Decision Rule #shorts</h3><span class='badge' style='background:#9f81c722;color:#9f81c7'>🕸️ Graphs</span></div></a><a class='card' href='short-comparison-191129-916.html'><div class='body'><h3>REST vs GraphQL vs gRPC: which one should you actually pick? #shorts</h3><span class='badge' style='background:#9f81c722;color:#9f81c7'>🕸️ Graphs</span></div></a></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
