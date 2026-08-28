@@ -1,0 +1,260 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3734. Lexicographically Smallest Palindromic Permutation Greater Than Target — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/lexicographically-smallest-palindromic-permutation-greater-than-target
+💻 Code o">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/lexicographically-smallest-palindromic-permutation-greater-than-target.html">
+<meta property="og:title" content="3734. Lexicographically Smallest Palindromic Permutation Greater Than Target — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/lexicographically-smallest-palindromic-permutation-greater-than-target
+💻 Code o">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>3734. Lexicographically Smallest Palindromic Permutation Greater Than Target</h1><span class='badge' style='background:#9f81c722;color:#9f81c7'>🕸️ Graphs</span> <span class='tick'>✓ Runtime tested</span><article><h3>Introduction</h3>
+<p>Palindrome problems show up constantly in coding interviews because they test something more specific than "can you loop through a string." They test whether you can spot structural symmetry and exploit it instead of brute-forcing your way through. LeetCode 3734 is a great example: on the surface it looks like a permutation-generation problem, which should terrify anyone who remembers how fast factorials grow. But the moment you notice that a palindrome is fully determined by its first half, the entire problem shrinks from "generate every arrangement" to "count letters and place them greedily."</p>
+<p>This pattern — one half of a structure determining the other — appears far beyond palindromes. Symmetric matrices, mirrored UI layouts, and certain anagram-based problems all reward the same instinct: stop arranging, start counting. That's the core skill this problem is really testing, and it's why interviewers like it.</p>
+<h3>Problem Overview</h3>
+<p>You're given two strings, <code>s</code> and <code>target</code>, both of the same length, containing only lowercase letters. You need to rearrange the letters of <code>s</code> into a palindrome, then, among every possible palindrome you could build from those letters, find the lexicographically smallest one that is strictly greater than <code>target</code>.</p>
+<p>If no rearrangement of <code>s</code> can form a palindrome that beats <code>target</code>, return an empty string.</p>
+<p>Two things make this harder than a standard "smallest palindrome" problem:</p>
+<ol>
+<li>Not every multiset of letters can even form a palindrome.</li>
+<li>"Smallest palindrome greater than target" isn't the same as "smallest palindrome overall" — you sometimes have to deliberately choose a larger letter early on just to clear the target.</li>
+</ol>
+<h3>Example</h3>
+<p>Let's trace <code>s = "baba"</code> and <code>target = "abba"</code>.</p>
+<p>Counting letters in <code>s</code>: two <code>a</code>'s, two <code>b</code>'s — both even, so a palindrome is possible (no letter needs to sit alone in the middle).</p>
+<p>The palindrome's left half only needs one <code>a</code> and one <code>b</code> (the right half mirrors it). If we match <code>target</code>'s left half exactly, we'd get <code>ab</code> → mirrored → <code>abba</code>. But that <strong>ties</strong> <code>target</code>, it doesn't beat it. Since we need strictly greater, this doesn't count.</p>
+<p>So we bump the left half up: the next viable left half using our letters is <code>ba</code>. Mirrored, that gives us <code>baab</code>.</p>
+<p>Check: is <code>"baab" &gt; "abba"</code>? Yes — <code>b &gt; a</code> at the very first character. That's our answer.</p>
+<p>This example already reveals the trap: matching the target exactly can produce a tie, and a tie is not a win.</p>
+<h3>Intuition</h3>
+<p>Here's how an experienced engineer would approach this without jumping straight to code.</p>
+<p><strong>Step 1: Notice the mirror.</strong> A palindrome of length <code>n</code> is completely determined by its first <code>⌈n/2⌉</code> characters. The back half is forced — it's just the reverse of the front (skipping the middle character if the length is odd). So instead of thinking "arrange the whole string," think "decide half the string."</p>
+<p><strong>Step 2: Figure out when a palindrome is even possible.</strong> For a string's letters to form <em>any</em> palindrome, at most one letter can have an odd count. That one odd letter, if it exists, must sit in the exact center. Every other letter needs to split evenly across the two mirrored halves. If more than one letter has an odd count, no palindrome exists — bail out immediately.</p>
+<p><strong>Step 3: Understand what "greater than target" really means here.</strong> Because the second half mirrors the first, the left half almost always decides the entire comparison — the first position where the built string differs from <code>target</code> determines the winner. The one exception: if the left half exactly matches <code>target</code>'s left half, then the outcome depends on the <em>whole</em> string, since <code>target</code> itself might not even be a palindrome.</p>
+<p><strong>Step 4: Build greedily, left to right.</strong> Try to match <code>target</code> exactly, character by character, using up letters from your available pool as you go. The moment you can't match a position (or you've matched everything but the result doesn't beat <code>target</code>), that's your signal to increase a letter somewhere.</p>
+<p><strong>Step 5: When you need to increase, increase as late as possible.</strong> At the current position, check if there's any available letter larger than <code>target</code>'s letter there. If yes, place the <em>smallest</em> letter that's still larger, then fill every remaining position with the smallest leftover letters possible. This guarantees the smallest valid result.</p>
+<p><strong>Step 6: If you can't increase here, back up.</strong> This is exactly like carrying a digit in addition. If position <code>i</code> has no larger letter available, move to position <code>i-1</code> and try there instead. If you back up past the very first position with no luck, no valid palindrome exists.</p>
+<h3>Brute Force Solution</h3>
+<p><strong>Idea:</strong> Generate every unique permutation of <code>s</code>, filter for the ones that are palindromes, sort them, and pick the smallest one strictly greater than <code>target</code>.</p>
+<p><strong>Algorithm:</strong>
+1. Generate all unique permutations of <code>s</code>.
+2. Filter to only those that read the same forwards and backwards.
+3. Sort the palindromes.
+4. Return the first one greater than <code>target</code>, or empty string if none exists.</p>
+<p><strong>Advantages:</strong>
+- Trivial to reason about and verify correctness.
+- No edge-case handling needed — the definition does the work.</p>
+<p><strong>Disadvantages:</strong>
+- Catastrophically slow. Even with only 10 distinct letters, you're looking at over 3 million permutations before deduplication.
+- LeetCode caps <code>s</code> at length 300 — brute force isn't just slow here, it's completely infeasible.</p>
+<p><strong>Complexity:</strong> Time is O(n! ) in the worst case (before filtering/deduplication), and space is O(n! · n) to store the permutations. Neither scales past very small inputs.</p>
+<h3>Optimal Solution</h3>
+<p>The optimal approach never generates a full string until the very end. It works entirely with letter counts and a single half-length array.</p>
+<p><strong>Step-by-step:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Count every letter in <code>s</code> using a 26-length frequency table.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>If more than one letter has an odd count, return <code>""</code> immediately — no palindrome is possible.</td>
+</tr>
+<tr>
+<td>3</td>
+<td>If exactly one letter is odd, remember it as the middle character. Halve every count to get the letters available for one half of the palindrome.</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Take <code>target</code>'s left half (<code>target[:half_len]</code>) — this is what we're actually racing against.</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Exact-match attempt:</strong> if the halved letter pool can spell <code>target</code>'s left half exactly, build it, mirror it, insert the middle letter, and check if the <em>full</em> palindrome beats the <em>full</em> target. If yes, that's the answer.</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Greedy build with backtrack:</strong> walk left to right, matching <code>target</code>'s left half as far as possible, snapshotting the remaining letter counts at each position.</td>
+</tr>
+<tr>
+<td>7</td>
+<td>From the point where matching failed (or ended in a tie), walk backward. At each position, check if a strictly larger letter is available in that position's snapshot.</td>
+</tr>
+<tr>
+<td>8</td>
+<td>At the first (rightmost) position where a larger letter is available, place the smallest such letter, then fill the rest of that half with the smallest remaining letters in sorted order.</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Mirror the completed half, insert the middle character if one exists, and return the result. If no backtrack position works, return <code>""</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>The key insight in step 5 is subtle but critical: matching <code>target</code>'s left half exactly doesn't guarantee your palindrome beats <code>target</code> — it might tie. Only checking the <em>fully mirrored</em> string against the <em>entire</em> target catches this.</p>
+<h3>Python Code</h3>
+<pre><code class="language-python">from collections import Counter
+
+
+def smallest_palindrome(s: str, target: str) -&gt; str:
+    n = len(s)
+    counts = Counter(s)
+
+    odd_letters = [ch for ch, c in counts.items() if c % 2]
+    if len(odd_letters) &gt; 1:
+        return &quot;&quot;
+
+    middle = odd_letters[0] if odd_letters else &quot;&quot;
+    half_len = n // 2
+    half_counts = {ch: c // 2 for ch, c in counts.items()}
+
+    target_half = target[:half_len]
+
+    def fits(word: str, pool: dict) -&gt; bool:
+        need = Counter(word)
+        return all(pool.get(ch, 0) &gt;= cnt for ch, cnt in need.items())
+
+    def smallest_from(pool: dict, length: int) -&gt; str:
+        letters = []
+        for ch in sorted(pool):
+            letters.append(ch * pool[ch])
+        return &quot;&quot;.join(letters)[:length]
+
+    def build_result(left_half: str) -&gt; str:
+        return left_half + middle + left_half[::-1]
+
+    # Attempt 1: exact match with target's left half.
+    if fits(target_half, half_counts):
+        pool = dict(half_counts)
+        for ch in target_half:
+            pool[ch] -= 1
+        candidate = build_result(target_half)
+        if candidate &gt; target:
+            return candidate
+
+    # Attempt 2: greedy build with backtrack-and-carry.
+    pool = dict(half_counts)
+    snapshots = []
+    matched_len = 0
+
+    for i, ch in enumerate(target_half):
+        snapshots.append(dict(pool))
+        if pool.get(ch, 0) &gt; 0:
+            pool[ch] -= 1
+            matched_len += 1
+        else:
+            break
+
+    # Backtrack from the failure point (or the full length) to the start.
+    for i in range(matched_len, -1, -1):
+        snap = snapshots[i] if i &lt; len(snapshots) else pool
+        target_ch = target_half[i] if i &lt; half_len else None
+        bump_letter = None
+        for ch in sorted(snap):
+            if snap[ch] &gt; 0 and (target_ch is None or ch &gt; target_ch):
+                bump_letter = ch
+                break
+        if bump_letter is None:
+            continue
+
+        left_half = target_half[:i] + bump_letter
+        remaining_pool = dict(snap)
+        remaining_pool[bump_letter] -= 1
+        left_half += smallest_from(remaining_pool, half_len - i - 1)
+        return build_result(left_half)
+
+    return &quot;&quot;
+</code></pre>
+<h3>Code Walkthrough</h3>
+<ul>
+<li><code>Counter(s)</code> builds the letter-frequency table in O(n).</li>
+<li><code>odd_letters</code> collects every letter with an odd count; if there's more than one, no palindrome exists, so we return early.</li>
+<li><code>middle</code> holds the lone odd-count letter (empty string if the length is even).</li>
+<li><code>half_counts</code> divides every count by two — this is the letter pool available for one mirrored half.</li>
+<li><code>target_half</code> is the portion of <code>target</code> we're actually comparing against, since the second half is forced.</li>
+<li><code>fits</code> checks whether a candidate word can be spelled using a given letter pool — used to test the exact-match shortcut.</li>
+<li><code>smallest_from</code> lays out whatever letters remain in sorted order, truncated to a needed length — this is always the lexicographically smallest arrangement of those letters.</li>
+<li><code>build_result</code> mirrors a left half around the middle character to form the full palindrome.</li>
+<li>The exact-match block tries <code>target_half</code> directly; if it's spellable and the resulting full palindrome beats <code>target</code>, we're done.</li>
+<li>The greedy block matches <code>target_half</code> position by position, saving a snapshot of the pool <em>before</em> consuming each letter, so we know exactly what was available if we need to backtrack to that position.</li>
+<li>The final backward loop is the "carry" step: starting from the last matched (or failed) position and walking back to the very start, it looks for the first position where a strictly larger letter than <code>target</code>'s is available, places it, fills the rest minimally, and returns.</li>
+</ul>
+<h3>Dry Run</h3>
+<p>Using <code>s = "baba"</code>, <code>target = "abba"</code>:</p>
+<ol>
+<li><code>counts = {'b': 2, 'a': 2}</code>, no odd letters, <code>middle = ""</code>, <code>half_len = 2</code>.</li>
+<li><code>half_counts = {'b': 1, 'a': 1}</code>, <code>target_half = "ab"</code>.</li>
+<li><strong>Exact match:</strong> <code>"ab"</code> fits <code>{'b':1,'a':1}</code>. Build: <code>"ab" + "" + "ba"</code> = <code>"abba"</code>. Compare: <code>"abba" &gt; "abba"</code> is <code>False</code> (a tie). Exact match fails.</li>
+<li><strong>Greedy build:</strong> position 0, target char <code>'a'</code>, pool has <code>a</code>. Snapshot <code>{'b':1,'a':1}</code> saved, consume <code>'a'</code> → pool <code>{'b':1,'a':0}</code>.
+   Position 1, target char <code>'b'</code>, pool has <code>b</code>. Snapshot <code>{'b':1,'a':0}</code> saved, consume <code>'b'</code> → pool <code>{'b':0,'a':0}</code>. <code>matched_len = 2</code>.</li>
+<li><strong>Backtrack from i=2</strong> (full match, no failure): no snapshot at index 2, use final <code>pool = {'b':0,'a':0}</code>, <code>target_ch = None</code>. No letters available — skip.</li>
+<li><strong>i=1:</strong> snapshot <code>{'b':1,'a':0}</code>, <code>target_ch = 'b'</code>. Sorted letters: <code>'b'</code> — is <code>'b' &gt; 'b'</code>? No. No bump available — skip.</li>
+<li><strong>i=0:</strong> snapshot <code>{'b':1,'a':1}</code>, <code>target_ch = 'a'</code>. Sorted letters: <code>'a'</code>, <code>'b'</code>. <code>'a' &gt; 'a'</code>? No. <code>'b' &gt; 'a'</code>? Yes — bump letter is <code>'b'</code>.
+   <code>left_half = "" + "b" = "b"</code>. Remaining pool after removing <code>'b'</code>: <code>{'b':0,'a':1}</code>. Fill remaining <code>2 - 0 - 1 = 1</code> slot with smallest: <code>"a"</code>. <code>left_half = "ba"</code>.</li>
+<li><code>build_result("ba")</code> = <code>"ba" + "" + "ab"</code> = <code>"baab"</code>.</li>
+</ol>
+<p>Result: <code>"baab"</code>, matching our hand-traced answer.</p>
+<h3>Complexity Analysis</h3>
+<p><strong>Time:</strong> O(n) for counting letters, plus O(n) for the greedy matching pass, plus O(n · 26) in the worst case for the backtrack loop (at each of up to n/2 positions, scanning up to 26 letters), plus O(n log n) for sorting in <code>smallest_from</code> — but since there are only 26 possible letters, sorting is effectively O(26 log 26), a constant. Overall this is <strong>O(n)</strong> with a constant factor of 26.</p>
+<p><strong>Space:</strong> O(n) for the snapshots list (one dictionary of size ≤26 per position) plus O(n) for the output string. Effectively <strong>O(n)</strong>.</p>
+<p><strong>Why this is correct:</strong> The palindrome constraint means only the first half needs to be decided, cutting the search space from "all permutations" to "all arrangements of half the letters." The greedy-with-backtrack strategy mirrors how you'd increment a number to find the next value larger than a target: match digits exactly as long as possible, and the first position (from the right) where a larger digit is available determines the answer. Every position after the bump can be filled with the smallest available letters because any valid combination beats <code>target</code> from that point on — there's no need to optimize further right.</p>
+<h3>Alternative Solutions</h3>
+<p>One alternative is sorting the entire letter pool and mirroring it directly, without any target-awareness. This gives you the <em>smallest possible palindrome</em> from <code>s</code>'s letters — but it ignores the "greater than target" constraint entirely. It only works by coincidence if that smallest palindrome happens to already beat <code>target</code>. The greedy-with-backtrack approach subsumes this: it naturally falls back to the smallest arrangement whenever no target-matching constraint is active (see <code>smallest_from</code>).</p>
+<p>Another alternative is binary-search-like reasoning over candidate left halves, but since letters aren't numeric and counts are constrained, this doesn't simplify beyond the greedy approach — it just re-implements it with more overhead.</p>
+<h3>Edge Cases</h3>
+<ul>
+<li><strong>All letters identical</strong> (e.g., <code>s = "aaaa"</code>): only one arrangement is possible; either it beats <code>target</code> or the answer is <code>""</code>.</li>
+<li><strong>Odd-length string with all-even letter counts:</strong> impossible to form any palindrome — the middle character has no candidate. Must return <code>""</code>.</li>
+<li><strong><code>target</code> already the maximum possible palindrome</strong> from <code>s</code>'s letters: no larger one exists, return <code>""</code>.</li>
+<li><strong><code>s</code> and <code>target</code> are anagrams of each other and <code>s</code> happens to already be <code>target</code>:</strong> exact match will tie, forcing the greedy path.</li>
+<li><strong>Single-character strings:</strong> trivially a palindrome; compare directly against <code>target</code>.</li>
+<li><strong>More than one letter with an odd count:</strong> immediately invalid, return <code>""</code> before doing any other work.</li>
+</ul>
+<h3>Common Mistakes</h3>
+<ol>
+<li><strong>Forgetting the "at most one odd count" check</strong> and trying to build a palindrome from letters that can't form one.</li>
+<li><strong>Assuming an exact match with <code>target</code>'s left half is automatically a win</strong> — it can produce a tie, which fails the "strictly greater" requirement.</li>
+<li><strong>Sorting all letters and mirroring without checking against <code>target</code></strong> — this gives the smallest palindrome overall, not the smallest one greater than <code>target</code>.</li>
+<li><strong>Not saving snapshots during the greedy match</strong>, making backtracking impossible without re-deriving the pool state at each position.</li>
+<li><strong>Bumping too early instead of as late as possible</strong> — always try positions from the right first, since bumping later in the string yields a smaller overall result.</li>
+<li><strong>Mishandling the middle character</strong> when the length is odd — forgetting to insert it, or using it in half-length calculations incorrectly.</li>
+<li><strong>Off-by-one errors in half-length</strong> when the total length is odd vs. even.</li>
+</ol>
+<h3>Interview Questions</h3>
+<ul>
+<li>What changes if you need the <em>largest</em> palindrome smaller than <code>target</code> instead?</li>
+<li>How would you extend this to a case-insensitive or Unicode alphabet?</li>
+<li>Can you solve this without the exact-match special case, folding it into the backtrack loop?</li>
+<li>How would you handle multiple queries against the same <code>s</code> with different <code>target</code> values efficiently?</li>
+<li>What's the smallest number of letter swaps needed to go from <code>s</code>'s current arrangement to your answer?</li>
+</ul>
+<h3>Similar Problems</h3>
+<ul>
+<li><strong>LeetCode 267 – Palindrome Permutation II:</strong> generates all distinct palindromic permutations of a string; foundational for understanding the half-string trick.</li>
+<li><strong>LeetCode 266 – Palindrome Permutation:</strong> checks whether <em>any</em> permutation of a string can form a palindrome, using the same odd-count-parity rule.</li>
+<li><strong>LeetCode 60 – Permutation Sequence:</strong> a different "find the Nth/next" permutation problem that also benefits from avoiding full enumeration.</li>
+<li><strong>LeetCode 31 – Next Permutation:</strong> the general-purpose version of "find the next lexicographically greater arrangement," minus the palindrome constraint — the backtrack-and-carry logic here is a close cousin.</li>
+</ul>
+<h3>Key Takeaways</h3>
+<p>A palindrome is defined by its first half — never arrange the whole string when you only need to decide half of it. Counting letters replaces generating permutations, turning a factorial problem into a linear one. When a "greater than target" constraint is involved, match exactly as long as possible, then increase the <em>latest</em> possible position and fill the rest minimally — exactly like carrying a digit in arithmetic. And always double-check: an exact match is not automatically a win, since it can tie instead of beat the target.</p>
+<h3>Watch the Video</h3>
+<p>If you want to see this traced out visually, position by position, with the backtrack step shown live, watch the full walkthrough here: {LINK}. It also includes real timing comparisons against brute force and two quiz rounds to test your understanding.</p>
+<h3>About the Series</h3>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series dedicated to building real algorithmic intuition instead of memorized solutions. Every episode picks apart a coding interview problem, works through the reasoning an experienced engineer would actually use, and backs it up with real code and real timing data — no hand-waving, no shortcuts skipped.</p>
+<h3>Call To Action</h3>
+<p>If this helped the problem click, drop a like on the video and subscribe for more daily breakdowns like this one. For deeper written walkthroughs delivered straight to your inbox, subscribe to the Substack. And if you spotted a cleaner approach or want the next follow-up question tackled, leave a comment — shares help this reach more developers prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Pattern: fix a global property (letter counts) then greedily choose the smallest valid arrangement — trigger?</summary><p>When arrangement is constrained by a fixed multiset (palindrome permutation), count letters first, then greedily build position-by-position instead of enumerating permutations.</p></details><details class='card2'><summary>Time complexity for building the palindrome greedily over the alphabet?</summary><p>O(n × 26) roughly — n halves of the string, each position tries up to 26 letters against remaining counts.</p></details><details class='card2'><summary>Space complexity for this approach?</summary><p>O(n + 26): output string/array of length n plus a fixed-size letter-count table.</p></details><details class='card2'><summary>Trickiest bug: comparing candidate to target for &#x27;greater than&#x27;?</summary><p>Must handle the tie-breaking prefix match carefully — a prefix equal to target isn&#x27;t &#x27;greater&#x27;; only diverge once a placed letter exceeds target&#x27;s at that position.</p></details><details class='card2'><summary>Palindrome constraint vs plain permutation-greater-than problems — key difference?</summary><p>Only the first half is freely chosen; the second half is mirrored, so parity of letter counts (at most one odd count) must be validated upfront.</p></details><details class='card2'><summary>Interview follow-up: how to extend for k-th smallest palindrome &gt; target instead of just the next one?</summary><p>Combinatorially count valid completions per prefix choice (like a digit-DP), skipping k of them per position instead of taking the first fit.</p></details></div><h2 class='ph1' style='font-size:1.4rem'>Similar problems</h2><div class='grid'><a class='card' href='lexicographically-smallest-permutation-greater-than-target.html'><div class='body'><h3>3720. Lexicographically Smallest Permutation Greater Than Target</h3><span class='badge' style='background:#9f81c722;color:#9f81c7'>🕸️ Graphs</span></div></a><a class='card' href='shortest-and-lexicographically-smallest-beautiful-string.html'><div class='body'><h3>2904. Shortest and Lexicographically Smallest Beautiful String</h3><span class='badge' style='background:#9f81c722;color:#9f81c7'>🕸️ Graphs</span></div></a><a class='card' href='short-comparison-130002-916.html'><div class='body'><h3>REST vs GraphQL: The Actual Decision Rule #shorts</h3><span class='badge' style='background:#9f81c722;color:#9f81c7'>🕸️ Graphs</span></div></a></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
