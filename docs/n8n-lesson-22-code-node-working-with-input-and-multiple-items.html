@@ -1,0 +1,180 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>n8n Lesson 22: Code Node — 50 Items In, 50 Items Out, No Loop Broken — Python LeetCode Solution</title><meta name="description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/n8n-lesson-22-code-node-working-with-input-and-multiple-items
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/n8n-lesson-22-code-node-working-with-input-and-multiple-items.html">
+<meta property="og:title" content="n8n Lesson 22: Code Node — 50 Items In, 50 Items Out, No Loop Broken — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="📄 Full written solution: https://interview-kit-fe.vercel.app/n8n-lesson-22-code-node-working-with-input-and-multiple-items
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode-python/tree">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>n8n Lesson 22: Code Node — 50 Items In, 50 Items Out, No Loop Broken</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>If you've spent any time building workflows in n8n, you've probably reached for the Code node the moment a built-in node couldn't quite do what you needed. It's the escape hatch — full JavaScript, full control. Which is exactly why it's also where the most confusing, hardest-to-notice bugs live.</p>
+<p>Here's the scenario: fifty rows flow into a Code node. The workflow runs. Green checkmark, no errors, no warnings. And only one item comes out the other end. Forty-nine rows are just gone — not filtered, not errored, just silently absent from the output.</p>
+<p>This isn't really an n8n problem. It's a mental-model problem, and it's one that trips up a lot of people coming from n8n's older Function node, or from any framework where "per-item" execution is automatic. Once you understand what the Code node actually hands you and what it expects back, this entire category of bug disappears — and you'll also start recognizing the pattern in other batch-processing systems, because "operate on a collection, not a single record" is a fundamental idea in software engineering, not an n8n quirk.</p>
+<h2>Problem Overview</h2>
+<p>In n8n, data moves between nodes as a list of items. A "Set All" or "Split In Batches" node, a database query, an API call returning multiple rows — all of these produce an array of items, not a single object.</p>
+<p>The Code node, when set to run once for all items (the default and most common mode), receives that entire array in one execution. Your job inside the node is to read all of them, do something with each one, and hand back a properly shaped array containing all of them.</p>
+<p>The bug happens when people assume the runtime will loop for them — calling their code once per item automatically, the way the old Function node used to behave for certain configurations. It won't. If you write code that only reads the first item, that's the only item you'll process. If you write code that returns raw values instead of properly wrapped items, n8n won't recognize your return value as data at all.</p>
+<h2>Example</h2>
+<p>Say you have fifty contact records flowing into a Code node, and you want to trim whitespace off each contact's <code>name</code> field.</p>
+<p><strong>Wrong approach:</strong></p>
+<pre><code class="language-javascript">const name = $json.name.trim();
+return [{ name }];
+</code></pre>
+<p>Output: one item. The other forty-nine names never got touched, and nothing in the UI tells you that.</p>
+<p><strong>Correct approach:</strong></p>
+<pre><code class="language-javascript">const items = $input.all();
+return items.map(item =&gt; ({
+  json: { name: item.json.name.trim() }
+}));
+</code></pre>
+<p>Output: fifty items, each with a trimmed name, each properly wrapped for the next node to consume.</p>
+<p>The difference between these two snippets is exactly two things: where you read the data from, and how you shape what you return. Everything else about the code is the same.</p>
+<h2>Intuition</h2>
+<p>Before jumping into code, it helps to build the right picture in your head of what's actually happening.</p>
+<p>Picture <code>$input</code> as a mail tray dropped on your desk — fifty unopened envelopes, all at once. <code>$json</code>, by contrast, is like someone handing you just the top envelope off that tray and calling it "the mail." It's not wrong, exactly — it is a piece of the mail — but it's not the whole delivery.</p>
+<p><code>$json</code> exists because early on, when you're prototyping a Code node, n8n's test panel feeds you a single pinned example item. Reading <code>$json.name</code> at that point looks completely correct, because there genuinely is only one item in front of you during development. The problem is invisible until real, multi-row data hits the node in production — at which point <code>$json</code> still quietly resolves to item zero, and every other row is left untouched.</p>
+<p>An experienced engineer, seeing "I need to process a batch," reaches instinctively for three moves: get the full collection, iterate over it, and produce a new collection in the shape the next stage expects. That's the entire intuition. The Code node isn't special here — it's just JavaScript array processing wearing an n8n costume.</p>
+<h2>Brute Force Solution</h2>
+<p>There isn't really a "brute force vs. optimal" split here in the algorithmic sense — this isn't a performance problem, it's a correctness problem. But it's worth walking through the naive, incomplete first attempt, because it's exactly the trap most people fall into.</p>
+<p><strong>Idea:</strong> Treat the Code node like a single-record transform. Read <code>$json</code>, transform it, return it.</p>
+<pre><code class="language-javascript">const name = $json.name.trim();
+return [{ json: { name } }];
+</code></pre>
+<p><strong>Why it seems fine:</strong> It runs. It doesn't error. During testing with one pinned item, it produces the exact expected output.</p>
+<p><strong>Why it fails:</strong> It only ever touches the first item in the batch. Every other row is silently discarded — not skipped with a warning, not logged, just absent from the node's output.</p>
+<ul>
+<li><strong>Advantage:</strong> Simple, reads like ordinary single-object code.</li>
+<li><strong>Disadvantage:</strong> Loses every item after the first. Fails silently in production with no error signal.</li>
+<li><strong>Time complexity:</strong> O(1) — which is precisely the bug, since it should be O(n).</li>
+<li><strong>Space complexity:</strong> O(1).</li>
+</ul>
+<h2>Optimal Solution</h2>
+<p>The fix has exactly two parts, and both matter — doing only one of them still breaks your workflow.</p>
+<p><strong>Step 1 — Read the full batch.</strong>
+Use <code>$input.all()</code> instead of <code>$json</code>. This returns an array of every item flowing into the node, each shaped like <code>{ json: {...}, binary: {...} }</code>.</p>
+<p><strong>Step 2 — Return every item, properly wrapped.</strong>
+Whatever transform you're doing, map over the array and return a new array. Each entry in that array must be an object with a <code>json</code> key holding your actual data — not the raw data itself.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What it does</th>
+<th>Common mistake</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Read</td>
+<td><code>$input.all()</code> gets every item</td>
+<td>Using <code>$json</code>, which is just item 0</td>
+</tr>
+<tr>
+<td>Transform</td>
+<td><code>.map()</code> over the array</td>
+<td>Using <code>.forEach()</code> and forgetting to return</td>
+</tr>
+<tr>
+<td>Return</td>
+<td>Wrap each result as <code>{ json: {...} }</code></td>
+<td>Returning raw objects with no <code>json</code> key</td>
+</tr>
+</tbody>
+</table>
+<p>Think of it as a pipeline: <strong>unwrap the tray → do work on each envelope → reseal each envelope before sending it downstream.</strong> Skip the resealing step and the next node either throws an error or misreads your data as garbage.</p>
+<h2>Python Code</h2>
+<p>The video is JavaScript-specific (n8n's Code node), but the identical pattern — read the full collection, transform each element, return a collection with correct structure — is worth internalizing in Python, since it's the same shape you'll hit in any batch-processing or ETL context.</p>
+<pre><code class="language-python">def process_items(items: list[dict]) -&gt; list[dict]:
+    &quot;&quot;&quot;
+    Mirrors the n8n Code node pattern:
+    read every item, transform each one, return every item.
+    &quot;&quot;&quot;
+    return [
+        {&quot;json&quot;: {&quot;name&quot;: item[&quot;json&quot;][&quot;name&quot;].strip()}}
+        for item in items
+    ]
+
+
+if __name__ == &quot;__main__&quot;:
+    sample_items = [
+        {&quot;json&quot;: {&quot;name&quot;: &quot;  Alice  &quot;}},
+        {&quot;json&quot;: {&quot;name&quot;: &quot;Bob   &quot;}},
+        {&quot;json&quot;: {&quot;name&quot;: &quot;  Cara&quot;}},
+    ]
+
+    result = process_items(sample_items)
+
+    assert len(result) == len(sample_items), &quot;Item count changed — a row was dropped&quot;
+    assert all(&quot;json&quot; in r for r in result), &quot;Missing json wrapper on an item&quot;
+    assert [r[&quot;json&quot;][&quot;name&quot;] for r in result] == [&quot;Alice&quot;, &quot;Bob&quot;, &quot;Cara&quot;]
+
+    print(&quot;All items processed and wrapped correctly:&quot;, result)
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>items: list[dict]</code> — stands in for what <code>$input.all()</code> returns: a list, one entry per incoming row.</li>
+<li>The list comprehension is the Python equivalent of <code>.map()</code> — it runs once per item and always produces a value for every input, so nothing gets skipped by accident the way a <code>for</code> loop with a missing <code>append</code> might.</li>
+<li>Each output entry is wrapped as <code>{"json": {...}}</code>, mirroring the exact shape n8n expects on the way out.</li>
+<li>The <code>__main__</code> block is a self-check: it asserts the item count didn't shrink and that every output item has the <code>json</code> wrapper — the two failure modes this whole article is about.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Input: three items — <code>"  Alice  "</code>, <code>"Bob   "</code>, <code>"  Cara"</code>.</p>
+<ol>
+<li>List comprehension starts iterating.</li>
+<li>Item 1: <code>"  Alice  ".strip()</code> → <code>"Alice"</code> → wrapped as <code>{"json": {"name": "Alice"}}</code>.</li>
+<li>Item 2: <code>"Bob   ".strip()</code> → <code>"Bob"</code> → wrapped similarly.</li>
+<li>Item 3: <code>"  Cara".strip()</code> → <code>"Cara"</code> → wrapped similarly.</li>
+<li>Final list has three wrapped items — count matches input, nothing lost.</li>
+<li>Assertions pass: length matches, every item has a <code>json</code> key, values are correctly trimmed.</li>
+</ol>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time complexity:</strong> O(n), where n is the number of items. Each item is visited exactly once — correct, because you fundamentally cannot transform n items in less than n operations.</li>
+<li><strong>Space complexity:</strong> O(n), since the output is a new list the same size as the input. This is expected and correct — you're not being wasteful, you're required to produce one output record per input record.</li>
+</ul>
+<p>The original buggy version was O(1) in both time and space — which felt efficient, but was actually just incomplete work disguised as efficiency.</p>
+<h2>Alternative Solutions</h2>
+<p>If your Code node is only filtering rows or renaming a field, skip the Code node entirely and use n8n's built-in <strong>Filter</strong> node or <strong>Set</strong> node instead. Both operate correctly across the full item array by default — you avoid this entire class of bug because there's no manual loop to get wrong. Reach for the Code node specifically when you need real branching logic, external library calls, or transforms that the built-in nodes can't express.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty input:</strong> <code>$input.all()</code> returns <code>[]</code>. Your <code>.map()</code> correctly returns <code>[]</code> too — no crash, no phantom item.</li>
+<li><strong>Single item:</strong> Works identically to multi-item; there's no special-casing needed, which is a sign the pattern is correct.</li>
+<li><strong>Missing field on one item:</strong> <code>item.json.name</code> throws if <code>name</code> is <code>undefined</code> on any row — add a guard (<code>item.json.name ?? ""</code>) if your data isn't guaranteed clean.</li>
+<li><strong>Very large batches:</strong> Still O(n) — fine for typical workflow volumes, but if you're processing tens of thousands of items per execution, consider n8n's Split In Batches node to chunk the work.</li>
+<li><strong>Binary data attached to items:</strong> <code>$input.all()</code> items can carry a <code>binary</code> key alongside <code>json</code> — if you only return <code>json</code>, you'll drop any attached files.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Reading <code>$json</code> inside a "run once for all items" Code node, silently limiting yourself to item zero.</li>
+<li>Returning raw objects (<code>{ name }</code>) instead of wrapped items (<code>{ json: { name } }</code>).</li>
+<li>Using <code>.forEach()</code> for the transform and forgetting that it doesn't return anything, leaving you with <code>undefined</code> as your return value.</li>
+<li>Trusting the test/pinned-data panel as proof the node works — it only ever shows you one item, so the bug is invisible until real data hits it.</li>
+<li>Mutating <code>item.json</code> directly and returning <code>item</code> — this can work, but it obscures which fields changed and makes debugging harder than returning a clean new object.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>"Why would a data transformation step silently drop records instead of throwing an error?"</li>
+<li>"Walk through the difference between <code>.map()</code>, <code>.forEach()</code>, and <code>.filter()</code> and when each is appropriate."</li>
+<li>"How would you defensively code a batch transform so a malformed record doesn't crash the whole batch?"</li>
+<li>"What's the tradeoff between processing items one-at-a-time versus operating on the full collection at once?"</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 1. Two Sum</strong> — same underlying skill: iterate a full collection rather than assuming a single value, since checking only the first element misses the answer.</li>
+<li><strong>LeetCode 118. Pascal's Triangle</strong> — building a full result array row by row mirrors returning a fully-populated output collection instead of a partial one.</li>
+<li><strong>LeetCode 283. Move Zeroes</strong> — another case where it's tempting to short-circuit after touching one element, when the correct solution requires visiting every element in the array.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The Code node isn't broken — it's doing exactly what you told it to do. <code>$json</code> giving you one item and <code>map()</code> needing a <code>json</code> wrapper are both documented behaviors; the bug is entirely in the mental model, not the tool. Two rules fix it permanently: read the full batch with <code>$input.all()</code>, and return every item wrapped as <code>{ json: {...} }</code>. And if you're not doing real logic, skip the Code node altogether — the Filter and Set nodes get you the same result without this failure mode.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with a live before-and-after run showing forty-nine items vanishing and then all fifty coming through correctly, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <strong>Fun with Learning Technology</strong>, a series that takes tools developers use every day — n8n, SQL, Python, system design, interview prep — and pulls them apart until the confusing parts actually make sense. No fluff, no assumed expertise, just the specific mental model that fixes the specific bug.</p>
+<h2>Call To Action</h2>
+<p>If this saved you from a silent data-loss bug, like the video on YouTube and subscribe for the rest of the series. For deeper written breakdowns like this one, subscribe to the Substack. Drop a comment with what you're stuck on in n8n right now — these lessons come directly from what people ask about.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>n8n Code node: reading input — why not $json?</summary><p>$json only sees item 0. Use $input.all() to get every incoming item as an array.</p></details><details class='card2'><summary>Time complexity of processing $input.all() items?</summary><p>O(n) — one pass over n incoming items to build the output array.</p></details><details class='card2'><summary>Space complexity of the working pattern?</summary><p>O(n) — new output array holds one entry per input item, plus originals in memory.</p></details><details class='card2'><summary>Common bug: Code node returns fewer items than expected?</summary><p>Forgot the {json:...} wrapper shape per item — n8n needs an array of {json:{...}} objects, not raw values.</p></details><details class='card2'><summary>$json vs $input.all() — when to use each?</summary><p>$json: single-item context (Item Lists mode). $input.all(): &#x27;Run Once for All Items&#x27; mode needing every row.</p></details><details class='card2'><summary>Interview follow-up: why loop with map instead of forEach here?</summary><p>map returns a new array matching required output shape; forEach returns undefined, breaking the node&#x27;s return contract.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
