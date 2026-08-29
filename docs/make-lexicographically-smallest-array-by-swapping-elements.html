@@ -1,0 +1,213 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2948. Make Lexicographically Smallest Array by Swapping Elements — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/make-lexicographically-smallest-array-by-swapping-elements
+💻 Code on GitHub: ht">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/make-lexicographically-smallest-array-by-swapping-elements.html">
+<meta property="og:title" content="2948. Make Lexicographically Smallest Array by Swapping Elements — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/make-lexicographically-smallest-array-by-swapping-elements
+💻 Code on GitHub: ht">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>2948. Make Lexicographically Smallest Array by Swapping Elements</h1><span class='badge' style='background:#9f81c722;color:#9f81c7'>🕸️ Graphs</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Every so often a LeetCode problem shows up wearing a disguise. On the surface, "Make Lexicographically Smallest Array by Swapping Elements" (LeetCode 2948) looks like a simulation problem — swap this pair, swap that pair, see what happens. Try to solve it that way and you'll burn through your interview time simulating swaps that never converge on the right answer.</p>
+<p>This problem matters because it tests something interviewers care about far more than raw coding speed: can you recognize when a problem <em>isn't</em> the problem it appears to be? Underneath the swapping rules is a connectivity question, and the moment you see that, the solution almost writes itself. That reframing — from "simulate the operation" to "model the relationship" — is one of the most transferable skills in technical interviews, and it's exactly what Union-Find was built for.</p>
+<h2>Problem Overview</h2>
+<p>You're given an array of positive integers and a single integer <code>limit</code>. You may repeatedly swap any two elements in the array, but only if the absolute difference between their values is less than or equal to <code>limit</code>. You can perform this swap as many times as you like, in any order.</p>
+<p>Your task is to produce the lexicographically smallest version of the array reachable through any sequence of these swaps. Lexicographically smallest means: compare the two candidate arrays left to right, and whichever one has the smaller value at the first position where they differ wins.</p>
+<p>The catch is scale. The array can hold up to 100,000 elements, and both the values and the limit can be as large as a billion. Any approach that checks every pair of positions, or that tries to bucket values by counting, is off the table. You need something close to sorting speed.</p>
+<h2>Example</h2>
+<p>Take the array <code>[1, 5, 3, 9, 8]</code> with <code>limit = 2</code>.</p>
+<ul>
+<li>Swap positions 1 and 2 (values 5 and 3, difference 2 — legal): <code>[1, 3, 5, 9, 8]</code></li>
+<li>Swap positions 3 and 4 (values 9 and 8, difference 1 — legal): <code>[1, 3, 5, 8, 9]</code></li>
+</ul>
+<p>No further legal swap improves this. The final answer is <code>[1, 3, 5, 8, 9]</code>.</p>
+<p>Notice something curious: 1 never moves, but 9 and 8 do. And even though 1 and 9 differ by 8 — far outside the limit — you might see problems where a value ends up sitting right where a very different value used to be, because chains of small differences add up. That's the phenomenon this problem is really testing.</p>
+<h2>Intuition</h2>
+<p>The first instinct almost everyone has is to treat this literally: find any two positions whose values are close enough, swap them, check if the array improved, repeat. That works for the easy cases, but it breaks down fast. A value can be "stuck" relative to any single swap and still need to travel far across the array — it just has to travel through a chain of smaller hops.</p>
+<p>Here's the reframe: forget about swaps as actions. Think about them as <em>edges</em>. If value A can swap with value B, draw a line between them. If B can swap with C, draw another line. Even if A and C can never swap directly, they're connected through B — and because swaps can happen any number of times in any order, anything connected through a chain of legal swaps can eventually end up anywhere else in that chain's positions.</p>
+<p>That's a graph connectivity problem, and the tool for graph connectivity at this scale, without building an actual graph, is Union-Find (also called Disjoint Set Union). Once you see "chains of connections," union-find should come to mind almost as a reflex.</p>
+<p>The remaining trick is <em>how</em> you build those connections. If you compare adjacent elements in the original array, you're really asking "are these two positions currently next to each other," which has nothing to do with whether they can swap — swapping depends on value difference, not position. Instead, sort the values first. Once sorted, any two neighboring values that differ by no more than <code>limit</code> are legally linked, and because they're sorted, this single adjacent-pair scan is guaranteed to catch every possible link — a value further away in the sorted order can only be connected through a chain of these adjacent links anyway.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Repeatedly scan for any pair of positions whose values differ by at most <code>limit</code>, swap them if it produces a smaller array, and repeat until no improving swap exists.</p>
+<p><strong>Algorithm:</strong>
+1. Loop over all pairs of positions.
+2. For each pair, check if the value difference is within <code>limit</code>.
+3. If swapping would decrease the array lexicographically, perform it.
+4. Repeat until a full pass produces no improvement.</p>
+<p><strong>Advantages:</strong> Simple to reason about and implement for small inputs; directly mirrors the problem statement.</p>
+<p><strong>Disadvantages:</strong> Doesn't reliably reach the true optimum, because a value might need several swaps in sequence — including some that look locally "non-improving" — to reach its ideal final position. It also doesn't terminate cleanly at a known optimal state without extra bookkeeping.</p>
+<p><strong>Time complexity:</strong> O(n²) per pass, with potentially many passes needed — easily O(n³) or worse in practice.
+<strong>Space complexity:</strong> O(1) beyond the array itself.</p>
+<p>For n up to 100,000, this is many orders of magnitude too slow.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach has four moving parts:</p>
+<ol>
+<li>
+<p><strong>Sort indices by value.</strong> We need to know both the sorted order of values and which original position each value came from, so we sort a list of indices using the array values as the sort key — not the values themselves.</p>
+</li>
+<li>
+<p><strong>Build clusters with Union-Find.</strong> Walk through the sorted order. For each pair of neighbors, if their values differ by at most <code>limit</code>, union their <em>original</em> positions. Because the values are sorted, this catches every reachable link with a single linear scan — no need to compare every pair.</p>
+</li>
+<li>
+<p><strong>Group positions by cluster.</strong> After all unions are done, every position belongs to exactly one root. Group all positions sharing a root into a cluster.</p>
+</li>
+<li>
+<p><strong>Refill each cluster optimally.</strong> For every cluster, take its set of original positions, sort them, take its set of values, sort them, and assign the smallest value to the earliest position, the next smallest to the next position, and so on.</p>
+</li>
+</ol>
+<p>Why does this produce the lexicographically smallest array? Because a cluster represents every position a value inside it could ever reach through some sequence of legal swaps — and nothing outside the cluster can ever mix in. Given a fixed set of positions and a fixed set of values that must occupy exactly those positions, the lexicographically smallest arrangement is always "smallest value goes in the earliest position." There's no cleverer arrangement possible once positions and values are locked to a cluster.</p>
+<table>
+<thead>
+<tr>
+<th>Sorted value</th>
+<th>Original index</th>
+<th>Linked to next? (≤ limit)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>0</td>
+<td>yes (diff 2)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>2</td>
+<td>yes (diff 2)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>1</td>
+<td>no (diff 3)</td>
+</tr>
+<tr>
+<td>8</td>
+<td>4</td>
+<td>yes (diff 1)</td>
+</tr>
+<tr>
+<td>9</td>
+<td>3</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>This gives two clusters: positions <code>{0, 2, 1}</code> with values <code>{1, 3, 5}</code>, and positions <code>{4, 3}</code> with values <code>{8, 9}</code>. Sorting each cluster's positions and values and matching them up gives exactly <code>[1, 3, 5, 8, 9]</code>.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">class UnionFind:
+    def __init__(self, n):
+        self.parent = list(range(n))
+
+    def find(self, x):
+        while self.parent[x] != x:
+            self.parent[x] = self.parent[self.parent[x]]  # path compression
+            x = self.parent[x]
+        return x
+
+    def union(self, x, y):
+        root_x, root_y = self.find(x), self.find(y)
+        if root_x != root_y:
+            self.parent[root_x] = root_y
+
+
+def lexicographically_smallest_array(nums, limit):
+    n = len(nums)
+    uf = UnionFind(n)
+
+    # Sort original indices by their value
+    order = sorted(range(n), key=lambda i: nums[i])
+
+    # Union adjacent indices (in sorted-value order) that are swappable
+    for i in range(n - 1):
+        if nums[order[i + 1]] - nums[order[i]] &lt;= limit:
+            uf.union(order[i], order[i + 1])
+
+    # Group original positions by their cluster root
+    clusters = {}
+    for i in range(n):
+        root = uf.find(i)
+        clusters.setdefault(root, []).append(i)
+
+    result = nums[:]
+    for positions in clusters.values():
+        positions.sort()
+        values = sorted(nums[i] for i in positions)
+        for pos, val in zip(positions, values):
+            result[pos] = val
+
+    return result
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>UnionFind.__init__</code> gives every position its own parent — itself — so every element starts in its own singleton cluster.</li>
+<li><code>find</code> walks up the parent chain until it hits a self-parenting node (the root), and along the way it repoints each node to its grandparent, flattening the structure so future lookups stay fast — this is path compression.</li>
+<li><code>union</code> finds the roots of both inputs and, if they differ, merges the clusters by pointing one root at the other.</li>
+<li><code>order = sorted(range(n), key=lambda i: nums[i])</code> produces the indices of <code>nums</code> sorted by their values, without discarding position information.</li>
+<li>The union loop compares each pair of <em>sorted-order neighbors</em>; if they're within <code>limit</code>, their original indices get unioned. This is the step that correctly encodes "can swap" as "value difference," not position.</li>
+<li>The clustering dictionary groups every position under its cluster's root.</li>
+<li>The final loop takes each cluster's positions and values, sorts both independently, and pairs them smallest-to-smallest — this placement step is what actually produces the answer.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using <code>nums = [1, 5, 3, 9, 8]</code>, <code>limit = 2</code>:</p>
+<ol>
+<li><code>order</code> sorted by value: indices <code>[0, 2, 1, 4, 3]</code> (values <code>1, 3, 5, 8, 9</code>).</li>
+<li>Union pass: <code>1-3</code> diff 2 → union(0, 2). <code>3-5</code> diff 2 → union(2, 1). <code>5-8</code> diff 3 → skip. <code>8-9</code> diff 1 → union(4, 3).</li>
+<li>Clusters: <code>{0, 1, 2}</code> and <code>{3, 4}</code>.</li>
+<li>Cluster <code>{0, 1, 2}</code>: positions sorted <code>[0, 1, 2]</code>, values sorted <code>[1, 3, 5]</code> → result[0]=1, result[1]=3, result[2]=5.</li>
+<li>Cluster <code>{3, 4}</code>: positions sorted <code>[3, 4]</code>, values sorted <code>[8, 9]</code> → result[3]=8, result[4]=9.</li>
+<li>Final result: <code>[1, 3, 5, 8, 9]</code>. Matches the expected answer.</li>
+</ol>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(n log n), dominated by the initial sort of indices by value. The union-find operations, with path compression, run in effectively O(n α(n)) — nearly linear, where α is the inverse Ackermann function. Grouping and re-sorting each cluster costs no more than O(n log n) total across all clusters, since the sum of cluster sizes is n.</p>
+<p><strong>Space:</strong> O(n) for the parent array, the sorted-order list, and the cluster dictionary.</p>
+<p>This is correct because the only operation that costs more than linear time is sorting, and it happens a bounded number of times (once for the full array, once per cluster, but the cluster sorts together never exceed n elements total).</p>
+<h2>Alternative Solutions</h2>
+<p>You could model this as an explicit graph and run BFS or DFS to find connected components instead of Union-Find. It produces the same clusters, but requires building an adjacency structure and generally runs slower in practice due to higher constant factors and stack/queue overhead — Union-Find with path compression is the tighter fit here because the connections are formed incrementally, in sorted order, rather than needing to be looked up as a real graph.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty or single-element array:</strong> No swaps possible or needed; return as-is.</li>
+<li><strong>All values identical:</strong> Every element is within <code>limit</code> of every other; the whole array collapses into a single cluster, and since all values are equal, the "smallest arrangement" is just the original array.</li>
+<li><strong><code>limit = 0</code>:</strong> No two distinct values can ever swap (since a difference of 0 means values are already equal); duplicates of the same value can still be considered connected, but sorting them changes nothing.</li>
+<li><strong>Very large values near the billion mark:</strong> Ensure difference calculations don't rely on any fixed-width overflow assumptions (not an issue in Python, but worth calling out for other languages).</li>
+<li><strong>Array already sorted:</strong> Every cluster's values are already in position; the algorithm still runs but performs no meaningful reordering.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Unioning adjacent original indices</strong> (<code>i</code> and <code>i+1</code>) instead of adjacent <em>sorted-value</em> indices — this conflates position with value proximity.</li>
+<li><strong>Forgetting path compression</strong>, which turns <code>find</code> into a potential O(n) operation per call and blows up the time complexity.</li>
+<li><strong>Sorting values without preserving original indices</strong>, losing the ability to write results back to the correct positions.</li>
+<li><strong>Assuming a single swap must directly connect two far-apart values</strong>, missing that indirect chains of swaps allow far-apart values to reach each other.</li>
+<li><strong>Re-sorting the entire array instead of per-cluster</strong>, which ignores the constraint that a value can only move within its own connected cluster.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you prove that sorting each cluster's values into its sorted positions is optimal?</li>
+<li>What changes if swaps have a cost, and you want the smallest array within a budget of swaps?</li>
+<li>How would you extend this to report the minimum number of actual swaps needed to reach the final array?</li>
+<li>What if <code>limit</code> could be different for every pair of indices instead of a single global value?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 947 (Most Stones Removed with Same Row or Column):</strong> Another connectivity problem solved cleanly with Union-Find.</li>
+<li><strong>LeetCode 1319 (Number of Operations to Make Network Connected):</strong> Uses Union-Find to count connected components directly.</li>
+<li><strong>LeetCode 721 (Accounts Merge):</strong> Union-Find over a different kind of "closeness" relation — shared emails instead of value difference.</li>
+<li><strong>LeetCode 990 (Satisfiability of Equality Equations):</strong> Union-Find applied to equivalence constraints rather than numeric proximity.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The core lesson of LeetCode 2948 is recognizing when an operation-based problem ("you can swap these") is secretly a relationship-based problem ("these things are connected"). Once you sort the values and treat "swappable" as an edge, Union-Find turns a seemingly complex simulation into a clean, near-linear algorithm. The two ideas to hold onto: connect by value proximity, not position, and once positions and values are locked into a cluster, sorted-to-sorted placement is always optimal.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough — including a live timing comparison between the brute-force and optimal approaches, and two quiz checkpoints to test your understanding — watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <em>Fun with Learning Technology</em>, a series dedicated to building real intuition behind coding interview problems rather than memorizing solutions. Each episode traces a problem from first read to optimal solution, with runnable code and complexity proof along the way.</p>
+<h2>Call To Action</h2>
+<p>If this helped you understand Union-Find a little better, give the video a like on YouTube and subscribe for more problem breakdowns like this one. For deeper dives and behind-the-scenes notes, subscribe to the Substack newsletter. Drop a comment with your own approach or a problem you'd like covered next, and share this with a friend who's prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Pattern for &#x27;swap only where diff ≤ limit&#x27; problems?</summary><p>Union-Find grouping: elements connected by allowed swaps form a group; sort within each group freely.</p></details><details class='card2'><summary>Time complexity of LC 2948 solution?</summary><p>O(n log n) — dominated by sorting; union-find operations are near O(n) with path compression.</p></details><details class='card2'><summary>Space complexity of LC 2948 solution?</summary><p>O(n) for union-find parent array, index groups, and sorted value groups.</p></details><details class='card2'><summary>Common bug when solving LC 2948?</summary><p>Forgetting swaps are transitive — if a-b and b-c are swappable, a-c must join the same group even without a direct edge.</p></details><details class='card2'><summary>Why doesn&#x27;t greedy pairwise swapping work here?</summary><p>A single swap can only fix one pair; the real reachable set per index is its whole union-find component, not just direct neighbors.</p></details><details class='card2'><summary>Union-Find vs adjacency-list BFS for grouping — why prefer Union-Find?</summary><p>Both find connected components, but union-find avoids building/traversing a graph explicitly, giving near-linear time with simpler code.</p></details></div><h2 class='ph1' style='font-size:1.4rem'>Similar problems</h2><div class='grid'><a class='card' href='lexicographically-smallest-palindromic-permutation-greater-than-target.html'><div class='body'><h3>3734. Lexicographically Smallest Palindromic Permutation Greater Than Target</h3><span class='badge' style='background:#9f81c722;color:#9f81c7'>🕸️ Graphs</span></div></a><a class='card' href='lexicographically-smallest-permutation-greater-than-target.html'><div class='body'><h3>3720. Lexicographically Smallest Permutation Greater Than Target</h3><span class='badge' style='background:#9f81c722;color:#9f81c7'>🕸️ Graphs</span></div></a><a class='card' href='shortest-and-lexicographically-smallest-beautiful-string.html'><div class='body'><h3>2904. Shortest and Lexicographically Smallest Beautiful String</h3><span class='badge' style='background:#9f81c722;color:#9f81c7'>🕸️ Graphs</span></div></a></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
