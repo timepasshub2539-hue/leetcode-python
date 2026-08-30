@@ -8,6 +8,217 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>n8n Lesson 23: Why One Bad Node Kills the Whole Workflow</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><p>A single unhandled node error can stop your entire n8n workflow cold — no retry, no alert, nothing. In this lesson Kai shows how to wire an Error Trigger workflow to catch failures globally, when to f</p></article>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>n8n Lesson 23: Why One Bad Node Kills the Whole Workflow</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every automation eventually breaks. An API times out, a webhook returns malformed data, a spreadsheet gets a permission change nobody flagged — it doesn't matter how carefully you build a workflow, something upstream will fail on a night you're not watching. What separates a fragile automation from a production-grade one isn't whether it fails. It's whether <em>you</em> find out before your customer does.</p>
+<p>This is one of those topics that looks trivial until you've been burned by it. A workflow silently stopping mid-execution is the automation equivalent of a background job crashing without logging — everything looks fine until someone notices data is missing three days later. n8n gives you exactly two built-in mechanisms to solve this: a global Error Trigger workflow, and per-node Continue on Fail. Understanding when to use each — and the mistake almost everyone makes with the second one — is what this lesson is about.</p>
+<p>If you're building anything that touches money, customer communication, or data integrity, this isn't optional knowledge. It's the difference between finding out about a bug in a Slack alert thirty seconds after it happens, or finding out from an angry customer three days later.</p>
+<h2>Problem Overview</h2>
+<p>Picture a workflow with three steps: charge a customer's card, send them a confirmation email, and log the order in a spreadsheet. This is a normal, everyday automation — nothing exotic about it.</p>
+<p>By default, n8n treats every node as a hard dependency. If any node in that chain throws an error, execution stops right there. The remaining nodes never run. In our example, if the email step fails because the email provider's API timed out, the spreadsheet never gets updated either — even though the spreadsheet step has nothing to do with email at all.</p>
+<p>Worse, the failure is only visible if someone is actively looking at the Executions tab in the n8n editor. Nobody does that at 2am. So the failure exists, technically, as a red mark in a list — but functionally it's invisible until its downstream consequences surface somewhere else, like a customer support ticket.</p>
+<p>The problem isn't that n8n doesn't record failures. It's that recording is not the same as alerting, and stopping is not the same as controlled failure.</p>
+<h2>Example</h2>
+<p>Let's walk through the order-confirmation scenario concretely.</p>
+<p><strong>Workflow: Process Order</strong>
+1. Charge Card (Stripe node)
+2. Send Confirmation Email (Email node)
+3. Log to Spreadsheet (Google Sheets node)</p>
+<p><strong>What happens with default settings, if step 2 fails:</strong>
+- Step 1 runs successfully — the customer is charged.
+- Step 2 throws an error (email API timeout) — execution halts.
+- Step 3 never runs — the spreadsheet is never updated.
+- The execution shows as "failed" in the Executions list. Nobody is looking at that list.
+- Three days later, a customer asks where their confirmation email is, and now you're also explaining why the order isn't in your records.</p>
+<p>That's the failure mode this lesson fixes. The customer was charged correctly — the money moved — but two of the three steps that were supposed to follow silently never happened, and there was zero signal generated anywhere a human would see it in real time.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer thinks about this, before writing any configuration.</p>
+<p>Start by separating the steps in your workflow into two categories: <strong>steps that must succeed for the workflow to make sense</strong>, and <strong>steps that are nice-to-have but not fatal if they fail</strong>.</p>
+<p>Charging a card is category one — if that fails, everything downstream should stop, because there's nothing meaningful left to do. Updating a spreadsheet log is category two — it's useful, but the world doesn't end if it's delayed by five minutes while someone fixes a permissions issue.</p>
+<p>Once you've drawn that line, two separate problems emerge:</p>
+<ol>
+<li><strong>For category-one failures</strong>, you don't want to prevent the stop — you want the stop to be loud. Someone needs to know <em>immediately</em>, not eventually.</li>
+<li><strong>For category-two failures</strong>, you don't want a stop at all. You want the workflow to keep going, but you still need to know that step failed, and you need a place to route that failure so it gets handled instead of ignored.</li>
+</ol>
+<p>This is the same mental model as a <code>try/except</code> block in Python, or a circuit breaker in a distributed system: critical paths fail loud and stop; non-critical paths fail gracefully and get logged or retried. n8n just implements this with two different UI features instead of one language construct, and if you don't know to use both, you'll only ever get half of the protection.</p>
+<h2>Brute Force Solution</h2>
+<p>The "brute force" here isn't really a solution — it's what most people ship first, then get burned by.</p>
+<p><strong>Idea:</strong> Do nothing. Rely on n8n's default behavior of halting execution on any node failure, and periodically check the Executions tab for red (failed) runs.</p>
+<p><strong>Algorithm:</strong>
+1. Build the workflow normally.
+2. Deploy it.
+3. Occasionally open the n8n editor and scan the Executions list for failures.</p>
+<p><strong>Advantages:</strong>
+- Zero setup work.
+- Nothing to configure or maintain.</p>
+<p><strong>Disadvantages:</strong>
+- Failures are only detected when someone manually checks — there's no push notification.
+- A single failed node kills every downstream step, even unrelated ones.
+- Time between failure and detection is unbounded — could be minutes, could be days.
+- No distinction between "this failure is critical" and "this failure is cosmetic."</p>
+<p><strong>Time complexity (informally):</strong> detection time is O(human attention span), which in practice trends toward infinity for anything not actively being watched.</p>
+<p><strong>Space complexity:</strong> negligible — but the "space" of undetected bugs and downstream data gaps grows with every silent failure.</p>
+<p>This is the state most n8n workflows are in by default, and it's exactly what causes the "customer tells you three days later" scenario.</p>
+<h2>Optimal Solution</h2>
+<p>The fix has two independent parts, and you need both — using only one leaves a gap.</p>
+<h3>Part 1: Global alerting with an Error Trigger workflow</h3>
+<p>Think of this like a building's alarm system. A silent flashing light that nobody's watching in a hallway isn't a safety system — it's decoration. A real alarm calls the security company automatically. n8n's <strong>Error Trigger</strong> node is that automatic call.</p>
+<p>You build a <em>separate</em> workflow, starting with the Error Trigger node instead of a normal trigger. Inside that workflow, you add whatever alerting you want — a Slack message, an email, a log entry in a monitoring tool.</p>
+<p>Then, on your <em>main</em> workflow, you open its settings and set the "Error Workflow" field to point at this error-handling workflow. From that point on, any unhandled failure in the main workflow automatically triggers the error workflow — no polling, no manual checking.</p>
+<table>
+<thead>
+<tr>
+<th>Piece</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Main workflow</td>
+<td>Does the actual work (charge, email, log)</td>
+</tr>
+<tr>
+<td>Error Trigger workflow</td>
+<td>Fires automatically the instant the main workflow fails</td>
+</tr>
+<tr>
+<td>Settings → Error Workflow field</td>
+<td>The wire connecting the two</td>
+</tr>
+</tbody>
+</table>
+<h3>Part 2: Controlled failure with Continue on Fail + an IF node</h3>
+<p>The Error Trigger solves alerting for <em>fatal</em> failures. But some steps shouldn't be fatal at all — you don't want the spreadsheet update skipped just because the email node hiccuped.</p>
+<p>Every node has a <strong>Continue on Fail</strong> setting, off by default. Turn it on for a node like the email step, and a failure there no longer halts the whole run — execution moves on to the next steps regardless.</p>
+<p>Here's the part people get wrong: turning on Continue on Fail does not mean the error disappears. It means the error gets attached to that item as data, and execution proceeds <em>as if nothing happened</em> — unless you explicitly check for it.</p>
+<p>That's why Continue on Fail is only half a solution on its own. You pair it with an <strong>IF node</strong> placed immediately after the node that might fail. The IF node checks: did this item come back carrying an error? If yes, route it down a "handle failure" branch — retry, log it, alert someone. If no, continue down the normal success path.</p>
+<p>Skip the IF node, and you've just traded a loud failure for a silent one — the exact problem you were trying to solve, just relocated.</p>
+<h2>Python Code</h2>
+<p>n8n workflows are visual, not code-based, but the underlying logic maps directly onto a Python pattern — useful both for understanding the concept and for replicating it in a custom script or Function node.</p>
+<pre><code class="language-python">def process_order(charge_card, send_email, log_to_sheet, alert):
+    &quot;&quot;&quot;
+    Mirrors the n8n pattern:
+    - critical steps fail hard and alert
+    - non-critical steps continue and get checked
+    &quot;&quot;&quot;
+    # Critical step: fail hard, no continue-on-fail equivalent
+    try:
+        charge_card()
+    except Exception as error:
+        alert(critical=True, error=error)
+        raise  # stop everything, this is the Error Trigger equivalent
+
+    # Non-critical step: Continue on Fail + IF node equivalent
+    email_result = _run_with_continue_on_fail(send_email)
+    if email_result.failed:
+        alert(critical=False, error=email_result.error)
+        _handle_failure_branch(email_result)
+    else:
+        _handle_success_branch(email_result)
+
+    # Another non-critical step, same pattern
+    sheet_result = _run_with_continue_on_fail(log_to_sheet)
+    if sheet_result.failed:
+        alert(critical=False, error=sheet_result.error)
+        _handle_failure_branch(sheet_result)
+
+
+class StepResult:
+    def __init__(self, failed: bool, error: Exception | None = None, data=None):
+        self.failed = failed
+        self.error = error
+        self.data = data
+
+
+def _run_with_continue_on_fail(step_fn) -&gt; StepResult:
+    try:
+        data = step_fn()
+        return StepResult(failed=False, data=data)
+    except Exception as error:
+        return StepResult(failed=True, error=error)
+
+
+def _handle_failure_branch(result: StepResult):
+    # retry, log, or notify — whatever &quot;handle failure&quot; means for this step
+    pass
+
+
+def _handle_success_branch(result: StepResult):
+    pass
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>charge_card()</code> is called directly, unguarded. If it throws, the <code>except</code> block alerts and then <code>raise</code>s again — this mirrors letting a critical n8n node fail hard and rely on the Error Trigger workflow to catch it globally.</li>
+<li><code>_run_with_continue_on_fail</code> wraps a step function in a try/except that never re-raises. Instead of stopping, it returns a <code>StepResult</code> describing what happened — this is exactly what Continue on Fail does: the error becomes data attached to the item, not a program-stopping event.</li>
+<li>The <code>if email_result.failed:</code> check is the IF node. This is the step people skip in real n8n workflows, and skipping the equivalent check here is exactly as dangerous — the failed result would just flow into <code>_handle_success_branch</code> as if it succeeded.</li>
+<li>Each non-critical step gets its own <code>_run_with_continue_on_fail</code> call and its own check — nothing is shared or assumed between them, mirroring how each n8n node needs its own Continue on Fail setting and its own downstream IF node.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using the order-confirmation example, with <code>send_email</code> timing out:</p>
+<ol>
+<li><code>charge_card()</code> runs successfully — no exception, execution proceeds.</li>
+<li><code>_run_with_continue_on_fail(send_email)</code> calls <code>send_email()</code>, which raises a timeout exception. The wrapper catches it and returns <code>StepResult(failed=True, error=TimeoutError(...))</code>.</li>
+<li><code>if email_result.failed:</code> evaluates to <code>True</code>.</li>
+<li><code>alert(critical=False, error=...)</code> fires — this is the Slack/email notification, sent within seconds of the failure.</li>
+<li><code>_handle_failure_branch(email_result)</code> runs — retry logic or a queued follow-up email.</li>
+<li>Execution continues to <code>log_to_sheet()</code> — unaffected by the email failure, exactly as intended.</li>
+<li><code>sheet_result.failed</code> is <code>False</code>, so <code>_handle_success_branch</code> runs normally.</li>
+</ol>
+<p>End state: the card was charged, the spreadsheet was updated, and a human was alerted about the email failure within seconds — instead of a customer flagging a missing confirmation three days later.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(n) where n is the number of steps in the workflow — each step is evaluated once, whether it succeeds, fails-and-continues, or fails-and-halts. Adding error handling doesn't change the asymptotic cost of running the workflow; it just adds a constant-time check (the IF node) after each non-critical step.</p>
+<p><strong>Space:</strong> O(1) additional space per step — a single <code>StepResult</code> object (or, in n8n, the error data attached to the item) is all that's carried forward. This is correct because you're not storing history across the whole run, just the outcome of the immediately preceding step.</p>
+<p>The complexity cost of doing this "right" is negligible. There's no performance excuse for skipping it.</p>
+<h2>Alternative Solutions</h2>
+<p><strong>Wrap every node in a Function node with manual try/catch instead of using Continue on Fail.</strong> This works, but it means reimplementing what n8n already gives you for free at the node level, and it scatters error-handling logic across Function nodes instead of keeping it as a visible, consistent setting. Only reach for this if you need error-handling logic more complex than "check and branch" — for example, transforming the error message before logging it.</p>
+<p><strong>Use only the Error Trigger workflow, skip Continue on Fail everywhere.</strong> Simpler to set up, but every failure becomes fatal — you lose the ability to let non-critical steps keep going. Fine for short, single-purpose workflows; a real liability for multi-step workflows where most steps are independent of each other.</p>
+<p><strong>Use only Continue on Fail everywhere, skip the Error Trigger workflow.</strong> This is the worst of the three — you get no global alerting, so unless every single node has its own IF-node check wired to a notification, failures degrade back into silence. Don't do this.</p>
+<p>The two-part pattern in this lesson — Error Trigger for critical paths, Continue on Fail plus IF for everything else — isn't just "a" solution, it's the one that scales as the workflow grows more steps.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty or missing input to a node</strong>: Continue on Fail still catches this as an error on the item, but your IF node's failure branch needs to handle "no data" distinctly from "API error," or your retry logic may retry something that will never succeed.</li>
+<li><strong>Multiple items failing in the same execution</strong>: n8n processes items independently, so some items in a batch may fail while others succeed. Your IF node needs to check <em>per item</em>, not just once for the whole execution.</li>
+<li><strong>The Error Trigger workflow itself failing</strong>: if your alerting workflow has a bug, you now have a critical failure with no safety net. Keep this workflow deliberately simple and test it directly.</li>
+<li><strong>A node failing intermittently</strong> (like a flaky API): Continue on Fail plus a retry branch is the right pattern, but naive immediate retries can hammer a struggling service — add a short delay before retrying.</li>
+<li><strong>Maximum retry loops</strong>: without a retry counter, a failure branch that always retries can loop forever. Track attempt count as data on the item and cap it.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Turning on Continue on Fail and stopping there.</strong> The workflow stops erroring out, so it looks fixed — but without an IF node, failed data just flows downstream disguised as success.</li>
+<li><strong>Setting the Error Workflow field but never testing it.</strong> An error-handling workflow you haven't triggered on purpose is a hypothesis, not a safety net.</li>
+<li><strong>Making every node Continue on Fail, including critical ones.</strong> If charging the card fails and you continue anyway, you can end up sending a confirmation for an order that was never actually paid for.</li>
+<li><strong>Alerting to a channel nobody checks.</strong> A Slack message into a muted channel is functionally the same as no alert at all.</li>
+<li><strong>Not distinguishing failure types in the IF node.</strong> Treating "invalid input" and "API is down" identically means you'll retry things that can never succeed and silently drop things that should be retried.</li>
+<li><strong>Forgetting the Error Trigger workflow needs its own error handling.</strong> If it can fail too, and usually it's simple enough that people assume it can't.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you design error handling for a multi-step workflow where some steps are critical and others aren't?</li>
+<li>What's the difference between logging a failure and alerting on a failure, and why does that distinction matter operationally?</li>
+<li>How would you prevent a retry mechanism from looping forever on a permanently broken dependency?</li>
+<li>If a batch of items is processed together and only some fail, how do you avoid losing track of which ones need attention?</li>
+<li>How would you test that your error-alerting path actually works, without waiting for a real production failure?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Designing a circuit breaker pattern</strong> — same principle of stopping cascading failures at a critical boundary, applied to distributed systems instead of workflow automation.</li>
+<li><strong>Building a dead-letter queue for failed messages</strong> — the queueing equivalent of the "handle failure" branch: failed items get routed somewhere reviewable instead of vanishing.</li>
+<li><strong>Implementing retry-with-backoff logic</strong> — a natural extension of the "handle failure" branch once you're past just detecting and alerting on failures.</li>
+<li><strong>Structured logging vs. print-debugging</strong> — the same underlying lesson: making failures visible by design instead of relying on someone noticing.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Default n8n behavior stops the whole execution on any node failure, and does nothing to alert anyone.</li>
+<li>The Error Trigger workflow gives you global, automatic alerting for critical failures — wire it once in the main workflow's settings.</li>
+<li>Continue on Fail lets non-critical steps keep the workflow moving after they fail, but the error doesn't vanish — it becomes data on the item.</li>
+<li>Continue on Fail without an IF node checking for that error is a trap: it looks fixed but is actually silent.</li>
+<li>The real pattern is a split: fail hard and alert on what's critical, continue and check on what isn't. This maps to try/except and circuit-breaker patterns you'll recognize from general software engineering, not just n8n.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This lesson is easier to follow watching it happen live — the failure occurring in real time, the fix being applied, and the verification step at the end. Watch it here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This is part of <strong>Fun with Learning Technology</strong>, a series built around the stuff that actually trips people up in real projects — not textbook examples, but the specific moments where a tool's default behavior quietly works against you until you know what to look for. Each lesson takes one of those moments, shows the failure happening, and walks through the fix with the reasoning behind it, not just the steps.</p>
+<h2>Call To Action</h2>
+<p>If this saved you a future 2am scramble, do three things: like the video on YouTube so more people building n8n workflows see it, subscribe for the next lesson in the series, and subscribe to the Substack for written breakdowns like this one delivered straight to your inbox. Drop a comment with the workflow you're building error handling for — it might be the next lesson. And if you know someone whose automation just failed silently on them, send this their way.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Node fails mid-workflow with no output — which fix?</summary><p>Error Trigger workflow for global catch, or per-node &#x27;Continue on Fail&#x27; for local recovery — pick based on scope.</p></details><details class='card2'><summary>Time cost of adding error handling to a workflow?</summary><p>O(1) per node — each node&#x27;s error path is configured independently, not proportional to workflow size.</p></details><details class='card2'><summary>Space cost of Error Trigger + try/catch pattern?</summary><p>O(1) extra — one Error Trigger workflow reused globally, no per-execution state growth.</p></details><details class='card2'><summary>Common bug: &#x27;Continue on Fail&#x27; set but workflow still looks broken?</summary><p>Downstream nodes still receive the failed item&#x27;s null/error output unchecked — must explicitly branch on the error field.</p></details><details class='card2'><summary>Error Trigger workflow vs node-level Continue on Fail?</summary><p>Error Trigger = workflow-wide safety net (logging/alerts); Continue on Fail = per-node, lets execution proceed past that one failure.</p></details><details class='card2'><summary>Interview: how do you stop customers noticing a backend failure?</summary><p>Catch the error at the node (Continue on Fail), check its error output, then reroute to a fallback path before it reaches the customer-facing step.</p></details></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>
