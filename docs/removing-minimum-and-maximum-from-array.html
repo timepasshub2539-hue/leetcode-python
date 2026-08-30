@@ -1,0 +1,210 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2091. Removing Minimum and Maximum From Array | LeetCode Daily Python Solution (3 formulas, 1 min) — Python LeetCode Solution</title><meta name="description" content="Walk through LeetCode 2091 step by step: find the min and max indices, then compare three deletion strategies (left-first, right-first, both-ends) to find the minimum operations needed. We trace a rea">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/removing-minimum-and-maximum-from-array.html">
+<meta property="og:title" content="2091. Removing Minimum and Maximum From Array | LeetCode Daily Python Solution (3 formulas, 1 min) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="Walk through LeetCode 2091 step by step: find the min and max indices, then compare three deletion strategies (left-first, right-first, both-ends) to find the minimum operations needed. We trace a rea">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>2091. Removing Minimum and Maximum From Array | LeetCode Daily Python Solution (3 formulas, 1 min)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Array problems that ask you to "remove elements from the front or back" show up constantly in coding interviews, and they're deceptively tricky. Most people's first instinct is to simulate the process step by step — track the current min, remove it, check if it's at an end, repeat. That instinct is exactly what LeetCode 2091, Removing Minimum and Maximum From Array, is designed to punish.</p>
+<p>This problem is a great teaching example because it tests something interviewers care about deeply: can you step back from a simulation and notice that most of the state you're tracking is irrelevant? Once you see that only two positions in the entire array matter, the problem collapses from "write a loop that mutates an array" into "compare three numbers." That shift in thinking — from simulation to direct computation — is one of the most valuable instincts you can build for interviews, and it's the whole point of this article.</p>
+<h2>Problem Overview</h2>
+<p>You're given an array of distinct integers. In one operation, you can either:</p>
+<ul>
+<li>Delete the leftmost element of the array, or</li>
+<li>Delete the rightmost element of the array</li>
+</ul>
+<p>You need to find the minimum number of deletions required so that both the minimum value and the maximum value have been removed from the array. Order of deletions doesn't matter — only the count.</p>
+<p>Since all values are distinct, there is exactly one minimum and exactly one maximum, so there's never a tie to break.</p>
+<h2>Example</h2>
+<p>Take the array:</p>
+<pre><code>[2, 10, 7, 5, 4, 1, 8, 6]
+</code></pre>
+<ul>
+<li>The maximum, <code>10</code>, is at index <code>1</code>.</li>
+<li>The minimum, <code>1</code>, is at index <code>5</code>.</li>
+</ul>
+<p>To remove both, you have three options:</p>
+<ol>
+<li><strong>Delete from the front only</strong>, far enough to pass index <code>5</code> (the min's position): that's <code>6</code> deletions.</li>
+<li><strong>Delete from the back only</strong>, far enough to pass index <code>1</code> from the right side: that's <code>7</code> deletions.</li>
+<li><strong>Delete a bit from each end</strong>: <code>2</code> deletions from the front (clears the max at index 1) and <code>3</code> deletions from the back (clears the min at index 5). Total: <code>5</code> deletions.</li>
+</ol>
+<p>The answer is <code>5</code>, because chopping from both ends lets you avoid dragging along all the elements between the min and max.</p>
+<h2>Intuition</h2>
+<p>The naive approach is to simulate: repeatedly look at the front and back of the array, check if either end holds the current min or max, delete it, and keep going until both are gone. It feels natural because the problem statement describes deletions happening one at a time.</p>
+<p>But step back and ask: what actually determines the cost? Every element between the min and the max is never the target of a deletion decision — it just gets swept away as a side effect of clearing a path to the min or max. The only two facts that matter are:</p>
+<ul>
+<li><strong>Where is the minimum?</strong> (its index, call it <code>i</code>)</li>
+<li><strong>Where is the maximum?</strong> (its index, call it <code>j</code>)</li>
+</ul>
+<p>Once you know these two positions, you don't need to simulate anything. You only need to compare three fixed ways of reaching both positions:</p>
+<ol>
+<li>Clear everything from the front through whichever of <code>i</code>/<code>j</code> comes later.</li>
+<li>Clear everything from the back through whichever of <code>i</code>/<code>j</code> comes earlier.</li>
+<li>Clear from the front up through the earlier index, and from the back up through the later index.</li>
+</ol>
+<p>Whichever of these three costs the least is your answer. No loop over the array's contents is needed beyond finding the two positions.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Simulate the deletion process. Maintain pointers to the current front and back of the array (or a live min/max). At each step, check whether the front or back holds the current min or max, and delete accordingly, counting the number of operations until both have been removed.</p>
+<p><strong>Algorithm:</strong>
+1. Track the current left and right boundary of the "remaining" array.
+2. Repeatedly recompute (or track) the min and max within the remaining bounds.
+3. Delete from whichever end gets you closer to removing the min or max.
+4. Count operations until the min and max are both outside the remaining bounds.</p>
+<p><strong>Advantages:</strong>
+- Mirrors the problem description literally, so it's easy to explain conceptually.
+- Doesn't require any upfront insight about index positions.</p>
+<p><strong>Disadvantages:</strong>
+- Requires careful bookkeeping about which values have already been "seen" as deleted.
+- Naive re-scans for the current min/max at each step cost O(n) per step, giving O(n²) overall.
+- Much harder to prove correct than directly comparing formulas, since greedy step-by-step choices can be subtle to justify.</p>
+<p><strong>Complexity:</strong> O(n²) time in the naive version, O(1) extra space.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach skips simulation entirely.</p>
+<p><strong>Step 1 — Locate the two positions that matter.</strong>
+Scan the array once to find the index of the minimum value and the index of the maximum value. Call the smaller of the two indices <code>i</code> and the larger <code>j</code>.</p>
+<p><strong>Step 2 — Compute three fixed costs.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Cost</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Front-only</td>
+<td><code>j + 1</code></td>
+<td>Delete everything from index <code>0</code> through <code>j</code></td>
+</tr>
+<tr>
+<td>Back-only</td>
+<td><code>n - i</code></td>
+<td>Delete everything from index <code>i</code> through <code>n - 1</code></td>
+</tr>
+<tr>
+<td>Both-ends</td>
+<td><code>(i + 1) + (n - j)</code></td>
+<td>Delete <code>0..i</code> from the front, <code>j..n-1</code> from the back</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Step 3 — Return the minimum of the three.</strong></p>
+<p>That's the entire algorithm. There's no window to slide and no need to touch any element that isn't the min or max — the cost only depends on <em>positions</em>, not <em>values</em>.</p>
+<pre><code>Array:  [2, 10, 7, 5, 4, 1, 8, 6]
+Index:   0   1  2  3  4  5  6  7
+              ^max          ^min
+              j=1          i=5
+
+front-only  = j + 1           = 2
+back-only   = n - i           = 3
+both-ends   = (i+1) + (n-j)   = 6 + 2 = 8
+</code></pre>
+<p>Wait — walking through the numeric example from the transcript with <code>i=5</code>, <code>j=1</code>, <code>n=8</code>:</p>
+<ul>
+<li>front-only = <code>j + 1</code> = <code>2</code> (this only clears the max, not the min — so front-only actually needs to go through <code>max(i, j) = 5</code>, cost <code>6</code>)</li>
+<li>back-only = <code>n - i</code> = <code>3</code> (this only clears the min, not the max, so back-only needs <code>n - min(i, j) = n - 1 = 7</code>)</li>
+<li>both-ends = <code>(i + 1) + (n - j)</code>... </li>
+</ul>
+<p>This is exactly why the swap step matters — the formulas above assume <code>i</code> is the min's index and <code>j</code> is the max's index <em>and</em> <code>i &lt; j</code>. If the raw min/max scan gives you them in the opposite order, you must swap before applying the formulas, or the arithmetic silently answers a different question. With <code>i=1</code> (earlier index) and <code>j=5</code> (later index) after the swap:</p>
+<ul>
+<li>front-only = <code>j + 1 = 6</code></li>
+<li>back-only = <code>n - i = 7</code></li>
+<li>both-ends = <code>(i + 1) + (n - j) = 2 + 3 = 5</code></li>
+</ul>
+<p>The minimum is <code>5</code> — matching the walkthrough.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def minimum_deletions(nums: list[int]) -&gt; int:
+    n = len(nums)
+
+    i = nums.index(min(nums))
+    j = nums.index(max(nums))
+
+    # Ensure i is the earlier index and j is the later one.
+    if i &gt; j:
+        i, j = j, i
+
+    front_only = j + 1
+    back_only = n - i
+    both_ends = (i + 1) + (n - j)
+
+    return min(front_only, back_only, both_ends)
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>n = len(nums)</code>: cache the array length, used in every formula.</li>
+<li><code>i = nums.index(min(nums))</code>: find the index of the smallest value. This is one linear pass.</li>
+<li><code>j = nums.index(max(nums))</code>: find the index of the largest value. Another linear pass.</li>
+<li><code>if i &gt; j: i, j = j, i</code>: since the formulas assume <code>i</code> comes before <code>j</code> in the array, swap them if the min happens to appear after the max.</li>
+<li><code>front_only = j + 1</code>: the number of elements from index <code>0</code> up to and including <code>j</code>, the later of the two target indices.</li>
+<li><code>back_only = n - i</code>: the number of elements from index <code>i</code> to the end of the array.</li>
+<li><code>both_ends = (i + 1) + (n - j)</code>: delete the front chunk up to and including <code>i</code>, plus the back chunk from <code>j</code> to the end.</li>
+<li><code>return min(...)</code>: pick whichever strategy costs the fewest deletions.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Array: <code>[2, 10, 7, 5, 4, 1, 8, 6]</code>, <code>n = 8</code></p>
+<ol>
+<li><code>min(nums) = 1</code>, at index <code>5</code> → candidate <code>i = 5</code></li>
+<li><code>max(nums) = 10</code>, at index <code>1</code> → candidate <code>j = 1</code></li>
+<li>Since <code>i (5) &gt; j (1)</code>, swap: now <code>i = 1</code>, <code>j = 5</code></li>
+<li><code>front_only = j + 1 = 6</code></li>
+<li><code>back_only = n - i = 8 - 1 = 7</code></li>
+<li><code>both_ends = (i + 1) + (n - j) = 2 + 3 = 5</code></li>
+<li><code>min(6, 7, 5) = 5</code></li>
+</ol>
+<p>Return <code>5</code> — matching the manual trace from the intuition section.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> O(n). Finding the min and its index, and the max and its index, are each a single linear scan. Everything after that is constant-time arithmetic.</li>
+<li><strong>Space:</strong> O(1). Only a handful of integer variables are used; no auxiliary array or extra structure is needed.</li>
+</ul>
+<p>These bounds are correct because the algorithm never revisits array elements after the two initial scans — there's no nested loop, no recursion, and no growing data structure.</p>
+<h2>Alternative Solutions</h2>
+<p>A sliding window feels tempting because the problem involves cutting from both ends, but there's no window condition to satisfy — you're not searching for a contiguous range that meets some property, you're independently choosing a front cut and a back cut. Once you see that, the sliding window framing dissolves and you're back to comparing three fixed formulas. There isn't a meaningfully different algorithmic approach beyond this — every correct solution reduces to locating <code>i</code> and <code>j</code> and comparing the same three costs, whether you compute the min/max with <code>min()</code>/<code>max()</code>, in a single combined loop, or via sorting (which would cost O(n log n) and is strictly worse).</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Two-element array:</strong> <code>i</code> and <code>j</code> are <code>0</code> and <code>1</code> in some order; all three formulas correctly reduce to <code>2</code>.</li>
+<li><strong>Minimum and maximum adjacent:</strong> the both-ends and front/back-only formulas still work without special-casing, since the swap step already normalizes order.</li>
+<li><strong>Minimum or maximum at an array boundary:</strong> if the max is already at index <code>n - 1</code>, <code>back_only</code> naturally comes out cheap since <code>n - i</code> only pays for reaching the min.</li>
+<li><strong>Large arrays (up to 100,000 elements):</strong> the O(n) scan keeps this well within time limits; avoid any O(n log n) sorting-based shortcut.</li>
+<li><strong>All values distinct (guaranteed by constraints):</strong> no need to handle duplicate min/max values, since the problem guarantees uniqueness.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting to swap <code>i</code> and <code>j</code>.</strong> If the min's raw index happens to be larger than the max's raw index, plugging them into the formulas unswapped produces wrong (often negative or oversized) costs.</li>
+<li><strong>Simulating deletions with a loop.</strong> This works but is unnecessarily slow and error-prone compared to the direct formula approach.</li>
+<li><strong>Confusing which formula pairs with which strategy.</strong> Mixing up <code>front_only</code> and <code>back_only</code> silently returns a valid-looking but incorrect number.</li>
+<li><strong>Re-scanning the array inside a loop to recompute min/max.</strong> This degrades an O(n) solution into O(n²) without any correctness benefit.</li>
+<li><strong>Off-by-one errors in the both-ends formula.</strong> Forgetting the <code>+1</code> on <code>i</code> or miscounting <code>n - j</code> is the most common source of a wrong final answer.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you modify this solution if duplicate values were allowed?</li>
+<li>Can you solve this without using Python's built-in <code>min()</code>/<code>max()</code>/<code>index()</code>, in a single pass?</li>
+<li>What's the time complexity if you used <code>sorted(nums)</code> to find the min and max instead?</li>
+<li>How would the solution change if you could only delete from the front, never the back?</li>
+<li>Can you prove why simulating the deletions greedily is never actually necessary?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 1750 – Minimum Length of String After Deleting Similar Ends</strong>: another two-ends deletion problem where the key insight is tracking pointers from both sides rather than simulating character-by-character removal.</li>
+<li><strong>LeetCode 42 – Trapping Rain Water</strong>: also benefits from recognizing that only certain boundary values (max heights from each side) matter, not every element.</li>
+<li><strong>LeetCode 11 – Container With Most Water</strong>: another "two ends matter, middle doesn't" problem solved with direct index comparison instead of brute force.</li>
+<li><strong>LeetCode 1855 – Maximum Distance Between a Pair of Values</strong>: similarly reduces to comparing index relationships rather than exhaustively checking pairs.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The core lesson of LeetCode 2091 isn't about arrays at all — it's about resisting the urge to simulate a process when the problem can be reduced to a handful of positions and a direct formula. Find the two indices that actually matter, derive the fixed costs for reaching them, and compare. That's O(n) time, O(1) space, and a technique that generalizes to many "delete/trim from both ends" problems.</p>
+<h2>Watch the Video</h2>
+<p>For the full step-by-step derivation, including two quiz breaks to test your understanding before the answer is revealed, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a daily series that takes one LeetCode problem and works through it from first principles — building intuition before writing a single line of code, and explaining <em>why</em> an approach works rather than just <em>what</em> it does. New problems are posted every day.</p>
+<h2>Call To Action</h2>
+<p>If this walkthrough helped the solution click, give the video a like on YouTube and subscribe so future daily problems land in your feed. For deeper write-ups like this one delivered straight to your inbox, subscribe to the Substack newsletter. Drop a comment with which strategy you guessed first, and share this with anyone prepping for coding interviews.</p>
+<hr /></article>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
