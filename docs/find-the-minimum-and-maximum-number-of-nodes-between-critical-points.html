@@ -1,0 +1,280 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2058. Find the Minimum and Maximum Number of Nodes Between Critical Points — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/find-the-minimum-and-maximum-number-of-nodes-between-critical-points
+💻 Code on ">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/find-the-minimum-and-maximum-number-of-nodes-between-critical-points.html">
+<meta property="og:title" content="2058. Find the Minimum and Maximum Number of Nodes Between Critical Points — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/find-the-minimum-and-maximum-number-of-nodes-between-critical-points
+💻 Code on ">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>2058. Find the Minimum and Maximum Number of Nodes Between Critical Points</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Linked list problems have a reputation for being either trivial or brutal, with not much in between. LeetCode 2058, "Find the Minimum and Maximum Number of Nodes Between Critical Points," lands right at the sweet spot interviewers love: the setup is easy to state, the naive solution is obvious, and the optimal solution requires you to notice something subtle about the structure of the problem. That's exactly the kind of question that separates candidates who can code from candidates who can reason about code.</p>
+<p>What makes this problem worth your time isn't the linked list traversal itself — you've done that a hundred times. It's the realization, buried in the middle of the problem, that one of the two values you need to compute is <em>global</em> and the other is <em>local</em>. Spotting that distinction on the fly, under interview pressure, is the actual skill being tested. Once you've internalized it here, you'll start noticing the same shape in array problems, string problems, and anywhere else you're asked to track "closest" and "farthest" in the same pass.</p>
+<h2>Problem Overview</h2>
+<p>You're given the head of a singly linked list of integers. A node is called a <strong>critical point</strong> if it is either:</p>
+<ul>
+<li>A <strong>local maximum</strong>: strictly greater than both its previous and next neighbor, or</li>
+<li>A <strong>local minimum</strong>: strictly less than both its previous and next neighbor.</li>
+</ul>
+<p>The head and tail of the list can never be critical points, because a critical point requires both a previous and a next neighbor to compare against.</p>
+<p>Once you've identified every critical point in the list, you need to return two values:</p>
+<ol>
+<li><strong>Minimum distance</strong> — the smallest gap (in node count) between any two <em>consecutive</em> critical points.</li>
+<li><strong>Maximum distance</strong> — the gap between the very first and the very last critical point in the list.</li>
+</ol>
+<p>If the list has fewer than two critical points, there's nothing to measure a distance between, so you return <code>[-1, -1]</code>.</p>
+<h2>Example</h2>
+<p>Take the list <code>[5, 3, 1, 2, 5, 1, 2]</code>, with indices <code>0</code> through <code>6</code>.</p>
+<ul>
+<li>Index <code>2</code> (value <code>1</code>): neighbors are <code>3</code> and <code>2</code>. Both are bigger, so this is a local minimum. Critical.</li>
+<li>Index <code>4</code> (value <code>5</code>): neighbors are <code>2</code> and <code>1</code>. Both are smaller, so this is a local maximum. Critical.</li>
+<li>Index <code>5</code> (value <code>1</code>): neighbors are <code>5</code> and <code>2</code>. Both are bigger, so this is a local minimum. Critical.</li>
+</ul>
+<p>Critical point indices: <code>2, 4, 5</code>.</p>
+<ul>
+<li><strong>Minimum distance</strong>: the closest consecutive pair is <code>4</code> and <code>5</code>, one node apart → <code>1</code>.</li>
+<li><strong>Maximum distance</strong>: the outermost pair is <code>2</code> and <code>5</code> → <code>5 - 2 = 3</code>.</li>
+</ul>
+<p>Result: <code>[1, 3]</code>.</p>
+<h2>Intuition</h2>
+<p>The first instinct most people have is to treat this like a generic "find all pairwise distances and take the min and max" problem. That instinct is half right and half a trap.</p>
+<p>Think about what the maximum distance actually represents: the gap between the <em>first</em> critical point and the <em>last</em> critical point. No matter what critical points exist in between, none of them can ever be farther from the first point than the last point is, and none of them can ever be farther from the last point than the first point is. The two extremes of the list are, by definition, the two extremes of the distance. So the maximum distance doesn't need any tracking at all beyond remembering the first and last positions you've seen — it's <code>last - first</code>, full stop.</p>
+<p>The minimum distance is the opposite. Two critical points that are far apart in the list tell you nothing about two critical points that happen to sit close together somewhere else. There's no shortcut here — you genuinely have to compare each critical point to the one immediately before it and keep the smallest gap you've found.</p>
+<p>Once you see this asymmetry — one value is global and needs no running computation, the other is local and needs a running minimum — the algorithm falls out naturally. You don't need to store every critical point's index in a list. You only need to carry three numbers forward as you walk: the position of the first critical point, the position of the previous critical point, and the smallest gap seen so far. The last critical point's position doubles as what you need for the max distance at the end.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea</strong>: Walk the list once to collect the index of every critical point into an array. Then do a second pass over that array, comparing each pair of neighbors to find the minimum gap, and subtract the first index from the last to get the maximum gap.</p>
+<p><strong>Algorithm</strong>:
+1. Traverse the list, checking each node (except head and tail) against its neighbors.
+2. Append the index of every critical point to a list, <code>positions</code>.
+3. If <code>positions</code> has fewer than 2 entries, return <code>[-1, -1]</code>.
+4. Compute <code>max_dist = positions[-1] - positions[0]</code>.
+5. Loop through <code>positions</code>, tracking the smallest difference between consecutive entries as <code>min_dist</code>.
+6. Return <code>[min_dist, max_dist]</code>.</p>
+<p><strong>Advantages</strong>: Straightforward to write, easy to reason about, low risk of an off-by-one bug because you can inspect the full <code>positions</code> array while debugging.</p>
+<p><strong>Disadvantages</strong>: Uses O(k) extra space for the array of critical point positions, where k can be up to n/2 in the worst case. Unnecessary since you never need more than the first, previous, and last positions at once.</p>
+<p><strong>Complexity</strong>: O(n) time (two linear passes), O(n) space in the worst case for the positions array.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach collapses the two-pass brute force into a single pass by only ever remembering three numbers instead of a full list of positions.</p>
+<p>Set up two pointers, <code>prev</code> and <code>curr</code>, with <code>curr</code> one node ahead of <code>prev</code>, and an index counter <code>idx</code> starting at <code>1</code> (curr's position). Before the loop starts, initialize:</p>
+<table>
+<thead>
+<tr>
+<th>Tracker</th>
+<th>Purpose</th>
+<th>Initial value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>first</code></td>
+<td>Index of the first critical point found</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td><code>prev_idx</code></td>
+<td>Index of the most recently found critical point</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td><code>last</code></td>
+<td>Index of the last critical point found (updated continuously)</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td><code>min_dist</code></td>
+<td>Smallest gap seen between consecutive critical points</td>
+<td><code>infinity</code></td>
+</tr>
+</tbody>
+</table>
+<p>Walk the list while <code>curr.next</code> exists:</p>
+<ol>
+<li>Check if <code>curr</code> is a peak (<code>curr.val &gt; prev.val</code> and <code>curr.val &gt; curr.next.val</code>) or a valley (<code>curr.val &lt; prev.val</code> and <code>curr.val &lt; curr.next.val</code>).</li>
+<li>If it is a critical point:
+   - If <code>first</code> is still <code>None</code>, set <code>first = idx</code> — there's nothing to compare against yet.
+   - Otherwise, compute <code>idx - prev_idx</code> and update <code>min_dist</code> if this gap is smaller.
+   - Set <code>prev_idx = idx</code> and <code>last = idx</code> either way, so the next comparison uses the freshest critical point.</li>
+<li>Advance <code>prev</code> and <code>curr</code> by one node each, and increment <code>idx</code>.</li>
+</ol>
+<p>After the loop, if <code>first</code> is still <code>None</code> or <code>first == last</code> (meaning zero or one critical point was found), return <code>[-1, -1]</code>. Otherwise return <code>[min_dist, last - first]</code>.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from typing import Optional, List
+
+
+class ListNode:
+    def __init__(self, val: int = 0, next: 'Optional[ListNode]' = None):
+        self.val = val
+        self.next = next
+
+
+def nodes_between_critical_points(head: Optional[ListNode]) -&gt; List[int]:
+    prev = head
+    curr = head.next
+    idx = 1
+
+    first = prev_idx = last = None
+    min_dist = float('inf')
+
+    while curr and curr.next:
+        is_peak = curr.val &gt; prev.val and curr.val &gt; curr.next.val
+        is_valley = curr.val &lt; prev.val and curr.val &lt; curr.next.val
+
+        if is_peak or is_valley:
+            if first is None:
+                first = idx
+            else:
+                min_dist = min(min_dist, idx - prev_idx)
+            prev_idx = idx
+            last = idx
+
+        prev = curr
+        curr = curr.next
+        idx += 1
+
+    if first is None or first == last:
+        return [-1, -1]
+
+    return [min_dist, last - first]
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>prev</code> and <code>curr</code> are the two pointers used to check a node against its immediate neighbors — <code>prev</code> trails one step behind <code>curr</code>.</li>
+<li><code>idx</code> tracks <code>curr</code>'s position in the list, starting at <code>1</code> since <code>curr</code> begins at the second node (index <code>0</code> can never be critical anyway).</li>
+<li><code>first</code>, <code>prev_idx</code>, and <code>last</code> all start as <code>None</code> because no critical point has been found yet; <code>min_dist</code> starts at infinity so the first real gap always replaces it.</li>
+<li>The loop condition <code>curr and curr.next</code> stops one node before the tail, since the tail can't be checked against a "next" neighbor.</li>
+<li><code>is_peak</code> and <code>is_valley</code> are the two ways a node qualifies as critical — note the strict <code>&gt;</code> and <code>&lt;</code>, which excludes ties.</li>
+<li>The <code>if first is None</code> branch handles the very first critical point specially, since there's nothing yet to subtract from.</li>
+<li>Every subsequent critical point updates <code>min_dist</code> against the gap from the <em>previous</em> critical point only — never against <code>first</code> or any earlier point.</li>
+<li><code>prev_idx</code> and <code>last</code> are updated together on every critical point hit; <code>last</code> simply always holds the most recent one, which by the end of the loop is the final one.</li>
+<li>After the loop, <code>first is None</code> catches zero critical points, and <code>first == last</code> catches exactly one (both trackers point at the same single index).</li>
+</ul>
+<h2>Dry Run</h2>
+<p>List: <code>[5, 3, 1, 2, 5, 1, 2]</code></p>
+<table>
+<thead>
+<tr>
+<th>idx</th>
+<th>curr.val</th>
+<th>prev.val</th>
+<th>next.val</th>
+<th>Critical?</th>
+<th>first</th>
+<th>prev_idx</th>
+<th>last</th>
+<th>min_dist</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>3</td>
+<td>5</td>
+<td>1</td>
+<td>no</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>inf</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1</td>
+<td>3</td>
+<td>2</td>
+<td>valley</td>
+<td>2</td>
+<td>2</td>
+<td>2</td>
+<td>inf</td>
+</tr>
+<tr>
+<td>3</td>
+<td>2</td>
+<td>1</td>
+<td>5</td>
+<td>no</td>
+<td>2</td>
+<td>2</td>
+<td>2</td>
+<td>inf</td>
+</tr>
+<tr>
+<td>4</td>
+<td>5</td>
+<td>2</td>
+<td>1</td>
+<td>peak</td>
+<td>2</td>
+<td>4</td>
+<td>4</td>
+<td>2 (4-2)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>1</td>
+<td>5</td>
+<td>2</td>
+<td>valley</td>
+<td>2</td>
+<td>5</td>
+<td>5</td>
+<td>1 (5-4)</td>
+</tr>
+</tbody>
+</table>
+<p>Loop ends (curr.next is now the tail). <code>first = 2</code>, <code>last = 5</code>, both set, so we return <code>[min_dist, last - first]</code> = <code>[1, 3]</code> — matching the expected output.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time</strong>: O(n). The list is walked exactly once, with a constant amount of work per node — no nested loops, no revisiting.</p>
+<p><strong>Space</strong>: O(1). Regardless of list length, only a fixed handful of scalar variables (<code>first</code>, <code>prev_idx</code>, <code>last</code>, <code>min_dist</code>, <code>idx</code>, and the two pointers) are ever held in memory. Correctness holds because the maximum distance only ever needs the outermost two points (proven by the fact that nothing between them can be farther apart than they are), and the minimum distance only ever needs a comparison against the immediately preceding critical point — no historical data beyond that is relevant.</p>
+<h2>Alternative Solutions</h2>
+<p>The brute force two-pass approach (collect all positions, then scan for min/max) is the only reasonable alternative, and it's worth knowing because interviewers sometimes want you to state it first before optimizing. It trades O(n) extra space for slightly more readable code — arguably useful if you're debugging by inspecting the full array of positions. But since the single-pass version is no harder to write once you understand the first/prev/last insight, there's rarely a reason to ship the brute force version in practice.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty or near-empty list</strong> (fewer than 3 nodes): no node can have both a previous and next neighbor, so there are zero critical points → <code>[-1, -1]</code>.</li>
+<li><strong>Strictly monotonic list</strong> (e.g., <code>[9, 8, 7, 6, 5]</code>): every interior node has one bigger and one smaller neighbor, so nothing qualifies as a peak or valley → <code>[-1, -1]</code>.</li>
+<li><strong>Exactly one critical point</strong>: <code>first == last</code>, nothing to pair it against → <code>[-1, -1]</code>.</li>
+<li><strong>All values equal</strong> (e.g., <code>[4, 4, 4, 4]</code>): no node is strictly greater or strictly smaller than both neighbors, so no critical points exist.</li>
+<li><strong>Critical points at the very ends of the "interior"</strong> (index 1 or n-2): still valid as long as they have both a previous and next node — only the true head and tail are excluded.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Allowing ties to count as critical.</strong> The problem requires <em>strict</em> inequality on both sides — a node equal to a neighbor is neither a peak nor a valley.</li>
+<li><strong>Computing max distance as the largest gap between <em>any</em> pair of critical points</strong> instead of just <code>last - first</code>. This is unnecessary extra work and, if implemented incorrectly, can actually give the wrong answer for edge orderings.</li>
+<li><strong>Forgetting to guard against fewer than two critical points</strong>, causing a crash (subtracting from <code>None</code>) or a silently wrong answer instead of returning <code>[-1, -1]</code>.</li>
+<li><strong>Checking the head or tail node as if they could be critical.</strong> They can't — they lack a full pair of neighbors — and checking them either crashes on a null neighbor access or produces false positives.</li>
+<li><strong>Off-by-one errors in index tracking</strong>, especially when the pointer-based single-pass approach is used and <code>idx</code> isn't incremented in sync with <code>curr</code>.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would this change if the list were doubly linked instead of singly linked?</li>
+<li>Can you solve this without extra pointers, using recursion instead? What are the tradeoffs?</li>
+<li>What if the list were circular — would the head and tail be able to become critical points?</li>
+<li>How would you extend this to return the actual node values at the min/max distance positions, not just indices?</li>
+<li>Could this same first/previous/last tracking pattern apply to a streaming input where you can't look ahead?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 852 (Peak Index in a Mountain Array)</strong> — same core idea of identifying a local maximum, but on an array with binary search instead of linear scan.</li>
+<li><strong>LeetCode 1901 (Find a Peak Element II)</strong> — extends peak-finding to two dimensions.</li>
+<li><strong>LeetCode 876 (Middle of the Linked List)</strong> — good companion practice for the two-pointer technique used here.</li>
+<li><strong>LeetCode 2130 (Maximum Twin Sum of a Linked List)</strong> — another linked list problem that rewards tracking positions cleverly instead of storing the whole list.</li>
+<li><strong>LeetCode 162 (Find Peak Element)</strong> — the array analog of peak detection, useful for contrasting linked list vs. array traversal tradeoffs.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>A critical point is a strict local peak or valley, and only interior nodes qualify. The maximum distance between critical points is always just the gap between the first and last one found — never a value that needs a running comparison. The minimum distance, by contrast, is inherently local and requires comparing each critical point only to the one immediately before it. Recognizing that asymmetry is what turns a two-pass, extra-space solution into a clean single pass with constant space.</p>
+<h2>Watch the Video</h2>
+<p>If you'd rather see this traced live, node by node, with the two in-video quizzes to test whether the pattern actually stuck, watch the full walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a daily series that takes one coding interview problem and works through it from first principles — building the intuition before ever touching code, then proving out the optimal solution step by step. If you're prepping for interviews or just enjoy watching problems get taken apart methodically, this series is built for you.</p>
+<h2>Call To Action</h2>
+<p>If this explanation helped the pattern click, give the video a like on YouTube and subscribe for daily problem breakdowns. For the full written version delivered straight to your inbox, subscribe to the Substack newsletter. Drop a comment with the problem you want tackled next, and share this with anyone grinding through their own interview prep.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Pattern tell: linked list where each value compared to prev AND next?</summary><p>Local min/max scan — track prev, curr, next in one pass; that&#x27;s the &#x27;critical point&#x27; signal.</p></details><details class='card2'><summary>Time complexity for scanning the list for critical points?</summary><p>O(n) — single traversal, comparing each node&#x27;s neighbors as you go.</p></details><details class='card2'><summary>Space complexity for min/max distance between critical points?</summary><p>O(1) — only track first index, previous index, and running min/max, no storage of the list.</p></details><details class='card2'><summary>Trickiest edge case with critical points?</summary><p>Head and tail nodes can&#x27;t be critical (no left or right neighbor) — start comparisons from the second node.</p></details><details class='card2'><summary>Min distance vs max distance between critical points — different logic?</summary><p>Max = last minus first (one pass, no extra state); min = smallest gap between *consecutive* critical points only.</p></details><details class='card2'><summary>Follow-up: why can&#x27;t you just store all critical point indices in a list first?</summary><p>You can, but it&#x27;s wasted O(k) space — tracking first/prev index while streaming gets both answers in O(1) space.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
