@@ -1,0 +1,241 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3568. Minimum Moves to Clean the Classroom — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/minimum-moves-to-clean-the-classroom
+💻 Code on GitHub: https://github.com/timep">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/minimum-moves-to-clean-the-classroom.html">
+<meta property="og:title" content="3568. Minimum Moves to Clean the Classroom — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/minimum-moves-to-clean-the-classroom
+💻 Code on GitHub: https://github.com/timep">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>3568. Minimum Moves to Clean the Classroom</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Why This Problem Matters</h2>
+<p>Grid problems show up constantly in coding interviews because they compress a lot of algorithmic thinking into a small, visual space. LeetCode 3568, Minimum Moves to Clean the Classroom, looks like a simple pathfinding exercise at first glance, but it's actually testing something sharper: can you recognize when a resource constraint (energy) needs to become part of your search <em>state</em> rather than part of your search <em>cost</em>?</p>
+<p>Interviewers love this distinction because it's a common trap. The instinct when you see "energy" or "fuel" in a problem is to reach for Dijkstra's algorithm, since it feels like a weighted-graph problem. But every move here costs exactly one step — the energy is a <em>constraint</em> on which moves are legal, not a <em>weight</em> on the edges. Spotting that difference, and then figuring out how to track energy and collected litter without blowing up your state space, is exactly the kind of reasoning that separates a candidate who memorized BFS templates from one who understands why BFS works.</p>
+<h2>Problem Overview</h2>
+<p>You're given a grid representing a classroom. Each cell is one of:</p>
+<ul>
+<li><strong>S</strong> — the student's starting position</li>
+<li><strong>L</strong> — a litter cell that needs to be collected</li>
+<li><strong>R</strong> — a reset cell that fully restores the student's energy the instant they step on it</li>
+<li><strong>X</strong> — an obstacle the student cannot walk through</li>
+<li>An empty floor cell</li>
+</ul>
+<p>The student starts with a fixed maximum energy. Every move to an adjacent cell (up, down, left, right) costs exactly one unit of energy. If the student steps onto a reset cell, their energy is restored to full immediately, regardless of what it was before. The student needs to visit every litter cell at least once, in as few total moves as possible. If it's impossible to collect all the litter — because energy runs out before reaching some cell and no reset can save it — the answer is <code>-1</code>.</p>
+<h2>Example</h2>
+<p>Consider a small 2×2 grid:</p>
+<pre><code>L S
+R L
+</code></pre>
+<p>Energy cap: 4.</p>
+<ul>
+<li>Start on <strong>S</strong>, move left onto <strong>L</strong> → litter collected, energy now 3.</li>
+<li>Move down onto <strong>R</strong> → energy resets to full (4), even though it had only dropped to 2.</li>
+<li>Move right onto <strong>L</strong> → second litter collected.</li>
+</ul>
+<p>Total: <strong>3 moves</strong>. The reset is what makes this route efficient — without it, a longer detour might be needed to avoid running dry.</p>
+<h2>Intuition</h2>
+<p>The first thing to notice is what stays constant and what varies. Every move costs exactly one step, no matter what cell you land on. That constancy is the signal that BFS — not Dijkstra — is the right tool, since BFS guarantees the shortest path in an unweighted graph, and this graph is unweighted in terms of move cost.</p>
+<p>What varies is <em>whether a move is even legal</em>. You can't take a step if you have zero energy left. And whether litter is "collected" depends on your path history — you need to remember which of it you've already picked up.</p>
+<p>So the real question becomes: what is a "node" in this graph? It's not just a grid cell. Two students standing on the same cell can be in completely different situations — one might have full energy and all litter collected, another might be almost out of energy with half the litter still dirty. Those are different states, even though they're on the same square. The state has to capture everything that affects future moves: <strong>position, remaining energy, and which litter has been collected</strong>.</p>
+<p>The litter constraint gives you the final piece: at most 10 litter cells. Ten yes/no flags is exactly what a bitmask is for — pack the collected/uncollected status of every litter cell into a single integer instead of a list or set. Now an entire state fits into four small numbers, and comparing two states for equality is instant.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Simulate every possible route from the start, branching in four directions at every step, and track which litter has been picked up along each path.</p>
+<p><strong>Algorithm:</strong> At each cell, recursively try all four neighbors, updating a running set of collected litter, until either all litter is collected (record the move count) or energy runs out (abandon the path).</p>
+<p><strong>Advantages:</strong> Conceptually simple, no special data structures needed.</p>
+<p><strong>Disadvantages:</strong> Reset cells let the student revisit cells they've already visited, meaning a path can loop indefinitely. There's no natural stopping condition, so raw path enumeration doesn't even converge to a fixed number of routes — let alone a manageable one. On a 20×20 grid this isn't just slow, it's structurally broken.</p>
+<p><strong>Time complexity:</strong> Unbounded / exponential (does not terminate cleanly due to loops).
+<strong>Space complexity:</strong> Unbounded for the same reason.</p>
+<h2>Optimal Solution</h2>
+<p>The fix is to stop thinking about <em>paths</em> and start thinking about <em>states</em>. A state is:</p>
+<pre><code>(row, col, energy, litter_mask)
+</code></pre>
+<p>If the search ever revisits an identical state, there's no point exploring it again — some other path already reached that exact combination of position, energy, and progress in the same number of moves or fewer (since BFS explores in non-decreasing move order). This collapses an infinite tree of paths into a finite graph of states.</p>
+<table>
+<thead>
+<tr>
+<th>Grid dimension</th>
+<th>Max value</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rows × Cols</td>
+<td>400</td>
+<td>Bounds position</td>
+</tr>
+<tr>
+<td>Energy</td>
+<td>50</td>
+<td>Bounds the third state field</td>
+</tr>
+<tr>
+<td>Litter cells</td>
+<td>10</td>
+<td>Bounds mask to <code>2^10 = 1024</code> values</td>
+</tr>
+</tbody>
+</table>
+<p>Total state space: <code>rows × cols × energy × 2^litter_count</code> — roughly 20 million in the worst case, which BFS chews through easily.</p>
+<p>BFS explores states layer by layer: all states reachable in 1 move, then all states reachable in 2 moves, and so on. Because it never skips a layer, the very first time a state has every litter bit cleared, that layer number <em>is</em> the minimum move count — no other path could possibly have reached "fully clean" in fewer moves, since BFS would have found it first.</p>
+<p><strong>The rule that actually encodes the problem:</strong> when you move onto a cell,
+- if it's a reset cell, new energy = max energy, no matter what it was before
+- otherwise, new energy = current energy − 1
+- if it's an uncollected litter cell, flip that bit off in a <em>fresh copy</em> of the mask</p>
+<p><strong>The one gotcha:</strong> the mask check for "all litter collected" must happen the instant you generate a new state, <em>before</em> you check or add it to the visited set. That's what lets you return immediately on the very move that finishes the job, rather than doing one extra unnecessary loop.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from collections import deque
+
+
+def min_moves_to_clean(grid: list[list[str]], energy_cap: int) -&gt; int:
+    rows, cols = len(grid), len(grid[0])
+
+    start = None
+    litter_index = {}
+    for r in range(rows):
+        for c in range(cols):
+            cell = grid[r][c]
+            if cell == 'S':
+                start = (r, c)
+            elif cell == 'L':
+                litter_index[(r, c)] = len(litter_index)
+
+    full_mask = (1 &lt;&lt; len(litter_index)) - 1
+    if full_mask == 0:
+        return 0  # no litter to collect
+
+    visited = {(start[0], start[1], energy_cap, 0)}
+    queue = deque([(start[0], start[1], energy_cap, 0)])
+    moves = 0
+
+    while queue:
+        moves += 1
+        for _ in range(len(queue)):
+            r, c, energy, mask = queue.popleft()
+            if energy == 0:
+                continue
+
+            for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                nr, nc = r + dr, c + dc
+                if not (0 &lt;= nr &lt; rows and 0 &lt;= nc &lt; cols):
+                    continue
+                if grid[nr][nc] == 'X':
+                    continue
+
+                new_energy = energy_cap if grid[nr][nc] == 'R' else energy - 1
+                new_mask = mask
+                if (nr, nc) in litter_index:
+                    new_mask &amp;= ~(1 &lt;&lt; litter_index[(nr, nc)])
+
+                if new_mask == full_mask:
+                    return moves
+
+                state = (nr, nc, new_energy, new_mask)
+                if state not in visited:
+                    visited.add(state)
+                    queue.append(state)
+
+    return -1
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><strong>Scan the grid once</strong> to find the start position and index every litter cell (<code>litter_index</code> maps each litter coordinate to a bit position).</li>
+<li><strong><code>full_mask</code></strong> is the target: every litter bit turned on. If there's no litter, return 0 immediately.</li>
+<li><strong>Seed the queue</strong> with the start state — full energy, mask 0 — and mark it visited.</li>
+<li><strong>Each <code>while</code> iteration is one move layer.</strong> Draining the queue with <code>for _ in range(len(queue))</code> processes every state reachable in the current move count before advancing to the next.</li>
+<li><strong>Dead branches:</strong> if <code>energy == 0</code>, the state has nowhere left to go, so skip it.</li>
+<li><strong>Neighbor generation:</strong> skip off-grid cells and obstacles.</li>
+<li><strong>Energy update:</strong> full refill on <code>R</code>, otherwise decrement by one.</li>
+<li><strong>Mask update:</strong> flip the relevant bit off in a <em>new</em> mask value if landing on uncollected litter — never mutate the old mask, since it may still be needed by other states in the queue.</li>
+<li><strong>Early return:</strong> the moment <code>new_mask == full_mask</code>, return the current move count without waiting to enqueue the state.</li>
+<li><strong>Visited check:</strong> only push genuinely new states onto the queue.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using the earlier 2×2 example: <code>L S / R L</code>, energy cap 4.</p>
+<table>
+<thead>
+<tr>
+<th>Move</th>
+<th>State before</th>
+<th>Action</th>
+<th>State after</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>(S, energy=4, mask=00)</td>
+<td>move left onto L</td>
+<td>(energy=3, mask=01)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>(energy=3, mask=01)</td>
+<td>move down onto R</td>
+<td>(energy=4, mask=01)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>(energy=4, mask=01)</td>
+<td>move right onto L</td>
+<td>(energy=3, mask=11 = full_mask)</td>
+</tr>
+</tbody>
+</table>
+<p>At move 3, <code>new_mask == full_mask</code>, so the function returns <code>3</code> immediately — matching the expected answer.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> <code>O(rows × cols × energy_cap × 2^litter_count)</code> — each unique state is enqueued and processed at most once, and generating neighbors from a state is <code>O(1)</code> (4 directions).</p>
+<p><strong>Space:</strong> Same bound, for the <code>visited</code> set and queue holding up to that many states.</p>
+<p>Plugging in worst-case limits (400 cells, energy 50, 10 litter cells) gives roughly 20 million states — large but well within what a modern machine handles in well under a second.</p>
+<p>This bound is correct because BFS never revisits a state, and the state itself is defined precisely enough (position + energy + mask) to capture every fact that matters for future moves.</p>
+<h2>Alternative Solutions</h2>
+<p>You could implement this as <strong>iterative deepening DFS</strong> on the same state space, but that trades BFS's natural shortest-path guarantee for repeated re-exploration at each depth — strictly worse here since BFS already gives you the answer for free at the first layer that satisfies the goal.</p>
+<p>A <strong>Dijkstra-based</strong> approach also works (every state transition still has uniform cost 1), but it's strictly more overhead — a priority queue instead of a plain queue — for no benefit, since all edge weights are equal.</p>
+<h2>Edge Cases</h2>
+<ol>
+<li><strong>No litter at all</strong> — return 0 immediately, no search needed.</li>
+<li><strong>Litter unreachable due to obstacles with no reset nearby</strong> — the queue empties without ever reaching <code>full_mask</code>; return <code>-1</code>.</li>
+<li><strong>Start position surrounded by obstacles</strong> — no valid first move; queue empties on the first layer.</li>
+<li><strong>Energy cap of 0 with litter present</strong> — student can't move at all; return <code>-1</code> unless litter count is 0.</li>
+<li><strong>Multiple reset cells</strong> — algorithm handles this naturally since each reset independently sets energy to max regardless of path taken to reach it.</li>
+</ol>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Gating the reset on energy hitting exactly zero.</strong> The rule is unconditional — standing on <code>R</code> always tops off energy, even with energy to spare. Gating it undercounts valid routes.</li>
+<li><strong>Mutating the mask in place</strong> instead of creating a fresh copy per neighbor — this corrupts sibling branches sharing the same starting mask.</li>
+<li><strong>Checking <code>full_mask</code> after adding to visited</strong> instead of before — this adds an unnecessary extra layer to the returned move count.</li>
+<li><strong>Forgetting to skip states with zero energy</strong> — leads to invalid moves being processed or infinite exploration.</li>
+<li><strong>Using a list or set instead of a bitmask</strong> for litter tracking — works correctness-wise, but is far slower to hash and compare, and blows up the practical state space.</li>
+<li><strong>Treating this as a weighted-graph problem</strong> and reaching for Dijkstra when plain BFS already guarantees correctness at lower complexity.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Why does uniform move cost make BFS sufficient instead of Dijkstra?</li>
+<li>How would the solution change if diagonal moves were allowed?</li>
+<li>What if there were more than 10 litter cells — how would you adapt the state representation?</li>
+<li>How would you reconstruct the actual path, not just the move count?</li>
+<li>What if reset cells only partially restored energy instead of fully?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 864: Shortest Path to Get All Keys</strong> — nearly identical bitmask + BFS pattern, tracking collected keys instead of litter.</li>
+<li><strong>LeetCode 1293: Shortest Path in a Grid with Obstacles Elimination</strong> — BFS with an extra state dimension (obstacles removed) instead of energy.</li>
+<li><strong>LeetCode 847: Shortest Path Visiting All Nodes</strong> — bitmask BFS over graph nodes rather than grid cells, same core idea of packing "visited set" into an integer.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>When a problem gives every move the same cost but adds a resource constraint, fold that constraint into your BFS <em>state</em>, not into edge weights. When you need to track a small set of binary flags (which items are collected, which nodes are visited), a bitmask turns an unwieldy list into a single comparable, hashable integer. And always evaluate your goal condition the moment a new state is generated — waiting an extra cycle costs you correctness on the "first layer to satisfy the goal" guarantee that makes BFS work in the first place.</p>
+<h2>Watch the Video</h2>
+<p>Prefer to see the whole derivation and code walkthrough in motion, including the full quiz section? Watch it here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series that treats algorithm and interview problems as puzzles worth genuinely understanding — not just memorizing patterns for. Every episode goes from raw problem statement to a fully reasoned, from-scratch solution, with the "why" spelled out at every step.</p>
+<h2>Call To Action</h2>
+<p>If this walkthrough helped the state-space trick click, give the video a like on YouTube and subscribe for the rest of the series. For deeper written breakdowns delivered straight to your inbox, subscribe to the Substack. Got a different approach or a follow-up question? Drop it in the comments — and if you know someone prepping for interviews, share this one with them.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Greedy sim vs full path search — when does greedy work here?</summary><p>When each step has one locally-forced best move and no benefit from lookahead; otherwise BFS/DP over state space is needed.</p></details><details class='card2'><summary>Time complexity for simulating cell-by-cell cleaning moves?</summary><p>O(n*m) or O(n*m*directions) — bounded by grid size times possible facing states, not exponential path enumeration.</p></details><details class='card2'><summary>Space complexity driver for this problem?</summary><p>O(n*m) for a visited/state grid tracking position plus direction/battery level, not recursion over all paths.</p></details><details class='card2'><summary>Trickiest bug when tracking a draining resource (battery) per move?</summary><p>Off-by-one on when battery decrements — before or after the move — causes early termination or one extra step counted.</p></details><details class='card2'><summary>Why brute-force all paths fails on this LeetCode 3568 problem?</summary><p>State space blows up combinatorially with grid size and battery levels; must collapse to deterministic/greedy transitions instead.</p></details><details class='card2'><summary>Interview follow-up: how would you handle a bigger grid with obstacles?</summary><p>Same simulation logic still applies since transitions stay local; only bounds checking and obstacle skip logic need adding.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
