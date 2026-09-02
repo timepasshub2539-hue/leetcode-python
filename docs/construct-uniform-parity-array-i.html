@@ -1,0 +1,176 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3875. Construct Uniform Parity Array I | LeetCode Daily Python Solution (the trick nobody sees) — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/construct-uniform-parity-array-i
+💻 Code on GitHub: https://github.com/timepassh">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/construct-uniform-parity-array-i.html">
+<meta property="og:title" content="3875. Construct Uniform Parity Array I | LeetCode Daily Python Solution (the trick nobody sees) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/construct-uniform-parity-array-i
+💻 Code on GitHub: https://github.com/timepassh">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>3875. Construct Uniform Parity Array I | LeetCode Daily Python Solution (the trick nobody sees)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Some LeetCode problems test whether you know an algorithm. Others test whether you can resist reaching for one. Construct Uniform Parity Array I belongs firmly in the second camp, and that's exactly why it's worth slowing down on.</p>
+<p>At first glance, this problem looks like it wants graph theory, GCD reasoning, or some clever bit manipulation. The name alone — "parity array," "construct" — sounds like it's baiting you into overthinking. Interviewers love problems like this because they separate candidates who pattern-match against known algorithms from candidates who actually reason from first principles. If you can spot that this problem reduces to a single fact about subtraction and remainders, you'll write a three-line solution. If you can't, you'll spend fifteen minutes building machinery you never needed.</p>
+<p>Learning to recognize when a problem is smaller than it looks is a skill in itself, and it transfers to nearly every technical interview you'll ever sit through.</p>
+<h2>Problem Overview</h2>
+<p>You're given an array of distinct integers. Your job is to build a second array of the same length where every single element ends up with the same parity — either every element is even, or every element is odd. Mixing is not allowed.</p>
+<p>For each position in the new array, you have exactly two options:</p>
+<ol>
+<li>Keep the original number exactly as it is.</li>
+<li>Replace it with the difference between it and some other number from the original array.</li>
+</ol>
+<p>There is no third option. No multiplying, no dividing, no adding. Just "keep" or "subtract one array element from another."</p>
+<p>You need to return <code>True</code> if it's possible to build such a uniform array, and <code>False</code> otherwise — although, as we'll see, that second outcome never actually happens.</p>
+<p>Constraints worth noting: the array has at most 100 elements, values range from 1 to 100, and all values are distinct. The distinctness matters because it guarantees that when you subtract one element from another, you're not subtracting a number from itself and trivially landing on zero.</p>
+<h2>Example</h2>
+<p>Take <code>nums = [2, 3]</code>.</p>
+<ul>
+<li>Position 0: subtract — <code>2 - 3 = -1</code>, which is odd.</li>
+<li>Position 1: keep as-is — <code>3</code>, which is odd.</li>
+</ul>
+<p>Every slot lands on odd. Result: <code>True</code>.</p>
+<p>Now take <code>nums = [4, 6]</code>. Both numbers are already even, so you keep both exactly as they are. Zero operations needed. Result: <code>True</code>.</p>
+<p>Try <code>nums = [4, 7]</code> and imagine you only allowed yourself to keep values as-is. <code>4</code> is even, <code>7</code> is odd — that naive attempt fails immediately. This is the case that makes people think the answer sometimes has to be <code>False</code>. It doesn't, because you're allowed to subtract, and that extra move is enough to rescue every mixed case.</p>
+<h2>Intuition</h2>
+<p>Here's how an experienced engineer approaches this, rather than jumping straight to code.</p>
+<p>Start by asking: what are the only ways this problem can go wrong? An all-even or all-odd array is impossible to build only if some element simply cannot become one of those two parities using our two allowed moves. So the real question is: can every number, using "keep" or "subtract another array value," always be pushed into at least one consistent parity across the whole array?</p>
+<p>Break the array into two cases.</p>
+<p><strong>Case one: the array is already uniform.</strong> If every number is already even, keep them all as-is — you're done in zero moves. Same logic for all-odd. This case is trivial and costs nothing.</p>
+<p><strong>Case two: the array has a mix of even and odd numbers.</strong> This is the case that feels dangerous, and it's exactly where people start reaching for GCD arguments or bitwise tricks, because subtraction combined with number theory smells like it should be complicated. But strip away the noise: parity is arithmetic mod 2, and subtraction mod 2 behaves exactly like addition mod 2. Even minus odd, mod 2, is <code>0 - 1 = -1 ≡ 1 (mod 2)</code> — always odd. Always. It doesn't matter which even number or which odd number you pick, or how many of each exist in the array.</p>
+<p>So if the array has at least one even and at least one odd number, every even element can subtract any odd element and land on odd, and every odd element already sits on odd. The whole array can be driven to all-odd in a single pass, regardless of how the values are distributed.</p>
+<p>Combine both cases: uniform arrays are already done, and mixed arrays can always be forced to all-odd. There is no array configuration that fails. The function can simply return <code>True</code> unconditionally.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Check if the array is already all-even or all-odd. If not, attempt every combination of keep/subtract per element and see if any combination produces a uniform-parity array.</p>
+<p><strong>Algorithm:</strong>
+1. Check <code>all(x % 2 == 0 for x in nums)</code> and <code>all(x % 2 == 1 for x in nums)</code>.
+2. If neither holds, try, for each element, either keeping it or subtracting every other array element from it, and check if any full assignment produces uniform parity.</p>
+<p><strong>Advantages:</strong> Conceptually simple, doesn't require the parity insight.</p>
+<p><strong>Disadvantages:</strong> Wildly unnecessary — you'd be exploring a combinatorial space to answer a question that's actually always <code>True</code>. It also obscures the real insight instead of revealing it.</p>
+<p><strong>Complexity:</strong> In the worst case, trying every keep/subtract choice across every element against every other element is O(n²) per configuration and exponential if you're checking assignments naively. Completely avoidable.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal solution is really just applying the intuition above directly, with no loop required.</p>
+<table>
+<thead>
+<tr>
+<th>Array state</th>
+<th>Move to use</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>All even</td>
+<td>Keep every element</td>
+<td>All even</td>
+</tr>
+<tr>
+<td>All odd</td>
+<td>Keep every element</td>
+<td>All odd</td>
+</tr>
+<tr>
+<td>Mixed even/odd</td>
+<td>Odd elements: keep. Even elements: subtract any odd element</td>
+<td>All odd</td>
+</tr>
+</tbody>
+</table>
+<p>Since every branch of that table lands on <code>True</code>, there's no need to even check which branch you're in. The function collapses to a single unconditional return.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">class Solution:
+    def canConstruct(self, nums1: list[int]) -&gt; bool:
+        # Uniform arrays need no change; mixed arrays can always be
+        # driven to all-odd since even - odd is always odd (mod 2).
+        return True
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>class Solution</code> and <code>canConstruct</code> match LeetCode's required interface for this problem.</li>
+<li><code>nums1</code> is accepted as the input array, per the problem signature, though its contents never change the outcome.</li>
+<li>The comment documents the two cases that justify the constant return: an already-uniform array needs no moves, and a mixed array can always be pushed to all-odd because subtracting an odd value from an even value is always odd under modular arithmetic.</li>
+<li>The function returns <code>True</code> unconditionally because no input configuration under the given constraints can fail.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Take <code>nums1 = [2, 3]</code>.</p>
+<ol>
+<li>Call <code>canConstruct([2, 3])</code>.</li>
+<li>The function does not inspect the array at all — it returns <code>True</code> immediately.</li>
+<li>Cross-check by hand: position 0 uses subtract (<code>2 - 3 = -1</code>, odd), position 1 keeps <code>3</code> (odd). Both slots land on odd, confirming <code>True</code> was the correct answer.</li>
+</ol>
+<p>Take <code>nums1 = [4, 8, 16]</code>.</p>
+<ol>
+<li>Call <code>canConstruct([4, 8, 16])</code>.</li>
+<li>Returns <code>True</code> immediately.</li>
+<li>Cross-check: all three values are already even, so keeping every element as-is produces an all-even array with zero moves. Confirmed.</li>
+</ol>
+<h2>Complexity Analysis</h2>
+<p><strong>Time complexity:</strong> O(1). There is no loop over the array and no dependency on <code>n</code>, the array length. The function returns a constant value regardless of input size.</p>
+<p><strong>Space complexity:</strong> O(1). No auxiliary data structures are allocated.</p>
+<p>These are correct — not just fast — because the underlying math guarantees the answer is always <code>True</code> for every valid input under the problem's constraints (distinct integers between 1 and 100). There's no input that requires the function to do work to determine the answer.</p>
+<h2>Alternative Solutions</h2>
+<p>A reasonable alternative is to explicitly branch on the array's current state before returning <code>True</code>, for readability in an interview setting:</p>
+<pre><code class="language-python">class Solution:
+    def canConstruct(self, nums1: list[int]) -&gt; bool:
+        if all(x % 2 == 0 for x in nums1):
+            return True
+        if all(x % 2 == 1 for x in nums1):
+            return True
+        # mixed parity: even - odd is always odd
+        return True
+</code></pre>
+<p>This is functionally identical but O(n) instead of O(1), since it scans the array with <code>all()</code>. It's worth mentioning in an interview to show you considered the input, even though the unconditional <code>True</code> is the leaner, more honest solution once you've proven the result never depends on the array's contents.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Single-element array:</strong> Trivially uniform already — keep the one element as-is. Still <code>True</code>.</li>
+<li><strong>All values identical parity, all even:</strong> Keep every element. <code>True</code>.</li>
+<li><strong>All values identical parity, all odd:</strong> Keep every element. <code>True</code>.</li>
+<li><strong>Maximum size array (100 elements) with maximum spread of values (1 to 100):</strong> Still <code>True</code> — array size and value range never affect the outcome.</li>
+<li><strong>Array with exactly one even and one odd value:</strong> The even value subtracts the odd value to become odd; the odd value stays. <code>True</code>.</li>
+</ul>
+<p>Note: since the array elements are guaranteed distinct, there's no case where subtracting a number from itself produces zero-related ambiguity.</p>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Assuming "keep as-is" is the only allowed move and concluding mixed arrays fail.</strong> The subtract option is what makes the answer always <code>True</code>, and skipping it leads directly to a wrong <code>False</code>.</li>
+<li><strong>Reaching for GCD-based reasoning.</strong> This problem has nothing to do with divisibility chains; it's pure parity arithmetic.</li>
+<li><strong>Overcomplicating with bitwise tricks.</strong> Checking the lowest bit of every possible subtraction result is unnecessary once you know even minus odd is always odd.</li>
+<li><strong>Writing an O(n) or worse solution when O(1) suffices.</strong> Looping to check <code>all(even)</code> or <code>all(odd)</code> isn't wrong, but it signals you haven't fully collapsed the problem to its core truth.</li>
+<li><strong>Forgetting to consider the mixed case entirely.</strong> Some solvers correctly handle "already uniform" but panic on mixed arrays and assume more logic is needed.</li>
+<li><strong>Not verifying the parity fact algebraically.</strong> Assuming even minus odd "feels" odd is different from confirming it via mod-2 arithmetic — always confirm intuition with the actual math before trusting it.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Why is subtraction mod 2 equivalent to addition mod 2?</li>
+<li>Would this problem change if the allowed operation were addition instead of subtraction?</li>
+<li>What if the array could contain duplicate values — does the "distinct" constraint matter here, and why?</li>
+<li>How would you handle a variant that asks for the minimum number of operations rather than just feasibility?</li>
+<li>Could you write a test suite that convinces a skeptical teammate this function is correct without enumerating every array?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode: Minimum Number of Operations to Make Array Continuous</strong> — another problem where the naive brute-force instinct is far more expensive than the actual pattern hiding underneath.</li>
+<li><strong>LeetCode: Check if Array Is Sorted and Rotated</strong> — tests the same skill of recognizing when a property can be verified with a single pass instead of complex logic.</li>
+<li><strong>LeetCode: Divide Array Into Equal Pairs</strong> — another parity-driven problem where counting even/odd occurrences resolves the whole question.</li>
+<li><strong>LeetCode: Construct Uniform Parity Array II</strong> (if applicable in your problem set) — the natural follow-up that likely asks for the minimum operations rather than a yes/no answer, forcing you to actually count even-to-odd conversions.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Not every problem needs an algorithm — some need a single correct observation.</li>
+<li>Parity arithmetic (mod 2) is often simpler than it looks: even minus odd is always odd, no exceptions.</li>
+<li>Before writing code, enumerate every move you're allowed to make and ask what each one guarantees. That's often faster than testing case after case.</li>
+<li>The best solutions are sometimes the shortest, and proving correctness matters more than writing more code.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>Prefer to see this traced out visually, with the quiz checkpoints and the full walkthrough? Watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series dedicated to making LeetCode problems, coding interview prep, and core software engineering concepts genuinely intuitive — not just memorized. Each video and article pairs a real problem with the reasoning an experienced engineer would actually use to solve it, so the goal isn't just "here's the answer," it's "here's how you'd find it yourself next time."</p>
+<h2>Call To Action</h2>
+<p>If this breakdown saved you from overthinking a problem that didn't need it, consider liking the video on YouTube and subscribing for more daily LeetCode walkthroughs. For deeper dives and written companions to every video, subscribe to the Substack newsletter. Got a different way you solved this one, or a problem you want covered next? Drop it in the comments — and if this helped, share it with someone prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Parity-flip pattern: when to think &#x27;toggle LSB in pairs&#x27;?</summary><p>When array must become all-odd/all-even and only +1/-1 moves allowed: pair mismatched elements, flip one bit each.</p></details><details class='card2'><summary>Time complexity of the uniform-parity construction?</summary><p>O(n) — single pass to count/split odds and evens, one more pass to apply moves.</p></details><details class='card2'><summary>Space complexity of the uniform-parity solution?</summary><p>O(1) extra (O(n) for output array) — just counters and in-place adjustment, no auxiliary structures.</p></details><details class='card2'><summary>Trickiest edge case in Construct Uniform Parity Array I?</summary><p>Array already uniform parity — must return unchanged array with zero moves, not force unnecessary flips.</p></details><details class='card2'><summary>Why must you flip toward majority parity, not minority?</summary><p>Constraints cap total moves; converting the smaller group costs fewer +1/-1 ops than flipping the larger group.</p></details><details class='card2'><summary>Interview follow-up: what changes in a &#x27;Uniform Parity II&#x27; with a move-count limit?</summary><p>Becomes a greedy/counting feasibility check — verify min(odds,evens) flips ≤ limit before committing to majority parity.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
