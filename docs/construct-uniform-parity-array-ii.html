@@ -1,0 +1,210 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3876. Construct Uniform Parity Array II | LeetCode Daily Python Solution — one check replaces O(n^2) — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/construct-uniform-parity-array-ii
+💻 Code on GitHub: https://github.com/timepass">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/construct-uniform-parity-array-ii.html">
+<meta property="og:title" content="3876. Construct Uniform Parity Array II | LeetCode Daily Python Solution — one check replaces O(n^2) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/construct-uniform-parity-array-ii
+💻 Code on GitHub: https://github.com/timepass">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>3876. Construct Uniform Parity Array II | LeetCode Daily Python Solution — one check replaces O(n^2)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Some LeetCode problems test whether you know a data structure. Others test something more fundamental: whether you can look past the obvious brute-force instinct and find the one property of the problem that makes the whole thing collapse into something trivial. LeetCode 3876, Construct Uniform Parity Array II, is firmly in the second category.</p>
+<p>On the surface it looks like a combinatorial search problem — for every number you get two choices, keep it or subtract something from it, and you need every resulting value to share the same parity. The naive brain immediately reaches for trying combinations. But the array can hold up to 100,000 elements, and two choices per element means 2^n possibilities, a number that blows past anything a computer could check in the lifetime of the universe for n much smaller than 100,000.</p>
+<p>This is exactly the kind of problem interviewers like, because it rewards a specific skill: recognizing that a search space you can't brute force is often hiding a much smaller, provable structure underneath. Once you see that structure here, the code is four lines. Getting there is the entire exercise, and that's what makes it worth learning properly rather than memorizing.</p>
+<h2>Problem Overview</h2>
+<p>You're given an array of <code>n</code> distinct integers, <code>nums1</code>. Your job is to build a second array of the same length where every position is filled according to one of two rules:</p>
+<ul>
+<li>Keep the original value as-is, or</li>
+<li>Replace it with the difference between it and some <em>other, smaller</em> value in the array (the subtraction has to produce a result of at least 1)</li>
+</ul>
+<p>The constraint is that once you're done, every single value in the new array must share the same parity — either they're all odd, or they're all even. You don't have to construct the array itself. You only need to answer yes or no: is it possible?</p>
+<p>Because all values in <code>nums1</code> are distinct, there's a useful guarantee baked in — if there's an odd number in the array, there's a well-defined smallest odd number with no ties, which turns out to matter a lot once you get to the solution.</p>
+<h2>Example</h2>
+<p>Take <code>nums1 = [1, 4, 7]</code>.</p>
+<ul>
+<li>Keep <code>1</code> — it's already odd.</li>
+<li>Take <code>4</code> and subtract <code>1</code>: <code>4 - 1 = 3</code>, which is odd.</li>
+<li>Keep <code>7</code> — already odd.</li>
+</ul>
+<p>Every value in the resulting array <code>[1, 3, 7]</code> is odd, so the answer is <code>true</code>.</p>
+<p>Notice what made this work: the only value that needed transforming was <code>4</code>, and it only needed to borrow from <em>one</em> other number, <code>1</code>, to flip into the right parity. That single interaction is the whole problem in miniature.</p>
+<h2>Intuition</h2>
+<p>The instinct most people reach for first is to treat this as a search: for each element, try "keep" and try "subtract from every possible partner," then check if any full combination produces uniform parity. That's the brute-force mental model, and it's the one to explicitly reject before writing any code, because with up to 100,000 elements it's 2^100000 combinations — not slow, but literally uncomputable.</p>
+<p>So instead of asking "what combination works," ask a smaller question: what does subtraction actually <em>do</em> to parity?</p>
+<p>There are only two cases:</p>
+<ul>
+<li>Subtracting two numbers of the <strong>same parity</strong> always gives an <strong>even</strong> result (odd − odd = even, even − even = even).</li>
+<li>Subtracting two numbers of <strong>different parity</strong> always gives an <strong>odd</strong> result (odd − even = odd, even − odd = odd).</li>
+</ul>
+<p>That's it — that's the entire mechanism. It doesn't matter <em>which</em> odd number or <em>which</em> even number you pick, only what parity it has.</p>
+<p>From here, a few things fall out immediately:</p>
+<ul>
+<li>An odd number can only turn <em>even</em> by subtracting a smaller <em>odd</em> number from it.</li>
+<li>An even number can only turn <em>odd</em> by subtracting a smaller <em>odd</em> number from it.</li>
+</ul>
+<p>Now ask: if the array has any odd number at all, can we ever make everything even? No — the <em>smallest</em> odd number in the array has no smaller odd number to borrow from, so it's permanently stuck as odd. That kills the "all-even" target the moment a single odd number exists.</p>
+<p>So the only target worth checking is "make everything odd." And since every even number can only flip to odd by subtracting a smaller odd number, and there's exactly one smallest odd number available to serve as a partner, the entire multi-way search collapses into a single comparison: <strong>is every even number bigger than the smallest odd number in the array?</strong> If yes, every even number has something smaller to subtract and flip parity. If any even number is smaller than the smallest odd number, it has nothing valid to subtract from, and the answer is <code>false</code>.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> For every position, try both choices — keep the value, or subtract every other smaller value from it — and check if any full assignment produces uniform parity.</p>
+<p><strong>Algorithm:</strong>
+1. For each element, generate the set of possible resulting values (itself, plus itself minus every smaller element).
+2. Recursively try every combination of choices across all positions.
+3. For each complete combination, check whether every resulting value shares one parity.
+4. Return <code>true</code> if any combination works.</p>
+<p><strong>Advantages:</strong> Conceptually simple, directly mirrors the problem statement, easy to reason about correctness for tiny inputs.</p>
+<p><strong>Disadvantages:</strong> Completely infeasible at scale — it doesn't just run slowly, it can't run at all for realistic <code>n</code>.</p>
+<p><strong>Complexity:</strong> Time is O(2^n · n) in the best case (n choices per element, n elements to verify), space is O(n) for recursion depth. For <code>n = 100,000</code> this is not a number you can wait out.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach uses the parity rule from the intuition section directly, and needs exactly one pass to gather information plus one pass to verify.</p>
+<p><strong>Step 1 — Split off the odd numbers.</strong>
+Pull every odd number in <code>nums1</code> into its own list using a list comprehension.</p>
+<p><strong>Step 2 — Handle the "no odd numbers" case.</strong>
+If that list is empty, the array is already all even — return <code>true</code> immediately. There's nothing to check.</p>
+<p><strong>Step 3 — Find the smallest odd number.</strong>
+Since all values are distinct, <code>min()</code> on the odds list gives a single, unambiguous smallest odd value. This is the only number in the entire array capable of flipping any even number's parity.</p>
+<p><strong>Step 4 — Verify every even number can reach it.</strong>
+Walk through the original array. Any even number smaller than the smallest odd number can never become odd — there's no valid subtraction available to it — so return <code>false</code> the moment you find one.</p>
+<p><strong>Step 5 — If nothing failed, return true.</strong>
+If every even number in the array is at least as large as the smallest odd number, every one of them has a valid subtraction partner, so the whole array can become uniformly odd.</p>
+<table>
+<thead>
+<tr>
+<th>Value type</th>
+<th>Can it become odd?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Already odd</td>
+<td>Yes — no change needed</td>
+</tr>
+<tr>
+<td>Even, and larger than smallest odd</td>
+<td>Yes — subtract the smallest odd number</td>
+</tr>
+<tr>
+<td>Even, and smaller than smallest odd</td>
+<td>No — nothing smaller and odd exists to subtract</td>
+</tr>
+</tbody>
+</table>
+<p>This table is the entire algorithm. Everything else is bookkeeping.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def canConstruct(nums1: list[int]) -&gt; bool:
+    odds = [x for x in nums1 if x % 2 == 1]
+
+    # No odd numbers at all — array is already uniformly even.
+    if not odds:
+        return True
+
+    smallest_odd = min(odds)
+
+    # Any even number smaller than the smallest odd has nothing to subtract.
+    for x in nums1:
+        if x % 2 == 0 and x &lt; smallest_odd:
+            return False
+
+    return True
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>odds = [x for x in nums1 if x % 2 == 1]</code> — one pass over the array, collecting every odd value into a new list. This is the first and only place we touch parity classification directly.</li>
+<li><code>if not odds: return True</code> — the early exit for the case where the array is already fully even. No further work is needed because there's nothing that could ever conflict.</li>
+<li><code>smallest_odd = min(odds)</code> — a single call that identifies the only number in the array that matters for the rest of the check. Because values are distinct, this is unambiguous.</li>
+<li>The <code>for x in nums1</code> loop is the verification pass. It checks every even number against <code>smallest_odd</code> and bails out the instant it finds one that can't be fixed.</li>
+<li><code>return True</code> at the end means the loop completed without finding a disqualifying even number, so the array can be made uniformly odd.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Take <code>nums1 = [1, 4, 7]</code> again, this time tracing the code line by line.</p>
+<ol>
+<li><code>odds = [x for x in nums1 if x % 2 == 1]</code> → <code>odds = [1, 7]</code>.</li>
+<li><code>odds</code> is not empty, so we skip the early return.</li>
+<li><code>smallest_odd = min([1, 7])</code> → <code>smallest_odd = 1</code>.</li>
+<li>Loop through <code>nums1</code>:
+   - <code>x = 1</code>: odd, skip.
+   - <code>x = 4</code>: even, is <code>4 &lt; 1</code>? No. Continue.
+   - <code>x = 7</code>: odd, skip.</li>
+<li>Loop finishes without returning <code>False</code>.</li>
+<li>Return <code>True</code>.</li>
+</ol>
+<p>This matches the expected answer, and it matches the manual reasoning from the example: <code>4</code> only needed to beat <code>1</code> in size to have a valid subtraction partner, and it does.</p>
+<p>Now a failing case: <code>nums1 = [3, 6, 1, 2]</code>.</p>
+<ol>
+<li><code>odds = [3, 1]</code>.</li>
+<li><code>smallest_odd = min([3, 1]) = 1</code>.</li>
+<li>Loop: <code>x = 3</code> odd, skip. <code>x = 6</code> even, <code>6 &lt; 1</code>? No. <code>x = 1</code> odd, skip. <code>x = 2</code> even, <code>2 &lt; 1</code>? No.</li>
+<li>Return <code>True</code>.</li>
+</ol>
+<p>And a case that fails: <code>nums1 = [0, 5]</code> — wait, values must be positive per typical constraints, so use <code>nums1 = [4, 9, 6, 2]</code>. Wait — check: odds = [9], smallest_odd = 9. Loop: 4 even, 4 &lt; 9 → True → return <code>False</code>. Correct, since <code>4</code>, <code>6</code>, and <code>2</code> are all smaller than the only odd number available and have nothing valid to subtract.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(n). Building the <code>odds</code> list is one full pass, <code>min()</code> over it is at most another O(n), and the verification loop is a third O(n) pass. Three linear passes still sum to O(n) — there's no nesting between them.</p>
+<p><strong>Space:</strong> O(n) in the worst case, for the <code>odds</code> list, since every value in the array could be odd.</p>
+<p>These bounds are tight because the algorithm fundamentally needs to look at every element at least once to classify its parity — there's no way to answer the question without that, so O(n) is also the theoretical floor for this problem.</p>
+<h2>Alternative Solutions</h2>
+<p>You could merge the "collect odds" and "find minimum" steps into a single pass using <code>float('inf')</code> as a running minimum tracker, avoiding the intermediate <code>odds</code> list entirely:</p>
+<pre><code class="language-python">def canConstruct(nums1: list[int]) -&gt; bool:
+    smallest_odd = min((x for x in nums1 if x % 2 == 1), default=None)
+    if smallest_odd is None:
+        return True
+    return all(x &gt;= smallest_odd for x in nums1 if x % 2 == 0)
+</code></pre>
+<p>This keeps the same O(n) time but drops the O(n) space for the odds list down to O(1) extra space, since <code>min()</code> with a generator expression doesn't materialize a list. It's a reasonable production-quality alternative if memory matters more than a small readability tradeoff — the two-list version reads more clearly for anyone new to the parity trick.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty array:</strong> Trivially satisfies "uniform parity" since there's nothing to conflict — behaves correctly by falling through to <code>True</code>.</li>
+<li><strong>Single element:</strong> As covered below, no special casing is needed; a lone value has nothing to compare against and always passes.</li>
+<li><strong>All values already odd:</strong> <code>smallest_odd</code> gets set, the verification loop finds no even numbers to check, returns <code>True</code>.</li>
+<li><strong>All values already even:</strong> <code>odds</code> is empty, returns <code>True</code> on the early exit.</li>
+<li><strong>Smallest odd number is also the smallest number overall:</strong> Every even number is automatically larger, so it always passes.</li>
+<li><strong>Largest possible array (100,000 elements):</strong> No behavioral edge case, but worth confirming the solution stays linear and doesn't silently degrade — it does not, given the analysis above.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Trying to brute-force every keep/subtract combination.</strong> This looks correct on paper but is computationally impossible for anything beyond a handful of elements.</li>
+<li><strong>Forgetting that "all-even" is never reachable once an odd number exists.</strong> Some solutions waste time checking both targets when only one is ever viable.</li>
+<li><strong>Comparing every even number against every odd number instead of just the smallest one.</strong> This turns an O(n) solution into an O(n²) one for no benefit — only the smallest odd number can ever serve as a valid subtraction partner.</li>
+<li><strong>Adding an explicit <code>if n == 1: return True</code> guard.</strong> It's unnecessary; a single element trivially satisfies uniform parity through the same logic that handles everything else, and adding the guard signals the general case isn't fully trusted.</li>
+<li><strong>Using <code>&lt;=</code> instead of <code>&lt;</code> when comparing an even number to the smallest odd number.</strong> Since all values are distinct, an even number can never equal the smallest odd number, but getting the comparison direction wrong (or assuming equality could happen) is a common off-by-one style slip.</li>
+<li><strong>Forgetting the subtraction result must be at least 1.</strong> This is implicitly satisfied because subtracting a <em>smaller</em> value from a larger one always yields a positive difference, but it's worth explicitly confirming rather than assuming.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Why does the "all-even" target never need to be checked once any odd number is present?</li>
+<li>Why does only the <em>smallest</em> odd number matter, rather than checking against all odd numbers?</li>
+<li>How would the solution change if values in the array were allowed to repeat?</li>
+<li>Can you prove why subtracting an odd number always flips parity, regardless of which odd number is used?</li>
+<li>What's the time and space complexity, and can the space be reduced further?</li>
+<li>How would you modify this to also <em>construct</em> the actual output array, not just answer true/false?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 3875, Construct Uniform Parity Array I</strong> — the predecessor problem, typically with smaller constraints that allow a more direct simulation before the O(n) insight becomes necessary.</li>
+<li><strong>Two Sum</strong> — another problem where the "obvious" nested-loop approach is replaced by a single pass once you find the right structural insight (a hash set instead of a parity minimum).</li>
+<li><strong>Minimum Absolute Difference</strong> — relies on the same idea that sorting or finding extremal values often replaces exhaustive pairwise comparison.</li>
+<li><strong>Find the Duplicate Number</strong> — another case where a single well-chosen value (rather than a full search) resolves the entire problem.</li>
+</ul>
+<p>These are worth practicing together because they all train the same muscle: replacing pairwise comparison with a single extremal value once you understand the underlying rule.</p>
+<h2>Key Takeaways</h2>
+<ul>
+<li>Parity, not the actual magnitude of the numbers, is the only thing that matters here.</li>
+<li>Subtraction between same-parity numbers always produces even results; between different-parity numbers, always odd.</li>
+<li>Once an odd number exists, "all-even" is permanently unreachable, so only "all-odd" needs checking.</li>
+<li>The entire multi-way search collapses into finding one minimum value and comparing every even number against it.</li>
+<li>The result is O(n) time and O(n) space (or O(1) extra space with a single-pass variant), replacing an exponential brute force.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>If you'd rather see this reasoned through out loud — including the real timing comparison between brute force and the optimal solution, and two quiz rounds to test your understanding — the full walkthrough is here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of the <em>Fun with Learning Technology</em> series, where each episode takes one real coding interview problem and works backward from a naive first instinct to a provably correct, efficient solution — the same way you'd actually reason through it under interview pressure, not a polished answer pulled from memory.</p>
+<h2>Call To Action</h2>
+<p>If this helped the problem click, the biggest favor you can do is watch the full video on YouTube and hit subscribe — it's what keeps this series going. Subscribe to the Substack for the write-up version of every problem before it's even published, drop a comment with your own approach or a question you got stuck on, and share this with anyone prepping for interviews right now. Every bit of that helps more than you'd think.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When array must alternate/match parity pattern, what&#x27;s the trigger?</summary><p>Parity (odd/even) problems reduce to checking mod-2 values, not actual numbers — think bitmask or parity array.</p></details><details class='card2'><summary>Time complexity for scanning array once to fix parity mismatches?</summary><p>O(n) — single pass comparing each element&#x27;s parity against the target pattern.</p></details><details class='card2'><summary>Space complexity for building the uniform parity output array?</summary><p>O(n) for the output array itself; O(1) extra if modifying in place.</p></details><details class='card2'><summary>Common bug when checking &#x27;same parity&#x27; via subtraction?</summary><p>Forgetting subtraction preserves parity only for the difference, not the original values — (a-b) even means a,b share parity.</p></details><details class='card2'><summary>Same Parity vs Different Rules — what&#x27;s the key distinction?</summary><p>Same Parity checks a%2==b%2 directly; Different Rules problems apply a transform (like division) before comparing parity.</p></details><details class='card2'><summary>Interview follow-up: how would you verify parity in O(1) per element?</summary><p>Use bitwise AND with 1 (num &amp; 1) instead of modulo — faster and avoids sign issues with negative numbers.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
