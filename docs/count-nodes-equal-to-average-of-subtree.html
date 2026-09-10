@@ -1,0 +1,246 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2265. Count Nodes Equal to Average of Subtree — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/count-nodes-equal-to-average-of-subtree
+💻 Code on GitHub: https://github.com/ti">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/count-nodes-equal-to-average-of-subtree.html">
+<meta property="og:title" content="2265. Count Nodes Equal to Average of Subtree — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/count-nodes-equal-to-average-of-subtree
+💻 Code on GitHub: https://github.com/ti">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>2265. Count Nodes Equal to Average of Subtree</h1><span class='badge' style='background:#66a96f22;color:#66a96f'>🌳 Trees</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Binary tree problems show up in almost every coding interview loop, and the ones that trip people up aren't the ones that require a clever trick — they're the ones that punish redundant work. LeetCode 2265, "Count Nodes Equal to Average of Subtree," looks harmless on the surface: for each node, check whether its value equals the average of its own subtree. But the naive way to check "each node" ends up recomputing the same sums over and over, and that's exactly the kind of inefficiency interviewers are trained to spot.</p>
+<p>What makes this problem worth your time isn't the final answer — it's the pattern underneath it. Passing information <em>up</em> a tree instead of <em>down</em> into it is one of the most reusable ideas in tree algorithms, and it shows up again in problems about diameter, balance, and subtree sums. Once this pattern clicks, a whole category of "subtree property" questions stops being scary.</p>
+<h2>Problem Overview</h2>
+<p>You're given the root of a binary tree. Every node holds an integer value. For a given node, its <strong>subtree</strong> is that node plus everything below it — left child, right child, and their descendants, all the way down.</p>
+<p>For each node, compute the average of every value in its subtree, using <strong>integer (floor) division</strong> — so 11 divided by 2 is 5, not 5.5. If that average equals the node's own value, the node counts.</p>
+<p>Your job: return the total number of nodes across the whole tree where this condition holds.</p>
+<p>Two details matter more than they look:</p>
+<ul>
+<li>The average is computed over the node's <em>entire</em> subtree, not just its immediate children.</li>
+<li>Rounding is always down. A node whose true average is 4.9 does <strong>not</strong> match a value of 5.</li>
+</ul>
+<h2>Example</h2>
+<p>Take this tree:</p>
+<pre><code>        4
+       / \
+      8   5
+     / \    \
+    0   1    6
+</code></pre>
+<p>Work from the bottom up:</p>
+<ul>
+<li><strong>Node 0</strong> — leaf. Subtree is just <code>{0}</code>. Average = 0 / 1 = 0. Matches (0 == 0). ✅</li>
+<li><strong>Node 1</strong> — leaf. Subtree is <code>{1}</code>. Average = 1. Matches. ✅</li>
+<li><strong>Node 6</strong> — leaf. Subtree is <code>{6}</code>. Average = 6. Matches. ✅</li>
+<li><strong>Node 8</strong> — subtree is <code>{8, 0, 1}</code>. Sum = 9, count = 3, average = 3. 8 ≠ 3. ❌</li>
+<li><strong>Node 5</strong> — subtree is <code>{5, 6}</code>. Sum = 11, count = 2, average = 5 (floor of 5.5). Matches. ✅</li>
+<li><strong>Node 4 (root)</strong> — subtree is the whole tree: <code>{4, 8, 5, 0, 1, 6}</code>. Sum = 24, count = 6, average = 4. Matches. ✅</li>
+</ul>
+<p>Total matches: <strong>5</strong> — nodes 0, 1, 6, 5, and 4. That's the answer.</p>
+<p>Notice node 8 is the only miss, and it's a good example of why you can't judge a node by its children's values alone — you have to look at the whole subtree beneath it.</p>
+<h2>Intuition</h2>
+<p>The instinctive first move is: for every node, walk its subtree, add everything up, count the nodes, divide, compare. That works. It's also wasteful, because a node's subtree is nothing more than its left child's subtree, plus its right child's subtree, plus itself.</p>
+<p>Think of it like a company org chart. If you want to know the total salary under a manager, you don't re-interview every employee in that manager's chain every time you check a different manager. Each manager already gets a rolled-up number from their direct reports and just adds their own salary on top. The rollup happens once per person, not once per person <em>per manager who asks</em>.</p>
+<p>That's the shift: instead of asking "what's under me?" by walking down every time, have each node hand its total <em>up</em> to whoever asks for it, once. A postorder traversal — visit left, visit right, then process the current node — is the natural way to do this, because by the time you're standing at a node, both of its children have already reported their numbers.</p>
+<p>And here's the part that makes it elegant: you don't need a separate pass to "check every node" after computing totals. The check can happen at the exact moment a node receives its children's totals, inside the same traversal that computes them. One pass does both jobs.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> For every node in the tree, run a full traversal of its subtree to compute the sum and count, then compare the average to the node's value.</p>
+<p><strong>Algorithm:</strong>
+1. Traverse the tree (any order — preorder is fine).
+2. At each node, run a second traversal starting from that node to sum its subtree and count its nodes.
+3. Compare floor(sum / count) to the node's value; increment a counter on match.</p>
+<p><strong>Advantages:</strong> Straightforward to write, easy to reason about, no shared state to get confused by.</p>
+<p><strong>Disadvantages:</strong> Massive redundant work. A node near the root triggers a full subtree walk that revisits nodes that were <em>just</em> walked as part of a child's subtree computation moments earlier.</p>
+<p><strong>Complexity:</strong> For each of the n nodes, the subtree walk can touch up to n nodes in the worst case (a skewed tree), giving <strong>O(n²) time</strong>. Space is O(h) for recursion, where h is tree height.</p>
+<p>Given the problem's constraint of at most 1,000 nodes, this would technically pass — but it doesn't scale, and it's not the answer an interviewer wants to see once you understand the redundancy.</p>
+<h2>Optimal Solution</h2>
+<p>Switch to a bottom-up postorder DFS where each call returns two numbers: the <strong>sum</strong> and the <strong>node count</strong> of the subtree rooted at that call.</p>
+<p><strong>Step by step:</strong></p>
+<ol>
+<li><strong>Base case:</strong> if the current node is <code>None</code>, return <code>(0, 0)</code> — an empty branch contributes nothing to sum or count, so it never distorts a parent's totals.</li>
+<li><strong>Recurse left, recurse right:</strong> get <code>(left_sum, left_count)</code> and <code>(right_sum, right_count)</code> from the two children. This is the postorder step — children are resolved before the parent uses their results.</li>
+<li><strong>Combine:</strong> this node's subtree sum is <code>left_sum + right_sum + node.val</code>; this node's subtree count is <code>left_count + right_count + 1</code>.</li>
+<li><strong>Check:</strong> if <code>total_sum // total_count == node.val</code>, increment the running counter.</li>
+<li><strong>Return:</strong> hand <code>(total_sum, total_count)</code> up to the caller (the parent), so the parent can do the same thing.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Node</th>
+<th>Left (sum, count)</th>
+<th>Right (sum, count)</th>
+<th>Own sum</th>
+<th>Own count</th>
+<th>Average</th>
+<th>Match?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>(0,0)</td>
+<td>(0,0)</td>
+<td>0</td>
+<td>1</td>
+<td>0</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>1</td>
+<td>(0,0)</td>
+<td>(0,0)</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>8</td>
+<td>(0,1)</td>
+<td>(1,1)</td>
+<td>9</td>
+<td>3</td>
+<td>3</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>6</td>
+<td>(0,0)</td>
+<td>(0,0)</td>
+<td>6</td>
+<td>1</td>
+<td>6</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>5</td>
+<td>(0,0)</td>
+<td>(6,1)</td>
+<td>11</td>
+<td>2</td>
+<td>5</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>4</td>
+<td>(9,3)</td>
+<td>(11,2)</td>
+<td>24</td>
+<td>6</td>
+<td>4</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table>
+<p>Every node is visited exactly once, and every subtree's totals are computed exactly once — no rework, no second pass.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">class TreeNode:
+    def __init__(self, val=0, left=None, right=None):
+        self.val = val
+        self.left = left
+        self.right = right
+
+
+class Solution:
+    def averageOfSubtree(self, root: TreeNode) -&gt; int:
+        self.count = 0
+
+        def dfs(node):
+            if not node:
+                return 0, 0  # (sum, count) for an empty subtree
+
+            left_sum, left_count = dfs(node.left)
+            right_sum, right_count = dfs(node.right)
+
+            total_sum = left_sum + right_sum + node.val
+            total_count = left_count + right_count + 1
+
+            if total_sum // total_count == node.val:
+                self.count += 1
+
+            return total_sum, total_count
+
+        dfs(root)
+        return self.count
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>self.count = 0</code> — a running tally shared across every recursive call, since <code>dfs</code> itself only returns subtree totals, not the answer.</li>
+<li><code>def dfs(node):</code> — the recursive helper. It always returns a <code>(sum, count)</code> tuple for the subtree rooted at <code>node</code>.</li>
+<li><code>if not node: return 0, 0</code> — the base case for a missing child. Returning zeros means a leaf's single child (or a leaf itself) never gets skewed by a phantom branch.</li>
+<li><code>left_sum, left_count = dfs(node.left)</code> and the line after it — this is the postorder order of operations: resolve both children <em>before</em> touching the current node's own totals.</li>
+<li><code>total_sum = left_sum + right_sum + node.val</code> / <code>total_count = left_count + right_count + 1</code> — the actual rollup: this node's own value and its own presence get folded into what its children already reported.</li>
+<li><code>if total_sum // total_count == node.val:</code> — floor division (<code>//</code>), not <code>/</code>. This is the check the whole problem hinges on, and it has to happen after totals are combined, using totals that include the current node itself.</li>
+<li><code>return total_sum, total_count</code> — hands the combined numbers up to whichever call invoked this one (the parent), continuing the rollup.</li>
+<li><code>dfs(root)</code> at the end — triggers the whole walk; the return value is discarded because everything that matters was recorded in <code>self.count</code>.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using the tree from the example (<code>4</code> root, <code>8</code> and <code>5</code> children, <code>0</code>/<code>1</code> under <code>8</code>, <code>6</code> under <code>5</code>):</p>
+<ol>
+<li><code>dfs(4)</code> calls <code>dfs(8)</code>.</li>
+<li><code>dfs(8)</code> calls <code>dfs(0)</code> → base case children return <code>(0,0)</code>, <code>(0,0)</code> → node 0: sum=0, count=1, 0//1=0==0 → count=1. Returns <code>(0,1)</code>.</li>
+<li><code>dfs(8)</code> calls <code>dfs(1)</code> → same logic → node 1: sum=1, count=1, match → count=2. Returns <code>(1,1)</code>.</li>
+<li>Back in <code>dfs(8)</code>: sum = 0+1+8 = 9, count = 1+1+1 = 3, 9//3=3 ≠ 8 → no increment. Returns <code>(9,3)</code>.</li>
+<li><code>dfs(4)</code> calls <code>dfs(5)</code>.</li>
+<li><code>dfs(5)</code> calls <code>dfs(None)</code> (left) → <code>(0,0)</code>; calls <code>dfs(6)</code> → node 6: sum=6, count=1, match → count=3. Returns <code>(6,1)</code>.</li>
+<li>Back in <code>dfs(5)</code>: sum = 0+6+5 = 11, count = 0+1+1 = 2, 11//2=5==5 → match → count=4. Returns <code>(11,2)</code>.</li>
+<li>Back in <code>dfs(4)</code>: sum = 9+11+4 = 24, count = 3+2+1 = 6, 24//6=4==4 → match → count=5.</li>
+<li><code>dfs(4)</code> returns <code>(24,6)</code>; <code>averageOfSubtree</code> returns <code>self.count = 5</code>.</li>
+</ol>
+<p>Matches the expected answer.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time: O(n).</strong> Each node is visited exactly once by <code>dfs</code>, and the work done at each node (adding two numbers, one comparison) is O(1). No node's subtree is ever re-walked, because totals are passed up rather than recomputed.</p>
+<p><strong>Space: O(h).</strong> The only extra memory is the recursion call stack, which grows to the height of the tree, h. In the worst case (a completely skewed tree) h = n, giving O(n); for a balanced tree, h = O(log n).</p>
+<p>Compare that to the brute-force O(n²) — for the problem's constraint of 1,000 nodes, the difference is a million-ish operations versus a thousand.</p>
+<h2>Alternative Solutions</h2>
+<p>An iterative postorder traversal using an explicit stack achieves the same O(n) time and avoids Python's recursion limit for very deep trees (Python's default recursion limit is around 1,000, which happens to sit right at this problem's node cap — worth knowing if you ever see a similar problem without that constraint). The tradeoff is more bookkeeping: you'd track child totals for each node manually with a dictionary or by pushing partial results onto the stack, which adds code without changing the asymptotic complexity. For interview purposes, the recursive version is almost always preferred unless you're explicitly asked to avoid recursion.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Single-node tree:</strong> the root is a leaf; its subtree is itself, so it always matches (average of one number is that number). Count = 1.</li>
+<li><strong>All nodes equal:</strong> e.g., every value is 5 — every subtree average is 5, so every node matches. Count = n.</li>
+<li><strong>Skewed tree (linked-list shape):</strong> still O(n) time, but recursion depth hits n, which is where an iterative version becomes worth considering for very large inputs.</li>
+<li><strong>Minimum value nodes (value 0):</strong> make sure your check doesn't special-case zero — <code>0 // count == 0</code> behaves like any other comparison.</li>
+<li><strong>Root doesn't match but a deep leaf does:</strong> confirms the algorithm doesn't assume any correlation between a node's own value and whether it "should" match.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Using float division (<code>/</code>) instead of floor division (<code>//</code>).</strong> The problem explicitly rounds down; <code>/</code> will give you a float that never exactly equals an integer node value except by coincidence.</li>
+<li><strong>Checking the average against children's totals only, forgetting to include the current node's own value and count.</strong> This silently checks the wrong subtree.</li>
+<li><strong>Returning sum and count as two separate values or instance attributes instead of one tuple.</strong> This risks reading a stale count from before the current node was folded in, especially if the two updates aren't atomic within the call.</li>
+<li><strong>Forgetting the base case returns <code>(0, 0)</code> and not <code>(node.val, 1)</code> or something nonzero.</strong> A None child should never contribute to totals.</li>
+<li><strong>Doing two separate passes</strong> — one to compute all sums, one to check all nodes — when a single postorder pass already does both, doubling the traversal for no benefit.</li>
+<li><strong>Off-by-one in the count</strong>, forgetting to add 1 for the current node itself when combining children's counts.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you modify this to return the <em>node</em> with the closest average instead of just counting matches?</li>
+<li>What changes if the tree can have negative values? (Floor division behaves differently for negative numbers — worth testing.)</li>
+<li>Could you solve this iteratively without recursion? Walk through how you'd simulate the postorder stack.</li>
+<li>How would this pattern extend to a problem asking for the maximum subtree sum, or checking whether a tree is height-balanced?</li>
+<li>What's the space complexity if the tree is heavily skewed versus balanced, and why does that matter for very large inputs?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 104 (Maximum Depth of Binary Tree)</strong> — same bottom-up recursive shape, simpler payload.</li>
+<li><strong>LeetCode 110 (Balanced Binary Tree)</strong> — another postorder problem where each call returns info the parent needs to make its own decision.</li>
+<li><strong>LeetCode 543 (Diameter of Binary Tree)</strong> — classic "return one thing, but track a separate global answer" pattern, just like this problem's <code>self.count</code>.</li>
+<li><strong>LeetCode 863 / 988 / 1120 (various subtree aggregate problems)</strong> — all reuse the "return sum/count/height from children, combine at parent" idea.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The lesson isn't really about averages or binary trees specifically — it's about recognizing when a computation is naturally recursive on subproblems that overlap. Whenever a node's answer can be built entirely from its children's answers, resist the urge to recompute from scratch at every level. Return a bundled tuple, combine it at the parent, and check whatever condition you need in that same pass. This single pattern — postorder DFS with a bottom-up rollup — solves a wide swath of tree interview questions with a nearly identical skeleton.</p>
+<h2>Watch the Video</h2>
+<p>If you want to see this traced out on the whiteboard in real time, including the full dry run and the two guess-before-I-answer checkpoints, watch the full breakdown here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This walkthrough is part of <strong>Fun with Learning Technology</strong>, a series built around making coding interview prep actually stick — not just showing a working solution, but building the intuition an experienced engineer uses to find it in the first place. Every episode pairs a real problem with the reasoning behind it, so the pattern transfers to problems you haven't seen yet.</p>
+<h2>Call To Action</h2>
+<p>If this helped the problem click, drop a like on the video and subscribe on YouTube so you don't miss the next one. For deeper written breakdowns like this one, subscribe to the Substack newsletter. And if you got stuck somewhere or solved it a different way, leave a comment — I read every one and it genuinely shapes what gets covered next.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When a tree problem asks about subtree averages/sums, what approach?</summary><p>Bottom-up post-order recursion — compute sum and count per subtree once, avoid re-walking subtrees repeatedly.</p></details><details class='card2'><summary>Time complexity of counting nodes equal to their subtree average?</summary><p>O(n) — each node visited once during the single post-order pass.</p></details><details class='card2'><summary>Space complexity of the bottom-up subtree-average solution?</summary><p>O(h) for recursion stack (h = tree height), plus O(1) extra per node.</p></details><details class='card2'><summary>Trickiest edge case / common bug in this problem?</summary><p>Integer division truncation — average = sum/count must floor, not round; forgetting this misses valid matches.</p></details><details class='card2'><summary>Recomputing subtree sum per node (naive) vs bottom-up helper — why avoid the first?</summary><p>Naive re-walks each subtree from every ancestor, giving O(n²) worst case on skewed trees; bottom-up is O(n).</p></details><details class='card2'><summary>Interview follow-up: how would you return the actual matching subtree roots, not just a count?</summary><p>Append node to a results list inside the same post-order helper when sum/count == node.val, instead of incrementing a counter.</p></details></div><h2 class='ph1' style='font-size:1.4rem'>Similar problems</h2><div class='grid'><a class='card' href='short-debug-170002-916.html'><div class='body'><h3>6 Tries, 1 Line, 0 Guessing: How I Debug Now #shorts</h3><span class='badge' style='background:#66a96f22;color:#66a96f'>🌳 Trees</span></div></a><a class='card' href='maximum-length-substring-with-two-occurrences.html'><div class='body'><h3>Maximum Length Substring With Two Occurrences</h3><span class='badge' style='background:#66a96f22;color:#66a96f'>🌳 Trees</span></div></a><a class='card' href='longest-substring-of-one-repeating-character.html'><div class='body'><h3>Longest Substring of One Repeating Character</h3><span class='badge' style='background:#66a96f22;color:#66a96f'>🌳 Trees</span></div></a></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
