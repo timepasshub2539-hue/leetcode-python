@@ -1,0 +1,160 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3483. Unique 3-Digit Even Numbers | LeetCode Python Solution (why 5×9×8 is wrong) — Python LeetCode Solution</title><meta name="description" content="Everyone&#x27;s first instinct is 5 × 9 × 8 — and it&#x27;s wrong. We break down why the naive multiplication trap fails once leading zeros enter the picture, then split the problem into two clean cases (last d">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/unique-3-digit-even-numbers.html">
+<meta property="og:title" content="3483. Unique 3-Digit Even Numbers | LeetCode Python Solution (why 5×9×8 is wrong) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="Everyone&#x27;s first instinct is 5 × 9 × 8 — and it&#x27;s wrong. We break down why the naive multiplication trap fails once leading zeros enter the picture, then split the problem into two clean cases (last d">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>3483. Unique 3-Digit Even Numbers | LeetCode Python Solution (why 5×9×8 is wrong)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Some LeetCode problems test whether you know a data structure. Others test whether you can <em>think</em>. LeetCode 3483, "Unique 3-Digit Even Numbers," belongs firmly in the second camp. On the surface it looks like a five-second combinatorics warm-up — pick digits, multiply, done. That's exactly the trap.</p>
+<p>This problem matters because it's a miniature version of a mistake that shows up constantly in real interviews and real code: applying one formula uniformly across positions that don't actually behave the same way. Interviewers love this problem precisely because the "obvious" answer is wrong, and watching how a candidate reacts when their quick math doesn't match the brute-force check tells them a lot about how that candidate debugs.</p>
+<p>If you learn one thing from this problem, learn this: whenever a position in a sequence has a special rule (can't be zero, can't be a symbol, can't repeat a previous choice), stop and ask whether that rule interacts with your other choices before you multiply anything together.</p>
+<h2>Problem Overview</h2>
+<p>You're given a list of digits — somewhere between 3 and 10 of them, each between 0 and 9, and duplicates are allowed (the same digit can appear more than once in the list). Your job is to count how many distinct 3-digit even numbers you can build from these digits, following two rules:</p>
+<ol>
+<li>Each entry in the list can only be used once <em>per number</em> you build, but if a digit appears twice in the list, you're allowed to use two copies of it in the same number.</li>
+<li>The number can never start with a zero — because a number like "042" isn't really a 3-digit number, it's just 42.</li>
+</ol>
+<p>You're counting distinct final numbers, not distinct arrangements — so if two different physical copies of the digit "2" in your list produce the same 3-digit number, that only counts once.</p>
+<h2>Example</h2>
+<p>Take digits <code>[1, 2, 3, 4]</code>. Since every digit appears exactly once, there's no duplicate-copy issue to worry about — we just need arrangements where the last digit is even (2 or 4) and the first digit isn't zero (automatically true here, since there's no zero in the list at all).</p>
+<p>Some valid numbers: 124, 132, 214, 234, 312, 342, 412, 431... walk through it and you'll find exactly 12 valid 3-digit even numbers. Nothing repeats, because nothing in the input repeats.</p>
+<p>Now change the input to <code>[0, 2, 2, 4]</code>. Suddenly zero is in play, and there are two copies of 2. This is where the real problem lives — you now have to worry about leading zeros <em>and</em> about two different 2's producing the same final number.</p>
+<h2>Intuition</h2>
+<p>Here's the instinct almost everyone has on first read: "last digit must be even, so 5 choices (0, 2, 4, 6, 8); first digit can't be zero, so 9 remaining choices; middle digit is whatever's left, so 8 choices." Multiply them: 5 × 9 × 8 = 360.</p>
+<p>It feels airtight. It isn't.</p>
+<p>The flaw is subtle: the phrase "9 remaining choices for the first digit" assumes that after removing the last digit, there are always 9 digits left that <em>could</em> validly go first. But that assumption quietly depends on what the last digit was.</p>
+<ul>
+<li>If the last digit was <strong>0</strong>, then zero is already spent — every other digit (1 through 9, that's 9 of them) is fair game for the front. No conflict.</li>
+<li>If the last digit was <strong>2, 4, 6, or 8</strong>, zero is still sitting in the pool, unused — and it still can't go in front. So the front position doesn't actually get 9 free choices; it gets 8 (nine digits total minus zero, since zero is excluded and the last digit is also excluded).</li>
+</ul>
+<p>That's the whole bug. One formula assumed a uniform "9 choices" for the first digit regardless of which even digit got used last — but zero being <em>used up</em> versus zero being <em>merely unavailable</em> are two different situations with two different counts. This is a case-based problem wearing a single-formula disguise.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Skip the hand math entirely. Generate every permutation of three digits from the input, filter out the ones that start with zero or end in an odd digit, and count what's left. Drop results into a set to avoid double-counting identical numbers built from different digit copies.</p>
+<p><strong>Algorithm:</strong>
+1. Generate all permutations of length 3 from the digit list.
+2. For each permutation <code>(a, b, c)</code>, keep it if <code>a != 0</code> and <code>c</code> is even.
+3. Combine the three digits into a number and add it to a set.
+4. Return the size of the set.</p>
+<p><strong>Advantages:</strong> Dead simple to write, impossible to get wrong once you trust <code>itertools</code>, and naturally handles duplicate-copy limits (since permutations are built from list positions, a digit that appears once can't be used twice).</p>
+<p><strong>Disadvantages:</strong> Doesn't scale — but that's fine here, because the input has at most 10 digits.</p>
+<p><strong>Time complexity:</strong> O(n³) in the worst case for generating permutations of a length-n list restricted to 3 positions, which is really O(n × (n-1) × (n-2)) — at most about 720 permutations for n=10.</p>
+<p><strong>Space complexity:</strong> O(n³) for storing the intermediate permutations plus O(1) extra for the result set, since at most a few hundred entries ever exist.</p>
+<h2>Optimal Solution</h2>
+<p>The "optimal" solution here isn't a different algorithm — it's the <em>correct</em> formula, applied by splitting on the one variable that actually changes the count: what the last digit is.</p>
+<table>
+<thead>
+<tr>
+<th>Case</th>
+<th>Last digit choices</th>
+<th>First digit choices</th>
+<th>Middle digit choices</th>
+<th>Subtotal</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A: last digit is 0</td>
+<td>1 (just 0)</td>
+<td>9 (any nonzero digit)</td>
+<td>8 (whatever's left)</td>
+<td>1 × 9 × 8 = 72</td>
+</tr>
+<tr>
+<td>B: last digit is 2, 4, 6, or 8</td>
+<td>4</td>
+<td>8 (can't be 0, can't repeat last digit)</td>
+<td>8 (whatever's left)</td>
+<td>4 × 8 × 8 = 256</td>
+</tr>
+</tbody>
+</table>
+<p>Add the two subtotals: 72 + 256 = <strong>328</strong> — not 360.</p>
+<p>The key visual: in Case A, zero disappears from the pool entirely (it's been used), so the first digit has a full 9 options. In Case B, zero is still sitting there unused and still forbidden from the front, so the first digit effectively loses one option compared to Case A. That single difference is where the missing 32 went (360 − 328 = 32).</p>
+<p>For the actual LeetCode problem — with a real list of digits instead of the abstract range 0-9, and possible duplicates — the brute-force permutation approach is simpler to implement correctly than re-deriving this formula for arbitrary digit multisets, and since the input is capped at 10 digits, there's no performance reason not to use it.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from itertools import permutations
+
+
+class Solution:
+    def totalNumbers(self, digits: list[int]) -&gt; int:
+        seen = set()
+
+        for a, b, c in permutations(digits, 3):
+            if a != 0 and c % 2 == 0:
+                seen.add(a * 100 + b * 10 + c)
+
+        return len(seen)
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>from itertools import permutations</code> — pulls in the standard-library tool that generates every ordered arrangement of a given length from a list, without us hand-rolling recursion.</li>
+<li><code>seen = set()</code> — holds the distinct valid numbers we've built so far; using a set (not a list) means duplicate numbers from duplicate digit copies collapse automatically.</li>
+<li><code>for a, b, c in permutations(digits, 3):</code> — iterates every ordered triple of <em>positions</em> from <code>digits</code>. Because permutations operate on positions, not values, a digit that only appears once in the input can never be used twice in one triple — the copy limit is enforced for free.</li>
+<li><code>if a != 0 and c % 2 == 0:</code> — the two rules from the problem: no leading zero, last digit must be even.</li>
+<li><code>seen.add(a * 100 + b * 10 + c)</code> — reconstructs the actual 3-digit number from its digits and stores it.</li>
+<li><code>return len(seen)</code> — the count of distinct valid numbers.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Input: <code>digits = [0, 2, 2, 4]</code></p>
+<p>Permutations of length 3 include things like <code>(0, 2, 2)</code>, <code>(2, 0, 2)</code>, <code>(2, 2, 0)</code>, <code>(2, 4, 0)</code>, <code>(4, 2, 2)</code>, <code>(2, 2, 4)</code>, and many more.</p>
+<ul>
+<li><code>(0, 2, 2)</code> → <code>a == 0</code>, rejected (leading zero).</li>
+<li><code>(2, 0, 2)</code> → <code>a = 2</code> (fine), <code>c = 2</code> (even) → number = 202, added to <code>seen</code>.</li>
+<li><code>(2, 2, 0)</code> → <code>a = 2</code>, <code>c = 0</code> (even) → number = 220, added.</li>
+<li><code>(2, 4, 0)</code> → <code>a = 2</code>, <code>c = 0</code> → number = 240, added.</li>
+<li><code>(4, 2, 2)</code> → <code>a = 4</code>, <code>c = 2</code> → number = 422, added.</li>
+<li><code>(2, 2, 4)</code> → <code>a = 2</code>, <code>c = 4</code> → number = 224, added.</li>
+</ul>
+<p>Notice that <code>(2, 0, 2)</code> using the <em>first</em> copy of 2 as <code>a</code> and <code>(2, 0, 2)</code> using the <em>second</em> copy both produce 202 — but since we store the integer 202 in a set, it only counts once, even though two different permutation tuples generated it.</p>
+<p>After all permutations are processed, <code>seen</code> contains the full list of distinct valid numbers, and <code>len(seen)</code> is the answer.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(n³) where n is the number of digits (at most 10), since <code>permutations(digits, 3)</code> produces at most n × (n-1) × (n-2) tuples, and each is processed in constant time. In practice, that's at most 720 iterations — this is correct because we're bounding a brute-force enumeration by a small, fixed input size, not because n³ is generally fast.</p>
+<p><strong>Space:</strong> O(n³) in the worst case for the set (bounded by the number of distinct 3-digit numbers, which is at most 900, and also bounded by the permutation count), plus O(1) auxiliary space per iteration. This is correct because the set can never hold more entries than there are permutations feeding it.</p>
+<h2>Alternative Solutions</h2>
+<p>The two-case formula from the "Optimal Solution" section generalizes to the range 0-9 with no duplicates, and computing it directly is O(1) time and space — strictly faster than brute force. The catch: the moment your input has arbitrary duplicate digits and isn't guaranteed to contain every digit 0-9, you'd need to carefully count how many digits are available in each category (zero vs. nonzero-even vs. nonzero-odd, and how many <em>copies</em> of each), which turns a one-line formula into a small case-counting routine of its own. For an input capped at 10 digits, that added complexity doesn't buy you anything the brute-force version doesn't already give you for free — this is a case where the "clever" solution is worse engineering than the "dumb" one.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>All digits identical, e.g. <code>[2, 2, 2]</code>:</strong> Only one distinct number is possible (222), and only if it satisfies both rules — here it does, but if the repeated digit were odd, the answer would be 0.</li>
+<li><strong>No zero in the list:</strong> The leading-zero rule never triggers, and the two-case split (Case A / Case B) collapses to just Case B's logic.</li>
+<li><strong>Only one even digit available, e.g. <code>[1, 3, 5, 7, 8]</code>:</strong> Every valid number must end in that one digit — count drops sharply since there's no choice for the last position.</li>
+<li><strong>Minimum-length input (3 digits):</strong> If those 3 digits don't include an even digit or the only valid arrangement starts with zero, the answer can be 0.</li>
+<li><strong>Maximum-length input (10 digits) with heavy duplication:</strong> Tests whether your solution actually deduplicates — without the <code>set</code>, this case would overcount badly.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Using the single formula "choices for last × choices for first × choices for middle" without splitting on whether the last digit is zero — this is the exact 360-vs-328 trap.</li>
+<li>Forgetting that zero, once used as the last digit, is no longer available for the first digit's exclusion check — leading to double-penalizing the first digit's choices.</li>
+<li>Building numbers from permutations of <code>range(10)</code> instead of the actual input <code>digits</code> list — this ignores the constraint that a digit can only be used as many times as it appears.</li>
+<li>Forgetting to deduplicate with a <code>set</code>, so numbers built from two different physical copies of the same digit get counted twice.</li>
+<li>Checking <code>c % 2 == 0</code> before checking <code>a != 0</code>, then short-circuiting incorrectly, or checking oddness/evenness against the wrong variable (a common typo when swapping between reading digits as strings vs. integers).</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>"Why does the naive multiplication formula fail here, and can you name another problem where the same failure mode would show up?"</li>
+<li>"How would you solve this in O(1) time if the input digits array could contain arbitrary duplicates?"</li>
+<li>"What changes if the number needed to be 4 digits instead of 3?"</li>
+<li>"How would your solution change if leading zeros were actually allowed?"</li>
+<li>"Can you prove your two-case formula is exhaustive and non-overlapping?"</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 46 (Permutations)</strong> — the direct building block this solution leans on; understanding how permutations enumerate arrangements is essential here.</li>
+<li><strong>LeetCode 47 (Permutations II)</strong> — deals with deduplicating permutations from a list with repeated elements, which is conceptually the same problem <code>seen.add(...)</code> solves here.</li>
+<li><strong>LeetCode 996 (Number of Squareful Arrays)</strong> — another "count valid arrangements under a position-specific constraint" problem.</li>
+<li><strong>LeetCode 357 (Count Numbers with Unique Digits)</strong> — a close cousin that also requires careful case-splitting around the leading digit.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The lesson isn't really about digits — it's about spotting when a shared multiplier formula silently assumes something that isn't actually constant across cases. Any time the first slot in a sequence has a rule the other slots don't (can't be zero, can't be a special character, can't repeat), check whether that rule's <em>effect</em> changes depending on what happened elsewhere before you multiply. When in doubt, brute-force it and compare — it's the fastest way to catch a formula that's subtly wrong instead of visibly broken.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough, including the live brute-force run against all four of the problem's official test cases and two quick pop quizzes to lock in the leading-zero intuition, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <em>Fun with Learning Technology</em>, a series built around one idea: the fastest way to actually understand an algorithm is to watch someone get it wrong first, then figure out why. Every episode picks a problem where the "obvious" answer trips people up, and walks through the reasoning — not just the final code — needed to get it right.</p>
+<h2>Call To Action</h2>
+<p>If this saved you from making the same 360-vs-328 mistake, do three things: like the video on YouTube so more people see the correct breakdown before they submit the wrong answer, subscribe to the channel for more of these problem-solving walkthroughs, and subscribe to the Substack newsletter for deeper written explainers like this one. Drop a comment with the last "obvious formula" that turned out to be wrong for you — and share this with anyone prepping for interviews who still trusts their first instinct on counting problems.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>How many unique 3-digit even numbers from digits 1,2,3,4 (no repeats)?</summary><p>Split by last digit: last=2 or 4 gives 2×2=4 each; count both cases, sum them.</p></details><details class='card2'><summary>Why can&#x27;t the leading digit be 0 in this digit-arrangement problem?</summary><p>3-digit numbers can&#x27;t start with 0, so first-position choices exclude 0 even if 0 is in the digit set.</p></details><details class='card2'><summary>Why split into &#x27;last digit zero&#x27; vs &#x27;last digit nonzero even&#x27; cases?</summary><p>When last digit is 0, first digit has full remaining choices; when nonzero even, first digit loses one option (can&#x27;t be 0).</p></details><details class='card2'><summary>Time complexity of counting unique 3-digit even numbers from n digits?</summary><p>O(1) with combinatorics (permutation formula); O(n^3) if brute-force enumerating all digit triples.</p></details><details class='card2'><summary>Common bug when counting these numbers by brute force?</summary><p>Forgetting to exclude leading zero, silently including invalid numbers like 024 as valid 3-digit numbers.</p></details><details class='card2'><summary>Combinatorics case-split vs brute-force enumeration — when to prefer which?</summary><p>Use case-split math for large digit sets (fast, exact); brute force fine for small fixed sets like 4 digits, easier to verify.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
