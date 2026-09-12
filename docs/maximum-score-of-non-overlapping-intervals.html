@@ -1,0 +1,293 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3414. Maximum Score of Non-overlapping Intervals — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/maximum-score-of-non-overlapping-intervals
+💻 Code on GitHub: https://github.com">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/maximum-score-of-non-overlapping-intervals.html">
+<meta property="og:title" content="3414. Maximum Score of Non-overlapping Intervals — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/maximum-score-of-non-overlapping-intervals
+💻 Code on GitHub: https://github.com">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>3414. Maximum Score of Non-overlapping Intervals</h1><span class='badge' style='background:#ce946522;color:#ce9465'>💰 Greedy</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Every developer eventually meets a scheduling problem in disguise. Sometimes it's literally about calendars — meetings, job offers, flight bookings. Sometimes it's a resource allocation problem wearing a different costume. LeetCode 3414, Maximum Score of Non-overlapping Intervals, is one of the clearer examples of why interviewers love this family of problems: it looks like it wants a greedy answer, and greedy answers are exactly wrong here.</p>
+<p>This problem matters for interview prep because it tests three separate skills at once. First, whether you recognize that "pick the best-looking option first" is a trap. Second, whether you can turn a scheduling constraint into a sorted, binary-searchable structure. Third, whether you can extend a classic DP (weighted interval scheduling) into a bounded-count version, where you're not just optimizing a total, but optimizing a total under a hard cap on how many items you can choose. That bounded-count twist is what separates this from the textbook version of the problem, and it's the part most people get wrong on a first attempt.</p>
+<p>If you've done weighted job scheduling before, this will feel familiar with one extra dimension bolted on. If you haven't, this is a great problem to learn it from, because the constraint (at most 4 picks) forces you to think about <em>why</em> the DP needs an extra axis instead of just accepting it as boilerplate.</p>
+<h2>Problem Overview</h2>
+<p>You're given a list of intervals. Each interval has three numbers: a start point, an end point, and a weight. You need to choose a subset of these intervals — at most four of them — such that no two chosen intervals overlap. Overlap here is strict: if one interval ends exactly where another begins, they still count as touching, and touching is not allowed.</p>
+<p>Your goal is to maximize the sum of the weights of the intervals you pick. If multiple different subsets achieve the same maximum score, you must return the one whose original indices form the lexicographically smallest list when sorted — in practice, this usually just means: among tied options, don't take intervals you don't need.</p>
+<p>The output is the list of original indices (not the intervals themselves) of the chosen subset, sorted in ascending order.</p>
+<h2>Example</h2>
+<p>Consider six intervals, indexed 0 through 5, with these <code>[start, end, weight]</code> values:</p>
+<table>
+<thead>
+<tr>
+<th>Index</th>
+<th>Start</th>
+<th>End</th>
+<th>Weight</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>1</td>
+<td>3</td>
+<td>2</td>
+</tr>
+<tr>
+<td>1</td>
+<td>4</td>
+<td>5</td>
+<td>2</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1</td>
+<td>5</td>
+<td>5</td>
+</tr>
+<tr>
+<td>3</td>
+<td>6</td>
+<td>9</td>
+<td>3</td>
+</tr>
+<tr>
+<td>4</td>
+<td>6</td>
+<td>7</td>
+<td>1</td>
+</tr>
+<tr>
+<td>5</td>
+<td>8</td>
+<td>9</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p>Interval 2 runs from 1 to 5 and has the highest single weight on the list, 5. Interval 3 starts at 6, which is strictly after interval 2 ends at 5, so they don't overlap. Together, they sum to 5 + 3 = 8. Checking every other combination — including ones that squeeze in more than two intervals — nothing beats 8. So the answer is <code>[2, 3]</code>.</p>
+<p>Notice something important here: the two intervals with the <em>individually</em> highest weights aren't necessarily the answer. What matters is which sets of non-overlapping intervals are even reachable, and among those, which sums the highest.</p>
+<h2>Intuition</h2>
+<p>Here's the trap version of this problem, and it's worth sitting with because it's exactly how you'd get burned in an interview.</p>
+<p>Imagine five job offers on a calendar, each with a start day, end day, and payout. One offer pays \$500, dramatically more than the others. Your first instinct is to lock that one in immediately. But the \$500 job overlaps with two other jobs — say, one paying \$300 and one paying \$300 — which together total \$600. Skip the flashy \$500 job, take those two instead, and you've made \$100 more. The "obviously correct" first move was actually a \$100 mistake.</p>
+<p>This is the core lesson: <strong>the biggest single weight doesn't matter — the biggest chain of compatible weights does.</strong> Greedily grabbing the highest-value interval ignores what it blocks you from taking later. You need a way to reason about <em>sequences</em> of compatible intervals, not individual intervals in isolation.</p>
+<p>So how does an experienced engineer approach this? Start by sorting all intervals by their end time. Why end time and not start time? Because once you fix an interval, the question you always need to answer is "what's the best score I could have already banked using intervals that finished before this one starts?" Sorting by end time makes that question well-defined and lets you build it up incrementally, similar to how you'd build up a running maximum in classic weighted interval scheduling.</p>
+<p>Once you have things sorted, for each interval you need to quickly find the last (or, working forward, the <em>next</em>) interval that doesn't conflict with it. Checking every other interval for compatibility is an O(n) operation per interval, which becomes O(n²) overall — far too slow when n can reach 50,000. Since everything is sorted, this becomes a binary search: find the first interval whose start time is strictly after the current interval's end time. That's one O(log n) lookup instead of a linear scan.</p>
+<p>The final wrinkle is the "at most 4" constraint. In plain weighted interval scheduling, you track one running best score per position. Here, because you're capped at four picks, one number isn't enough — you need to know the best score achievable with exactly 1, 2, 3, or 4 remaining picks from any given position. That turns your DP array into a DP table with an extra dimension: rows for positions, and five columns for "0 through 4 picks."</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Try every possible subset of intervals of size 0 through 4, check whether each subset is pairwise non-overlapping, and keep the maximum-weight valid subset.</p>
+<p><strong>Algorithm:</strong>
+1. Generate all combinations of intervals of size 1, 2, 3, and 4.
+2. For each combination, check every pair for overlap.
+3. Track the maximum weight, and among ties, the lexicographically smallest index list.</p>
+<p><strong>Advantages:</strong> Trivial to reason about correctness. No sorting, no DP table, no binary search — just enumeration.</p>
+<p><strong>Disadvantages:</strong> Choosing up to 4 intervals out of n gives roughly O(n⁴) combinations, and checking each combination for pairwise overlap adds further cost. With n up to 50,000, this is astronomically slow — completely infeasible.</p>
+<p><strong>Time complexity:</strong> O(n⁴) or worse.
+<strong>Space complexity:</strong> O(1) beyond bookkeeping for the current best subset.</p>
+<p>This approach only exists as a mental baseline — it will not pass on the actual constraints, but it's useful for confirming correctness on tiny hand-built examples before trusting the optimized version.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach is a dynamic programming solution built on top of sorting and binary search. Here's the full sequence of steps.</p>
+<p><strong>Step 1 — Sort by start time, but remember original positions.</strong>
+Since the final answer needs original indices, sort the interval <em>indices</em> by start time rather than sorting the intervals themselves. Then pull out three parallel arrays — <code>start</code>, <code>end</code>, <code>weight</code> — in that sorted order.</p>
+<p><strong>Step 2 — Precompute the "next compatible interval" for each position.</strong>
+For every interval <code>i</code> in sorted order, binary search the <code>start</code> array for the first index whose start time is strictly greater than <code>end[i]</code>. Call this <code>nxt[i]</code>. This is the earliest interval you could take right after taking interval <code>i</code>.</p>
+<p><strong>Step 3 — Build the DP table.</strong>
+Create a table <code>dp</code> with <code>n + 1</code> rows and 5 columns (for 0 through 4 picks remaining). The extra row, <code>dp[n]</code>, represents "no more intervals left," and is all zeros. Fill the table from the bottom (last interval) up to the first:</p>
+<ul>
+<li><code>dp[i][0] = 0</code> for every <code>i</code> (zero picks left means zero score, no matter what).</li>
+<li>For <code>k</code> from 1 to 4: <code>dp[i][k] = max(dp[i+1][k], weight[i] + dp[nxt[i]][k-1])</code>.</li>
+</ul>
+<p>The first term is "skip interval <code>i</code>, keep whatever the best score was without it." The second term is "take interval <code>i</code>, add its weight, and jump ahead to the best score reachable from its next compatible interval, using one fewer pick." Take the larger of the two.</p>
+<p><strong>Step 4 — Read off the answer.</strong>
+The maximum possible score is <code>dp[0][4]</code> — the best score achievable starting from the very first interval with all four picks still available.</p>
+<p><strong>Step 5 — Reconstruct the actual chosen intervals.</strong>
+Walk forward from <code>i = 0</code>, <code>k = 4</code>. At each step, compare "take" versus "skip" the way the DP did. If taking <em>strictly</em> beats skipping, record this interval's original index, jump to <code>nxt[i]</code>, and decrement <code>k</code>. Otherwise, move to the next interval in sorted order without spending a pick. The word "strictly" matters: on an exact tie, skipping keeps the result using fewer indices, which is what guarantees the lexicographically smallest answer when multiple subsets tie for the top score.</p>
+<p>Since indices get collected in whatever order the chain happens to walk them (not necessarily increasing), sort the collected list before returning it.</p>
+<p>Here's a small trace of the table shape for the earlier six-interval example (values simplified for illustration):</p>
+<table>
+<thead>
+<tr>
+<th>i (sorted)</th>
+<th>k=0</th>
+<th>k=1</th>
+<th>k=2</th>
+<th>k=3</th>
+<th>k=4</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5</td>
+<td>0</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>4</td>
+<td>0</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>3</td>
+<td>0</td>
+<td>3</td>
+<td>4</td>
+<td>4</td>
+<td>4</td>
+</tr>
+<tr>
+<td>2</td>
+<td>0</td>
+<td>5</td>
+<td>8</td>
+<td>8</td>
+<td>8</td>
+</tr>
+<tr>
+<td>1</td>
+<td>0</td>
+<td>5</td>
+<td>8</td>
+<td>8</td>
+<td>8</td>
+</tr>
+<tr>
+<td>0</td>
+<td>0</td>
+<td>5</td>
+<td>8</td>
+<td>8</td>
+<td>8</td>
+</tr>
+</tbody>
+</table>
+<p><code>dp[0][4] = 8</code>, matching the expected answer.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from bisect import bisect_right
+from typing import List
+
+
+def maximum_weight(intervals: List[List[int]]) -&gt; List[int]:
+    n = len(intervals)
+
+    # Sort original indices by start time.
+    order = sorted(range(n), key=lambda i: intervals[i][0])
+    start = [intervals[i][0] for i in order]
+    end = [intervals[i][1] for i in order]
+    weight = [intervals[i][2] for i in order]
+
+    # nxt[i]: first sorted index whose start is strictly after end[i].
+    nxt = [bisect_right(start, end[i]) for i in range(n)]
+
+    # dp[i][k]: best score using intervals[i:], picking at most k of them.
+    dp = [[0] * 5 for _ in range(n + 1)]
+    for i in range(n - 1, -1, -1):
+        for k in range(1, 5):
+            skip = dp[i + 1][k]
+            take = weight[i] + dp[nxt[i]][k - 1]
+            dp[i][k] = max(skip, take)
+
+    # Reconstruct the lexicographically smallest set of original indices.
+    chosen = []
+    i, k = 0, 4
+    while i &lt; n and k &gt; 0:
+        skip = dp[i + 1][k]
+        take = weight[i] + dp[nxt[i]][k - 1]
+        if take &gt; skip:
+            chosen.append(order[i])
+            i = nxt[i]
+            k -= 1
+        else:
+            i += 1
+
+    return sorted(chosen)
+
+
+def demo() -&gt; None:
+    intervals = [[1, 3, 2], [4, 5, 2], [1, 5, 5], [6, 9, 3], [6, 7, 1], [8, 9, 1]]
+    result = maximum_weight(intervals)
+    assert result == [2, 3], result
+    print(&quot;ok:&quot;, result)
+
+
+if __name__ == &quot;__main__&quot;:
+    demo()
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>order = sorted(range(n), key=lambda i: intervals[i][0])</code> sorts indices, not the intervals themselves, so original positions are never lost.</li>
+<li><code>start</code>, <code>end</code>, <code>weight</code> are parallel arrays reindexed into sorted order — this keeps every later lookup a plain array access instead of repeated dictionary or tuple unpacking.</li>
+<li><code>nxt[i] = bisect_right(start, end[i])</code> finds the first sorted position whose start time is strictly greater than <code>end[i]</code>. Because "touching" counts as overlapping, this needs to be strictly greater, which is exactly what <code>bisect_right</code> gives against a value equal to <code>end[i]</code>.</li>
+<li>The DP table is built backwards (<code>range(n - 1, -1, -1)</code>) because <code>dp[i][k]</code> depends on <code>dp[i+1][k]</code> and <code>dp[nxt[i]][k-1]</code>, both of which refer to positions <em>after</em> <code>i</code>.</li>
+<li><code>dp[i][0]</code> is implicitly always 0 since the table is initialized with zeros and the loop only touches columns 1 through 4.</li>
+<li>The reconstruction loop mirrors the DP recurrence exactly, so whatever choice built the table is retraced faithfully — this symmetry is what keeps the reconstruction correct.</li>
+<li><code>chosen.append(order[i])</code> translates a sorted-order position back into its original index before storing it.</li>
+<li>The final <code>sorted(chosen)</code> step exists purely because indices get collected in traversal order, which is not the same as ascending numeric order.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using the six-interval example: <code>order</code> sorts by start time, which for this example keeps positions 0–5 in the same order already (starts are 1, 4, 1, 6, 6, 8 → after a stable sort by start, index 2 comes right after index 0 since both start at 1, but the exact tie-break doesn't change the outcome here).</p>
+<p>Working backwards, <code>dp[5][k] = 1</code> for <code>k ≥ 1</code> (only interval 5 available, weight 1). <code>dp[4][k]</code> compares skipping (inherits from <code>dp[5]</code>) versus taking interval 4 (weight 1, jumping past it) — they tie, so <code>dp[4][k] = 1</code>. <code>dp[3][k]</code> for <code>k ≥ 1</code> considers taking interval 3 (weight 3) jumping to <code>nxt[3]</code>, versus skipping — taking wins, giving <code>dp[3][k] = 3</code> for <code>k=1</code> and higher once compounded with later picks (works out to 4 once interval 5 is added at <code>k=2</code>). <code>dp[2][k]</code> considers taking interval 2 (weight 5) and jumping to <code>nxt[2] = 3</code> (interval 3 starts at 6, which is after interval 2 ends at 5): <code>5 + dp[3][k-1]</code>. At <code>k=4</code>, that's <code>5 + dp[3][3] = 5 + 3 = 8</code>, beating skipping.</p>
+<p>Reconstruction starts at <code>i=0, k=4</code>. Interval 0 (weight 2) doesn't beat skipping, so move to <code>i=1</code>. Interval 1 also doesn't beat skipping, move to <code>i=2</code>. Interval 2's "take" value (<code>5 + dp[3][3] = 8</code>) beats "skip" (<code>dp[3][4]</code>, which is also 8 in this table but not strictly greater — actually since take equals or exceeds skip and the recurrence favored take when building dp[2][4]=8, the reconstruction must match dp[2][4] to decide; taking interval 2 does achieve the recorded optimum), so index 2 is recorded, jump to <code>nxt[2] = 3</code>, <code>k=3</code>. At <code>i=3, k=3</code>, interval 3 (weight 3) beats skipping, so index 3 is recorded, jump to <code>nxt[3]</code> (past interval 3), <code>k=2</code>. From there, nothing further improves the score, so the loop ends. Final result: <code>sorted([2, 3]) = [2, 3]</code>, matching the expected output.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> Sorting indices is O(n log n). Computing <code>nxt[i]</code> for every interval via binary search is O(n log n) total. Building the DP table is O(n) rows times a constant 5 columns, so O(n). Reconstruction is O(n) in the worst case. Total: <strong>O(n log n)</strong>, dominated by sorting and binary search.</p>
+<p><strong>Space:</strong> The <code>start</code>, <code>end</code>, <code>weight</code>, and <code>nxt</code> arrays are each O(n). The DP table is O(n) rows times a constant 5 columns, so O(n) as well. Total: <strong>O(n)</strong>.</p>
+<p>These bounds are correct because the constant factor of 5 (from "at most 4 picks") never scales with input size — it's a fixed cap from the problem statement, not a variable dimension.</p>
+<h2>Alternative Solutions</h2>
+<p>A segment tree or Fenwick tree keyed on coordinate-compressed end times could replace the binary search step, letting you query "best score ending before position x" more flexibly if the problem allowed more general range queries. For this specific problem, that's unnecessary complexity — binary search on a sorted array does the same job with far less code and the same asymptotic complexity. The DP-with-binary-search approach is the standard, interview-appropriate solution here.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty input:</strong> <code>n = 0</code> should return an empty list — the DP table degenerates to just the base row of zeros.</li>
+<li><strong>Fewer than 4 valid non-overlapping intervals exist:</strong> the algorithm naturally picks fewer than 4, since <code>dp[i][k]</code> never forces a pick that doesn't improve the score.</li>
+<li><strong>All intervals overlap each other:</strong> only the single best-weight interval should be selected.</li>
+<li><strong>Duplicate intervals</strong> (same start, end, and weight): both are valid candidates independently; the tie-breaking rule (prefer skipping on equal score) determines which index is picked.</li>
+<li><strong>Touching endpoints</strong> (one interval's end equals another's start): must be treated as overlapping, not compatible — this is the single most common source of off-by-one bugs in this problem.</li>
+<li><strong>Maximum-size input</strong> (n = 50,000) with large coordinate values (up to 10⁹): confirms the solution doesn't rely on indexing into a day-by-day array, which would be infeasible at this scale.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Treating touching intervals as compatible.</strong> If interval A ends at 5 and interval B starts at 5, they still overlap — the binary search must use strictly-greater-than logic (<code>bisect_right</code>, not <code>bisect_left</code>, against the right value).</li>
+<li><strong>Using a single running-best array instead of a 5-column DP table.</strong> This silently ignores the "at most 4 picks" cap and reduces to unbounded weighted interval scheduling.</li>
+<li><strong>Greedily sorting by weight instead of end time.</strong> This is the exact trap the problem is designed around — it produces plausible-looking but wrong answers.</li>
+<li><strong>Scanning linearly for the next compatible interval</strong> instead of binary searching, which passes small tests but times out at n = 50,000.</li>
+<li><strong>Taking on a tie during reconstruction</strong> instead of skipping, which produces a valid-scoring but not lexicographically smallest index list.</li>
+<li><strong>Forgetting to sort the final index list</strong>, since indices are collected in whatever order the DP chain visits them, not ascending order.</li>
+<li><strong>Sorting the intervals themselves instead of their indices</strong>, losing the mapping back to the original positions needed for the answer.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Why does sorting by end time (rather than start time) make the DP recurrence well-defined?</li>
+<li>How would the solution change if the cap were a general <code>k</code> instead of a fixed 4?</li>
+<li>What's the worst-case time complexity if you replaced binary search with a linear scan, and why does the fixed cap of 4 not save you there?</li>
+<li>How do you guarantee the lexicographically smallest index set among ties, and why does "skip on exact tie" achieve that?</li>
+<li>Could this be solved with a greedy algorithm under any additional constraints? If so, which ones?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 435 — Non-overlapping Intervals</strong>: The unweighted, unbounded-count ancestor of this problem; a good warm-up for understanding overlap conditions.</li>
+<li><strong>LeetCode 1235 — Maximum Profit in Job Scheduling</strong>: The classic unbounded weighted interval scheduling problem this one builds on, minus the "at most k" cap.</li>
+<li><strong>LeetCode 300 — Longest Increasing Subsequence</strong>: Shares the "binary search plus DP" pattern for reducing an O(n²) recurrence to O(n log n).</li>
+<li><strong>LeetCode 1751 — Maximum Number of Events That Can Be Attended II</strong>: Nearly identical structure — weighted interval scheduling capped at k selections, using the same DP-plus-binary-search template.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The biggest single weight is not the same as the biggest reachable chain — greedy choices that ignore downstream consequences will cost you. Sorting by end time and binary searching for the next compatible interval turns an O(n²) scheduling problem into O(n log n). When a problem caps <em>how many</em> items you can select, that cap becomes a new dimension in your DP table, not an afterthought bolted onto a single-value DP. And when correctness requires a specific tie-breaking rule, encode it directly into the reconstruction logic — don't leave it to chance.</p>
+<h2>Watch the Video</h2>
+<p>For a visual walkthrough of the binary search jumps and the DP table filling in step by step, watch the full breakdown here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series dedicated to making coding interview problems and core computer science concepts genuinely intuitive rather than memorized. Every video works through the reasoning an experienced engineer actually goes through — the false starts, the "wait, why doesn't the obvious approach work" moments, and the pattern recognition that gets you to the right data structure. The goal isn't just to pass this one problem; it's to recognize the same shape the next time it shows up in a different costume.</p>
+<h2>Call To Action</h2>
+<p>If this explanation helped the problem finally click, give the video a like on YouTube and subscribe for more interview-focused breakdowns like this one. For deeper dives and written companions to every video, subscribe to the Substack newsletter. Drop a comment with the problem you'd like broken down next, and share this with anyone prepping for interviews who keeps getting tripped up by greedy-looking DP problems.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When intervals must be non-overlapping but you pick K of them, what&#x27;s the tell?</summary><p>Weighted interval scheduling pattern: sort by end time, DP where dp[i][k] = best score using first i intervals, k picks.</p></details><details class='card2'><summary>Time complexity for K-limited weighted interval scheduling with binary search?</summary><p>O(n log n): sort intervals, then for each use binary search to find last non-overlapping predecessor.</p></details><details class='card2'><summary>Space complexity of the DP table for this problem?</summary><p>O(n*k) for the dp array; can sometimes trim to O(k) per row but n*k is standard and safe.</p></details><details class='card2'><summary>Why does greedily grabbing the biggest-score interval first fail?</summary><p>It can block two smaller overlapping-free intervals whose combined score beats the one big pick — greedy ignores future exclusions.</p></details><details class='card2'><summary>Weighted interval scheduling vs plain activity selection (max count)?</summary><p>Activity selection maximizes count and greedy-by-end-time works; weighted scoring needs DP since values differ, greedy breaks.</p></details><details class='card2'><summary>Interview follow-up: how do you find the last compatible interval fast?</summary><p>Binary search on sorted end times for the rightmost interval whose end &lt;= current start.</p></details></div><h2 class='ph1' style='font-size:1.4rem'>Similar problems</h2><div class='grid'><a class='card' href='stone-game-iii-advanced.html'><div class='body'><h3>Stone Game III — 🔴 Advanced (3/3) — LeetCode Daily Python Solution (why greedy loses)</h3><span class='badge' style='background:#ce946522;color:#ce9465'>💰 Greedy</span></div></a><a class='card' href='stone-game-intermediate.html'><div class='body'><h3>Stone Game — 🟡 Intermediate (2/3) — LeetCode Daily Python Solution (the interval trick)</h3><span class='badge' style='background:#ce946522;color:#ce9465'>💰 Greedy</span></div></a><a class='card' href='smallest-palindromic-rearrangement-i-advanced.html'><div class='body'><h3>This Greedy Trick Solves Smallest Palindromic Rearrangement in O(n)</h3><span class='badge' style='background:#ce946522;color:#ce9465'>💰 Greedy</span></div></a></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
