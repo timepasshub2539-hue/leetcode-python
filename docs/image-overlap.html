@@ -1,0 +1,160 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>835. Image Overlap | LeetCode Daily Python Solution (stop moving the grid) — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/image-overlap
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/image-overlap.html">
+<meta property="og:title" content="835. Image Overlap | LeetCode Daily Python Solution (stop moving the grid) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/image-overlap
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leetcode">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>835. Image Overlap | LeetCode Daily Python Solution (stop moving the grid)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Grid alignment problems show up more often in interviews than people expect, and not because anyone is testing you on satellite imagery. They're testing whether you can spot when a problem's real bottleneck is hidden data, not the grid itself. LeetCode 835, Image Overlap, looks like an image-processing problem, but it's really a lesson in reframing: instead of searching over positions, you search over relationships between the few points that actually matter.</p>
+<p>This is also a great problem for building instinct around when to trade a "obvious" O(n⁴) brute force for something driven entirely by sparse data. If you've ever frozen in an interview because a solution technically works but clearly won't scale, this pattern is one of the cleanest ways to build that muscle.</p>
+<h2>Problem Overview</h2>
+<p>You're given two square binary grids of the same size, <code>img1</code> and <code>img2</code>, each filled with 0s and 1s. You're allowed to slide one grid — left, right, up, or down, by any amount — before placing it on top of the other. No rotating, no flipping, just translation.</p>
+<p>After sliding, the "overlap" is the number of positions where both grids have a 1 at the same cell. Your job is to find the slide that produces the largest possible overlap, and return that maximum count.</p>
+<p>The key constraint that should catch your eye: sliding never wraps around and never rotates. A slide is fully described by exactly two numbers — how far you moved vertically, and how far you moved horizontally.</p>
+<h2>Example</h2>
+<p>Imagine a small grid where <code>img1</code> has 1s scattered at a few positions, and <code>img2</code> has the same shape of 1s, just shifted down by one row and right by one column.</p>
+<p>If you slide <code>img1</code> down by 1 and right by 1, every one of its 1-cells now sits exactly on top of a 1-cell in <code>img2</code>. The overlap count equals however many 1s were in the smaller of the two point sets.</p>
+<p>In the actual example from the problem, sliding <code>img1</code> right by one and down by one causes three 1-cells to align perfectly. No other slide does better, so the answer is 3.</p>
+<h2>Intuition</h2>
+<p>The naive instinct is to physically slide the grid: try every possible offset, stack the grids, and count matching 1s at each position. It works, but think about what you're actually spending time on. For an n×n grid, there are roughly O(n²) possible offsets, and checking each one costs O(n²) work to compare cells. That's O(n⁴) total, and worse, you're spending most of that time comparing zeros against zeros — cells that could never contribute to an overlap.</p>
+<p>The reframe: an overlap only ever happens where a 1 in <code>img1</code> lines up with a 1 in <code>img2</code>. There's no other way to get credit. So instead of asking "what happens at this shift," ask the reverse question: "for this pair of 1-cells, one from each image, what shift would align them?"</p>
+<p>The answer is just their coordinate difference — a row gap and a column gap. That difference is a shift <em>vector</em>. If you compute this vector for every pair of 1-cells (one from each grid), the shift that appears most often is the shift that aligns the most 1s. You've turned a search over positions into a tally over votes.</p>
+<p>This works because the number of 1s is often far smaller than n², especially in sparse grids like satellite photos of land. You stop paying for every empty cell and only pay for the pixels that actually carry information.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Slide <code>img2</code> over <code>img1</code> at every possible offset, stack them, and count matching 1s.</p>
+<p><strong>Algorithm:</strong>
+1. For every possible row shift and column shift within the grid's bounds.
+2. Overlay the shifted grid on the original.
+3. Count cells where both are 1.
+4. Track the maximum count seen.</p>
+<p><strong>Advantages:</strong> Simple to reason about, directly matches the problem's plain-English description, easy to verify by hand on small examples.</p>
+<p><strong>Disadvantages:</strong> Wastes enormous effort scanning offsets and cells that never contain any 1s. Doesn't exploit sparsity at all.</p>
+<p><strong>Complexity:</strong> Time O(n⁴) — roughly n² possible shifts, each costing O(n²) to evaluate. Space O(n²) for the grids themselves (or O(1) extra if done in place).</p>
+<h2>Optimal Solution</h2>
+<p>Step 1: Walk both grids once each and collect the coordinates of every 1-cell. Call these <code>pts1</code> and <code>pts2</code>.</p>
+<p>Step 2: For every point in <code>pts1</code> paired with every point in <code>pts2</code>, compute the row difference and column difference. This pair <code>(row_gap, col_gap)</code> is the shift vector this pairing "votes" for.</p>
+<p>Step 3: Tally these votes in a dictionary, keyed by the <code>(row_gap, col_gap)</code> tuple.</p>
+<p>Step 4: The answer is the highest vote count in that dictionary — the shift that aligns the most 1-cells simultaneously.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happens</th>
+<th>Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Extract points</td>
+<td>Scan grid once</td>
+<td>O(n²)</td>
+</tr>
+<tr>
+<td>Pair and vote</td>
+<td>Compare every pt1 to every pt2</td>
+<td>O(|pts1| × |pts2|)</td>
+</tr>
+<tr>
+<td>Read max</td>
+<td>Scan dictionary values</td>
+<td>O(distinct shifts)</td>
+</tr>
+</tbody>
+</table>
+<p>Because <code>|pts1|</code> and <code>|pts2|</code> are both at most n², but in practice much smaller for sparse grids, this dramatically outperforms brute force sliding.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from collections import defaultdict
+from typing import List
+
+
+def largest_overlap(img1: List[List[int]], img2: List[List[int]]) -&gt; int:
+    n = len(img1)
+
+    pts1 = [(r, c) for r in range(n) for c in range(n) if img1[r][c] == 1]
+    pts2 = [(r, c) for r in range(n) for c in range(n) if img2[r][c] == 1]
+
+    if not pts1 or not pts2:
+        return 0
+
+    counts = defaultdict(int)
+    for r1, c1 in pts1:
+        for r2, c2 in pts2:
+            shift = (r1 - r2, c1 - c2)
+            counts[shift] += 1
+
+    return max(counts.values())
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>n = len(img1)</code> grabs the grid dimension once.</li>
+<li>The two list comprehensions build <code>pts1</code> and <code>pts2</code>, each a list of <code>(row, col)</code> coordinates where the grid holds a 1. This is the step that throws away every zero cell — from here on, zeros never enter the calculation.</li>
+<li>The early return handles the case where either image has no 1s at all: there's nothing to overlap, so the answer is immediately 0.</li>
+<li><code>counts</code> is a dictionary mapping a shift vector to how many point-pairs voted for it.</li>
+<li>The nested loop pairs every point in <code>pts1</code> with every point in <code>pts2</code>. <code>(r1 - c1, c1 - c2)</code>... actually <code>(r1 - r2, c1 - c2)</code> is the shift that would move the point in <code>img2</code> onto the point in <code>img1</code>.</li>
+<li><code>counts[shift] += 1</code> records that vote.</li>
+<li><code>max(counts.values())</code> returns the highest tally, which is the largest achievable overlap.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Say <code>pts1 = [(0, 0), (1, 1)]</code> and <code>pts2 = [(1, 0), (2, 1)]</code>.</p>
+<p>Pairing <code>(0,0)</code> with <code>(1,0)</code> gives shift <code>(-1, 0)</code>.
+Pairing <code>(0,0)</code> with <code>(2,1)</code> gives shift <code>(-2, -1)</code>.
+Pairing <code>(1,1)</code> with <code>(1,0)</code> gives shift <code>(0, 1)</code>.
+Pairing <code>(1,1)</code> with <code>(2,1)</code> gives shift <code>(-1, 0)</code>.</p>
+<p>Tally: <code>(-1, 0)</code> appears twice, everything else once. Max count is 2, so the answer is 2 — sliding by row -1, col 0 aligns both points.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(|pts1| × |pts2|), bounded above by O(n⁴) in the worst case (a fully dense grid), but typically far smaller. This is correct because every possible overlap must come from some pair of 1-cells, and we enumerate exactly those pairs — no more, no less.</p>
+<p><strong>Space:</strong> O(distinct shifts), which is bounded by O(|pts1| × |pts2|) in the worst case but usually much smaller in practice, since many pairs collapse onto the same shift.</p>
+<h2>Alternative Solutions</h2>
+<p>FFT-based cross-correlation is the standard technique for aligning real images and would technically work here, computing overlap counts for all shifts simultaneously via convolution. But with n capped at 30, the overhead of setting up FFTs isn't worth it — the point-pairing approach is simpler to implement, easier to reason about, and just as fast at this scale.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty grids (all zeros):</strong> Either <code>pts1</code> or <code>pts2</code> is empty, function returns 0 immediately.</li>
+<li><strong>Single 1 in each grid:</strong> Only one shift vector is ever voted for; that's the answer, trivially 1.</li>
+<li><strong>Identical grids, no shift needed:</strong> The zero shift <code>(0, 0)</code> should collect the most votes.</li>
+<li><strong>All 1s (dense grid):</strong> Every pair votes, and the maximum shift is the "no movement" case, which yields n².</li>
+<li><strong>1s on grid boundary:</strong> Coordinates work identically at edges; no special handling needed since we never physically move the grid.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Trying to physically slide and re-index the grid arrays, leading to off-by-one errors or index-out-of-bounds handling for the "hanging off the edge" parts.</li>
+<li>Forgetting the early return for empty point lists, causing <code>max()</code> on an empty dictionary to throw a <code>ValueError</code>.</li>
+<li>Swapping the order of subtraction (<code>r2 - r1</code> instead of <code>r1 - r2</code>), which flips the direction of the shift — usually harmless for the final count but confusing if you later need the actual shift, not just its magnitude.</li>
+<li>Using a nested list or a 2D array to store vote counts instead of a dictionary, wasting memory over the full shift-space instead of only tracking shifts that actually occurred.</li>
+<li>Recomputing the point lists inside the nested loop instead of extracting them once beforehand.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you modify this to return the actual best shift, not just the overlap count?</li>
+<li>What happens to the time complexity if the grids aren't square?</li>
+<li>Could you solve this using FFT-based convolution instead, and what's the tradeoff?</li>
+<li>How would your approach change if grids could also be rotated, not just slid?</li>
+<li>What's the worst-case input that maximizes the runtime of this algorithm?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 30 (Substring with Concatenation of All Words):</strong> similar "reduce to relevant positions" reframing.</li>
+<li><strong>LeetCode 149 (Max Points on a Line):</strong> also relies on tallying vectors/slopes between point pairs in a hash map.</li>
+<li><strong>LeetCode 1878 (Get Biggest Three Rhombus Sums):</strong> grid-coordinate reasoning with geometric constraints.</li>
+<li><strong>LeetCode space-transform problems</strong> in general benefit from the same "convert positions to relative differences" trick.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>When a grid problem seems dominated by sparse "interesting" cells, stop thinking about positions and start thinking about relationships between those cells. Converting a position search into a vote tally on relative offsets is a pattern worth recognizing — it shows up anywhere alignment, matching, or translation invariance matters.</p>
+<h2>Watch the Video</h2>
+<p>Prefer seeing this traced out visually with the actual grid diagrams and two live quizzes to test your understanding? Watch the full walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This is part of Fun with Learning Technology, a series that breaks down LeetCode problems the way you'd actually want them explained in a real interview prep session — building intuition first, writing clean production-quality Python second, and never skipping the "why" behind an approach.</p>
+<h2>Call To Action</h2>
+<p>If this helped the vote-on-vectors trick click for you, the video has the full visual walkthrough — give it a like on YouTube, subscribe for more daily LeetCode breakdowns, and consider subscribing to the Substack for deeper dives. Drop a comment with your own approach or a problem you'd like to see covered next, and share this with anyone prepping for coding interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Overlapping grids with translations only — what&#x27;s the tell?</summary><p>When you only need shift amounts (dx,dy), not rotation, think: collect coordinates, count vector differences via hashmap.</p></details><details class='card2'><summary>Time complexity of the vector-tally approach for Image Overlap?</summary><p>O(n^4) worst case: comparing every &#x27;1&#x27; in image A against every &#x27;1&#x27; in image B.</p></details><details class='card2'><summary>Space complexity of the shift-vector counting approach?</summary><p>O(n^4) in the worst case for the hashmap of (dx,dy) counts, since each dimension ranges -n..n.</p></details><details class='card2'><summary>Common bug when computing shift vectors between two 1-cells?</summary><p>Forgetting shift is directional (A&#x27;s cell minus B&#x27;s cell, not the reverse) — flips sign and silently corrupts the vote tally.</p></details><details class='card2'><summary>Brute-force grid shifting vs vector-tally: what&#x27;s the tradeoff?</summary><p>Brute force tries every shift and rescans the whole grid each time (slow); tally approach only touches actual 1s, much faster when sparse.</p></details><details class='card2'><summary>Interview follow-up: what if rotation were also allowed?</summary><p>Vector-tally breaks down; you&#x27;d need to also enumerate rotations (4 or 8 orientations) and repeat the shift-vote process per orientation.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
