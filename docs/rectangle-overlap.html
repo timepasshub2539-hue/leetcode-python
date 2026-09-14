@@ -1,0 +1,165 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>836. Rectangle Overlap | LeetCode Daily Python Solution (2 one-line checks, zero geometry) — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/rectangle-overlap
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leet">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/rectangle-overlap.html">
+<meta property="og:title" content="836. Rectangle Overlap | LeetCode Daily Python Solution (2 one-line checks, zero geometry) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/rectangle-overlap
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/leet">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>836. Rectangle Overlap | LeetCode Daily Python Solution (2 one-line checks, zero geometry)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Picture your calendar app. You've got a meeting from 2:00 to 3:00. Someone tries to book 2:45 to 3:30. The app has to flag that conflict instantly, every time, with zero ambiguity. That's the real-world shape of LeetCode 836: Rectangle Overlap.</p>
+<p>It's labeled "easy," and the core idea genuinely is easy once you see it. But the problem hides a few sharp edges — the kind that trip up developers who've solved plenty of harder problems but jump straight to geometry instead of stepping back and reframing the question. Interviewers like this problem precisely because it rewards a specific instinct: turning "when do these things overlap" into "when do these things definitely miss." That reframe — checking the complement of what you actually want — shows up constantly in interval scheduling, memory allocation, calendar systems, and range-based systems design. Rectangle Overlap is a clean, low-stakes place to build that instinct before you need it somewhere expensive.</p>
+<h2>Problem Overview</h2>
+<p>You're given two rectangles on a 2D grid. Each one is described by its bottom-left corner and its top-right corner — four numbers total per rectangle. You need to return <code>true</code> if the rectangles overlap with a genuine, positive area, and <code>false</code> otherwise.</p>
+<p>The critical rule: touching isn't overlapping. If two rectangles share only an edge or a single corner, that's zero area of intersection, and the answer is <code>false</code>. You're also guaranteed that every rectangle is valid — its bottom-left corner is strictly below and to the left of its top-right corner, so you never have to defend against a degenerate, zero-area rectangle as input.</p>
+<h2>Example</h2>
+<p>Let's set up two rectangles:</p>
+<ul>
+<li><code>rec1 = [0, 0, 2, 2]</code> — bottom-left at (0,0), top-right at (2,2)</li>
+<li><code>rec2 = [1, 1, 3, 3]</code> — bottom-left at (1,1), top-right at (3,3)</li>
+</ul>
+<p>Rec1 spans x from 0 to 2 and y from 0 to 2. Rec2 spans x from 1 to 3 and y from 1 to 3. Visually, rec2 is shifted up and to the right, but it still cuts through rec1's upper-right quadrant. The overlapping region is the square from (1,1) to (2,2) — real area, so the answer is <code>true</code>.</p>
+<p>Now compare that to <code>rec1 = [0, 0, 2, 2]</code> and <code>rec2 = [2, 0, 4, 2]</code>. Rec2 starts exactly where rec1 ends on the x-axis. They share the vertical edge at x=2, but there's zero width of overlap. The answer here is <code>false</code>, even though the rectangles are touching.</p>
+<h2>Intuition</h2>
+<p>The natural first instinct is to check whether a corner of one rectangle lands inside the other. It feels obvious — if they overlap, surely one rectangle pokes a corner into the other, right?</p>
+<p>Wrong, and this is exactly the trap the problem sets. Picture a long, thin rectangle sliced straight through the middle of a wide one, like a knife through a stick of butter. The thin rectangle overlaps the wide one significantly — real area, unmistakably — but none of its four corners land inside the wide rectangle, and none of the wide rectangle's corners land inside the thin one. Corner-checking misses this case entirely.</p>
+<p>So flip the question. Instead of asking "do these overlap," ask "when could they definitely <em>not</em> overlap?" There are exactly four ways two rectangles can fail to touch:</p>
+<ol>
+<li>Rec1 is entirely to the left of rec2</li>
+<li>Rec1 is entirely to the right of rec2</li>
+<li>Rec1 is entirely above rec2</li>
+<li>Rec1 is entirely below rec2</li>
+</ol>
+<p>If none of those four conditions hold, the rectangles must overlap — no corner-checking, no geometry, no edge cases about diagonal slices. This is the same move you'd make reasoning about two meetings on a calendar: instead of asking "do these time ranges overlap," you ask "does one end before the other starts." Reduce the rectangle problem to that same one-dimensional question, once for x and once for y, and require both to hold.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Check every corner of rec1 against rec2's boundaries, and every corner of rec2 against rec1's boundaries, looking for any point that falls strictly inside the other rectangle.</p>
+<p><strong>Algorithm:</strong> For each of the four corners of each rectangle, test whether that point lies strictly within the other rectangle's bounds.</p>
+<p><strong>Advantages:</strong> Feels intuitive, matches how people first picture the problem visually.</p>
+<p><strong>Disadvantages:</strong> It's wrong. As shown above, a thin rectangle can overlap another with zero corners inside either shape. This approach fails silently on that exact case, which is worse than being slow — it's incorrect.</p>
+<p><strong>Time complexity:</strong> O(1) — still just a constant number of checks.
+<strong>Space complexity:</strong> O(1).</p>
+<p>Since this approach doesn't actually solve the problem correctly, it's not a real fallback — it's a trap to recognize and route around, which is why the reframe below is the only solution worth writing.</p>
+<h2>Optimal Solution</h2>
+<p>Project both rectangles onto the x-axis, ignoring y entirely. Rec1 becomes the interval <code>[x1, x2]</code>, rec2 becomes <code>[x3, x4]</code>. Do the same on the y-axis: <code>[y1, y2]</code> and <code>[y3, y4]</code>.</p>
+<p>Two intervals overlap with positive length exactly when each one's start is strictly before the other's end:</p>
+<pre><code>x_overlap = rec1.x1 &lt; rec2.x2 and rec2.x1 &lt; rec1.x2
+y_overlap = rec1.y1 &lt; rec2.y2 and rec2.y1 &lt; rec1.y2
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rec1.x1 &lt; rec2.x2</code></td>
+<td>rec1 doesn't start after rec2 ends (x-axis)</td>
+</tr>
+<tr>
+<td><code>rec2.x1 &lt; rec1.x2</code></td>
+<td>rec2 doesn't start after rec1 ends (x-axis)</td>
+</tr>
+<tr>
+<td><code>rec1.y1 &lt; rec2.y2</code></td>
+<td>rec1 doesn't start after rec2 ends (y-axis)</td>
+</tr>
+<tr>
+<td><code>rec2.y1 &lt; rec1.y2</code></td>
+<td>rec2 doesn't start after rec1 ends (y-axis)</td>
+</tr>
+</tbody>
+</table>
+<p>The rectangles overlap with real area only when <strong>both</strong> the x-projection and y-projection overlap. The strict <code>&lt;</code> is what excludes edge-touching and corner-touching — a shared boundary produces equal values on one side, which fails the strict inequality and correctly returns <code>false</code>.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">class Solution:
+    def isRectangleOverlap(self, rec1: list[int], rec2: list[int]) -&gt; bool:
+        x1, y1, x2, y2 = rec1
+        x3, y3, x4, y4 = rec2
+
+        x_overlap = x1 &lt; x4 and x3 &lt; x2
+        y_overlap = y1 &lt; y4 and y3 &lt; y2
+
+        return x_overlap and y_overlap
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>x1, y1, x2, y2 = rec1</code> unpacks rec1's bottom-left <code>(x1, y1)</code> and top-right <code>(x2, y2)</code>.</li>
+<li><code>x3, y3, x4, y4 = rec2</code> does the same for rec2.</li>
+<li><code>x_overlap = x1 &lt; x4 and x3 &lt; x2</code> checks the x-axis projections: rec1 must start before rec2 ends, and rec2 must start before rec1 ends.</li>
+<li><code>y_overlap = y1 &lt; y4 and y3 &lt; y2</code> runs the identical logic on the y-axis.</li>
+<li><code>return x_overlap and y_overlap</code> — both axes must independently overlap for the rectangles to share real area.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using <code>rec1 = [0, 0, 2, 2]</code> and <code>rec2 = [1, 1, 3, 3]</code>:</p>
+<ul>
+<li><code>x1, y1, x2, y2 = 0, 0, 2, 2</code></li>
+<li><code>x3, y3, x4, y4 = 1, 1, 3, 3</code></li>
+<li><code>x_overlap = (0 &lt; 3) and (1 &lt; 2)</code> → <code>True and True</code> → <code>True</code></li>
+<li><code>y_overlap = (0 &lt; 3) and (1 &lt; 2)</code> → <code>True and True</code> → <code>True</code></li>
+<li>Return <code>True and True</code> → <strong><code>True</code></strong></li>
+</ul>
+<p>Now the edge-touching case, <code>rec1 = [0, 0, 2, 2]</code> and <code>rec2 = [2, 0, 4, 2]</code>:</p>
+<ul>
+<li><code>x1, y1, x2, y2 = 0, 0, 2, 2</code></li>
+<li><code>x3, y3, x4, y4 = 2, 0, 4, 2</code></li>
+<li><code>x_overlap = (0 &lt; 4) and (2 &lt; 2)</code> → <code>True and False</code> → <code>False</code></li>
+<li>Return <code>False</code> immediately (short-circuits) — <strong><code>False</code></strong>, correctly rejecting the shared edge.</li>
+</ul>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(1). Four comparisons, regardless of coordinate magnitude — there's no loop, no scan, nothing that grows with input size.</p>
+<p><strong>Space:</strong> O(1). A handful of unpacked integers, no auxiliary structures.</p>
+<p>These are exact bounds, not amortized estimates — the algorithm does the same fixed work for coordinates near zero or near the integer limits.</p>
+<h2>Alternative Solutions</h2>
+<p>You could compute the intersection rectangle explicitly — <code>max(x1, x3)</code> to <code>min(x2, x4)</code> for width, same idea for height — and check both resulting dimensions are positive. This is mathematically equivalent to the projection check and also O(1). It's arguably more useful if you later need the actual overlapping area or region, not just a boolean, since it hands you the intersection's coordinates directly. For this problem, where only <code>true</code>/<code>false</code> is required, the direct interval check is more minimal — no reason to compute values you'll never inspect.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Exact edge touch:</strong> rectangles share a full edge (e.g., rec2 starts where rec1 ends on x). Strict <code>&lt;</code> correctly returns <code>false</code>.</li>
+<li><strong>Corner touch only:</strong> rectangles meet at a single point. Both axis checks fail on at least one side, returning <code>false</code>.</li>
+<li><strong>One rectangle fully inside another:</strong> all four inequalities hold comfortably, returns <code>true</code>.</li>
+<li><strong>Identical rectangles:</strong> every inequality holds strictly, returns <code>true</code> — they overlap with their entire area.</li>
+<li><strong>Large coordinates:</strong> since the algorithm is pure comparison, coordinate magnitude (even near the problem's stated bounds) has zero effect on runtime.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Using <code>&lt;=</code> instead of <code>&lt;</code>.</strong> This incorrectly counts edge-touching or corner-touching as overlap.</li>
+<li><strong>Checking corners instead of projections.</strong> Fails on the thin-rectangle-slicing-through case, where no corner lands inside either shape.</li>
+<li><strong>Checking only one axis.</strong> Two rectangles can overlap on x but miss entirely on y (stacked vertically with no shared row) — both axes are required.</li>
+<li><strong>Mixing up which rectangle's coordinate goes on which side of the inequality.</strong> Swapping <code>x1 &lt; x4</code> for <code>x1 &lt; x2</code> checks a rectangle against itself, not against the other rectangle.</li>
+<li><strong>Assuming a naive "does the start of one come before the end of the other" check in one shot without also checking the reverse.</strong> You need both directions (<code>x1 &lt; x4 and x3 &lt; x2</code>), not just one — a single-direction check alone gives false positives, exactly like the 2:00–3:00 vs. 3:15–3:30 calendar example.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you extend this to return the actual overlapping rectangle, not just a boolean?</li>
+<li>What if the input allowed rectangles with zero area — how does your solution behave, and should it?</li>
+<li>Can you generalize this projection trick to 3D boxes?</li>
+<li>How would you check overlap among N rectangles efficiently, instead of just two?</li>
+<li>Why does checking "when they miss" simplify the logic compared to checking "when they hit" directly?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 435, Non-overlapping Intervals</strong> — same 1D interval-overlap logic, applied to interval scheduling and removal.</li>
+<li><strong>LeetCode 986, Interval List Intersections</strong> — extends the two-interval overlap check into merging many interval lists.</li>
+<li><strong>LeetCode 252/253, Meeting Rooms I/II</strong> — the calendar-conflict framing from this video's intro, solved directly with interval overlap checks.</li>
+<li><strong>LeetCode 223, Rectangle Area</strong> — builds on this problem's projection idea to compute actual overlapping area, not just a boolean.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Rectangle Overlap teaches a pattern bigger than the problem itself: when a condition is hard to state directly, try stating its complement instead. "When do they miss" decomposed cleanly into two independent 1D interval checks, while "when do they overlap" tempted a geometric, corner-based approach that's actually wrong. Strict inequalities are what separate touching from overlapping, and that single detail is the whole difficulty rating of this "easy" problem.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough — including the two quiz rounds that stress-test the strict inequality and the four-comparison count — watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series built around taking LeetCode's daily challenge and unpacking not just the code, but the reasoning that gets you there — the same instincts that make the difference in a real coding interview.</p>
+<h2>Call To Action</h2>
+<p>If this reframe clicked for you, give the video a like on YouTube and subscribe for daily LeetCode breakdowns. Subscribe to the Substack for the written version delivered straight to your inbox. Drop a comment with where else you've used the "check when it misses" trick, and share this with someone prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Overlapping-rectangles problem: what&#x27;s the trick?</summary><p>Don&#x27;t check overlap directly — check the opposite: when do they NOT overlap on each axis, then negate.</p></details><details class='card2'><summary>Rectangle Overlap: time complexity?</summary><p>O(1) — fixed number of coordinate comparisons regardless of input size.</p></details><details class='card2'><summary>Rectangle Overlap: space complexity?</summary><p>O(1) — only a few scalar comparisons, no extra structures.</p></details><details class='card2'><summary>Common bug when writing the overlap condition?</summary><p>Using &lt;= instead of &lt; for the separation check — edge-touching rectangles count as non-overlapping, not overlapping.</p></details><details class='card2'><summary>1D interval overlap vs 2D rectangle overlap?</summary><p>Rectangle overlap is just two independent 1D interval-overlap checks, one per axis, ANDed together.</p></details><details class='card2'><summary>Interview follow-up: what if rectangles can touch at an edge?</summary><p>Strict inequalities already exclude that case — area of overlap must be strictly positive on both axes.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
