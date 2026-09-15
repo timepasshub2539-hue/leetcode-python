@@ -1,0 +1,200 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2472. Maximum Number of Non-overlapping Palindrome Substrings — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/maximum-number-of-non-overlapping-palindrome-substrings
+💻 Code on GitHub: https">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/maximum-number-of-non-overlapping-palindrome-substrings.html">
+<meta property="og:title" content="2472. Maximum Number of Non-overlapping Palindrome Substrings — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/maximum-number-of-non-overlapping-palindrome-substrings
+💻 Code on GitHub: https">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>2472. Maximum Number of Non-overlapping Palindrome Substrings</h1><span class='badge' style='background:#66a96f22;color:#66a96f'>🌳 Trees</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Palindrome problems show up constantly in coding interviews because they force you to think about two skills at once: string manipulation and optimization strategy. LeetCode 2472, Maximum Number of Non-overlapping Palindrome Substrings, looks at first glance like a job for dynamic programming — "maximize a count of non-overlapping pieces" is the classic setup for a DP table or an interval-scheduling algorithm. That's exactly why it's a good interview question. It tests whether you'll reach for the heaviest tool available or actually think about the structure of the problem first.</p>
+<p>The payoff here is a greedy algorithm that runs in roughly O(n × k) time, needs no extra memory beyond a counter and a pointer, and takes about ten lines to implement once you understand why it works. If you're preparing for interviews, this problem is worth internalizing not just for the LeetCode number, but for the pattern it teaches: when you're picking non-overlapping pieces to maximize a count, the <em>smallest valid piece</em> usually beats the <em>biggest available piece</em>, because it leaves the most room for what comes after.</p>
+<h2>Problem Overview</h2>
+<p>You're given a string <code>s</code> and an integer <code>k</code>. Your job is to select as many non-overlapping substrings of <code>s</code> as possible, subject to two rules:</p>
+<ul>
+<li>Every substring you pick must be a palindrome (it reads the same forwards and backwards).</li>
+<li>Every substring you pick must have a length of at least <code>k</code>.</li>
+</ul>
+<p>Substrings can't overlap — once you use a set of characters for one palindrome, none of those characters can be reused in another. You want to return the maximum number of substrings you can select under these constraints.</p>
+<p>The string length can be up to 2,000 characters, and <code>s</code> consists only of lowercase English letters, so there's no need to worry about casing or punctuation when checking for palindromes.</p>
+<h2>Example</h2>
+<p>Take <code>s = "abaccdbbd"</code> and <code>k = 3</code>.</p>
+<p>Scanning from the left, <code>"aba"</code> (indices 0–2) is a palindrome of length 3, satisfying the minimum length requirement. That's a valid pick. Moving further along, <code>"dbbd"</code> (indices 5–8) is a palindrome of length 4. These two substrings don't share any characters, so they're both valid picks — and you can't find a third non-overlapping palindrome of length 3 or more anywhere else in the string.</p>
+<p><strong>Output: 2</strong></p>
+<p>Every character not consumed by <code>"aba"</code> or <code>"dbbd"</code> (the <code>"cc"</code> in the middle) either isn't part of a long-enough palindrome on its own, or would require reusing characters already claimed. Two is the maximum.</p>
+<h2>Intuition</h2>
+<p>The first instinct most people have is: find the <em>longest</em> palindrome available and take it, since a longer palindrome feels like it's "worth more." That instinct is wrong, and it's wrong in an instructive way.</p>
+<p>Consider a string that is entirely one giant palindrome. If you greedily grab the biggest palindrome first, you consume the whole string in one move and end up with a count of 1. But that same string might be decomposable into three or four smaller palindromes, each meeting the minimum length requirement, giving you a count of 3 or 4 instead. Taking the "best" single piece cost you several smaller wins.</p>
+<p>The fix is to flip the greedy strategy: scan left to right, and the moment you spot <em>any</em> palindrome that's at least length <code>k</code>, take the shortest one available and move past it immediately. Don't hold out for something bigger. This works because a smaller palindrome uses fewer characters, which leaves more of the string free for future picks — and since your only goal is maximizing <em>count</em>, not total length, using fewer characters per pick is strictly better or equal.</p>
+<p>The natural next question is: which lengths do you actually need to check? A palindrome can be peeled — strip the two outer matching characters off any palindrome and what remains in the middle is still a palindrome, just two characters shorter. If you keep peeling, you eventually land on something of length <code>k</code> or <code>k + 1</code>, sitting at nearly the same starting position as the original. That means you never need to test every possible palindrome length starting at each index — checking length <code>k</code> and length <code>k + 1</code> is enough to catch the smallest valid palindrome anchored there, regardless of how long the "full" palindrome at that position might be.</p>
+<p>This is also why the usual DP-plus-interval-scheduling instinct is overkill: you don't need every palindromic substring in the string, just the shortest one starting at each position, and a swap argument shows using anything longer never helps.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> For every possible starting index, check every possible ending index to find all palindromic substrings of length at least <code>k</code>. Then treat this as an interval-scheduling problem — sort all valid palindrome intervals and run a classic non-overlapping interval selection (or dynamic programming over positions) to find the maximum count.</p>
+<p><strong>Algorithm:</strong>
+1. For each pair <code>(i, j)</code> with <code>j - i + 1 &gt;= k</code>, check if <code>s[i:j+1]</code> is a palindrome.
+2. Collect all such intervals.
+3. Run DP or greedy interval scheduling to select the maximum number of non-overlapping intervals.</p>
+<p><strong>Advantages:</strong> Conceptually straightforward, reuses well-known interval-scheduling machinery, easy to reason about correctness.</p>
+<p><strong>Disadvantages:</strong> Generating every valid palindrome interval is O(n²) pairs, and checking each one naively costs O(n) per pair, giving O(n³) before you even get to the scheduling step. For n up to 2,000, that's on the order of 8 billion operations — far too slow.</p>
+<p><strong>Complexity:</strong> Time O(n³) (or O(n²) with palindrome precomputation via DP/Manacher, still followed by a scheduling pass); Space O(n²) to store all candidate intervals.</p>
+<h2>Optimal Solution</h2>
+<p>The key insight, established above, is that you never need every palindrome — just the shortest valid one starting at each index, which is always length <code>k</code> or <code>k + 1</code>.</p>
+<p>That collapses the whole problem into a single greedy left-to-right scan:</p>
+<ol>
+<li>Start a pointer <code>i</code> at 0.</li>
+<li>At position <code>i</code>, check if <code>s[i:i+k]</code> (length <code>k</code>) is a palindrome. If yes, count it, and jump <code>i</code> forward by <code>k</code>.</li>
+<li>If not, check if <code>s[i:i+k+1]</code> (length <code>k + 1</code>) is a palindrome. If yes, count it, and jump <code>i</code> forward by <code>k + 1</code>.</li>
+<li>If neither works, advance <code>i</code> by 1 and try again.</li>
+<li>Repeat until <code>i</code> runs past the end of the string.</li>
+</ol>
+<p>No backtracking, no revisiting earlier positions, no need to compare candidate intervals against each other — every decision is final the moment it's made.</p>
+<p><strong>Walking the example</strong> <code>s = "abaccdbbd"</code>, <code>k = 3</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Position <code>i</code></th>
+<th>Check length 3</th>
+<th>Check length 4</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><code>"aba"</code> → palindrome</td>
+<td>—</td>
+<td>take it, jump to <code>i = 3</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>"ccd"</code> → not</td>
+<td><code>"ccdb"</code> → not</td>
+<td>advance to <code>i = 4</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>"cdb"</code> → not</td>
+<td><code>"cdbb"</code> → not</td>
+<td>advance to <code>i = 5</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>"dbb"</code> → not</td>
+<td><code>"dbbd"</code> → palindrome</td>
+<td>take it, jump to <code>i = 9</code></td>
+</tr>
+<tr>
+<td>9</td>
+<td>out of bounds</td>
+<td>—</td>
+<td>stop</td>
+</tr>
+</tbody>
+</table>
+<p>Final count: <strong>2</strong>, matching the expected output.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">class Solution:
+    def maxPalindromes(self, s: str, k: int) -&gt; int:
+        def is_pal(l: int, r: int) -&gt; bool:
+            while l &lt; r:
+                if s[l] != s[r]:
+                    return False
+                l += 1
+                r -= 1
+            return True
+
+        n = len(s)
+        count = 0
+        i = 0
+
+        while i &lt;= n - k:
+            if is_pal(i, i + k - 1):
+                count += 1
+                i += k
+            elif i + k &lt; n and is_pal(i, i + k):
+                count += 1
+                i += k + 1
+            else:
+                i += 1
+
+        return count
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>is_pal(l, r)</code> is a standard two-pointer palindrome check: it walks inward from both ends of the slice and bails out the moment characters don't match. It's nested inside <code>maxPalindromes</code> purely so it can read <code>s</code> directly without passing it as an extra argument.</li>
+<li><code>count</code> tracks how many valid palindromes we've locked in; <code>i</code> is the scan pointer.</li>
+<li>The <code>while i &lt;= n - k</code> guard stops the scan once there aren't enough characters left to form a length-<code>k</code> palindrome.</li>
+<li>First branch: try the length-<code>k</code> window starting at <code>i</code>. If it's a palindrome, take it and jump <code>i</code> forward by exactly <code>k</code> — past every character just consumed.</li>
+<li>Second branch: if the length-<code>k</code> window fails, try length <code>k + 1</code> (guarded by <code>i + k &lt; n</code> so the slice doesn't run off the end of the string). If that's a palindrome, take it and jump forward by <code>k + 1</code>.</li>
+<li>Fallback: if neither window is a palindrome, slide <code>i</code> forward by 1 and try again from the next starting position.</li>
+<li>The loop never moves <code>i</code> backward, which is what keeps this a single linear pass instead of something requiring backtracking.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using <code>s = "abaccdbbd"</code>, <code>k = 3</code>, <code>n = 9</code>:</p>
+<ul>
+<li><code>i = 0</code>: <code>is_pal(0, 2)</code> checks <code>s[0]='a'</code> vs <code>s[2]='a'</code> (match), pointers cross → palindrome. <code>count = 1</code>, <code>i = 3</code>.</li>
+<li><code>i = 3</code>: <code>is_pal(3, 5)</code> checks <code>s[3]='c'</code> vs <code>s[5]='d'</code> → mismatch, not a palindrome. Try length 4: <code>is_pal(3, 6)</code> checks <code>s[3]='c'</code> vs <code>s[6]='b'</code> → mismatch. <code>i = 4</code>.</li>
+<li><code>i = 4</code>: <code>is_pal(4, 6)</code> checks <code>s[4]='c'</code> vs <code>s[6]='b'</code> → mismatch. Length 4: <code>is_pal(4, 7)</code> checks <code>s[4]='c'</code> vs <code>s[7]='b'</code> → mismatch. <code>i = 5</code>.</li>
+<li><code>i = 5</code>: <code>is_pal(5, 7)</code> checks <code>s[5]='d'</code> vs <code>s[7]='b'</code> → mismatch. Length 4: <code>is_pal(5, 8)</code> checks <code>s[5]='d'</code> vs <code>s[8]='d'</code> (match), then <code>s[6]='b'</code> vs <code>s[7]='b'</code> (match), pointers cross → palindrome. <code>count = 2</code>, <code>i = 9</code>.</li>
+<li><code>i = 9</code>: loop condition <code>9 &lt;= 9 - 3</code> (i.e. <code>9 &lt;= 6</code>) is false. Loop ends.</li>
+</ul>
+<p>Return <code>count = 2</code>. Matches the expected output.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> Each palindrome check (<code>is_pal</code>) costs up to O(k) steps since it walks inward from both ends of a window of size <code>k</code> or <code>k + 1</code>. The pointer <code>i</code> advances through the string, and in the worst case it moves one step at a time doing an O(k) check at every position, giving O(n × k) overall. Since <code>k</code> is bounded by <code>n</code>, this is comfortably fast for <code>n</code> up to 2,000.</p>
+<p><strong>Space:</strong> O(1) beyond the input string — just a counter and a pointer, no auxiliary arrays or recursion stack.</p>
+<p><strong>Why it's correct:</strong> The peeling argument guarantees the shortest palindrome at any starting index is length <code>k</code> or <code>k + 1</code>, so checking only those two lengths never misses a valid pick. The greedy-exchange argument guarantees that taking the shortest available palindrome at the earliest position is never worse than any alternative choice, because any solution using a longer or later palindrome can be modified to use the shorter, earlier one without reducing the total count — it only frees up more string for subsequent picks.</p>
+<h2>Alternative Solutions</h2>
+<p>A dynamic programming formulation is possible: define <code>dp[i]</code> as the maximum count achievable using <code>s[i:]</code>, and transition by checking, at each <code>i</code>, whether a length-<code>k</code> or length-<code>k + 1</code> palindrome starts there, taking <code>1 + dp[i + length]</code> versus <code>dp[i + 1]</code>. This gives the same O(n × k) time complexity but requires O(n) space for the DP array and is more code to write and reason about. Since the greedy approach provably makes the optimal local choice at every step (no situation ever benefits from skipping a valid earliest palindrome), the DP array is unnecessary — the greedy scan is a strict simplification with identical complexity, which is why it's the preferred solution here.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty or too-short string:</strong> If <code>len(s) &lt; k</code>, the loop condition <code>i &lt;= n - k</code> is false immediately, and the function correctly returns 0.</li>
+<li><strong>No palindromes at all meeting length k:</strong> The pointer slides all the way through via the fallback branch, and <code>count</code> stays 0.</li>
+<li><strong>k = 1:</strong> Every single character is trivially a palindrome of length 1, so the algorithm greedily takes one-character palindromes back-to-back, maximizing count by consuming the string one character at a time.</li>
+<li><strong>Entire string is one palindrome:</strong> The algorithm won't fall for the "grab the biggest chunk" trap — it finds the shortest palindrome at the earliest position first, which is exactly the behavior that prevents undercounting.</li>
+<li><strong>String with repeated identical characters (e.g., <code>"aaaaaa"</code>, k = 2):</strong> Nearly every adjacent pair is a palindrome, so the greedy scan takes non-overlapping pairs consecutively, maximizing the count for that structure.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Always picking the longest available palindrome.</strong> This is the single biggest trap in this problem — it feels intuitive but actively reduces the final count, as shown in the intuition section.</li>
+<li><strong>Checking every possible substring length at each position.</strong> This isn't wrong, just wasteful — it turns an O(n × k) solution into something far slower without improving correctness.</li>
+<li><strong>Forgetting the <code>i + k &lt; n</code> bounds check before testing the length-<code>k + 1</code> window.</strong> Skipping this causes an index-out-of-range error near the end of the string.</li>
+<li><strong>Advancing the pointer by 1 after a successful match instead of jumping past the full matched length.</strong> This allows overlapping substrings to be selected, violating the problem's core constraint.</li>
+<li><strong>Assuming a DP table over all palindromic substrings is required.</strong> Building a full palindrome DP table (<code>is_palindrome[i][j]</code> for all pairs) is correct but unnecessary — it costs O(n²) space and time for information the greedy scan never needs.</li>
+<li><strong>Off-by-one errors in the two-pointer palindrome check</strong>, particularly around whether the slice bounds are inclusive or exclusive, which silently produces wrong palindrome verdicts near string edges.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Why is it always safe to prefer the shortest valid palindrome over a longer one at the same starting position?</li>
+<li>Can you prove the greedy choice is optimal using an exchange argument?</li>
+<li>How would the solution change if substrings were allowed to overlap?</li>
+<li>What's the time complexity if <code>k</code> is a large fraction of <code>n</code>, and can you improve it using an algorithm like Manacher's for palindrome detection?</li>
+<li>How would you modify the algorithm to also return the actual substrings selected, not just the count?</li>
+<li>What happens if the string can contain uppercase letters or punctuation — how does that change the palindrome check?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 5 (Longest Palindromic Substring)</strong> — foundational palindrome-detection practice, though it optimizes for length rather than count.</li>
+<li><strong>LeetCode 132 (Palindrome Partitioning II)</strong> — a DP problem about minimizing cuts to partition a string into palindromes, a useful contrast to this greedy, count-maximizing variant.</li>
+<li><strong>LeetCode 435 (Non-overlapping Intervals)</strong> — the general interval-scheduling pattern this problem's greedy strategy echoes.</li>
+<li><strong>LeetCode 267 (Palindrome Permutation II)</strong> — different angle on palindrome construction, good for reinforcing palindrome properties.</li>
+<li><strong>LeetCode 647 (Palindromic Substrings)</strong> — counts all palindromic substrings in a string, useful for practicing the two-pointer expand-around-center technique used here.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Maximizing a count of non-overlapping pieces almost always rewards greedily taking the smallest valid piece as early as possible, not the largest available one — freeing up space for future picks beats "winning big" on any single pick. For palindrome-specific problems, the peeling property (a palindrome's inner core is itself a shorter palindrome) is a powerful tool for shrinking the search space from "check every length" down to "check the two shortest possible lengths." Recognizing when a DP-and-interval-scheduling instinct is overkill — and replacing it with a provably correct greedy pass — is a skill worth practicing beyond this one problem.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with the visual trace through the example string, the greedy loop built step by step, and two pause-and-guess quizzes to test your understanding before the recap, check out the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of Fun with Learning Technology, a series that works through LeetCode problems the way an experienced engineer actually approaches them — starting from intuition and problem structure before ever writing code, and explaining not just the solution but why the "obvious" approach often isn't the right one.</p>
+<h2>Call To Action</h2>
+<p>If this walkthrough helped the greedy trick click, give the video a like on YouTube and subscribe for more problem breakdowns like this one. For deeper write-ups and behind-the-scenes notes on how these solutions come together, subscribe to the Substack. Drop a comment with your own approach to LeetCode 2472, or share this with someone prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>You need to pick k non-overlapping palindromic substrings maximizing count — what&#x27;s the greedy tell?</summary><p>Interval scheduling greedy: always take the earliest-ending valid palindrome, then jump past it.</p></details><details class='card2'><summary>Time complexity of the DP + smallest-palindrome-check solution for LC 2472?</summary><p>O(n^2) — DP over end index times checking substrings of length k and k+1 at each position.</p></details><details class='card2'><summary>Space complexity of the standard DP approach here?</summary><p>O(n) for the dp array; palindrome checks done in O(1) extra via two-pointer, no full table stored.</p></details><details class='card2'><summary>Common bug: why not just take the shortest palindrome you find anywhere?</summary><p>You must take the shortest palindrome ending earliest that meets length k, not any short one — order by end index, not just length.</p></details><details class='card2'><summary>Why does the algorithm only test lengths k and k+1, not longer ones?</summary><p>Any longer valid palindrome contains a shorter valid one inside it ending no later, so checking k and k+1 always dominates.</p></details><details class='card2'><summary>Interval scheduling (activity selection) vs this palindrome-selection problem — key difference?</summary><p>Classic scheduling picks earliest-finishing among given intervals; here you must first discover minimal-length palindromic intervals, then apply the same greedy.</p></details></div><h2 class='ph1' style='font-size:1.4rem'>Similar problems</h2><div class='grid'><a class='card' href='count-nodes-equal-to-average-of-subtree.html'><div class='body'><h3>2265. Count Nodes Equal to Average of Subtree</h3><span class='badge' style='background:#66a96f22;color:#66a96f'>🌳 Trees</span></div></a><a class='card' href='short-debug-170002-916.html'><div class='body'><h3>6 Tries, 1 Line, 0 Guessing: How I Debug Now #shorts</h3><span class='badge' style='background:#66a96f22;color:#66a96f'>🌳 Trees</span></div></a><a class='card' href='maximum-length-substring-with-two-occurrences.html'><div class='body'><h3>Maximum Length Substring With Two Occurrences</h3><span class='badge' style='background:#66a96f22;color:#66a96f'>🌳 Trees</span></div></a></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
