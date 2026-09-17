@@ -1,0 +1,256 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1477. Find Two Non-overlapping Sub-arrays Each With Target Sum — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/find-two-non-overlapping-sub-arrays-each-with-target-sum
+💻 Code on GitHub: http">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/find-two-non-overlapping-sub-arrays-each-with-target-sum.html">
+<meta property="og:title" content="1477. Find Two Non-overlapping Sub-arrays Each With Target Sum — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/find-two-non-overlapping-sub-arrays-each-with-target-sum
+💻 Code on GitHub: http">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>1477. Find Two Non-overlapping Sub-arrays Each With Target Sum</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Every so often a LeetCode problem looks like a sliding window question on the surface but actually rewards a completely different mental model. LeetCode 1477, Find Two Non-overlapping Sub-arrays Each With Target Sum, is one of those. It gets filed under "sliding window" and "prefix sum" tags, but the real skill being tested is something interviewers care about deeply: can you take a brute-force idea that compares every pair of results, and collapse it into a single pass by carrying forward just one piece of state?</p>
+<p>This pattern shows up constantly outside of LeetCode too — anywhere you need to combine two non-overlapping "events" optimally over a stream of data, whether that's log intervals, transaction windows, or scheduling slots. Learning to recognize it here means you'll spot it again in a system design interview or in production code that has to process something in one linear scan for performance reasons.</p>
+<h2>Problem Overview</h2>
+<p>You're given an array of positive integers and a target number. Your job is to find two subarrays — contiguous slices of the array — that don't overlap with each other, where each subarray's elements sum exactly to the target. Among all valid pairs of subarrays that satisfy this, you want the pair whose combined length (length of subarray one plus length of subarray two) is the smallest possible. If no such pair exists, return -1.</p>
+<p>The key constraints that shape the solution: the array can hold up to 100,000 numbers, so anything quadratic is too slow. Every number is a positive integer between 1 and 1000, which matters more than it looks — because all values are positive, the running sum as you walk the array only ever increases. It never repeats a value and never decreases, which means each prefix sum is unique and lookups against it are unambiguous. The target itself can be as large as 100 million, ruling out any approach that depends on a small, fixed-size range of possible sums.</p>
+<h2>Example</h2>
+<p>Take the array <code>[3, 2, 2, 4, 3]</code> with a target of <code>3</code>.</p>
+<ul>
+<li>The element at index 0 is <code>3</code> on its own — that's a valid subarray of length 1.</li>
+<li>The element at index 4 is also <code>3</code> on its own — another valid subarray of length 1, and it shares no indices with the first one.</li>
+</ul>
+<p>Combined length: <code>1 + 1 = 2</code>. That's the answer.</p>
+<p>Notice there's also a subarray <code>[2, 2]...</code> no wait, <code>2 + 2 = 4</code>, not 3, so that doesn't qualify. The only valid single-element matches here are indices 0 and 4, and since they don't overlap, they're immediately the best (and only) pair.</p>
+<h2>Intuition</h2>
+<p>Picture scanning a long receipt tape as a cashier. You don't get to scroll back and forth — you read it once, left to right, keeping a running total in your head. That mental image is exactly the shape of this problem: up to 100,000 numbers means we need something close to a single pass, not an approach that inspects every possible pair of subarrays.</p>
+<p>The first instinct many people have is: find every subarray that sums to the target, then check every pair of them for overlap and pick the best combined length. That's the brute-force path, and it's worth understanding before optimizing away from it.</p>
+<p>The key insight that unlocks the O(N) solution is this: the sum of any contiguous stretch of the array equals one running total minus an earlier running total. If you're walking the array and keeping a cumulative sum, then a subarray ending at your current position sums to the target exactly when there was some earlier point where the running total was precisely <code>target</code> less than it is now. That turns "does a subarray summing to target exist ending here" into a single hash map lookup — no rescanning required.</p>
+<p>Once you can detect a qualifying subarray in constant time, the second piece of intuition is what makes this genuinely O(N) instead of O(N²): every time you find a new valid subarray ending at the current index, you don't need to compare it against every subarray found so far. You only need to know the single best (shortest) valid subarray that already finished before this one started. Carry that "best so far" number forward as you scan, and each new find only needs to check against that one number.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Find all subarrays summing to the target using prefix sums (this part is unavoidable and cheap), then compare every pair of those subarrays to check for overlap and track the minimum combined length.</p>
+<p><strong>Algorithm:</strong>
+1. Compute all subarrays whose sum equals the target — store their (start, end) index pairs.
+2. For every pair of these subarrays, check if their index ranges overlap.
+3. Among non-overlapping pairs, track the minimum sum of their two lengths.</p>
+<p><strong>Advantages:</strong> Conceptually simple, easy to reason about correctness.</p>
+<p><strong>Disadvantages:</strong> The number of qualifying subarrays can itself be O(N) in the worst case, and comparing every pair of them is O(N²). For 100,000 elements, that's potentially 10 billion comparisons — far too slow.</p>
+<p><strong>Time complexity:</strong> O(N²) in the worst case.
+<strong>Space complexity:</strong> O(N) to store the qualifying subarrays.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach processes the array exactly once, maintaining three pieces of state:</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>seen</code> (dict)</td>
+<td>Maps a running sum → the index where that sum last occurred</td>
+</tr>
+<tr>
+<td><code>min_len[i]</code></td>
+<td>Shortest valid subarray found anywhere in <code>array[0..i]</code></td>
+</tr>
+<tr>
+<td><code>best</code></td>
+<td>Best combined length found so far (starts at infinity)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Step-by-step:</strong></p>
+<ol>
+<li>Seed <code>seen</code> with <code>{0: -1}</code>. This means: "a running sum of zero occurred at index -1." It matters because a valid subarray starting at index 0 needs something to subtract against — without this seed, that subarray would be invisible to the lookup.</li>
+<li>Walk the array, adding each number to a running <code>total</code>.</li>
+<li>At each index, check if <code>total - target</code> exists in <code>seen</code>. If it does, the subarray from just after that earlier index up to the current index sums exactly to the target.</li>
+<li>When you find such a subarray, check <code>min_len</code> at that earlier index — that tells you the best subarray that already finished before this one started. If one exists, combine the two lengths and update <code>best</code>.</li>
+<li>Update the running "best single-length subarray seen so far" tracker, then record it into <code>min_len</code> at the current index.</li>
+<li>Store <code>total</code> in <code>seen</code> at the current index for future lookups.</li>
+<li>After the loop, return <code>best</code> if it was ever updated, otherwise return -1.</li>
+</ol>
+<p>The one detail worth pausing on: you must check that the earlier index is not -1 in a way that would let a subarray pair with itself starting at index 0. A subarray beginning at index 0 has nothing valid before it, and skipping that guard would silently let the algorithm combine a stretch with a phantom zero-length partner.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def min_sum_of_lengths(arr, target):
+    n = len(arr)
+    INF = float('inf')
+
+    # min_len[i] = length of the shortest valid subarray ending at or before index i
+    min_len = [INF] * n
+    seen = {0: -1}  # running sum -&gt; index where it occurred
+
+    total = 0
+    best_so_far = INF   # shortest single valid subarray seen up to current index
+    best_combined = INF
+
+    for i, num in enumerate(arr):
+        total += num
+        needed = total - target
+
+        if needed in seen:
+            start = seen[needed]
+            current_len = i - start
+
+            # Combine with the best subarray that finished before this one started
+            if start != -1 and min_len[start] != INF:
+                best_combined = min(best_combined, min_len[start] + current_len)
+
+            best_so_far = min(best_so_far, current_len)
+
+        min_len[i] = best_so_far
+        seen[total] = i
+
+    return best_combined if best_combined != INF else -1
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>min_len[i]</code> tracks the shortest valid subarray found anywhere from the start of the array through index <code>i</code>. It's a running "best so far" that any later subarray can look up.</li>
+<li><code>seen</code> maps a running sum to the index at which it occurred. It's seeded with <code>{0: -1}</code> so subarrays starting at index 0 have something to subtract against.</li>
+<li>For each number, we update <code>total</code>, then compute <code>needed = total - target</code>. If <code>needed</code> is a sum we've already seen, a valid subarray exists ending here.</li>
+<li><code>start = seen[needed]</code> gives us the index right before this new subarray begins. Checking <code>min_len[start]</code> tells us whether a qualifying subarray already finished by that point, and if so, we try pairing the two.</li>
+<li><code>best_so_far</code> tracks the shortest single qualifying subarray ending at or before the current index — this becomes tomorrow's <code>min_len</code> entry.</li>
+<li><code>seen[total] = i</code> records today's running sum for future lookups.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Array: <code>[3, 2, 2, 4, 3]</code>, target: <code>3</code>.</p>
+<table>
+<thead>
+<tr>
+<th>i</th>
+<th>num</th>
+<th>total</th>
+<th>needed</th>
+<th>in seen?</th>
+<th>start</th>
+<th>min_len[start]</th>
+<th>best_combined</th>
+<th>best_so_far</th>
+<th>min_len[i]</th>
+<th>seen updated</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>3</td>
+<td>3</td>
+<td>0</td>
+<td>yes (-1)</td>
+<td>-1</td>
+<td>skip (start == -1)</td>
+<td>inf</td>
+<td>1</td>
+<td>1</td>
+<td>{0:-1, 3:0}</td>
+</tr>
+<tr>
+<td>1</td>
+<td>2</td>
+<td>5</td>
+<td>2</td>
+<td>no</td>
+<td>—</td>
+<td>—</td>
+<td>inf</td>
+<td>1</td>
+<td>1</td>
+<td>+{5:1}</td>
+</tr>
+<tr>
+<td>2</td>
+<td>2</td>
+<td>7</td>
+<td>4</td>
+<td>no</td>
+<td>—</td>
+<td>—</td>
+<td>inf</td>
+<td>1</td>
+<td>1</td>
+<td>+{7:2}</td>
+</tr>
+<tr>
+<td>3</td>
+<td>4</td>
+<td>11</td>
+<td>8</td>
+<td>no</td>
+<td>—</td>
+<td>—</td>
+<td>inf</td>
+<td>1</td>
+<td>1</td>
+<td>+{11:3}</td>
+</tr>
+<tr>
+<td>4</td>
+<td>3</td>
+<td>14</td>
+<td>11</td>
+<td>yes</td>
+<td>3</td>
+<td>min_len[3]=1</td>
+<td>1+1=2</td>
+<td>1</td>
+<td>1</td>
+<td>+{14:4}</td>
+</tr>
+</tbody>
+</table>
+<p>Final <code>best_combined = 2</code> — matching the expected answer.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time: O(N).</strong> Every element is processed exactly once. Dictionary insertion and lookup are O(1) average case, and array indexing is O(1).</p>
+<p><strong>Space: O(N).</strong> The <code>seen</code> dictionary can hold up to N entries (one running sum per index, all distinct since values are positive), and <code>min_len</code> is an array of size N.</p>
+<p>These are correct because there's no nested loop and no re-scanning — everything is computed from state carried forward from the previous iteration.</p>
+<h2>Alternative Solutions</h2>
+<p>A two-pass variant is common: compute <code>min_len</code> left-to-right in one pass, then a second array <code>min_len_from_right</code> right-to-left, and in a final pass check every valid subarray against the right-side minimum too (to catch cases where the second subarray comes before the first in your scan order, but you want the shorter one on the left conceptually). This is still O(N) time and space — it's a stylistic variant of the same idea, sometimes easier to reason about because it explicitly separates "look left" and "look right" concerns. The single-pass version above is more compact but relies on the fact that non-overlapping just means "the second one starts after the first one ends," which the running index naturally enforces.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>No valid subarray exists at all</strong> → the function correctly returns -1 since <code>best_combined</code> never updates from infinity.</li>
+<li><strong>Only one valid subarray exists</strong> → <code>best_combined</code> stays infinity because there's never a pair, correctly returning -1.</li>
+<li><strong>Target equals a single element repeated many times</strong> (e.g., all 1s with target 1) → many length-1 subarrays qualify; the algorithm should still find the minimum pair (length 2) without extra logic.</li>
+<li><strong>Minimum values</strong> (array of all 1s, target 1, length 2 array) → the two shortest possible non-overlapping matches, combined length 2.</li>
+<li><strong>Maximum target with small numbers</strong> (target larger than the sum of the whole array) → no subarray can ever sum to target, so <code>needed</code> never matches, and the function returns -1.</li>
+<li><strong>Two qualifying subarrays are adjacent</strong> (no gap between them) → still valid, since adjacency isn't overlap; the algorithm handles this naturally because <code>start != -1</code> and the ranges don't share indices.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting to seed <code>seen</code> with <code>{0: -1}</code>.</strong> Without it, any subarray starting at index 0 is invisible to the algorithm.</li>
+<li><strong>Not guarding against <code>start == -1</code> when combining.</strong> This lets the algorithm silently pair a subarray with a phantom "subarray of length 0" that doesn't exist, producing wrong answers.</li>
+<li><strong>Confusing prefix sum indices with subarray lengths.</strong> The subarray length is <code>i - start</code>, not <code>i - start + 1</code> when <code>start</code> is treated as "one before the subarray begins" — get this off-by-one wrong and every length is skewed.</li>
+<li><strong>Trying to solve this with a true sliding window (two pointers).</strong> Because you need to find <em>pairs</em> of subarrays rather than a single contiguous region, a classic expand/shrink window doesn't directly apply — the prefix sum + hash map pattern is what actually fits.</li>
+<li><strong>Updating <code>min_len[i]</code> before checking <code>min_len[start]</code> for combination.</strong> If you update the running minimum before doing the lookup, you can accidentally use a subarray's own information to "combine with itself," corrupting the result.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would this change if array elements could be negative?</li>
+<li>Can you return the actual subarrays instead of just the combined length?</li>
+<li>What if you needed three non-overlapping subarrays instead of two?</li>
+<li>How would you adapt this to a streaming input where you can't store the whole array?</li>
+<li>Why does the positive-integer constraint make the hash map approach reliable here?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 560 (Subarray Sum Equals K)</strong> — same prefix sum + hash map foundation, but only asks for a count of qualifying subarrays, not a pairing.</li>
+<li><strong>LeetCode 325 (Maximum Size Subarray Sum Equals k)</strong> — nearly identical prefix sum technique, but optimizes for the longest single subarray instead of shortest combined pair.</li>
+<li><strong>LeetCode 209 (Minimum Size Subarray Sum)</strong> — a genuine sliding window problem, useful for contrasting when two pointers apply versus when prefix sums are the right tool.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The lesson here isn't really about subarrays — it's about recognizing when a brute-force "compare every pair" approach can be replaced by "carry forward the single best candidate as you scan." Prefix sums convert range-sum questions into O(1) lookups, and tracking a running minimum alongside them turns a pairing problem into a single linear pass. That combination — hash map for detection, running minimum for combination — is a pattern worth having ready for any interview question that asks you to combine two non-overlapping results optimally.</p>
+<h2>Watch the Video</h2>
+<p>Watching the full walkthrough makes the index bookkeeping much easier to internalize, especially the guard against pairing with a phantom subarray. Check it out here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <em>Fun with Learning Technology</em>, a series dedicated to teaching real interview-relevant algorithms with a focus on the <em>why</em> behind each optimization, not just the code that passes the test cases. Every episode builds toward the same goal: making the leap from brute force to optimal feel obvious rather than magical.</p>
+<h2>Call To Action</h2>
+<p>If this walkthrough helped the pattern click, give the video a like on YouTube and subscribe for more deep dives into interview-level algorithms. For written breakdowns delivered straight to your inbox, subscribe to the Substack. Drop a comment with which part of the prefix sum trick you want explained differently, and share this with anyone prepping for coding interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Two non-overlapping subarrays with given sums — what&#x27;s the tell?</summary><p>Fixed-target subarray sum + need positions/lengths → prefix sums + hashmap of sum→earliest end index.</p></details><details class='card2'><summary>Time complexity for this two-pass prefix-sum solution?</summary><p>O(n) — one pass builds prefix sums, one pass combines best-left with best-right per split point.</p></details><details class='card2'><summary>Space complexity of the prefix-sum + best-length tracking approach?</summary><p>O(n) — prefix sum array plus a running best-length array for combining left/right splits.</p></details><details class='card2'><summary>Common bug when combining two subarrays here?</summary><p>Only pairing subarrays found on opposite sides of a split; forgetting a valid pair can both lie fully left of some index.</p></details><details class='card2'><summary>This pattern vs plain &#x27;subarray sum equals K&#x27;?</summary><p>Same prefix-sum trick, but you also track minimum length ending by each index to later combine two disjoint valid windows.</p></details><details class='card2'><summary>Interview follow-up: extend to three non-overlapping subarrays?</summary><p>Track best pair-sum-of-lengths ending by index (from this 2-subarray solution), then combine with a third window scanning left-to-right.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
