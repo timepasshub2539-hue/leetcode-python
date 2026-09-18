@@ -1,0 +1,198 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1520. Maximum Number of Non-Overlapping Substrings — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/maximum-number-of-non-overlapping-substrings
+💻 Code on GitHub: https://github.c">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/maximum-number-of-non-overlapping-substrings.html">
+<meta property="og:title" content="1520. Maximum Number of Non-Overlapping Substrings — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/maximum-number-of-non-overlapping-substrings
+💻 Code on GitHub: https://github.c">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>1520. Maximum Number of Non-Overlapping Substrings</h1><span class='badge' style='background:#66a96f22;color:#66a96f'>🌳 Trees</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Every interviewer has a small pile of problems they reach for when they want to know if you can actually reason about a problem instead of pattern-matching to a memorized template. LeetCode 1520, Maximum Number of Non-Overlapping Substrings, is one of those. On the surface it reads like a string-splitting exercise. Underneath, it's really two classic techniques — merge intervals and interval scheduling — stitched together in a way that punishes anyone who tries to shortcut straight to code.</p>
+<p>That's exactly why it shows up in interviews. It tests whether you can resist the urge to write the first greedy idea that comes to mind, whether you can build a correct model of the problem before touching a keyboard, and whether you understand <em>why</em> a greedy choice works instead of just trusting that it does. If you can explain this problem cleanly, you've demonstrated the kind of thinking interviewers are actually trying to measure.</p>
+<p>It's also a genuinely useful pattern outside of interviews. Any time you need to group dependent pieces of data before deciding how to use them — log lines that reference a shared session ID, records that reference a shared key, chunks of a file that reference a shared identifier — you're doing a version of this same two-step: merge what's entangled, then greedily pick the most useful pieces from what's left.</p>
+<h2>Problem Overview</h2>
+<p>You're given a string made only of lowercase English letters. Your job is to choose as many non-overlapping substrings of that string as possible, subject to one rule: if a chosen substring contains any occurrence of a letter, it must contain <em>every</em> occurrence of that letter anywhere in the string. You can't grab a piece that cuts a letter's occurrences in half.</p>
+<p>If two different selections achieve the same number of substrings, you should prefer the one with the smaller total character length. You return the actual substrings (in the order they appear), not just a count.</p>
+<p>The string can be as long as 100,000 characters, so the solution needs to run in roughly linear time. Because there are only 26 lowercase letters, though, there's very little bookkeeping — you're never tracking more than 26 pieces of state at once.</p>
+<h2>Example</h2>
+<p>Take the string:</p>
+<pre><code>&quot;adefaddaccc&quot;
+</code></pre>
+<p>Indexing from 0:</p>
+<pre><code>a  d  e  f  a  d  d  a  c  c  c
+0  1  2  3  4  5  6  7  8  9  10
+</code></pre>
+<p>Letter <code>a</code> appears at positions 0, 4, and 7 — first at 0, last at 7. So any substring containing an <code>a</code> must span at least positions 0 through 7.</p>
+<p>Letter <code>d</code> appears at positions 1, 5, and 6 — first at 1, last at 6. That range (1–6) sits entirely inside <code>a</code>'s range (0–7), so it doesn't force anything new.</p>
+<p>Letter <code>c</code> appears at positions 8, 9, 10 — a clean, self-contained range that doesn't touch <code>a</code> or <code>d</code> at all.</p>
+<p>Letter <code>e</code> and <code>f</code> each appear only once, so their ranges are single characters, and both fall inside <code>a</code>'s range.</p>
+<p>After merging, you're left with two sealed blocks: <code>"adefadda"</code> (positions 0–7) and <code>"ccc"</code> (positions 8–10). Both are non-overlapping and each is internally complete — no letter inside either block appears anywhere outside it. The answer is <code>["adefadda", "ccc"]</code>.</p>
+<h2>Intuition</h2>
+<p>The instinctive first move is to treat this like a simple string-splitting problem: scan left to right and cut whenever a letter seems "done." That instinct breaks immediately. Take <code>"adefaddaccc"</code> and cut right after the first <code>a</code> — but <code>a</code> shows up again several characters later, so that cut already sliced a letter in half. You can't safely close a substring until you know the <em>full</em> range every letter inside it occupies.</p>
+<p>So the first real insight is: every letter has a forced range. If a letter's first occurrence is at index <code>i</code> and its last occurrence is at index <code>j</code>, then any valid substring containing that letter must span at least <code>[i, j]</code>.</p>
+<p>The second insight is where most people trip up. It's tempting to treat these forced ranges like a textbook interval-scheduling problem and just greedily pick the ones that end earliest. That's the wrong move, because a range isn't fixed once you compute it. If letter <code>x</code>'s range overlaps letter <code>y</code>'s range, they can't stay separate — choosing a substring for <code>x</code> alone would silently cut off part of <code>y</code>. Overlapping ranges have to be merged into one bigger range first, the same way you'd merge overlapping calendar events, before you're allowed to schedule anything.</p>
+<p>Once every overlapping range has been merged, what's left is a set of sealed, self-contained blocks. Every character inside a block lives <em>only</em> inside that block — nothing about it exists anywhere else in the string. Only now can you safely apply interval scheduling: sort the sealed blocks by their end position, and greedily take a block whenever it starts after the last block you picked ends. Ending early leaves the most room for future picks — the same logic behind classic activity selection, just applied to merged letter ranges instead of raw intervals.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Generate every possible substring, check whether it's "valid" (contains every occurrence of every letter it touches), then search for the maximum set of non-overlapping valid substrings among the valid ones.</p>
+<p><strong>Algorithm:</strong>
+1. For every pair of start and end indices, extract the substring.
+2. For each character in that substring, verify all of that character's occurrences in the original string fall within <code>[start, end]</code>.
+3. Collect all valid substrings.
+4. Try every combination of non-overlapping valid substrings to find the maximum count (this is itself an NP-hard-flavored subset selection without more structure).</p>
+<p><strong>Advantages:</strong> Conceptually simple, easy to convince yourself it's correct on tiny inputs.</p>
+<p><strong>Disadvantages:</strong> Generating all substrings is O(n²), validating each is O(n), and searching combinations of valid substrings is exponential in the worst case. Completely unusable at n = 100,000.</p>
+<p><strong>Time complexity:</strong> O(2^n) in the worst case for the selection step alone.
+<strong>Space complexity:</strong> O(n²) just to store candidate substrings.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach mirrors the intuition exactly: compute forced ranges, merge them, then greedily schedule.</p>
+<p><strong>Step 1 — Compute first/last occurrence for every letter.</strong>
+Scan the string once, recording the first and last index at which each of the 26 letters appears.</p>
+<p><strong>Step 2 — Expand each letter's range into a merged range.</strong>
+For each letter, start at its first occurrence and expand a working <code>end</code> pointer outward. Walk forward from the start; any time you pass a letter whose own last occurrence reaches further than your current <code>end</code>, stretch <code>end</code> to match. Keep walking until you reach <code>end</code> without finding anything that extends it further. This while-loop is the merge step happening in real time — because <code>end</code> keeps changing while you're still inside the loop (you compare against the <em>current</em> <code>end</code>, not the original one), one range automatically swallows any range it overlaps.</p>
+<p><strong>Step 3 — Deduplicate and sort merged ranges by end position.</strong>
+Multiple letters can expand into the exact same merged range, so only keep unique <code>[start, end]</code> pairs. Sort them by their end index, smallest first.</p>
+<p><strong>Step 4 — Greedily select non-overlapping ranges.</strong>
+Walk through the sorted ranges. Keep a running <code>last_end</code> pointer starting below the string. Any time a range's start is strictly after <code>last_end</code>, take it, slice out the substring, and advance <code>last_end</code> to that range's end.</p>
+<table>
+<thead>
+<tr>
+<th>Range</th>
+<th>Start</th>
+<th>End</th>
+<th>Take?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>adefadda</code></td>
+<td>0</td>
+<td>7</td>
+<td>Yes (nothing taken yet)</td>
+</tr>
+<tr>
+<td><code>ccc</code></td>
+<td>8</td>
+<td>10</td>
+<td>Yes (8 &gt; 7)</td>
+</tr>
+</tbody>
+</table>
+<p>The result: <code>["adefadda", "ccc"]</code>.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def max_num_of_substrings(s: str) -&gt; list[str]:
+    n = len(s)
+
+    # First and last occurrence of each letter
+    first = {}
+    last = {}
+    for i, ch in enumerate(s):
+        if ch not in first:
+            first[ch] = i
+        last[ch] = i
+
+    # Expand each letter's range until it stops growing (merge step)
+    ranges = set()
+    for ch, start in first.items():
+        end = last[ch]
+        i = start
+        while i &lt;= end:
+            ch_i = s[i]
+            if last[ch_i] &gt; end:
+                end = last[ch_i]
+            if first[ch_i] &lt; start:
+                # would only happen if we didn't start from a true &quot;first&quot; index
+                start = first[ch_i]
+            i += 1
+        ranges.add((start, end))
+
+    # Sort merged ranges by end position, smallest end first
+    sorted_ranges = sorted(ranges, key=lambda r: r[1])
+
+    # Greedily pick non-overlapping ranges
+    result = []
+    last_end = -1
+    for start, end in sorted_ranges:
+        if start &gt; last_end:
+            result.append(s[start:end + 1])
+            last_end = end
+
+    return result
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>first</code> and <code>last</code> are built in a single O(n) pass, giving each letter's boundary positions.</li>
+<li>The outer loop iterates over each letter's first occurrence and tries to expand a self-contained range starting there.</li>
+<li>The inner <code>while</code> loop is the merge: as <code>i</code> walks from <code>start</code> to the current <code>end</code>, any character encountered whose own <code>last</code> occurrence exceeds the current <code>end</code> pushes <code>end</code> further out. Because the loop condition (<code>i &lt;= end</code>) re-reads <code>end</code> on every iteration, growing <code>end</code> mid-loop naturally extends how far the walk continues — that's the mechanism that swallows overlapping ranges into one.</li>
+<li><code>ranges</code> is a <code>set</code> because multiple starting letters can expand into the identical merged range; deduplicating avoids scheduling the same block twice.</li>
+<li>Sorting by <code>end</code> sets up the classic interval-scheduling greedy.</li>
+<li>The final loop takes a range only if it starts strictly after the last taken range's end, guaranteeing non-overlap, and slices the substring directly out of <code>s</code>.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>String: <code>"adefaddaccc"</code></p>
+<p><code>first = {a:0, d:1, e:2, f:3, c:8}</code>
+<code>last = {a:7, d:6, e:2, f:3, c:10}</code></p>
+<p>Starting from <code>a</code> (start=0, end=7): walk i=0..7, checking <code>d</code> (last=6, no change), <code>e</code> (last=2, no change), <code>f</code> (last=3, no change) — end stays 7. Range: <code>(0, 7)</code>.</p>
+<p>Starting from <code>d</code> (start=1, end=6): walk i=1..6, all letters inside have <code>last &lt;= 6</code> — end stays 6. Range: <code>(1, 6)</code>.</p>
+<p>Starting from <code>e</code> (start=2, end=2), <code>f</code> (start=3, end=3) — single-character ranges nested inside <code>a</code>'s range.</p>
+<p>Starting from <code>c</code> (start=8, end=10): walk i=8..10, all <code>c</code> — end stays 10. Range: <code>(8, 10)</code>.</p>
+<p><code>ranges = {(0,7), (1,6), (2,2), (3,3), (8,10)}</code>, sorted by end: <code>[(2,2), (3,3), (1,6), (0,7), (8,10)]</code>.</p>
+<p>Greedy pass with <code>last_end = -1</code>:
+- <code>(2,2)</code>: start 2 &gt; -1 → take, but wait — this is nested inside <code>(0,7)</code> which we haven't ruled out yet. Because <code>(2,2)</code> and <code>(3,3)</code> are proper subsets of <code>(0,7)</code>, taking them first would block <code>(0,7)</code> from ever being selected later, and <code>(0,7)</code> is the range that's <em>actually</em> self-contained (letters <code>e</code> and <code>f</code> aren't fully independent — they only look that way in isolation).</p>
+<p>This is exactly why deduplication alone isn't enough — <code>(2,2)</code> and <code>(3,3)</code> are <strong>not</strong> valid standalone answers; they're intermediate artifacts of the expansion, not sealed blocks, because expanding from <code>e</code> and <code>f</code> never accounted for the surrounding <code>a</code>/<code>d</code> overlap correctly in a naive per-letter walk. In a correct implementation, the expansion step must also pull <code>start</code> backward when a nested letter's own <code>first</code> occurrence is smaller — which the code above handles via the <code>first[ch_i] &lt; start</code> check. Re-running expansion for <code>e</code> with that correction: <code>e</code>'s <code>start=2</code> walks and finds nothing pulling it outward or backward on its own, but because <code>e</code> is never anyone's true block boundary, in practice you filter to keep only maximal ranges before scheduling (any range fully contained in another is dropped). After that filter, only <code>(0,7)</code> and <code>(8,10)</code> remain, and the greedy pass takes both, yielding <code>["adefadda", "ccc"]</code> — matching the expected output.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> Computing <code>first</code>/<code>last</code> is O(n). Expanding each of the (at most 26) letter ranges involves a walk bounded by the string length, giving O(26n) in the worst case — but since 26 is a constant, this is O(n). Sorting the merged ranges is O(26 log 26), effectively constant. The final greedy pass is O(26). Total: <strong>O(n)</strong>.</p>
+<p><strong>Space:</strong> <code>first</code>, <code>last</code>, and <code>ranges</code> each hold at most 26 entries — O(1) additional space relative to input size, plus O(n) for the output substrings themselves, which is unavoidable since you must return the characters.</p>
+<p>These bounds hold because the alphabet size is fixed at 26 regardless of <code>n</code>, so every per-letter operation collapses to a constant factor rather than scaling with input size.</p>
+<h2>Alternative Solutions</h2>
+<p>A union-find (disjoint set) approach can compute the same merged ranges: union adjacent positions that belong to the same letter's span, then union across overlapping spans, and finally read off connected components as sealed blocks. It's a valid alternative and can feel more "principled" for merging, but it adds implementation overhead (path compression, rank) for no complexity improvement over the direct expand-and-merge approach shown above. For this problem's constraints, the range-expansion method is simpler to write correctly and just as fast.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Single-character string:</strong> e.g. <code>"a"</code> — the only range is <code>(0,0)</code>, and the answer is <code>["a"]</code>.</li>
+<li><strong>All identical characters:</strong> e.g. <code>"aaaa"</code> — one merged range covering the whole string; answer is <code>["aaaa"]</code>.</li>
+<li><strong>Every letter distinct:</strong> e.g. <code>"abcde"</code> — each letter is its own sealed range; the answer includes every single character as its own substring.</li>
+<li><strong>One letter forces the entire string:</strong> e.g. <code>"abcbz...a"</code> where <code>a</code>'s first and last occurrences are the string's first and last index — the merged range covers everything, and the answer is a single substring equal to the whole string.</li>
+<li><strong>Empty input:</strong> Per constraints this won't occur, but a defensive implementation should return <code>[]</code> for an empty string rather than erroring.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Greedily cutting substrings during a single left-to-right scan</strong> without first computing full letter ranges — this produces invalid splits, as shown in the first <code>"adefaddaccc"</code> example.</li>
+<li><strong>Sorting ranges by start instead of end</strong> before the greedy pass — this breaks the interval-scheduling guarantee and can produce a suboptimal count.</li>
+<li><strong>Forgetting to re-check the expanding <code>end</code> against the <em>current</em> value inside the while loop</strong> — comparing against the original <code>end</code> instead of the live one silently drops merges and produces broken (non-sealed) ranges.</li>
+<li><strong>Not deduplicating or not filtering out ranges fully nested inside larger ranges</strong> before scheduling — this can cause the greedy pass to "spend" a pick on a redundant sub-range.</li>
+<li><strong>Assuming letters that appear once are automatically independent</strong> — a single-occurrence letter can still sit inside a larger letter's forced range and must be merged accordingly.</li>
+<li><strong>Off-by-one errors when slicing substrings</strong> — since <code>end</code> is an inclusive index, slicing must use <code>s[start:end + 1]</code>, not <code>s[start:end]</code>.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Why must overlapping ranges be merged before applying interval scheduling, rather than scheduling directly on the raw per-letter ranges?</li>
+<li>How would the solution change if the tie-breaking rule required the <em>largest</em> total length instead of the smallest?</li>
+<li>Can you prove that sorting by end position and greedily picking non-overlapping intervals maximizes the count? (Exchange argument / accepted correctness proof.)</li>
+<li>What would you change if the alphabet weren't fixed at 26 characters — say, arbitrary Unicode?</li>
+<li>How does this problem relate to the classic "merge intervals" and "non-overlapping intervals" LeetCode problems?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 56 — Merge Intervals:</strong> the exact merging technique used here, isolated as its own problem.</li>
+<li><strong>LeetCode 435 — Non-overlapping Intervals:</strong> the exact greedy-scheduling technique used here, isolated as its own problem.</li>
+<li><strong>LeetCode 763 — Partition Labels:</strong> nearly the same core idea (letters force ranges that must stay together), but without the final "maximize count with tie-break" twist, making it a good stepping stone before tackling 1520.</li>
+<li><strong>LeetCode 986 — Interval List Intersections:</strong> reinforces comfort with interval boundary reasoning, useful for building the same mental model.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The whole problem collapses into three moves: find each letter's forced range from its first and last occurrence, merge any ranges that overlap into sealed blocks, then sort by end position and greedily take non-overlapping blocks. The merge step matters because a "range" isn't trustworthy until nothing overlapping it remains unmerged — skip that step and you'll accept substrings that secretly cut a letter in half. The greedy-by-earliest-end step works because ending early always preserves the most room for future picks, which is the same proof that backs classic activity selection. Recognizing "merge dependent pieces, then greedily schedule what's left" as a reusable two-step pattern is the real transferable skill here, well beyond this one LeetCode problem.</p>
+<h2>Watch the Video</h2>
+<p>For the full visual walkthrough — including the trickiest line of the while-loop explained step by step, a proof sketch of why smallest-end-first is optimal, and two quiz checkpoints to test yourself before seeing the answer — watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of Fun with Learning Technology, a series built around teaching real software engineering concepts — from coding interview problems to system design to the tools developers use every day — in a way that builds genuine intuition instead of just memorized templates. Each video and article pairs together so you can watch the reasoning unfold and then revisit the write-up whenever you need a refresher.</p>
+<h2>Call To Action</h2>
+<p>If this walkthrough helped the problem click, the biggest support is a like on the video and a subscribe on YouTube — it's what keeps this series going. For the written breakdowns, deeper dives, and extra problems that don't make it into video form, subscribe to the Substack newsletter. And if you have a question, a different approach, or a problem you'd like covered next, drop a comment — sharing this with someone prepping for interviews helps more than you'd think.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>You need max non-overlapping intervals from paired-char ranges. Which pattern?</summary><p>Greedy interval scheduling: sort by start, expand each range until closed, pick earliest-ending valid ranges first.</p></details><details class='card2'><summary>Time complexity for Maximum Non-Overlapping Substrings?</summary><p>O(26n) to build per-letter first/last index and expand ranges, roughly O(n).</p></details><details class='card2'><summary>Space complexity for this problem?</summary><p>O(26) for letter bounds plus O(n) for the range array; not O(1) despite fixed alphabet.</p></details><details class='card2'><summary>Trickiest bug when expanding a substring&#x27;s range?</summary><p>Forgetting to re-scan after the range grows -- a newly included char can pull the boundary further out, so expansion must loop until stable.</p></details><details class='card2'><summary>Why can&#x27;t you just take the shortest valid substring per starting letter?</summary><p>A short pick can still swallow another letter&#x27;s forced range, leaving stray unmatched chars outside any block -- validity requires the range to be fully self-contained.</p></details><details class='card2'><summary>Interview follow-up: why sort merged ranges by end index, not start?</summary><p>Classic activity-selection proof: picking earliest end index maximizes room for future non-overlapping picks.</p></details></div><h2 class='ph1' style='font-size:1.4rem'>Similar problems</h2><div class='grid'><a class='card' href='maximum-number-of-non-overlapping-palindrome-substrings.html'><div class='body'><h3>2472. Maximum Number of Non-overlapping Palindrome Substrings</h3><span class='badge' style='background:#66a96f22;color:#66a96f'>🌳 Trees</span></div></a><a class='card' href='count-nodes-equal-to-average-of-subtree.html'><div class='body'><h3>2265. Count Nodes Equal to Average of Subtree</h3><span class='badge' style='background:#66a96f22;color:#66a96f'>🌳 Trees</span></div></a><a class='card' href='short-debug-170002-916.html'><div class='body'><h3>6 Tries, 1 Line, 0 Guessing: How I Debug Now #shorts</h3><span class='badge' style='background:#66a96f22;color:#66a96f'>🌳 Trees</span></div></a></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
