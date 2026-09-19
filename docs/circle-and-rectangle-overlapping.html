@@ -1,13 +1,177 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>1401. Circle and Rectangle Overlapping | LeetCode Daily Python Solution (clamp to one point, done) — Python LeetCode Solution</title><meta name="description" content="Walk through LeetCode 1401 end to end: why the first instinct (checking distance to each edge) breaks on the real test case, and how clamping the circle&#x27;s center into the rectangle finds the one point">
+<title>1401. Circle and Rectangle Overlapping | LeetCode Daily Python Solution (clamp to one point, done) — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/circle-and-rectangle-overlapping
+💻 Code on GitHub: https://github.com/timepassh">
 <meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/circle-and-rectangle-overlapping.html">
 <meta property="og:title" content="1401. Circle and Rectangle Overlapping | LeetCode Daily Python Solution (clamp to one point, done) — Python LeetCode Solution"><meta property="og:type" content="website">
-<meta property="og:description" content="Walk through LeetCode 1401 end to end: why the first instinct (checking distance to each edge) breaks on the real test case, and how clamping the circle&#x27;s center into the rectangle finds the one point">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/circle-and-rectangle-overlapping
+💻 Code on GitHub: https://github.com/timepassh">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>1401. Circle and Rectangle Overlapping | LeetCode Daily Python Solution (clamp to one point, done)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><p>Walk through LeetCode 1401 end to end: why the first instinct (checking distance to each edge) breaks on the real test case, and how clamping the circle&#x27;s center into the rectangle finds the one point</p></article>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>1401. Circle and Rectangle Overlapping | LeetCode Daily Python Solution (clamp to one point, done)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Why This Problem Matters</h2>
+<p>Geometry problems show up less often than array or graph questions in interviews, but when they do, they separate candidates who pattern-match from candidates who actually reason about the shapes in front of them. LeetCode 1401, Circle and Rectangle Overlapping, looks like a coordinate-geometry exercise, but it's really testing something else: can you find the <em>right</em> thing to measure?</p>
+<p>Most people's first instinct here is wrong, and it's wrong in a way that passes some test cases and fails others — which is exactly the kind of bug that survives code review and breaks in production. That makes this problem a great teaching example, not just for LeetCode, but for how collision detection actually works in games, UI hit-testing, and physics engines.</p>
+<h2>Problem Overview</h2>
+<p>You're given two shapes:</p>
+<ul>
+<li>A <strong>circle</strong>, defined by its center coordinates <code>(x_center, y_center)</code> and a <code>radius</code>.</li>
+<li>A <strong>rectangle</strong>, defined by its bottom-left corner <code>(x1, y1)</code> and top-right corner <code>(x2, y2)</code>, where <code>x1 &lt;= x2</code> and <code>y1 &lt;= y2</code>.</li>
+</ul>
+<p>Your job is to return <code>True</code> if the circle and rectangle share at least one point, and <code>False</code> otherwise. Touching at a single point — the circle just grazing an edge or corner — still counts as overlapping.</p>
+<p>Constraints keep the numbers small (radius and coordinates are bounded to a few thousand), so there's no need to worry about floating-point precision issues at scale, and the rectangle's corners are always given in the correct order, so you never have to normalize them.</p>
+<h2>Example</h2>
+<p>Let's use the case that trips up the naive approach:</p>
+<ul>
+<li>Circle: center <code>(0, 0)</code>, radius <code>1</code></li>
+<li>Rectangle: bottom-left <code>(1, -1)</code>, top-right <code>(3, 1)</code></li>
+</ul>
+<p>The circle sits to the left of the rectangle. The rectangle's <code>y</code> range is <code>[-1, 1]</code>, and the circle's center <code>y = 0</code> already falls inside that range. The rectangle's <code>x</code> range is <code>[1, 3]</code>, and the circle's center <code>x = 0</code> falls outside it, to the left.</p>
+<p>So the closest point on the rectangle to the circle's center is <code>(1, 0)</code> — the <code>x</code> value snapped to the rectangle's left edge, the <code>y</code> value left alone. The distance from <code>(0, 0)</code> to <code>(1, 0)</code> is exactly <code>1</code>, which equals the radius. The circle touches the rectangle at exactly one point. Answer: <code>True</code>.</p>
+<p>That single traced example is the whole problem in miniature — once you see how the closest point gets found, the general solution just repeats the same logic in both dimensions.</p>
+<h2>Intuition</h2>
+<p>Here's the mistake most people make first: measure the distance from the circle's center to the rectangle's center, and compare it to the radius.</p>
+<p>Run that on the example above. The rectangle's center is <code>(2, 0)</code>. Distance from <code>(0, 0)</code> to <code>(2, 0)</code> is <code>2</code>, which is bigger than the radius of <code>1</code>. That says "no overlap." But we just showed the circle touches the rectangle's edge. The center-to-center distance is measuring the wrong thing entirely — the rectangle's center is almost never the point closest to the circle.</p>
+<p>The real question isn't "how far apart are the centers?" It's "what's the single closest point on the rectangle to the circle's center?" That point could be:</p>
+<ul>
+<li>A <strong>corner</strong>, if the circle is diagonally outside the rectangle.</li>
+<li>A point on a <strong>flat edge</strong>, if the circle is directly above, below, left, or right of the rectangle.</li>
+<li>The circle's own center, if it's <strong>already inside</strong> the rectangle.</li>
+</ul>
+<p>If that closest point lies within the circle's radius, the shapes overlap. If it doesn't, nothing on the rectangle is close enough, and they don't.</p>
+<p>The elegant part is <em>how</em> you find that closest point without writing separate logic for corners, edges, and the inside case. You clamp the circle's <code>x</code> coordinate to the rectangle's <code>[x1, x2]</code> range, and clamp its <code>y</code> coordinate to the rectangle's <code>[y1, y2]</code> range:</p>
+<pre><code class="language-python">closest_x = max(x1, min(x_center, x2))
+closest_y = max(y1, min(y_center, y2))
+</code></pre>
+<p>If the center is already inside the rectangle, both <code>min</code> and <code>max</code> leave it unchanged — clamping is a no-op, and the "closest point" is the center itself, giving a distance of zero. If the center is outside on one axis, that axis gets pulled to the nearest edge. If it's outside on both axes, you land exactly on a corner. One formula, every case covered.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Check the circle's distance to each of the rectangle's four corners and to each of its four edges as separate cases, then take the minimum.</p>
+<p><strong>Algorithm:</strong>
+1. Compute distance from the circle's center to each corner.
+2. For each edge, project the center onto the edge's line segment and compute that distance.
+3. Also check whether the center is inside the rectangle.
+4. Take the smallest of all these distances and compare it to the radius.</p>
+<p><strong>Advantages:</strong> Conceptually explicit — you can see exactly which case you're handling.</p>
+<p><strong>Disadvantages:</strong> It's four to eight separate distance calculations with different formulas for corners versus edges versus the interior case. It's easy to miss a case, and the code balloons for no real benefit, since a single clamp already produces the same closest point.</p>
+<p><strong>Time complexity:</strong> O(1) — a fixed number of comparisons regardless of input.
+<strong>Space complexity:</strong> O(1).</p>
+<p>Note this "brute force" is still constant time — geometry problems like this rarely have a slower alternative, the difference is code complexity and correctness risk, not asymptotic speed.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach is the clamp-and-compare method described in the intuition section. Here's the full breakdown:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Operation</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>closest_x = max(x1, min(x_center, x2))</code></td>
+<td>Snap x into rectangle's horizontal bounds</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>closest_y = max(y1, min(y_center, y2))</code></td>
+<td>Snap y into rectangle's vertical bounds</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>dx = x_center - closest_x</code>, <code>dy = y_center - closest_y</code></td>
+<td>Distance components to closest point</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>dx*dx + dy*dy &lt;= radius*radius</code></td>
+<td>Compare squared distance to squared radius</td>
+</tr>
+</tbody>
+</table>
+<p>Step 4 avoids a square root. Since both sides of the comparison are non-negative, squaring preserves the ordering — <code>a &lt;= b</code> if and only if <code>a² &lt;= b²</code> for non-negative values — so skipping <code>sqrt()</code> costs nothing in correctness and saves a slower floating-point operation.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">def check_overlap(radius: int, x_center: int, y_center: int,
+                   x1: int, y1: int, x2: int, y2: int) -&gt; bool:
+    # Find the point on the rectangle closest to the circle's center
+    closest_x = max(x1, min(x_center, x2))
+    closest_y = max(y1, min(y_center, y2))
+
+    # Compare squared distance to squared radius to avoid sqrt
+    dx = x_center - closest_x
+    dy = y_center - closest_y
+    return dx * dx + dy * dy &lt;= radius * radius
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>min(x_center, x2)</code> pulls <code>x_center</code> down if it's past the rectangle's right edge; otherwise it stays as <code>x_center</code>.</li>
+<li><code>max(x1, ...)</code> then pushes that value up if it's past the left edge; otherwise it's unchanged.</li>
+<li>The same two-step clamp happens on the <code>y</code> axis against the top and bottom edges.</li>
+<li><code>dx</code> and <code>dy</code> are the horizontal and vertical distance from the circle's center to that clamped point.</li>
+<li><code>dx * dx + dy * dy</code> is the squared Euclidean distance — no <code>sqrt</code> needed.</li>
+<li>The final comparison against <code>radius * radius</code> answers the overlap question directly.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using circle <code>(0, 0)</code>, radius <code>1</code>, rectangle <code>(1, -1)</code> to <code>(3, 1)</code>:</p>
+<ol>
+<li><code>closest_x = max(1, min(0, 3)) = max(1, 0) = 1</code></li>
+<li><code>closest_y = max(-1, min(0, 1)) = max(-1, 0) = 0</code></li>
+<li><code>dx = 0 - 1 = -1</code>, <code>dy = 0 - 0 = 0</code></li>
+<li><code>dx*dx + dy*dy = 1 + 0 = 1</code></li>
+<li><code>radius*radius = 1</code></li>
+<li><code>1 &lt;= 1</code> → <code>True</code></li>
+</ol>
+<p>The circle touches the rectangle's edge exactly at the boundary, and the function correctly returns <code>True</code>.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(1). The solution performs a fixed number of arithmetic operations — two <code>min</code>/<code>max</code> pairs, two subtractions, two multiplications, one addition, one comparison — regardless of the magnitude of the inputs. There are no loops, no recursion, and no data structure traversal.</p>
+<p><strong>Space:</strong> O(1). Only a handful of scalar variables are used; nothing scales with input size.</p>
+<p>These bounds are tight because the problem is fundamentally a fixed-size geometric computation — there's no way to do less work than compute the closest point and check one distance.</p>
+<h2>Alternative Solutions</h2>
+<p>You could check the four corners and four edges as separate cases (the brute force approach above), but it produces the same result with more code and more chances for an off-by-one or missed case. There's no algorithmically different approach that improves on O(1) — this problem is already at its theoretical floor. The only real choice is between the unified clamp formula and the verbose case-by-case version.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Circle's center exactly inside the rectangle:</strong> Clamping is a no-op, distance is <code>0</code>, which is always <code>&lt;= radius²</code>, so it returns <code>True</code>.</li>
+<li><strong>Circle far from the rectangle:</strong> Clamped point is a corner, squared distance exceeds <code>radius²</code>, returns <code>False</code>.</li>
+<li><strong>Circle exactly touching an edge or corner:</strong> Distance equals radius exactly — the <code>&lt;=</code> comparison must include equality, or this case incorrectly returns <code>False</code>.</li>
+<li><strong>Zero radius:</strong> The circle degenerates to a point; the same clamp logic still works, checking if that point lies within (or on) the rectangle.</li>
+<li><strong>Rectangle is a line or point</strong> (<code>x1 == x2</code> or <code>y1 == y2</code>): Clamping still works — one axis has a single valid value, and the comparison still holds.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Using center-to-center distance</strong> instead of finding the closest point — fails whenever the circle overlaps a flat edge rather than sitting near the rectangle's center.</li>
+<li><strong>Using strict <code>&lt;</code> instead of <code>&lt;=</code></strong> — misses the case where the circle exactly touches the rectangle, which the problem explicitly counts as overlap.</li>
+<li><strong>Taking the square root unnecessarily</strong> — not wrong, just slower; comparing squared values is equivalent and cheaper.</li>
+<li><strong>Writing separate branches for corners, edges, and interior</strong> — error-prone and redundant when a single clamp handles all three.</li>
+<li><strong>Assuming rectangle corners might be unordered</strong> — the problem guarantees <code>x1 &lt;= x2</code> and <code>y1 &lt;= y2</code>, so adding a normalization step is wasted code.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you extend this to check overlap between two circles, or two rectangles?</li>
+<li>What changes if the rectangle can be rotated (not axis-aligned)?</li>
+<li>Can you compute the actual overlapping area, not just whether it overlaps?</li>
+<li>How does this generalize to 3D — a sphere and a box?</li>
+<li>Why is comparing squared distances valid here, and when would it <em>not</em> be valid?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 223 (Rectangle Area):</strong> Also axis-aligned rectangle geometry, focused on computing overlapping area instead of a boolean check.</li>
+<li><strong>LeetCode 1266 (Minimum Time Visiting All Points):</strong> Builds distance intuition using Chebyshev distance rather than Euclidean.</li>
+<li><strong>LeetCode 836 (Rectangle Overlap):</strong> The pure rectangle-rectangle version of this same "closest point / bounds check" family.</li>
+<li><strong>LeetCode 1232 (Check If It Is a Straight Line):</strong> Different shape, same theme — reasoning about coordinate geometry directly rather than brute-forcing points.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Overlap and collision problems usually reduce to one question: what's the closest point between the two shapes? Once you find that, a single distance check settles everything. Clamping is the tool that finds the closest point on an axis-aligned rectangle in one line per axis, covering corners, edges, and the inside case simultaneously. And comparing squared distances instead of taking a square root is a small, free optimization worth having as a reflex.</p>
+<h2>Watch the Video</h2>
+<p>If you want to see this traced out visually, step by step, with the quiz at the end to test your understanding, watch the full walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series that works through LeetCode problems, real-world engineering concepts, and interview prep the way an experienced engineer actually thinks through them — building intuition first, writing code second, and never skipping the "why."</p>
+<h2>Call To Action</h2>
+<p>If this helped make LeetCode 1401 click, give the video a like on YouTube and subscribe for more daily problem breakdowns. For deeper dives and behind-the-scenes notes on the series, subscribe to the Substack. Drop a comment with which problem you want covered next, and share this with anyone prepping for coding interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Circle-rectangle overlap: what&#x27;s the trick instead of checking all edges?</summary><p>Clamp circle center to rectangle bounds to find closest point, then compare distance to radius.</p></details><details class='card2'><summary>Time complexity of closest-point clamping approach?</summary><p>O(1) — just min/max clamps and one distance comparison, no loops.</p></details><details class='card2'><summary>Space complexity of the clamp-and-check solution?</summary><p>O(1) — a few scalar variables (clamped x, y), no extra structures.</p></details><details class='card2'><summary>Common bug when comparing distance to radius?</summary><p>Forgetting to compare squared distance to radius squared, or taking sqrt unnecessarily and hitting float precision issues.</p></details><details class='card2'><summary>Clamping-to-closest-point vs brute-force edge/corner checks?</summary><p>Clamping handles all cases (inside, edge, corner) in one formula; brute-force needs separate cases and is error-prone.</p></details><details class='card2'><summary>Interview follow-up: circle-circle overlap instead of circle-rectangle?</summary><p>Compare distance between centers to sum of radii — no clamping needed since both shapes are round.</p></details></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>
