@@ -1,0 +1,282 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3498. Reverse Degree of a String | LeetCode Daily Python Solution (the ord() trick nobody uses) — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/reverse-degree-of-a-string
+💻 Code on GitHub: https://github.com/timepasshub2539">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/reverse-degree-of-a-string.html">
+<meta property="og:title" content="3498. Reverse Degree of a String | LeetCode Daily Python Solution (the ord() trick nobody uses) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/reverse-degree-of-a-string
+💻 Code on GitHub: https://github.com/timepasshub2539">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>3498. Reverse Degree of a String | LeetCode Daily Python Solution (the ord() trick nobody uses)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h1>SEO PACKAGE</h1>
+<h2>1. SEO Title</h2>
+<p>Reverse Degree of a String (LeetCode 3498) — Python Solution Explained with the ord() Trick</p>
+<h2>2. SEO Subtitle</h2>
+<p>A step-by-step breakdown of LeetCode 3498 that shows why reversing the string is a trap, and how a single <code>ord()</code> call replaces it entirely.</p>
+<h2>3. Featured Quote</h2>
+<p>"A lot of these easy problems invent their own numbering — reversed, offset by one, whatever. Read the definition twice before you write any code."</p>
+<h2>4. Meta Description</h2>
+<p>Solve LeetCode 3498, Reverse Degree of a String, in Python with O(n) time and O(1) space. Learn the ord() trick and avoid the reversed-alphabet trap.</p>
+<h2>5. URL Slug</h2>
+<p><code>leetcode-3498-reverse-degree-of-a-string-python</code></p>
+<h2>6. Keywords</h2>
+<p>LeetCode 3498, Reverse Degree of a String, LeetCode Python solution, LeetCode daily challenge, Python ord() function, Python enumerate, coding interview prep, string manipulation Python, algorithm intuition, O(n) time complexity, O(1) space complexity, LeetCode easy problems, Python interview questions, alphabet position problem, reversed alphabet value, data structures and algorithms, DSA Python, string traversal algorithm, LeetCode explained, competitive programming Python</p>
+<h2>7. Tags</h2>
+<p>LeetCode, Python, Coding Interview, Algorithms, Data Structures, DSA, LeetCode Daily, Software Engineering, String Problems, Interview Prep, Python Tutorial, ord Function, Easy LeetCode</p>
+<hr />
+<h1>MAIN ARTICLE</h1>
+<h2>Introduction</h2>
+<p>Easy-rated LeetCode problems have a reputation for being throwaway warmups, but the ones that stick around in interview loops are usually the ones with a small twist buried in the definition. Reverse Degree of a String is exactly that kind of problem. On the surface it looks like a basic loop-and-sum exercise. Underneath, it's testing something much more valuable than syntax: can you read a spec carefully enough to catch a numbering convention that runs backward from what you'd naturally assume?</p>
+<p>This matters beyond the problem itself. Interviewers use problems like this to see whether you verify your understanding against a worked example before committing to code, or whether you charge ahead on your first guess. Getting burned once by "reverse" meaning something other than what you expected is a cheap lesson to learn here, and a very expensive one to learn live in an interview.</p>
+<h2>Problem Overview</h2>
+<p>You're given a string made up entirely of lowercase English letters. Every letter in the alphabet has a "reversed value" — instead of <code>a = 1, b = 2, ..., z = 26</code>, the values run the other direction: <code>a = 26, b = 25, ..., z = 1</code>.</p>
+<p>For each character in the string, take its reversed alphabet value and multiply it by its position in the string, counting positions from 1 (not 0). Sum all of these products together. That sum is the string's "reverse degree."</p>
+<p>The string itself is never reversed. Only the alphabet-to-number mapping is reversed. That distinction is the entire problem.</p>
+<h2>Example</h2>
+<p>Take the string <code>"abc"</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Character</th>
+<th>Position (1-indexed)</th>
+<th>Reversed alphabet value</th>
+<th>Product</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a</td>
+<td>1</td>
+<td>26</td>
+<td>26</td>
+</tr>
+<tr>
+<td>b</td>
+<td>2</td>
+<td>25</td>
+<td>50</td>
+</tr>
+<tr>
+<td>c</td>
+<td>3</td>
+<td>24</td>
+<td>72</td>
+</tr>
+</tbody>
+</table>
+<p>Sum: <code>26 + 50 + 72 = 148</code>.</p>
+<p>So <code>"abc"</code> has a reverse degree of 148. Every product comes from the same rule — reversed letter value times normal position — and the total is just the running sum of those three numbers.</p>
+<h2>Intuition</h2>
+<p>The natural first instinct when you see the word "reverse" in a string problem is to reverse the string, or reverse the order you iterate through it. That instinct is wrong here, and it's wrong in a way that's easy to miss because the math still produces a plausible-looking number.</p>
+<p>A more common first mistake is assuming <code>a = 1, b = 2, c = 3</code> — normal alphabet order — because that's the mapping most people reach for by default. Running that on <code>"abc"</code> gives <code>1*1 + 2*2 + 3*3 = 1 + 4 + 9 = 14</code>. That's not 148, so something in the assumption is wrong.</p>
+<p>Rereading the problem statement clarifies it: the position in the <em>alphabet</em> is reversed, not the string or the loop direction. <code>a</code> is worth 26 because it's 26th from the end of the alphabet; <code>z</code> is worth 1 because it's 1st from the end. The string is still processed left to right, in its normal order, with normal 1-indexed positions.</p>
+<p>This is the core skill the problem is testing: distinguish "reverse the alphabet mapping" from "reverse the string" or "reverse the index." Once you fix the mapping, everything else is a one-pass sum you've written a hundred times before.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> For each character, compute its reversed alphabet value with an explicit lookup (a dictionary or a 26-entry list built from <code>'a'</code> to <code>'z'</code>), multiply by 1-indexed position, and accumulate.</p>
+<p><strong>Algorithm:</strong>
+1. Build a mapping of each letter to its reversed value (either precomputed or via a formula).
+2. Loop through the string with an index.
+3. Multiply and accumulate.</p>
+<p><strong>Advantages:</strong> Very easy to reason about; the mapping is explicit and visible.</p>
+<p><strong>Disadvantages:</strong> Building an explicit 26-entry table is unnecessary work when the value can be computed directly from each letter's ASCII code.</p>
+<p><strong>Complexity:</strong> O(n) time, O(1) extra space (the alphabet table is a constant size regardless of input length) — so in practice this isn't meaningfully slower than the optimal version, just more code for the same result.</p>
+<h2>Optimal Solution</h2>
+<p>Skip the explicit lookup table. Python's <code>ord()</code> function already gives you a letter's position in the normal alphabet as an ASCII offset: <code>ord(char) - ord('a')</code> returns <code>0</code> for <code>'a'</code>, <code>1</code> for <code>'b'</code>, up through <code>25</code> for <code>'z'</code>.</p>
+<p>To flip that into the reversed value, just invert it: <code>26 - (ord(char) - ord('a'))</code>. For <code>'a'</code>, that's <code>26 - 0 = 26</code>. For <code>'z'</code>, that's <code>26 - 25 = 1</code>. That single expression replaces the entire lookup table.</p>
+<p>Then use <code>enumerate()</code> to walk the string and get both the index and the character in one pass. Since <code>enumerate</code> starts counting at 0 but the problem wants 1-indexed positions, add 1 to the index before multiplying.</p>
+<pre><code>position(0-indexed)  →  +1  →  actual position used in the formula
+character            →  ord() flip  →  reversed alphabet value
+                      →  multiply →  add to running total
+</code></pre>
+<h2>Python Code</h2>
+<pre><code class="language-python">def reverse_degree(s: str) -&gt; int:
+    total = 0
+    for index, char in enumerate(s):
+        reversed_value = 26 - (ord(char) - ord('a'))
+        position = index + 1
+        total += reversed_value * position
+    return total
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>total = 0</code> — the running sum, returned at the end.</li>
+<li><code>enumerate(s)</code> — yields <code>(index, char)</code> pairs so there's no manual counter to maintain.</li>
+<li><code>ord(char) - ord('a')</code> — converts the letter into its normal 0-based alphabet position (<code>a</code> → 0, <code>z</code> → 25).</li>
+<li><code>26 - (...)</code> — flips that into the reversed value (<code>a</code> → 26, <code>z</code> → 1).</li>
+<li><code>position = index + 1</code> — shifts <code>enumerate</code>'s 0-based index into the problem's 1-based position.</li>
+<li><code>total += reversed_value * position</code> — accumulates each character's contribution.</li>
+<li><code>return total</code> — the final reverse degree.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>String: <code>"abc"</code></p>
+<table>
+<thead>
+<tr>
+<th>index</th>
+<th>char</th>
+<th>ord(char)-ord('a')</th>
+<th>reversed_value</th>
+<th>position</th>
+<th>product</th>
+<th>total</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>a</td>
+<td>0</td>
+<td>26</td>
+<td>1</td>
+<td>26</td>
+<td>26</td>
+</tr>
+<tr>
+<td>1</td>
+<td>b</td>
+<td>1</td>
+<td>25</td>
+<td>2</td>
+<td>50</td>
+<td>76</td>
+</tr>
+<tr>
+<td>2</td>
+<td>c</td>
+<td>2</td>
+<td>24</td>
+<td>3</td>
+<td>72</td>
+<td>148</td>
+</tr>
+</tbody>
+</table>
+<p>Final answer: <code>148</code>, matching the example.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(n), where n is the length of the string. Each character is visited exactly once, and the work per character (an <code>ord()</code> call, a subtraction, a multiplication) is constant time.</p>
+<p><strong>Space:</strong> O(1). Only a running total, an index, and a character are held at any point — none of that scales with input size.</p>
+<p>These are correct because there's no nested loop, no auxiliary data structure that grows with input, and no recursion.</p>
+<h2>Alternative Solutions</h2>
+<p>You could precompute a dictionary mapping each of the 26 letters to its reversed value up front (<code>{chr(97+i): 26-i for i in range(26)}</code>) and do a dictionary lookup instead of the <code>ord()</code> arithmetic inside the loop. This is functionally identical — still O(n) time, still O(1) space (the dictionary is a fixed 26 entries) — but it's more code to build a table <code>ord()</code> already computes for you inline. Fine in interviews if you want to make the mapping visually explicit, but not necessary.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Single-letter string:</strong> e.g., <code>"z"</code> — position is 1, so the answer is just <code>z</code>'s reversed value, which is 1. No special-casing needed; the loop handles it naturally.</li>
+<li><strong>All same letter:</strong> e.g., <code>"aaa"</code> — reversed value stays 26 for every character, only the position changes, so the answer is <code>26*(1+2+3) = 156</code>.</li>
+<li><strong>Maximum length (1000 characters):</strong> still resolves in a single linear pass; no performance concern.</li>
+<li><strong>String of <code>z</code>s:</strong> each contributes only 1 times its position, so the total will be much smaller than the same-length string of <code>a</code>s.</li>
+<li><strong>Empty string:</strong> not part of the problem's constraints (length is at least 1), but the code would correctly return 0 if it were.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Using normal alphabet order (<code>a=1, b=2, ...z=26</code>) instead of the reversed order the problem actually specifies.</li>
+<li>Reversing the string itself instead of reversing the alphabet-to-number mapping.</li>
+<li>Forgetting to shift <code>enumerate</code>'s 0-based index by adding 1, which throws off every product.</li>
+<li>Reversing the index weighting (processing positions back-to-front) rather than the letter values.</li>
+<li>Building a lookup table with an off-by-one error, e.g. treating <code>a</code> as 25 instead of 26.</li>
+<li>Not verifying the formula against the given example before writing code, and only catching the mistake after submission fails.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you handle uppercase letters or mixed case if the constraints changed?</li>
+<li>Can you compute the reverse degree without a loop, using a formula or vectorized approach?</li>
+<li>What if positions were 0-indexed instead of 1-indexed — how would the code change?</li>
+<li>How would you extend this to a non-English alphabet or a different base value than 26?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 1: Two Sum</strong> — another problem where a single pass with a running structure (hash map instead of a running total) solves it in O(n).</li>
+<li><strong>LeetCode 806: Number of Lines To Write String</strong> — also maps characters to fixed values via a lookup and accumulates a running total.</li>
+<li><strong>LeetCode 1417: Reformat The String</strong> — string traversal with position-based logic driving the output.</li>
+<li><strong>LeetCode 2085: Count Common Words With One Occurrence</strong> — reinforces reading problem statements carefully since the "obvious" interpretation is often wrong.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The algorithm here is trivial once you have the right mapping — a single pass, multiply, and sum. The actual skill being tested is reading comprehension: catching that "reverse" applies to the alphabet values, not the string or the iteration order. <code>ord()</code> replaces an entire lookup table with one line of arithmetic, and <code>enumerate()</code> removes the need to track a manual counter. Verify your formula against the given example before writing any code — it would have caught the wrong-mapping mistake in seconds instead of after a failed submission.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough, including the trace of the example step by step and two quick quiz rounds to test your understanding, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of Fun with Learning Technology, a series that works through LeetCode's daily challenge with a focus on the reasoning behind each solution — not just the final code, but how an experienced engineer catches the trap, tests the assumption, and arrives at the fix.</p>
+<h2>Call To Action</h2>
+<p>If this helped the problem click, give the video a like on YouTube and subscribe for the rest of the daily LeetCode series. For deeper write-ups and more Python breakdowns, subscribe to the Substack. Drop a comment with your own approach or a question about the edge cases, and share this with anyone prepping for interviews.</p>
+<hr />
+<h1>SOCIAL MEDIA</h1>
+<h2>LinkedIn Post</h2>
+<p>LeetCode 3498, Reverse Degree of a String, looks like a basic loop problem until you actually read the spec closely.</p>
+<p>The setup: each letter gets a value based on its position counting backward through the alphabet (a = 26, b = 25, ... z = 1), multiplied by its normal position in the string (counting from 1), summed across all characters.</p>
+<p>My first instinct was to use normal alphabet order — a=1, b=2, c=3. For "abc" that gives 14. The expected answer is 148. The gap wasn't a bug in the loop; it was a wrong assumption about which direction "reverse" applied to. It's not the string that's reversed, and it's not the iteration order — it's the alphabet-to-number mapping itself.</p>
+<p>Once that clicks, the solution is one pass: <code>26 - (ord(char) - ord('a'))</code> gives the reversed value directly, no lookup table needed, and <code>enumerate()</code> handles position tracking. O(n) time, O(1) space.</p>
+<p>The bigger lesson isn't about this specific problem. It's that "easy" problems often invent their own numbering conventions — reversed, offset by one, zero-indexed vs one-indexed — and the fastest way to lose time isn't a hard algorithm, it's writing code against an assumption you never checked with the example.</p>
+<p>Full breakdown and code walkthrough: {LINK}</p>
+<h1>Python #LeetCode #CodingInterview #Algorithms #SoftwareEngineering</h1>
+<h2>Twitter/X Thread</h2>
+<p>1/ LeetCode 3498: Reverse Degree of a String. Looks trivial. Isn't — the trap is in one word. Thread 🧵</p>
+<p>2/ The rule: each letter gets a value based on its position counting BACKWARD through the alphabet. a=26, b=25, ... z=1. Multiply by the letter's normal position in the string (1-indexed). Sum it all.</p>
+<p>3/ First instinct: a=1, b=2, c=3, normal order. For "abc": 1<em>1 + 2</em>2 + 3*3 = 14.</p>
+<p>4/ Expected answer for "abc": 148. Not close. Something's fundamentally wrong with the assumption, not the arithmetic.</p>
+<p>5/ Reread the spec: "reversed alphabet position." The word "reverse" applies to the alphabet mapping — not the string, not the loop direction.</p>
+<p>6/ Correct mapping: a=26, b=25, c=24. Redo it: 26<em>1 + 25</em>2 + 24*3 = 26+50+72 = 148. ✅</p>
+<p>7/ The code needs exactly one trick: <code>26 - (ord(char) - ord('a'))</code> turns any lowercase letter into its reversed value. No lookup table required.</p>
+<p>8/ Pair that with <code>enumerate()</code> for position tracking, add 1 since enumerate starts at 0, multiply, accumulate.</p>
+<p>9/ Full solution is 5 lines. O(n) time, O(1) space. The algorithm was never the hard part.</p>
+<p>10/ The real lesson: easy problems love inventing their own numbering conventions. Read the definition twice, hand-check one example, then write code. Full breakdown: {LINK}</p>
+<h2>Facebook Post</h2>
+<p>Ever hit a coding problem where your first answer is confidently, completely wrong — and it takes rereading the same sentence three times to see why?</p>
+<p>That happened with LeetCode's Reverse Degree of a String. The word "reverse" makes you think you should flip the string, or process it backward. Nope. What's actually reversed is how letters get scored: a is worth 26, z is worth 1, and the string stays in its normal order the whole time.</p>
+<p>Once that clicked, the fix was a single line of Python using <code>ord()</code> — no lookup tables, no extra complexity. Full walkthrough, code, and a couple of quiz questions to test yourself: {LINK}</p>
+<h2>Reddit Summary</h2>
+<p>Worked through LeetCode 3498 (Reverse Degree of a String) — an easy-rated problem where the actual difficulty is in the wording, not the algorithm.</p>
+<p>The rule: each character's value is based on its position counting backward through the alphabet (a=26 ... z=1), multiplied by its 1-indexed position in the string, summed up.</p>
+<p>The natural mistake is assuming normal alphabet order (a=1, b=2...) instead of reversed. Running the example (<code>"abc"</code>) with the wrong mapping gives 14; the correct mapping gives 148. The word "reverse" refers to the alphabet-to-value mapping, not the string itself or the iteration direction.</p>
+<p>Once you have the right mapping, the Python solution is short:</p>
+<pre><code class="language-python">def reverse_degree(s):
+    total = 0
+    for i, c in enumerate(s):
+        total += (26 - (ord(c) - ord('a'))) * (i + 1)
+    return total
+</code></pre>
+<p>O(n) time, O(1) space. Wrote up the full reasoning, dry run, and edge cases if anyone wants the longer version.</p>
+<hr />
+<h1>GITHUB README</h1>
+<h1>Reverse Degree of a String — LeetCode 3498 (Python)</h1>
+<h2>Problem</h2>
+<p>Given a string <code>s</code> consisting only of lowercase English letters, compute its <strong>reverse degree</strong>:</p>
+<ul>
+<li>Each letter has a value based on its position counting <em>backward</em> through the alphabet: <code>a = 26, b = 25, ..., z = 1</code>.</li>
+<li>For every character, multiply its reversed alphabet value by its 1-indexed position in the string.</li>
+<li>Sum all the products to get the reverse degree.</li>
+</ul>
+<p><strong>Example:</strong> <code>s = "abc"</code> → <code>26*1 + 25*2 + 24*3 = 148</code></p>
+<h2>Intuition</h2>
+<p>The trap is assuming normal alphabet order (<code>a=1, b=2, ...</code>). That gives the wrong answer. The word "reverse" refers to the alphabet-to-value mapping, not the string order or iteration direction. The string is processed left to right as usual; only the letter values are flipped.</p>
+<h2>Approach</h2>
+<ol>
+<li>Walk the string once with <code>enumerate()</code> to get index and character together.</li>
+<li>Convert each character to its reversed alphabet value: <code>26 - (ord(char) - ord('a'))</code>.</li>
+<li>Multiply by the 1-indexed position (<code>index + 1</code>).</li>
+<li>Accumulate into a running total.</li>
+</ol>
+<h2>Python Solution</h2>
+<pre><code class="language-python">def reverse_degree(s: str) -&gt; int:
+    total = 0
+    for index, char in enumerate(s):
+        reversed_value = 26 - (ord(char) - ord('a'))
+        position = index + 1
+        total += reversed_value * position
+    return total
+</code></pre>
+<h2>Complexity</h2>
+<ul>
+<li><strong>Time:</strong> O(n) — single pass over the string.</li>
+<li><strong>Space:</strong> O(1) — only a running total and loop variables.</li>
+</ul>
+<h2>Video</h2>
+<p>Full walkthrough with dry run and quiz questions: {LINK}</p>
+<h2>Article</h2>
+<p>Full write-up with brute force comparison, edge cases, and interview follow-ups: {LINK}</p></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Pattern: &#x27;reverse degree&#x27; via char position weighting — trigger?</summary><p>When score depends on (26 - letter_rank) times position, think weighted-sum-in-one-pass, no need for extra structures.</p></details><details class='card2'><summary>Time complexity of computing Reverse Degree?</summary><p>O(n) — one linear scan over the string computing weight and summing.</p></details><details class='card2'><summary>Space complexity of the straightforward solution?</summary><p>O(1) extra space — just running total and index counters, no arrays needed.</p></details><details class='card2'><summary>Common bug when mapping &#x27;a&#x27;→26 down to &#x27;z&#x27;→1?</summary><p>Off-by-one from ord(c) - ord(&#x27;a&#x27;): forgetting to invert (26 - (ord(c)-ord(&#x27;a&#x27;))) gives &#x27;a&#x27; the wrong weight.</p></details><details class='card2'><summary>Bug from using 0-indexed position directly in the sum?</summary><p>Position must be 1-indexed (i+1) when multiplying by weight, else the first character always contributes zero.</p></details><details class='card2'><summary>Interview follow-up: how to extend to &#x27;sum over every substring&#x27;?</summary><p>Precompute prefix sums of weighted values so each substring&#x27;s contribution is O(1) via prefix[j]-prefix[i], avoiding O(n^2).</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
