@@ -1,0 +1,160 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3736. Minimum Moves to Equal Array Elements III — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/minimum-moves-to-equal-array-elements-iii
+💻 Code on GitHub: https://github.com/">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/minimum-moves-to-equal-array-elements-iii.html">
+<meta property="og:title" content="3736. Minimum Moves to Equal Array Elements III — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/minimum-moves-to-equal-array-elements-iii
+💻 Code on GitHub: https://github.com/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>3736. Minimum Moves to Equal Array Elements III</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Every so often, LeetCode gives you a problem that looks exactly like one you've already solved — until you read the constraints closely and realize the whole strategy you'd reach for by muscle memory is wrong. Minimum Moves to Equal Array Elements III is one of those problems. It sits right next to "Minimum Moves to Equal Array Elements II" in name and in spirit, and interviewers love pairs like this because they test whether you actually understood the previous solution or just memorized "sort, then median."</p>
+<p>If you've been through enough array problems, your instinct probably says: sort the array, pick the median, sum the distances. That instinct is correct for a huge family of problems — but it's built on an assumption you need to question every single time: can you move values in both directions? The moment a problem takes that freedom away and only lets you move one way, the median stops being optimal, and you need a different mental model entirely.</p>
+<p>This problem is worth sitting with because it isn't really about arrays at all. It's about recognizing constraints. The array, the "add one" operation, the one-directional move — all of that is scaffolding. What the problem is actually testing is whether you can notice when a familiar pattern doesn't apply and derive the right one from first principles. That skill shows up constantly in interviews, in system design, and honestly in day-to-day engineering: knowing when your mental shortcuts don't fit the situation in front of you.</p>
+<h2>Problem Overview</h2>
+<p>You're given an array of integers. In a single move, you may pick any one element and increase it by exactly 1 — that's the only operation allowed. You cannot decrease any value. Your job is to find the minimum total number of moves required to make every element in the array equal.</p>
+<p>The constraints keep things small (at most 100 elements, with modest value sizes), which is a strong hint that the intended solution doesn't need anything fancy like sorting or binary search — it's signaling that a single linear pass is enough.</p>
+<p>The key phrase to underline is "increase it by exactly 1." There's no mention of decreasing. That one-way restriction is the entire problem. Everything else — finding gaps, summing distances — follows directly from it.</p>
+<h2>Example</h2>
+<p>Take the array <code>[2, 1, 3]</code>.</p>
+<ul>
+<li>The largest value in the array is <code>3</code>.</li>
+<li>To raise <code>2</code> up to <code>3</code>, you need <code>3 - 2 = 1</code> move.</li>
+<li>To raise <code>1</code> up to <code>3</code>, you need <code>3 - 1 = 2</code> moves.</li>
+<li>The <code>3</code> itself needs <code>3 - 3 = 0</code> moves, since it's already at the target.</li>
+</ul>
+<p>Total moves: <code>1 + 2 + 0 = 3</code>.</p>
+<p>Why is the target <code>3</code> and not something smaller, like <code>2</code>? Because <code>3</code> can never come down to <code>2</code> — the only move available is <code>+1</code>. Any target below the current maximum is unreachable for at least one element. So <code>3</code>, the maximum, is the only value every element can actually reach.</p>
+<h2>Intuition</h2>
+<p>Here's where experience either helps you or actively misleads you. A lot of "equalize the array" problems reward meeting in the middle — pick the median (or average, for a looser version), and let higher values come down while lower values go up. That minimizes total movement because every element is allowed to travel toward the center from either side.</p>
+<p>Try applying that instinct to <code>[2, 1, 3]</code>. The values average out to about <code>2</code>. But look at what that would require: the <code>3</code> would need to drop to <code>2</code>. That's a decrease — and decreases aren't on the menu. The averaging trick doesn't just give a suboptimal answer here; it gives an <em>impossible</em> one.</p>
+<p>This is the moment to stop and ask a sharper question: given that elements can only go up, what's the smallest value that every element in the array can legally reach? It can't be anything below the current maximum, because the maximum element would have to shrink to get there, and shrinking isn't allowed. It also doesn't need to be anything above the maximum, because that would mean extra, unnecessary moves for every element, including the one that's already at the top.</p>
+<p>That leaves exactly one candidate: the maximum value already sitting in the array. It's the one number that requires zero moves for itself, and it's the lowest common target every other element can actually climb to. Once you see that, the rest of the problem collapses into arithmetic — add up how far every element is from that one fixed point.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Try every possible target value one at a time, from the smallest element up to some reasonable ceiling, compute the total moves needed for each candidate target, and keep the minimum.</p>
+<p><strong>Algorithm:</strong>
+1. For each candidate target <code>t</code> from <code>min(nums)</code> up to <code>max(nums)</code>:
+   - Check that <code>t &gt;= x</code> for every <code>x</code> in <code>nums</code> (otherwise some element would need to decrease).
+   - If valid, compute <code>sum(t - x for x in nums)</code>.
+2. Track the smallest total across all valid targets.</p>
+<p><strong>Advantages:</strong> It's a direct translation of "try everything," so it's easy to reason about and hard to get wrong on the logic front.</p>
+<p><strong>Disadvantages:</strong> It's doing a huge amount of redundant work. Every target below the maximum fails the validity check instantly, and every target above the maximum only adds extra moves. The brute force never actually discovers anything the direct approach doesn't already tell you — it just confirms it the slow way.</p>
+<p><strong>Time complexity:</strong> O(n · k), where <code>k</code> is the range of candidate targets you test (potentially as large as the value range in the array).
+<strong>Space complexity:</strong> O(1) beyond the input, assuming you don't store intermediate sums.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach skips the search entirely because we already proved the target can only be one value: the maximum.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happens</th>
+<th>Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Scan the array once to find <code>mx = max(nums)</code></td>
+<td>O(n)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Scan the array again, summing <code>mx - x</code> for every <code>x</code></td>
+<td>O(n)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Return the total</td>
+<td>O(1)</td>
+</tr>
+</tbody>
+</table>
+<p>There's no sorting, no median, no candidate search. The two passes can even be merged into one if you want to shave constant factors, but keeping them separate keeps the code obvious — find the ceiling, then measure every element's distance from it.</p>
+<p>It helps to picture the earlier "glasses of water" framing: you can only pour water in, never out. The fastest way to make every glass the same height is to fill each one up to whichever glass is already fullest. You never average the glasses, because averaging would ask the fullest glass to lose water — the one thing you're not allowed to do.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">class Solution:
+    def minMoves(self, nums: list[int]) -&gt; int:
+        mx = max(nums)
+        return sum(mx - x for x in nums)
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>class Solution:</code> — the required wrapper LeetCode expects your method inside.</li>
+<li><code>def minMoves(self, nums: list[int]) -&gt; int:</code> — takes the array of integers, returns a single integer: the minimum move count.</li>
+<li><code>mx = max(nums)</code> — one linear pass to find the largest value in the array. This is the fixed target every element must reach, for the reasons worked out in the Intuition section.</li>
+<li><code>return sum(mx - x for x in nums)</code> — a second linear pass. For every element <code>x</code>, <code>mx - x</code> is exactly the number of <code>+1</code> moves needed to bring it up to the target. Since <code>mx</code> is the maximum, this value is always non-negative, so you never accidentally compute a "negative move count" for an element that's already past the target — nothing can be past it.</li>
+<li>The generator expression inside <code>sum()</code> avoids building an intermediate list, keeping the extra space at O(1).</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using <code>nums = [2, 1, 3]</code>:</p>
+<ol>
+<li><code>mx = max([2, 1, 3])</code> → <code>mx = 3</code>.</li>
+<li>Compute each gap:
+   - <code>3 - 2 = 1</code>
+   - <code>3 - 1 = 2</code>
+   - <code>3 - 3 = 0</code></li>
+<li>Sum: <code>1 + 2 + 0 = 3</code>.</li>
+<li>Return <code>3</code>.</li>
+</ol>
+<p>Matches the example worked through earlier: raising <code>2</code> to <code>3</code> costs one move, raising <code>1</code> to <code>3</code> costs two moves, and <code>3</code> needs nothing.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time: O(n).</strong> Finding the maximum requires inspecting every element once. Summing the gaps requires inspecting every element once more. Two linear passes are still linear overall — O(n) + O(n) = O(n).</p>
+<p><strong>Space: O(1).</strong> Only <code>mx</code> and a running sum are kept in memory; nothing scales with the input size. (Python's <code>max()</code> and the generator inside <code>sum()</code> don't materialize extra arrays.)</p>
+<p>Both bounds are tight — you cannot do better than O(n), because you must at minimum look at every element once to even know what the maximum is.</p>
+<h2>Alternative Solutions</h2>
+<p>You could merge the two passes into a single loop that tracks a running maximum and a running sum simultaneously, then correct the sum at the end by accounting for how the maximum changed mid-scan. It's a fun exercise, but it adds bookkeeping for no asymptotic benefit — you're still O(n) time and O(1) space, just with messier code. The two-pass version is more readable and just as fast in practice, which is the better trade for interview settings.</p>
+<p>Sorting the array first is a trap worth naming explicitly, since it's the move this problem is designed to tempt you into. Once sorted, the maximum is just the last element — but sorting costs O(n log n), strictly worse than the O(n) you get by calling <code>max()</code> directly. Sorting is only useful here if you also need the array in order for some other reason; for this problem alone, it's pure overhead.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty array:</strong> Not reachable under LeetCode's stated constraints (the array always has at least one element), but if it somehow occurred, <code>max()</code> on an empty sequence raises a <code>ValueError</code> — worth knowing even if you don't need to handle it here.</li>
+<li><strong>Single-element array:</strong> <code>max(nums)</code> is that element itself, every gap is <code>0</code>, and the answer is <code>0</code>. No moves needed since there's nothing to equalize against.</li>
+<li><strong>All elements already equal:</strong> Every gap is <code>0</code>, so the total is <code>0</code> regardless of array length.</li>
+<li><strong>Duplicate maximums:</strong> If the largest value appears more than once, each occurrence contributes a gap of <code>0</code> — it doesn't change the logic or double-count anything.</li>
+<li><strong>Maximum value at the array's boundary constraints:</strong> Even at the largest allowed values, Python's integers don't overflow, so there's no special handling needed for large sums.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Reaching for the median or average</strong>, carried over from the "move in both directions" version of this problem. That approach produces a target smaller elements can't reach without decreasing, which this problem forbids.</li>
+<li><strong>Sorting the array unnecessarily.</strong> It doesn't break correctness, but it adds O(n log n) overhead for a problem that's solvable in O(n).</li>
+<li><strong>Computing <code>x - mx</code> instead of <code>mx - x</code></strong>, which silently flips every gap negative and corrupts the total.</li>
+<li><strong>Assuming the target should be the minimum</strong>, confusing "add" with "decrease toward the smallest value" — the direction of the allowed move determines the target, not an arbitrary choice of which extreme to use.</li>
+<li><strong>Recomputing <code>max(nums)</code> inside the summing loop</strong> (e.g., calling <code>max()</code> on every iteration instead of once up front), which quietly turns an O(n) solution into O(n²).</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>What changes about your approach if moves could go either direction (raise or lower)?</li>
+<li>How would you handle this if the array were a stream and you couldn't store the whole thing in memory?</li>
+<li>Can you prove that the maximum is the unique optimal target, rather than just asserting it?</li>
+<li>What's the time complexity if you were asked to also return <em>which</em> elements needed the most moves?</li>
+<li>How would your solution change if each move could add any positive integer, not just 1?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>Minimum Moves to Equal Array Elements II</strong> — the two-directional sibling of this problem, where the median replaces the maximum as the optimal target. Comparing the two is the best way to internalize how a constraint on move direction changes the entire strategy.</li>
+<li><strong>Minimum Moves to Equal Array Elements</strong> — the original version, equivalent in spirit to the "raise to the max" problem, often phrased with increment/decrement moves that net out the same way.</li>
+<li><strong>Candy</strong> — another problem where a one-directional constraint (each child needs more candy than specific neighbors) forces a non-obvious target rather than a simple average.</li>
+<li><strong>Minimum Number of Operations to Make Array Continuous</strong> — shares the theme of figuring out what the "right" target range is before computing a cost over it.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>The moment a problem restricts movement to one direction, the median and the average stop being valid targets — don't apply them on autopilot.</li>
+<li>When only increases are allowed, the maximum is the sole value every element can legally reach, and it costs the fewest total moves by construction.</li>
+<li>Small constraints in a problem statement are often a hint about the intended time complexity — here, they're telling you a single pass (or two) is all you need.</li>
+<li>The real skill being tested isn't the final one-liner; it's recognizing when a familiar pattern from a similar-sounding problem doesn't transfer.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>If you'd rather see this derived step by step — including the glasses-of-water framing and a couple of quick quiz checks along the way — watch the full walkthrough here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series built around making coding interview prep actually stick — not by memorizing solutions, but by building the intuition that lets you derive them on the spot. Each video takes one problem, questions the obvious approach, and walks through why the real solution works the way it does.</p>
+<h2>Call To Action</h2>
+<p>If this walkthrough helped the problem click, give the video a like on YouTube and subscribe for more of these breakdowns — new ones go up regularly. If you'd rather get the written version straight to your inbox, subscribe to the Substack newsletter. And if you spotted a different way to think about this problem, drop it in the comments — these threads often turn into some of the best explanations in the series. Sharing this with someone prepping for interviews helps the channel grow, too.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Pattern: array equalized via +1/-1 moves. What&#x27;s the tell?</summary><p>When each move only shifts one element by 1 and you need min total moves, think median minimization, not average.</p></details><details class='card2'><summary>Time complexity to solve this problem?</summary><p>O(n log n), dominated by sorting the array before computing median and gap sums.</p></details><details class='card2'><summary>Space complexity of the median-based solution?</summary><p>O(1) extra if sorting in place, O(n) if a sorted copy is made.</p></details><details class='card2'><summary>Common bug when summing distances to the target?</summary><p>Forgetting to pick the actual median (not average) causes undercounting moves, especially with even-length arrays.</p></details><details class='card2'><summary>Average vs median: why does average fail here?</summary><p>Average minimizes squared distance; moves cost is absolute distance, so median (not mean) minimizes total steps.</p></details><details class='card2'><summary>Interview follow-up: array has duplicates, does approach change?</summary><p>No — median logic and gap-summing still hold since duplicates don&#x27;t affect position-based minimization.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
