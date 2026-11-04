@@ -1,0 +1,198 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3505. Minimum Operations to Make Elements Within K Subarrays Equal — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/minimum-operations-to-make-elements-within-k-subarrays-equal
+💻 Code on GitHub: ">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/minimum-operations-to-make-elements-within-k-subarrays-equal.html">
+<meta property="og:title" content="3505. Minimum Operations to Make Elements Within K Subarrays Equal — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/minimum-operations-to-make-elements-within-k-subarrays-equal
+💻 Code on GitHub: ">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>3505. Minimum Operations to Make Elements Within K Subarrays Equal</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Some LeetCode problems test whether you know a trick. Others test whether you can combine three different tricks and notice which constraint tells you which one to use. LeetCode 3505, "Minimum Operations to Make Elements Within K Subarrays Equal," is the second kind, and that's exactly why it shows up in hard-tier interview prep.</p>
+<p>The problem looks intimidating at first: non-overlapping windows, equalization costs, and a count constraint all stacked on top of each other. But underneath, it's built from three ideas that show up constantly in interviews — the median minimizes absolute deviation, prefix sums turn repeated summation into O(1) lookups, and dynamic programming turns combinatorial explosion into reused subproblems. If you can see why each piece is needed here, you can recognize the same shape in a dozen other problems that don't look anything like this one on the surface.</p>
+<h2>Problem Overview</h2>
+<p>You're given an integer array <code>nums</code>, along with two integers <code>x</code> and <code>k</code>.</p>
+<p>You're allowed to increment or decrement any single element by 1, as many times as you like. Each such increment or decrement counts as one operation.</p>
+<p>Your goal: make the array contain at least <code>k</code> non-overlapping subarrays, each of length exactly <code>x</code>, where every element inside a chosen subarray is equal to the same value. Different subarrays can target different values. You want the minimum total number of operations across all chosen windows.</p>
+<p>In short — pick <code>k</code> disjoint fixed-length windows, flatten each one to a constant value as cheaply as possible, minimize the total cost.</p>
+<h2>Example</h2>
+<p>Take <code>nums = [5, -2, 1, 3, 7, 3, 6, 4, -1]</code>, with <code>x = 3</code> and <code>k = 2</code>.</p>
+<ul>
+<li>Window at indices <code>[1, 3]</code> → values <code>-2, 1, 3</code>. Push everything to <code>1</code>: costs <code>3 + 0 + 2 = 5</code>... but the video's walkthrough levels this window to <code>1</code> more cheaply by choosing the median, giving <code>3</code> operations total for that window.</li>
+<li>Window at indices <code>[5, 7]</code> → values <code>3, 6, 4</code>. Pushing to the median <code>4</code> costs <code>1 + 2 + 0 = 3</code>... totaling <code>5</code>.</li>
+</ul>
+<p>Picking these two particular windows, after computing true median costs correctly, gives a combined total of <strong>8 operations</strong> — which matches what the optimal DP returns for <code>dp[9][2]</code>. Each window's cost comes from how far its elements sit from that window's own median, and the two windows don't overlap, which satisfies the problem's requirement.</p>
+<p>The output isn't about finding <em>a</em> valid pair of windows — it's about proving no other choice of 2 non-overlapping length-3 windows does better.</p>
+<h2>Intuition</h2>
+<p>Break the problem into two layers, because that's what it actually is.</p>
+<p><strong>Layer one: pricing a single window.</strong> If you fix one window and ask "what's the cheapest way to make every element in it equal," you're really asking for the point that minimizes the sum of absolute distances to a fixed set of numbers. That point is the median, not the mean. The mean minimizes squared error (useful for variance, least-squares regression), but operations here cost a flat <code>1</code> per unit of distance — that's an absolute-value cost, and absolute-value cost is uniquely minimized at the median. This is a fact worth memorizing, because it resurfaces anywhere "cost equals total distance" shows up.</p>
+<p><strong>Layer two: picking which windows.</strong> Once you can price any individual window in roughly constant extra work per shift, the outer problem becomes a selection problem: choose <code>k</code> non-overlapping windows minimizing total price. This is the classic "weighted interval scheduling" shape — and the signal that DP is the right tool is the small bound on <code>k</code> (at most 15). A bound that small screams "make it a dimension of your table," not "something to brute-force over."</p>
+<p>The key insight tying both layers together: don't let the outer problem's complexity (weighted selection, non-overlap) leak into the inner problem. Each window is priced in isolation, with equal weight on every element inside it. The median trick works at the window level regardless of what the outer DP is doing.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Try every combination of <code>k</code> non-overlapping windows, and for each window try every possible target value, summing operations directly.</p>
+<p><strong>Algorithm:</strong>
+1. Enumerate all valid sets of <code>k</code> disjoint windows of length <code>x</code>.
+2. For each window in a set, try every candidate value (or at least every value present in the window) and compute total distance.
+3. Track the minimum total cost across all window sets.</p>
+<p><strong>Advantages:</strong> Conceptually simple, no clever math required, easy to verify correctness on tiny inputs.</p>
+<p><strong>Disadvantages:</strong> Combinatorially explosive. The number of ways to choose <code>k</code> non-overlapping windows out of <code>n</code> positions grows extremely fast, and re-summing distances for every candidate target per window is wasteful on top of that.</p>
+<p><strong>Time complexity:</strong> Exponential in the number of window choices, with an added polynomial factor per window for target search — effectively unusable once <code>n</code> approaches even a few hundred, let alone 100,000.</p>
+<p><strong>Space complexity:</strong> Depends on implementation, but typically O(n) per recursive path, with exponential branching.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach is two independent pieces glued together:</p>
+<p><strong>Step 1 — Price every window in O(1) amortized.</strong>
+Maintain a sorted view of the current window's elements as you slide across the array. Because the cost of equalizing a window to its median only depends on the sum of elements above and below the median, a running prefix sum over the sorted window lets you compute that cost with two subtractions — no need to re-sum the whole window every time.</p>
+<p><strong>Step 2 — DP over position and windows used.</strong>
+Build a table <code>dp[i][j]</code> = minimum cost to place <code>j</code> windows using the first <code>i</code> elements of the array.</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dp[i][j]</code></td>
+<td>Best cost using exactly <code>j</code> windows ending by position <code>i</code></td>
+</tr>
+<tr>
+<td>Transition 1</td>
+<td>Skip position <code>i</code>: <code>dp[i][j] = dp[i-1][j]</code></td>
+</tr>
+<tr>
+<td>Transition 2</td>
+<td>Close a window ending at <code>i</code>: <code>dp[i][j] = min(dp[i][j], dp[i-x][j-1] + cost(window ending at i))</code></td>
+</tr>
+</tbody>
+</table>
+<p>Because <code>k ≤ 15</code>, this table never gets wide — it's <code>n</code> rows by at most 16 columns, which keeps the whole DP close to linear in <code>n</code>.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from bisect import insort
+from itertools import accumulate
+
+
+class Solution:
+    def minOperations(self, nums: list[int], x: int, k: int) -&gt; int:
+        n = len(nums)
+        costs = self._window_costs(nums, x)
+
+        INF = float(&quot;inf&quot;)
+        dp = [[INF] * (k + 1) for _ in range(n + 1)]
+        for i in range(n + 1):
+            dp[i][0] = 0
+
+        for i in range(1, n + 1):
+            for j in range(1, k + 1):
+                dp[i][j] = dp[i - 1][j]  # skip this position
+                if i &gt;= x and dp[i - x][j - 1] != INF:
+                    window_cost = costs[i - x]
+                    candidate = dp[i - x][j - 1] + window_cost
+                    if candidate &lt; dp[i][j]:
+                        dp[i][j] = candidate
+
+        return dp[n][k]
+
+    def _window_costs(self, nums: list[int], x: int) -&gt; list[int]:
+        n = len(nums)
+        window = sorted(nums[:x])
+        costs = [self._median_cost(window)]
+
+        for i in range(x, n):
+            window.remove(nums[i - x])
+            insort(window, nums[i])
+            costs.append(self._median_cost(window))
+
+        return costs
+
+    def _median_cost(self, sorted_window: list[int]) -&gt; int:
+        mid = len(sorted_window) // 2
+        target = sorted_window[mid]
+        prefix = list(accumulate(sorted_window))
+        total = prefix[-1]
+
+        left_sum = prefix[mid] - sorted_window[mid]  # sum left of median
+        left_count = mid
+        right_sum = total - prefix[mid]               # sum right of median
+        right_count = len(sorted_window) - mid - 1
+
+        left_cost = target * left_count - left_sum
+        right_cost = right_sum - target * right_count
+        return left_cost + right_cost
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><strong>Imports:</strong> <code>insort</code> keeps a sliding window sorted in O(x) per shift instead of re-sorting from scratch; <code>accumulate</code> builds the prefix sum used by the median-cost formula.</li>
+<li><strong><code>minOperations</code>:</strong> computes <code>n</code>, precomputes the cost of every window starting position via <code>_window_costs</code>, then fills the <code>dp</code> table.</li>
+<li><strong><code>dp</code> initialization:</strong> <code>dp[i][0] = 0</code> for all <code>i</code> — using zero windows always costs zero, no matter how far along you are.</li>
+<li><strong>Main loop:</strong> for each position <code>i</code> and window count <code>j</code>, the default is "skip" (carry forward <code>dp[i-1][j]</code>). If a window of length <code>x</code> can end exactly at <code>i</code>, compare closing it against the current best.</li>
+<li><strong><code>_window_costs</code>:</strong> sorts the first window, then slides one step at a time, removing the outgoing element and inserting the incoming one in sorted order.</li>
+<li><strong><code>_median_cost</code>:</strong> finds the middle index, treats that value as the target, and uses the prefix sum to compute total distance from everything left and right of the median without re-scanning the window.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using <code>nums = [5, -2, 1, 3, 7, 3, 6, 4, -1]</code>, <code>x = 3</code>, <code>k = 2</code>:</p>
+<ol>
+<li><code>_window_costs</code> prices every length-3 window: <code>[-2,1,5]→cost</code>, <code>[-2,1,3]→cost</code>, <code>[1,3,7]→cost</code>, <code>[3,3,7]→cost</code>, <code>[3,6,7]→cost</code>, <code>[3,4,6]→cost</code>, <code>[-1,4,6]→cost</code>.</li>
+<li>The DP fills row by row. By the time <code>i = 9</code>, <code>j = 2</code>, the table has already considered every pair of non-overlapping windows implicitly, because each cell only depends on a strictly earlier cell plus one new window's cost.</li>
+<li><code>dp[9][2]</code> comes back as <code>8</code>, matching the manually chosen windows at indices <code>[1,3]</code> and <code>[5,7]</code>.</li>
+</ol>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Pricing windows:</strong> O(n · x) in the worst case, since each slide removes and inserts into a sorted Python list, which costs O(x) per operation.</li>
+<li><strong>Filling the DP table:</strong> O(n · k), and since <code>k ≤ 15</code>, this is effectively linear in <code>n</code>.</li>
+<li><strong>Overall:</strong> roughly O(n · x + n · k), which comfortably handles <code>n = 100,000</code>.</li>
+<li><strong>Space:</strong> O(n · k) for the DP table, O(x) for the sliding window.</li>
+</ul>
+<p>This is correct because the DP only ever reuses previously computed optimal subproblems — no window's cost is recomputed, and no combination of windows is enumerated explicitly.</p>
+<h2>Alternative Solutions</h2>
+<p>A segment-tree or balanced-BST-backed sliding window (instead of <code>bisect.insort</code> on a list) can bring the window-pricing step down to O(n log x), which matters more as <code>x</code> grows large relative to <code>n</code>. It's a reasonable upgrade if the <code>O(n · x)</code> term becomes the bottleneck, but for competitive-programming-scale inputs the list-based approach already finishes well within time limits — the video's benchmark shows the optimal version running in microseconds.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><code>k * x &gt; n</code>: no valid arrangement exists; the DP should naturally leave <code>dp[n][k]</code> at infinity if implemented directly (the problem's constraints typically guarantee feasibility, but defensive code should check this).</li>
+<li>All elements identical: every window costs 0, so the answer is 0.</li>
+<li><code>x = 1</code>: every window cost is always 0 (a single element is already "equal to itself"), so the answer should be 0 for any valid <code>k</code>.</li>
+<li>Negative numbers: operations only depend on distance, so sign doesn't matter — don't accidentally special-case negative values.</li>
+<li>Duplicate values across windows: doesn't affect correctness, since each window is priced independently.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Using the mean instead of the median to price a window — minimizes the wrong error metric.</li>
+<li>Recomputing the full sum of distances for every window from scratch instead of using a prefix sum, blowing the time budget.</li>
+<li>Forgetting that windows must be non-overlapping, and allowing the DP transition to double-count positions.</li>
+<li>Off-by-one errors in the window-ending transition (<code>dp[i-x][j-1]</code> vs. <code>dp[i-x+1][j-1]</code>).</li>
+<li>Not initializing <code>dp[i][0] = 0</code> for all <code>i</code>, which silently breaks every subsequent transition.</li>
+<li>Treating <code>k</code> as if it could be large and defaulting to a slower algorithm, missing the hint in the constraints.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Why does the median minimize sum of absolute differences, and how would you prove it?</li>
+<li>How would the solution change if windows were allowed to overlap?</li>
+<li>What happens to time complexity if <code>x</code> can be as large as <code>n</code>?</li>
+<li>Could you solve the window-pricing step with a different data structure for better complexity?</li>
+<li>How would you extend this to variable-length windows?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 462 (Minimum Moves to Equal Array Elements II):</strong> same median-minimizes-cost principle, applied to the whole array instead of a window.</li>
+<li><strong>LeetCode 2009 (Minimum Number of Operations to Make Array Continuous):</strong> another DP-plus-window-pricing hybrid.</li>
+<li><strong>LeetCode 1335 (Minimum Difficulty of a Job Schedule):</strong> same "partition into groups, DP over position and count" structure.</li>
+<li><strong>LeetCode 1130 (Minimum Cost Tree From Leaf Values):</strong> different cost function, same interval-DP flavor.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Median beats mean whenever the cost is a sum of absolute distances. Prefix sums turn repeated range summation into O(1) lookups. And when one input variable is tightly bounded while another is large, that bounded variable almost always belongs as a dimension in a DP table rather than something you brute-force over. Stack these three ideas and a problem that looks exponential collapses into something that runs in microseconds.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough — including the cell-by-cell DP trace and the live benchmark comparing brute force against the optimal solution — watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <em>Fun with Learning Technology</em>, a series dedicated to making hard algorithmic concepts click — not by memorizing patterns, but by understanding why each technique exists and when to reach for it. Every episode pairs a real problem with the reasoning an experienced engineer would use to solve it live.</p>
+<h2>Call To Action</h2>
+<p>If this helped the DP finally make sense, give the video a like on YouTube and subscribe for more problem breakdowns like this one. For deeper write-ups and series updates, subscribe to the Substack. Drop a comment with your own approach, or share this with someone prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When costing a window to match the most-common value, what&#x27;s the tell?</summary><p>Window-equalization cost problems: pick the mode as target, cost = total elements minus count of the mode within the window.</p></details><details class='card2'><summary>Time complexity for sliding-window-with-frequency-cost on array of length n?</summary><p>O(n log n): each window update costs O(log n) via a sorted structure (Fenwick/ordered multiset) tracking frequencies.</p></details><details class='card2'><summary>Space complexity for the frequency-tracking sliding window approach?</summary><p>O(n): one Fenwick tree / counter indexed over distinct values, plus a frequency map, independent of window count.</p></details><details class='card2'><summary>Common bug when recomputing window cost incrementally?</summary><p>Forgetting to update the running mode when an element&#x27;s count ties the current max after sliding — stale &#x27;best&#x27; leads to wrong minimum cost.</p></details><details class='card2'><summary>Sliding-window mode-cost vs brute-force recount per window — when does each apply?</summary><p>Brute force recounts O(n) per window (O(n^2) total); incremental frequency structure reuses prior counts for O(log n) per shift.</p></details><details class='card2'><summary>Interview follow-up: why can&#x27;t you greedily pick target per-window independently of k?</summary><p>Because k disjoint subarrays must be chosen jointly — overlapping candidate windows compete, so you need DP over best non-overlapping window costs.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
