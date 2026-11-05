@@ -1,0 +1,171 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1385. Find the Distance Value Between Two Arrays — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/find-the-distance-value-between-two-arrays
+💻 Code on GitHub: https://github.com">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/find-the-distance-value-between-two-arrays.html">
+<meta property="og:title" content="1385. Find the Distance Value Between Two Arrays — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/find-the-distance-value-between-two-arrays
+💻 Code on GitHub: https://github.com">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>1385. Find the Distance Value Between Two Arrays</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Interviewers love problems like LeetCode 1385 because they look trivial on the surface and quietly test whether you reach for the first idea that works or the idea that scales. The brute force here is one that almost every candidate writes in the first thirty seconds — nested loops comparing every element of one array against every element of another. It's correct. It also happens to be exactly the kind of answer that makes an interviewer ask, "can you do better?"</p>
+<p>That follow-up question is the whole point of the exercise. Can you recognize that sorting one array changes the nature of the lookup from "scan everything" to "jump straight to the neighborhood"? Can you translate that insight into working code with <code>bisect</code>? This problem is a compact, low-risk way to practice exactly that kind of thinking, and the pattern — sort once, binary search per lookup — shows up constantly in real systems: deduplication, nearest-neighbor matching, rate limiting windows, and more.</p>
+<h2>Problem Overview</h2>
+<p>You're given two integer arrays, <code>arr1</code> and <code>arr2</code>, and a non-negative integer <code>d</code>. For every value in <code>arr1</code>, you need to decide whether it's "safe" — meaning there is no value in <code>arr2</code> within a distance of <code>d</code> from it. Distance here just means absolute difference.</p>
+<p>If a value in <code>arr1</code> has at least one value in <code>arr2</code> whose absolute difference with it is less than or equal to <code>d</code>, that value is disqualified. Otherwise, it counts toward your answer. The function returns the total count of values in <code>arr1</code> that survive this check.</p>
+<p>Think of it as drones and no-fly zones: <code>arr1</code> holds drone positions, <code>arr2</code> holds beacon positions, and <code>d</code> is the radius around each beacon that a drone must avoid. A drone only counts as "safe" if it clears every single beacon by more than <code>d</code>.</p>
+<h2>Example</h2>
+<pre><code>arr1 = [4, 5, 8]
+arr2 = [10, 9, 1, 8]
+d = 2
+</code></pre>
+<ul>
+<li><strong>4</strong>: closest value in <code>arr2</code> is... checking all of them, nothing is within 2. Safe.</li>
+<li><strong>5</strong>: same story — nothing in <code>arr2</code> lands within distance 2. Safe.</li>
+<li><strong>8</strong>: <code>arr2</code> contains <code>8</code> itself, a distance of 0, which is ≤ 2. Not safe.</li>
+</ul>
+<p>Result: <strong>2</strong> safe values (<code>4</code> and <code>5</code>).</p>
+<h2>Intuition</h2>
+<p>The instinct every engineer starts with is "check each value in <code>arr1</code> against every value in <code>arr2</code>." That's correct, and it's also the first thing to question once you notice a pattern: for any given number, the <em>only</em> candidates that could possibly be within distance <code>d</code> are the numbers closest to it. You don't need to check the whole array — you need to check its neighbors.</p>
+<p>That reframes the problem. If <code>arr2</code> is sorted, then for any value <code>x</code>, the elements most likely to be close to <code>x</code> are sitting right next to where <code>x</code> would be inserted into that sorted array. Everything else in <code>arr2</code> is farther away by definition, because the array is ordered.</p>
+<p>This is the moment binary search becomes the obvious tool: it answers "where would <code>x</code> fit in this sorted array?" in logarithmic time. Once you have that insertion point, you only need to examine the element at that index and the one immediately before it — the two closest possible matches. If both are farther than <code>d</code>, nothing else in the array can be closer, and <code>x</code> is safe.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> For every element in <code>arr1</code>, loop through every element in <code>arr2</code> and compute the absolute difference. If any difference is ≤ <code>d</code>, the element is unsafe.</p>
+<p><strong>Algorithm:</strong>
+1. Initialize <code>count = 0</code>.
+2. For each <code>x</code> in <code>arr1</code>, check every <code>y</code> in <code>arr2</code>.
+3. If <code>abs(x - y) &lt;= d</code> for any <code>y</code>, skip <code>x</code>.
+4. Otherwise, increment <code>count</code>.</p>
+<p><strong>Advantages:</strong> Dead simple, no sorting, easy to verify by hand.</p>
+<p><strong>Disadvantages:</strong> Compares every pair, which is wasteful once arrays grow.</p>
+<p><strong>Complexity:</strong> Time O(n·m), Space O(1).</p>
+<h2>Optimal Solution</h2>
+<p>Sort <code>arr2</code> once — that costs <code>O(m log m)</code> up front. Now, for each value <code>x</code> in <code>arr1</code>, use <code>bisect_left</code> to find the index where <code>x</code> would be inserted into the sorted <code>arr2</code>. That index tells you the position of the smallest element ≥ <code>x</code>. Check that element (if it exists) and the element just before it (if it exists) — those are the only two candidates that could be within <code>d</code> of <code>x</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sort <code>arr2</code></td>
+<td>One-time cost, enables binary search</td>
+</tr>
+<tr>
+<td><code>bisect_left(arr2, x)</code></td>
+<td>Finds insertion index <code>i</code> for <code>x</code></td>
+</tr>
+<tr>
+<td>Check <code>arr2[i]</code></td>
+<td>The smallest value ≥ <code>x</code></td>
+</tr>
+<tr>
+<td>Check <code>arr2[i-1]</code></td>
+<td>The largest value &lt; <code>x</code></td>
+</tr>
+<tr>
+<td>Both farther than <code>d</code>?</td>
+<td><code>x</code> is safe</td>
+</tr>
+</tbody>
+</table>
+<p>Because <code>arr2</code> is sorted, no element outside these two neighbors can be closer to <code>x</code>. That's what collapses the inner loop from <code>m</code> comparisons to a single <code>log m</code> lookup.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from bisect import bisect_left
+from typing import List
+
+
+def find_the_distance_value(arr1: List[int], arr2: List[int], d: int) -&gt; int:
+    sorted_arr2 = sorted(arr2)
+    m = len(sorted_arr2)
+    count = 0
+
+    for x in arr1:
+        i = bisect_left(sorted_arr2, x)
+        safe = True
+
+        if i &lt; m and abs(sorted_arr2[i] - x) &lt;= d:
+            safe = False
+        if i &gt; 0 and abs(sorted_arr2[i - 1] - x) &lt;= d:
+            safe = False
+
+        if safe:
+            count += 1
+
+    return count
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>sorted_arr2 = sorted(arr2)</code> — sort once, reused for every lookup.</li>
+<li><code>bisect_left(sorted_arr2, x)</code> — returns the index where <code>x</code> would be inserted to keep the array sorted; this is the position of the first element ≥ <code>x</code>.</li>
+<li>The <code>i &lt; m</code> check guards against <code>x</code> being larger than every element in <code>arr2</code> (insertion point would be past the end).</li>
+<li>The <code>i &gt; 0</code> check guards against <code>x</code> being smaller than every element (nothing before index 0).</li>
+<li>Each <code>abs(...) &lt;= d</code> check disqualifies <code>x</code> if that specific neighbor is too close.</li>
+<li><code>count</code> only increments if neither neighbor triggered a disqualification.</li>
+</ul>
+<h2>Dry Run</h2>
+<p><code>arr1 = [4, 5, 8]</code>, <code>arr2 = [10, 9, 1, 8]</code>, <code>d = 2</code>
+<code>sorted_arr2 = [1, 8, 9, 10]</code></p>
+<ul>
+<li><code>x = 4</code>: <code>bisect_left</code> → index 1 (would sit before 8). Check <code>arr2[1]=8</code>, diff=4 &gt; 2, safe so far. Check <code>arr2[0]=1</code>, diff=3 &gt; 2, still safe. Count → 1.</li>
+<li><code>x = 5</code>: <code>bisect_left</code> → index 1. Check <code>8</code>, diff=3 &gt; 2. Check <code>1</code>, diff=4 &gt; 2. Count → 2.</li>
+<li><code>x = 8</code>: <code>bisect_left</code> → index 1 (matches existing 8). Check <code>arr2[1]=8</code>, diff=0 ≤ 2. Unsafe. Count stays 2.</li>
+</ul>
+<p>Final result: <strong>2</strong>, matching the expected output.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> Sorting <code>arr2</code> costs <code>O(m log m)</code>. Each of the <code>n</code> elements in <code>arr1</code> triggers one binary search, <code>O(log m)</code>. Total: <code>O((n + m) log m)</code>.</li>
+<li><strong>Space:</strong> <code>O(m)</code> for the sorted copy of <code>arr2</code>.</li>
+<li><strong>Why it's correct:</strong> Once <code>arr2</code> is sorted, the two elements adjacent to the insertion point are provably the closest possible candidates — any other element is farther away by the ordering property of a sorted array. Checking both covers every case where a closer match could exist on either side of <code>x</code>.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p>You could skip sorting and instead use a two-pointer merge-style scan if both arrays were sorted from the start, but since only one array needs sorting here, the binary search approach is simpler and doesn't require touching <code>arr1</code> at all. A brute-force-with-early-exit (breaking out of the inner loop the moment a match is found) helps a little in practice but doesn't change the worst-case complexity, so it's not a real alternative for larger inputs.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>d = 0:</strong> An element only counts if no value in <code>arr2</code> equals it exactly.</li>
+<li><strong>Empty <code>arr2</code>:</strong> Every element in <code>arr1</code> is automatically safe (no beacons to avoid).</li>
+<li><strong>Duplicate values in <code>arr2</code>:</strong> Sorting handles duplicates fine; the binary search still finds a valid neighbor.</li>
+<li><strong>All elements in <code>arr1</code> far from everything:</strong> The full length of <code>arr1</code> is returned.</li>
+<li><strong>Very large or very small values at the boundaries (0 to 10^5 per constraints):</strong> No special handling needed since Python integers don't overflow.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Checking only <code>bisect_left</code>'s index and forgetting to check the element <em>before</em> it.</li>
+<li>Forgetting bounds checks (<code>i &lt; m</code>, <code>i &gt; 0</code>), causing an <code>IndexError</code>.</li>
+<li>Sorting <code>arr1</code> instead of <code>arr2</code> — you must sort the array you're searching <em>into</em>, not the array you're iterating over.</li>
+<li>Using <code>&lt;</code> instead of <code>&lt;=</code> when comparing distance to <code>d</code> — the problem says "within d," which is inclusive.</li>
+<li>Re-sorting <code>arr2</code> inside the loop instead of once outside it, silently turning the solution back into something slower than intended.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would this change if <code>d</code> could be negative?</li>
+<li>What if you needed the actual safe values, not just the count?</li>
+<li>Could you solve this without sorting, using a different data structure (e.g., a balanced BST or a sorted set)?</li>
+<li>How would you handle streaming data where <code>arr2</code> changes over time?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 35 (Search Insert Position):</strong> Same core use of <code>bisect_left</code>.</li>
+<li><strong>LeetCode 300 (Longest Increasing Subsequence):</strong> Also leans on binary search over a maintained sorted structure.</li>
+<li><strong>LeetCode 658 (Find K Closest Elements):</strong> Same "closest neighbors in a sorted array" idea, extended to k elements.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Sorting one side of a comparison problem and reaching for binary search is a pattern worth internalizing — it turns "check everything" into "check two neighbors." The win isn't shrinking the loop by a constant factor; it's changing the shape of the lookup from linear to logarithmic.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with the drone-and-beacon visualization, timed benchmarks, and two quiz checkpoints, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <em>Fun with Learning Technology</em>, a series dedicated to making coding interview concepts and everyday software engineering ideas intuitive — not just memorized. Each episode pairs a real-world analogy with a full code walkthrough so the "why" sticks as well as the "how."</p>
+<h2>Call To Action</h2>
+<p>If this helped the problem click, give the video a like on YouTube and subscribe for more interview-ready breakdowns. For deeper write-ups like this one delivered straight to your inbox, subscribe to the Substack. Drop a comment with questions or problems you'd like covered next, and share this with anyone prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Pattern name/trigger: comparing every element in A against all of B?</summary><p>Brute-force pairwise comparison — trigger: small arrays, need per-element count against threshold distance.</p></details><details class='card2'><summary>Time complexity of brute force vs sort+binary-search approach?</summary><p>Brute force O(n*m); sort B then binary search per A element gives O(m log m + n log m).</p></details><details class='card2'><summary>Space complexity of the sorted binary-search solution?</summary><p>O(m) if sorting a copy, O(log m) extra beyond input if sorting in place.</p></details><details class='card2'><summary>Trickiest edge case when checking distance condition?</summary><p>Must use strict &#x27;&lt;=&#x27; on absolute difference; off-by-one on boundary values (d itself) silently breaks the count.</p></details><details class='card2'><summary>Linear scan vs binary search here: when does sorting pay off?</summary><p>Sorting wins when B is large and reused per A element; for tiny B, linear scan per element is simpler and fast enough.</p></details><details class='card2'><summary>Interview follow-up: how to extend if B changes dynamically between queries?</summary><p>Maintain B in a balanced structure (sorted list/BST) supporting insert + nearest-neighbor lookup, e.g. a sorted container with bisect-equivalent.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
