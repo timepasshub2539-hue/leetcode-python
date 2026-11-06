@@ -1,0 +1,230 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2747. Count Zero Request Servers | LeetCode Daily Python Solution (sort once, slide forever) — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/count-zero-request-servers
+💻 Code on GitHub: https://github.com/timepasshub2539">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/count-zero-request-servers.html">
+<meta property="og:title" content="2747. Count Zero Request Servers | LeetCode Daily Python Solution (sort once, slide forever) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/count-zero-request-servers
+💻 Code on GitHub: https://github.com/timepasshub2539"><meta property="og:image" content="https://i.ytimg.com/vi/7805RqhlB2k/hqdefault.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>2747. Count Zero Request Servers | LeetCode Daily Python Solution (sort once, slide forever)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/7805RqhlB2k' allowfullscreen></iframe></div><article><h2>8. Introduction</h2>
+<p>Monitoring dashboards love to lie by omission. A hundred thousand servers can all show green while a handful of them have quietly stopped receiving any traffic — no crash, no error, no alert. The only way to catch that is to ask a very specific question, over and over, for different time windows: "which servers got <em>zero</em> requests between this time and that time?"</p>
+<p>That's the real-world shape of LeetCode 2747, Count Zero Request Servers. It looks like a logs-and-timestamps exercise, but it's actually testing something interviewers care about a lot: can you recognize when a per-query brute force is going to blow up at scale, and can you restructure the problem so that sorting once lets you answer thousands of queries almost for free?</p>
+<p>This problem is a great one to actually sit with, because the "obvious" data structure — a per-server last-seen timestamp — turns out to be a trap. The faster solution requires you to stop thinking per-server and start thinking in terms of counts and a sliding window. That shift in framing is the whole lesson here, and it shows up again and again in interview problems that look like "count things active in a range."</p>
+<h2>9. Problem Overview</h2>
+<p>You're given:</p>
+<ul>
+<li><code>n</code> — the total number of servers, numbered <code>1</code> to <code>n</code>.</li>
+<li><code>logs</code> — a list of <code>[server_id, time]</code> pairs, each one recording that a server received a request at a given time. These are not necessarily sorted.</li>
+<li><code>x</code> — the length of the lookback window.</li>
+<li><code>queries</code> — a list of timestamps. For each query time <code>q</code>, you need to count how many servers received <strong>zero</strong> requests during the window <code>[q - x, q]</code>, inclusive on both ends.</li>
+</ul>
+<p>Return an array of answers, one per query, in the same order the queries were given.</p>
+<p>Constraints matter here: <code>n</code>, the number of logs, and the number of queries can each be up to <code>10^5</code>. Any algorithm that re-examines the full log for every query is doing up to <code>10^10</code> operations in the worst case — far too slow. You're also guaranteed <code>x &lt; queries[i]</code> for every query, which just means the left edge of the window never goes negative.</p>
+<h2>10. Example</h2>
+<p>Say <code>n = 3</code> and the sorted logs are:</p>
+<table>
+<thead>
+<tr>
+<th>server</th>
+<th>time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>3</td>
+</tr>
+<tr>
+<td>1</td>
+<td>5</td>
+</tr>
+<tr>
+<td>2</td>
+<td>6</td>
+</tr>
+</tbody>
+</table>
+<p>With <code>x = 5</code>:</p>
+<ul>
+<li><strong>Query <code>q = 10</code></strong>: window is <code>[5, 10]</code>. The log at time 3 falls outside it. Logs at time 5 (server 1) and time 6 (server 2) are inside. So servers 1 and 2 are active, server 3 is silent → answer <code>1</code>.</li>
+<li><strong>Query <code>q = 11</code></strong>: window is <code>[6, 11]</code>. Now only the log at time 6 (server 2) is inside — the log at time 5 just aged out. Server 2 is active; servers 1 and 3 are silent → answer <code>2</code>.</li>
+</ul>
+<p>Notice how the window <em>slides</em>: as <code>q</code> grows, old logs drop out on the left and new ones (if any) would enter on the right. That sliding behavior is the key to the efficient solution.</p>
+<h2>11. Intuition</h2>
+<p>The naive instinct is to treat this as a per-server problem, because the question is phrased per-server ("which servers are silent"). That pulls you toward a hash map of <code>server_id -&gt; last_seen_time</code>, checked against each query. But to answer "who's silent" with that structure, you'd have to either scan all <code>n</code> servers per query, or maintain some kind of expiring structure for every server — and clearing stale entries for up to <code>10^5</code> servers on every one of up to <code>10^5</code> queries is exactly the <code>O(n * queries)</code> blow-up you're trying to avoid.</p>
+<p>The better move is to stop asking "which servers" and start asking "how many are active," because the two are related by a trivial identity:</p>
+<pre><code>silent_count = n - active_count
+</code></pre>
+<p>If you can track <code>active_count</code> cheaply as the query window slides, you never need to know server identities at all for the final count — just the number.</p>
+<p>To track <code>active_count</code> cheaply, sort the logs by time and sort the queries by time (while remembering each query's original index, since the answer array needs to come back in the original order). Once both are sorted, every query's window only ever moves forward relative to the previous query's window — it never needs to rewind. That's the property that makes a two-pointer sliding window possible: a pointer that only increases, touching each log entry at most twice total (once to add it, once to remove it), across <em>all</em> queries combined.</p>
+<p>Keep a <code>count[server]</code> array. When a server's count goes from <code>0</code> to <code>1</code>, it just became active — increment <code>active_count</code>. When a log exits the window on the left and a server's count drops from <code>1</code> to <code>0</code>, it just went silent — decrement <code>active_count</code>. That's the entire mechanism.</p>
+<h2>12. Brute Force Solution</h2>
+<p><strong>Idea:</strong> For every query, scan the entire log, mark which servers appear within the window, then count how many servers never got marked.</p>
+<p><strong>Algorithm:</strong>
+1. For each query <code>q</code>:
+   - Initialize a <code>seen</code> set.
+   - Scan every log entry; if its time is within <code>[q - x, q]</code>, add its server id to <code>seen</code>.
+   - Answer is <code>n - len(seen)</code>.</p>
+<p><strong>Advantages:</strong> Dead simple to write and reason about; no sorting required; low risk of off-by-one bugs.</p>
+<p><strong>Disadvantages:</strong> Re-does the same scan for every query, recomputing overlapping work constantly.</p>
+<p><strong>Complexity:</strong> <code>O(queries * logs)</code> time, <code>O(n)</code> space per query. With both at <code>10^5</code>, that's up to <code>10^10</code> operations — far too slow for the given constraints.</p>
+<h2>13. Optimal Solution</h2>
+<p>The optimal approach has three moving pieces: a sorted log array, a sorted query list (index-preserved), and two pointers that only move forward.</p>
+<p><strong>Step 1 — Sort.</strong> Sort <code>logs</code> by timestamp. Sort query indices by the query's value, so you process queries from earliest window to latest.</p>
+<p><strong>Step 2 — Set up state.</strong> Create <code>count = [0] * (n + 1)</code> (one slot per server) and <code>active = 0</code>. Create two pointers, <code>left = 0</code> and <code>right = 0</code>, both indexing into the sorted logs.</p>
+<p><strong>Step 3 — Slide for each query, in time order:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Condition</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Advance <code>right</code></td>
+<td><code>logs[right].time &lt;= q</code></td>
+<td>Entering the window: increment <code>count[server]</code>; if it went <code>0 → 1</code>, <code>active += 1</code></td>
+</tr>
+<tr>
+<td>Advance <code>left</code></td>
+<td><code>logs[left].time &lt; q - x</code></td>
+<td>Leaving the window: decrement <code>count[server]</code>; if it went <code>1 → 0</code>, <code>active -= 1</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Step 4 — Record the answer.</strong> <code>answer[original_index] = n - active</code>.</p>
+<p>Because <code>right</code> only ever moves forward and <code>left</code> only ever moves forward, each log entry is touched by <code>right</code> exactly once (entering) and by <code>left</code> exactly once (leaving), across the <em>entire</em> run of queries — not per query. That's what collapses the total work from <code>O(queries * logs)</code> down to <code>O(logs + queries)</code> after the sorts.</p>
+<pre><code>time ----3-----5---6----------------10----11----&gt;
+logs:     [1]  [1] [2]
+queries:                            q=10  q=11
+window for q=10:        [5 ................10]
+window for q=11:            [6 .................11]
+</code></pre>
+<h2>14. Python Code</h2>
+<pre><code class="language-python">from typing import List
+
+
+def count_zero_request_servers(
+    n: int,
+    logs: List[List[int]],
+    x: int,
+    queries: List[int],
+) -&gt; List[int]:
+    logs_sorted = sorted(logs, key=lambda log: log[1])
+    query_order = sorted(range(len(queries)), key=lambda i: queries[i])
+
+    answer = [0] * len(queries)
+    count = [0] * (n + 1)
+    active = 0
+    left = right = 0
+    total_logs = len(logs_sorted)
+
+    for i in query_order:
+        q = queries[i]
+
+        # Bring in logs that just entered the window.
+        while right &lt; total_logs and logs_sorted[right][1] &lt;= q:
+            server = logs_sorted[right][0]
+            if count[server] == 0:
+                active += 1
+            count[server] += 1
+            right += 1
+
+        # Drop logs that have aged out of the window.
+        while left &lt; total_logs and logs_sorted[left][1] &lt; q - x:
+            server = logs_sorted[left][0]
+            count[server] -= 1
+            if count[server] == 0:
+                active -= 1
+            left += 1
+
+        answer[i] = n - active
+
+    return answer
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<ul>
+<li><code>logs_sorted</code> — logs ordered by time so the window can only move forward.</li>
+<li><code>query_order</code> — indices of <code>queries</code>, sorted by value, so queries are processed in time order while we still know where each answer belongs.</li>
+<li><code>count</code> — one slot per server (1-indexed, hence <code>n + 1</code>), tracking how many logs for that server currently sit inside the window.</li>
+<li><code>active</code> — running total of servers with <code>count[server] &gt; 0</code>.</li>
+<li>First <code>while</code> loop — pulls <code>right</code> forward through every log entry that now falls at or before <code>q</code>; a transition from <code>0</code> to <code>1</code> in <code>count[server]</code> means that server just became active.</li>
+<li>Second <code>while</code> loop — pulls <code>left</code> forward through every log entry whose time is strictly less than <code>q - x</code>, meaning it has aged out; a transition to <code>0</code> means that server just went silent.</li>
+<li><code>answer[i] = n - active</code> — write the result back at the query's <em>original</em> index, since we're iterating in sorted order.</li>
+</ul>
+<h2>16. Dry Run</h2>
+<p>Using <code>n = 3</code>, <code>logs = [[1,3],[1,5],[2,6]]</code>, <code>x = 5</code>, <code>queries = [10, 11]</code>.</p>
+<ul>
+<li><code>logs_sorted</code> is already <code>[[1,3],[1,5],[2,6]]</code>. <code>query_order = [0, 1]</code> (10 before 11).</li>
+<li><strong>q = 10</strong>, threshold for left = <code>10 - 5 = 5</code>.</li>
+<li><code>right</code> loop: time 3 ≤ 10 → server 1, <code>count[1]: 0→1</code>, <code>active=1</code>. time 5 ≤ 10 → server 1, <code>count[1]: 1→2</code>, active stays. time 6 ≤ 10 → server 2, <code>count[2]: 0→1</code>, <code>active=2</code>. <code>right=3</code>.</li>
+<li><code>left</code> loop: time 3 &lt; 5 → server 1, <code>count[1]: 2→1</code>, active stays. time 5 is not <code>&lt; 5</code> → stop. <code>left=1</code>.</li>
+<li><code>answer[0] = 3 - 2 = 1</code>. ✓ matches expected.</li>
+<li><strong>q = 11</strong>, threshold for left = <code>11 - 5 = 6</code>.</li>
+<li><code>right</code> loop: nothing left to add, <code>right</code> stays at 3 (end of logs).</li>
+<li><code>left</code> loop: time 5 &lt; 6 → server 1, <code>count[1]: 1→0</code>, <code>active=1</code>. time 6 is not <code>&lt; 6</code> → stop. <code>left=2</code>.</li>
+<li><code>answer[1] = 3 - 1 = 2</code>. ✓ matches expected.</li>
+</ul>
+<p>Final answer: <code>[1, 2]</code>.</p>
+<h2>17. Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> <code>O((logs + queries) log(logs + queries))</code> for the two sorts, plus <code>O(logs + queries)</code> for the sliding window itself, since <code>left</code> and <code>right</code> each advance at most <code>len(logs)</code> times total across the whole run, and we do <code>O(1)</code> work per query otherwise. Overall: <code>O((n_logs + n_queries) log(n_logs + n_queries))</code>.</li>
+<li><strong>Space:</strong> <code>O(n + logs + queries)</code> for the <code>count</code> array, the sorted copies, and the answer array.</li>
+<li><strong>Why it's correct:</strong> the two-pointer invariant holds because both logs and queries are sorted by time — the window's boundaries are monotonic non-decreasing functions of the query index in sorted order, so no pointer ever needs to move backward, and every log entry is added and removed exactly once over the life of the algorithm.</li>
+</ul>
+<h2>18. Alternative Solutions</h2>
+<p>A <strong>Binary Indexed Tree (Fenwick tree) / prefix-sum-over-time</strong> approach can also work: bucket logs by timestamp, build a structure that answers "how many distinct servers had any log in <code>[a, b]</code>" via range queries. It's viable and sometimes used when queries aren't allowed to be reordered (e.g., online queries arriving one at a time without the ability to batch-sort them first). But it adds real implementation complexity — tracking distinct servers in a range needs more than a simple sum — for no asymptotic win over the two-pointer approach in this offline-query setting. Stick with sort + sliding window unless you specifically need online queries.</p>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong>Empty logs:</strong> every server is silent for every query; <code>active</code> never increments, so <code>n - active = n</code> throughout. Handled automatically.</li>
+<li><strong>x larger than the full time range:</strong> the window just always contains everything seen so far; no special casing needed, pointers behave correctly.</li>
+<li><strong>Duplicate timestamps:</strong> multiple logs can share a timestamp; the <code>&lt;=</code> and <code>&lt;</code> comparisons handle ties correctly as long as you're consistent about which boundary is inclusive.</li>
+<li><strong>A single server receiving all requests:</strong> <code>active</code> maxes out at <code>1</code>; answer is always <code>n - 1</code>.</li>
+<li><strong>Minimum values</strong> (<code>n = 1</code>, one log, one query): still correct — <code>count</code> has 2 slots (<code>0</code> unused, <code>1</code> used), window logic unaffected by scale.</li>
+<li><strong>Maximum constraints</strong> (<code>10^5</code> each): this is exactly the case the optimal solution is built for; verify no accidental <code>O(n)</code> per-query work crept back in (e.g., don't rebuild <code>count</code> per query).</li>
+</ul>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting to preserve original query indices</strong> before sorting — writes answers back in the wrong order.</li>
+<li><strong>Using <code>&lt;</code> instead of <code>&lt;=</code> for the right pointer</strong>, or <code>&lt;=</code> instead of <code>&lt;</code> for the left pointer — the window's inclusive/exclusive boundaries are asymmetric and easy to swap by accident.</li>
+<li><strong>Reaching for a per-server last-seen map</strong> instead of a count array — it's intuitive but leads to <code>O(n)</code> cleanup work per query.</li>
+<li><strong>Resetting <code>count</code> or <code>active</code> inside the query loop</strong> — this throws away all the amortized savings and turns the sliding window back into per-query brute force.</li>
+<li><strong>Letting <code>left</code> or <code>right</code> move backward</strong> — if your sort or indexing logic has a bug that lets a pointer reset, you silently reintroduce quadratic behavior or incorrect counts.</li>
+<li><strong>Off-by-one on <code>n</code> indexing</strong> — servers are typically 1-indexed; sizing <code>count</code> as <code>[0] * n</code> instead of <code>[0] * (n + 1)</code> causes an out-of-bounds write.</li>
+</ol>
+<h2>21. Interview Questions</h2>
+<ul>
+<li>Why does sorting both logs and queries by time make a single forward-moving window sufficient?</li>
+<li>What breaks if you sort logs by server id instead of by time?</li>
+<li>How would you handle this if queries had to be answered online, one at a time, without batching?</li>
+<li>Can you adapt this window technique to answer "which specific servers are silent" rather than just the count?</li>
+<li>What's the time complexity if <code>x</code> varies per query instead of being fixed?</li>
+</ul>
+<h2>22. Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 239 — Sliding Window Maximum</strong>: same core technique (monotonic window over sorted data), different aggregate (max instead of count).</li>
+<li><strong>LeetCode 1438 — Longest Continuous Subarray With Absolute Diff Less Than or Equal to Limit</strong>: two-pointer window where you track a running property instead of rescanning.</li>
+<li><strong>LeetCode 1888 — Minimum Number of Flips to Make the Binary String Alternating</strong>: another "maintain a running count as a window slides" problem.</li>
+<li><strong>LeetCode 2763 — Sum of Imbalance Numbers of All Subarrays</strong>: offline-query-style counting with sorted structure assistance.</li>
+</ul>
+<h2>23. Key Takeaways</h2>
+<p>The expensive-looking part of this problem — per-query rescanning — disappears the moment you sort both logs and queries by time and notice the window only moves forward. Tracking counts instead of server identities turns "who is silent" into a cheap subtraction from a running active total. The pattern generalizes: whenever a problem asks you to answer many range-based queries against a fixed dataset, check whether sorting both sides lets you process everything with a single forward pass instead of restarting from scratch each time.</p>
+<h2>24. Watch the Video</h2>
+<p>For the full walkthrough — including a live timing comparison between the brute force and optimal solutions — watch the video here: {LINK}</p>
+<h2>25. About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series that works through LeetCode's daily challenge and real engineering concepts side by side, favoring intuition over memorized patterns. Each episode traces a problem from first read to optimal solution, the same way you'd actually think through it at a whiteboard.</p>
+<h2>26. Call To Action</h2>
+<p>If this helped the problem click, give the video a like on YouTube and subscribe for more daily walkthroughs — and if you want these breakdowns delivered straight to your inbox, subscribe to the Substack. Drop a comment with your own approach or a problem you'd like covered next, and share this with anyone prepping for interviews.</p>
+<hr /></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/7805RqhlB2k' target='_blank'>▶ Watch on YouTube</a></div><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>What&#x27;s the pattern tell for &#x27;servers with no requests in a time window&#x27;?</summary><p>Sliding window over sorted event times — when you need counts of absence within a moving range, sort then two-pointer the window.</p></details><details class='card2'><summary>Time complexity of the two-pointer sliding window solution?</summary><p>O((n+q) log n) — sorting logs/queries dominates; the pointer sweep itself is linear.</p></details><details class='card2'><summary>Space complexity of the sliding-window approach?</summary><p>O(n+q) for sorted copies, index arrays, and the frequency/count map of servers per window.</p></details><details class='card2'><summary>Trickiest bug when counting &#x27;zero-request&#x27; servers per query?</summary><p>Forgetting servers that never appear in logs at all — total servers minus active ones, not just window-absent ones.</p></details><details class='card2'><summary>Why does rescanning all logs per query fail here?</summary><p>Constraints allow up to 1e5 queries and logs, so O(q*n) rescanning blows past limits — must reuse sorted order across queries.</p></details><details class='card2'><summary>Two pointers vs full resort per query — what&#x27;s the key insight?</summary><p>Queries sorted by time let left/right pointers only move forward, reusing prior work instead of recomputing the window from scratch.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
