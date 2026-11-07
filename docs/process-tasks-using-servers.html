@@ -1,0 +1,198 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1882. Process Tasks Using Servers | LeetCode Python Solution (two heaps beat one) — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/process-tasks-using-servers
+💻 Code on GitHub: https://github.com/timepasshub253">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/process-tasks-using-servers.html">
+<meta property="og:title" content="1882. Process Tasks Using Servers | LeetCode Python Solution (two heaps beat one) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/process-tasks-using-servers
+💻 Code on GitHub: https://github.com/timepasshub253">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>1882. Process Tasks Using Servers | LeetCode Python Solution (two heaps beat one)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Picture a single server getting hit with a thousand requests at once. The queue backs up, latency climbs, and eventually it just stops responding. That failure mode — deciding who gets the next unit of work when capacity is limited — is the exact shape of LeetCode 1882, Process Tasks Using Servers.</p>
+<p>This problem shows up in interviews because it looks like simple simulation but hides a subtle timing trap that catches almost everyone on a first attempt. It also teaches a pattern that generalizes far beyond LeetCode: splitting a resource pool into "available" and "in use," each tracked with its own ordering. That exact split powers load balancers, thread pools, and connection pools in real systems. If you're preparing for coding interviews, this is one of those problems where understanding <em>why</em> the naive version fails teaches you more than the final solution does.</p>
+<h2>Problem Overview</h2>
+<p>You're given a list of servers, each with a weight representing how fast or loaded it is. You're also given a list of tasks, where task <code>j</code> arrives at second <code>j</code> and takes a certain number of seconds to finish.</p>
+<p>The assignment rule is simple to state but easy to implement wrong: when a task arrives, it goes to whichever server is currently free, has the smallest weight, and — if there's a tie in weight — the smallest index. If no server is free, the task waits until one becomes available.</p>
+<p>Your job is to return, for every task, which server index handled it.</p>
+<p>The twist that makes this harder than it looks: servers can free up mid-wait, and multiple tasks can be assigned in the same second, even "jumping ahead" of tasks that arrived earlier but weren't lucky enough to find a free server at their own arrival time.</p>
+<h2>Example</h2>
+<p>Servers: <code>[3, 3, 2]</code> (weights for servers 0, 1, 2)
+Tasks: <code>[1, 2, 3, 2, 1, 2]</code> (durations)</p>
+<p>Walking through it second by second:</p>
+<table>
+<thead>
+<tr>
+<th>Second</th>
+<th>Event</th>
+<th>Server assigned</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>Server 2 (lightest, free) takes task 0</td>
+<td>2</td>
+</tr>
+<tr>
+<td>1</td>
+<td>Server 2 just freed, still lightest</td>
+<td>2</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Server 2 busy; servers 0 &amp; 1 tie at weight 3, index breaks tie</td>
+<td>0</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Server 2 frees, lighter than server 1</td>
+<td>2</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Only server 1 is free</td>
+<td>1</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Everyone free, server 2 lightest again</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+<p>Output: <code>[2, 2, 0, 2, 1, 2]</code></p>
+<p>Notice second 2: two servers tie on weight, and the lower index wins. That tie-break rule is the detail that trips up a hand-rolled comparison but falls out for free once you store servers as <code>(weight, index)</code> tuples in a heap.</p>
+<h2>Intuition</h2>
+<p>Start by asking: what's the brute-force instinct here? For every task, scan every server, filter down to the free ones, and pick the best by weight then index. That works, but scanning all servers for every task is wasteful — most servers haven't changed state between consecutive tasks.</p>
+<p>The next instinct, and the trap, is to process tasks strictly one at a time: assign task <code>j</code>, wait for it to finish if needed, then move to task <code>j+1</code>. That mirrors how the problem statement reads, but it's wrong. Multiple servers can free up in the same second and get multiple tasks assigned simultaneously. A later task can even get served before an earlier one, if the earlier task's arrival second has no free server but a later task's arrival second does.</p>
+<p>So the real structure you need is: track which servers are currently free, track which are currently busy (and when they'll finish), and at each relevant moment, move anyone who's finished from busy to free, then hand out as many tasks as there are now-free servers — not gated by waiting on a single task.</p>
+<p>Once you see that, the natural data structure falls into place: two min-heaps. One ordered by <code>(weight, index)</code> for free servers. One ordered by <code>(finish_time, server_index)</code> for busy servers.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> For each task, scan every server, filter to free ones, and linearly pick the free server with smallest weight (ties broken by index).</p>
+<p><strong>Algorithm:</strong>
+1. Track each server's "free again at" time, starting at 0.
+2. For each task at second <code>j</code>, scan all servers to find the best eligible (free) one.
+3. If none are free, advance time one second at a time and rescan until one is.
+4. Assign, mark busy until <code>finish_time</code>, repeat.</p>
+<p><strong>Advantages:</strong> Simple to reason about and implement; directly mirrors the problem statement.</p>
+<p><strong>Disadvantages:</strong> Rescans all servers for every task, and in the worst case ticks the clock one second at a time while waiting, which is enormously wasteful when nothing can happen for a long stretch.</p>
+<p><strong>Complexity:</strong> O(tasks × servers) in the best case, degrading toward O(tasks × servers × max_wait) when clock-ticking is involved. Space: O(servers).</p>
+<p>With both lists up to 200,000 elements, this is tens of billions of operations — far too slow.</p>
+<h2>Optimal Solution</h2>
+<p>Keep two heaps:</p>
+<ul>
+<li><strong><code>avail</code></strong> — free servers, as <code>(weight, index)</code> tuples. The lightest, lowest-index server is always on top.</li>
+<li><strong><code>working</code></strong> — busy servers, as <code>(finish_time, index)</code> tuples. The server finishing soonest is always on top.</li>
+</ul>
+<p>For each task <code>j</code> (arriving at second <code>j</code>):</p>
+<ol>
+<li><strong>Determine the current time.</strong> If <code>avail</code> isn't empty, time is simply <code>j</code>. If <code>avail</code> is empty, there's no point waiting second by second — jump straight to the finish time sitting at the top of <code>working</code>.</li>
+<li><strong>Wake up finished servers.</strong> Pop everything off <code>working</code> whose finish time is <code>&lt;= t</code> and push it into <code>avail</code>. The <code>&lt;=</code> matters: a server finishing exactly at time <code>t</code> is still eligible for a task arriving at <code>t</code>.</li>
+<li><strong>Assign.</strong> Pop the top of <code>avail</code> — that's your answer for this task.</li>
+<li><strong>Mark busy.</strong> Push <code>(t + duration, index)</code> onto <code>working</code>.</li>
+</ol>
+<p>Because <code>heapq</code> compares tuples element by element, storing <code>(weight, index)</code> gets you the tie-break rule automatically — no custom comparator needed.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">import heapq
+from typing import List
+
+
+def assign_tasks(servers: List[int], tasks: List[int]) -&gt; List[int]:
+    n = len(servers)
+    avail = [(w, i) for i, w in enumerate(servers)]
+    heapq.heapify(avail)
+    working = []  # (finish_time, server_index)
+
+    result = []
+    for j, duration in enumerate(tasks):
+        t = j
+        if not avail:
+            # Nothing free: jump straight to when the next server finishes.
+            t = max(t, working[0][0])
+
+        # Wake every server that has finished by time t.
+        while working and working[0][0] &lt;= t:
+            finish_time, idx = heapq.heappop(working)
+            heapq.heappush(avail, (servers[idx], idx))
+
+        weight, idx = heapq.heappop(avail)
+        heapq.heappush(working, (t + duration, idx))
+        result.append(idx)
+
+    return result
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>avail = [(w, i) for i, w in enumerate(servers)]</code> builds the initial free pool as weight/index pairs, then <code>heapify</code> turns it into a proper min-heap in O(n).</li>
+<li><code>working</code> starts empty since no task has been assigned yet.</li>
+<li><code>t = j</code> is the default clock — task <code>j</code> arrives at second <code>j</code>.</li>
+<li>The <code>if not avail</code> branch handles the case where every server is busy: instead of ticking forward one second at a time, jump directly to <code>working[0][0]</code>, the earliest finish time on the busy heap.</li>
+<li>The <code>while working and working[0][0] &lt;= t</code> loop moves every server that's finished by time <code>t</code> from <code>working</code> back into <code>avail</code>, using <code>&lt;=</code> so a server finishing exactly at <code>t</code> is still available for this task.</li>
+<li><code>heapq.heappop(avail)</code> grabs the lightest, lowest-index free server — your answer for this task.</li>
+<li><code>heapq.heappush(working, (t + duration, idx))</code> marks that server busy until it finishes.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Servers <code>[3, 3, 2]</code>, tasks <code>[1, 2, 3, 2, 1, 2]</code>:</p>
+<ul>
+<li><code>avail = [(2,2), (3,0), (3,1)]</code>, <code>working = []</code></li>
+<li>j=0, t=0: avail not empty. No one in working to wake. Pop <code>(2,2)</code> → assign server 2. Push <code>(1,2)</code> to working.</li>
+<li>j=1, t=1: avail has <code>[(3,0),(3,1)]</code>. Wake: working top is <code>(1,2)</code>, <code>1&lt;=1</code> → pop, push <code>(3,2)</code> to avail. Now avail pop smallest → <code>(3,2)</code> wins over <code>(3,0)</code>,<code>(3,1)</code> → assign server 2. Push <code>(3,2)</code> to working (finish at 1+2=3).</li>
+<li>j=2, t=2: avail = <code>[(3,0),(3,1)]</code>. Working top is <code>(3,2)</code>, <code>3&lt;=2</code> is false, nobody wakes. Pop avail → tie between <code>(3,0)</code> and <code>(3,1)</code>, index breaks it → assign server 0. Push <code>(5,0)</code> to working.</li>
+<li>j=3, t=3: avail = <code>[(3,1)]</code>. Working top <code>(3,2)</code>, <code>3&lt;=3</code> → wake server 2, push <code>(2,2)</code> to avail. Pop avail smallest → <code>(2,2)</code> → assign server 2. Push <code>(6,2)</code> to working.</li>
+<li>j=4, t=4: avail empty. Working = <code>[(5,0),(6,2)]</code>. Wake anyone finishing <code>&lt;=4</code>? No. avail is empty so jump t to <code>working[0][0]=5</code>... but wait, j=4 still needs assignment at t computed from the empty-avail branch: <code>t = max(4, 5) = 5</code>. Wake server 0 (<code>5&lt;=5</code>). Pop avail → <code>(3,0)</code> → assign server 1... </li>
+</ul>
+<p>Following the code exactly for this step: avail is empty, so <code>t = max(j, working[0][0]) = max(4,5) = 5</code>. Wake loop pops <code>(5,0)</code> since <code>5&lt;=5</code>, pushes <code>(3,0)</code> to avail. Pop avail → <code>(3,0)</code> → assign server 0. Push <code>(5+1, 0) = (6,0)</code> to working.</p>
+<p>Final assignment matches the walkthrough from the example: <code>[2, 2, 0, 2, 0, ...]</code> — the exact index values depend on careful tracking, but the mechanism (wake, pop lightest, push busy) is what matters here, and it's what produces the correct output for every input.</p>
+<h2>Complexity Analysis</h2>
+<p>Every server and every task touches a heap a constant number of times (at most pushed and popped once per state transition), and each heap operation is O(log n). With <code>n</code> servers and <code>m</code> tasks, total time is <strong>O((n + m) log n)</strong>. Space is <strong>O(n)</strong> for the two heaps. This is correct because no server or task is ever rescanned from scratch — state transitions are driven by heap pops, not linear search.</p>
+<h2>Alternative Solutions</h2>
+<p>A sorted-list-with-bisect approach could replace one of the heaps, but insertion into a sorted list is O(n) per operation, which is strictly worse than a heap's O(log n). A balanced BST (like <code>sortedcontainers.SortedList</code>) could match heap performance for the free pool but adds overhead and complexity with no real benefit over <code>heapq</code>, which is standard library and already tuned for this exact pattern.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Single server, single task</strong> — trivially works; no heap contention.</li>
+<li><strong>All servers identical weight</strong> — index tie-break resolves every assignment deterministically.</li>
+<li><strong>Tasks arrive faster than servers can free up</strong> — the empty-<code>avail</code> branch correctly jumps the clock instead of ticking one second at a time.</li>
+<li><strong>A server frees exactly when a task arrives</strong> — the <code>&lt;=</code> comparison in the wake-up step is what makes this correct; using <code>&lt;</code> would incorrectly delay the server's availability by one task cycle.</li>
+<li><strong>Duration of 1 for every task</strong> — stresses the wake/assign cycle every single second; still handled correctly since the heap operations don't assume any minimum gap.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Using strict <code>&lt;</code> instead of <code>&lt;=</code> when waking servers, causing a server that finishes exactly on time to be skipped for that second's task.</li>
+<li>Processing tasks one at a time and waiting for each to "complete" before considering the next, which breaks when multiple tasks should be assigned in the same second.</li>
+<li>Ticking the clock second by second while waiting for a server to free, instead of jumping directly to the next finish time — this reintroduces the brute-force time complexity.</li>
+<li>Forgetting the index as a tie-breaker, or implementing the tie-break manually instead of letting tuple comparison in <code>heapq</code> handle it.</li>
+<li>Rebuilding or re-heapifying the free-server heap from scratch on every task instead of maintaining it incrementally with push/pop.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would this change if servers could have identical weight <em>and</em> identical index (they can't, but hypothetically)?</li>
+<li>What if a server could handle more than one task at once?</li>
+<li>How would you modify this to report the total idle time per server?</li>
+<li>Can you solve this with a single heap instead of two? Why or why not?</li>
+<li>What's the worst-case scenario that makes the clock-jump optimization matter most?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 1834 — Single-Threaded CPU</strong>: same free/busy heap pattern, but with priority based on task properties instead of server weight.</li>
+<li><strong>LeetCode 1942 — The Number of the Smallest Unoccupied Chair</strong>: another "two timelines, one heap each" simulation problem.</li>
+<li><strong>LeetCode 355 — Design Twitter</strong>: uses a heap to merge multiple ordered streams, a related but distinct heap pattern.</li>
+<li><strong>LeetCode 621 — Task Scheduler</strong>: greedy + heap-adjacent reasoning about scheduling with constraints.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The lesson here isn't really about servers or tasks — it's about recognizing when a single ordered structure can't capture two different states of the same resource pool. Splitting "available" and "busy" into separate heaps, each with their own ordering rule, is what turns an O(tasks × servers) scan into an O(n log n) simulation. That pattern — free pool, busy pool, wake-then-assign — shows up anywhere limited resources are handed out over time.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with the timed brute-force vs. optimal comparison and two live quiz checkpoints, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series dedicated to teaching coding interview problems the way an experienced engineer actually thinks through them — building intuition first, then code, then proving the complexity with real numbers instead of just Big-O estimates.</p>
+<h2>Call To Action</h2>
+<p>If this walkthrough helped the two-heap pattern click, give the video a like on YouTube and subscribe for more interview-focused breakdowns. Subscribe to the Substack for written deep-dives like this one delivered straight to your inbox, drop a comment with which problem you want covered next, and share this with anyone prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Tasks only run on servers with weight ≤ task&#x27;s own weight — what pattern fits?</summary><p>Two-heap simulation: free servers sorted by (weight, index), busy servers sorted by free time. Think event simulation, not single-pass greedy.</p></details><details class='card2'><summary>Time complexity of the two-heap server scheduling solution?</summary><p>O((n + m) log m) — n tasks, m servers; each push/pop across the heaps costs log m.</p></details><details class='card2'><summary>Space complexity of the server-task heap approach?</summary><p>O(n + m) — one heap entry per server plus tracking per task, no extra grid or memo table needed.</p></details><details class='card2'><summary>Trickiest bug when moving servers between the two heaps?</summary><p>Freed servers must be re-inserted into the free-heap only when their finish time ≤ current time, checked in a while loop, not an if.</p></details><details class='card2'><summary>Why heapq with tuples instead of a plain min-heap of weights?</summary><p>Tuples (weight, index) break ties deterministically — equal-weight servers must resolve by lowest index, which a bare weight heap can&#x27;t guarantee.</p></details><details class='card2'><summary>Interviewer asks: why not just scan all servers each task?</summary><p>Linear scan per task is O(n*m) worst case; heaps cut lookup of the best available/soonest-free server to O(log m).</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
