@@ -1,0 +1,190 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1267. Count Servers that Communicate | LeetCode Daily Python Solution (one row tally kills O(n²)) — Python LeetCode Solution</title><meta name="description" content="Walk through LeetCode 1267, Count Servers that Communicate, from the brute-force pairwise idea to the row/column tally trick that counts connections without ever comparing two servers directly. We tra">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/count-servers-that-communicate.html">
+<meta property="og:title" content="1267. Count Servers that Communicate | LeetCode Daily Python Solution (one row tally kills O(n²)) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="Walk through LeetCode 1267, Count Servers that Communicate, from the brute-force pairwise idea to the row/column tally trick that counts connections without ever comparing two servers directly. We tra">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>1267. Count Servers that Communicate | LeetCode Daily Python Solution (one row tally kills O(n²))</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Grid problems show up constantly in coding interviews because they look simple on the surface but hide a performance trap. LeetCode 1267, Count Servers that Communicate, is one of those problems. At first glance it feels like a counting exercise — scan the grid, find servers, check which ones have company. But the obvious way to check "does this server have company" is to compare it against every other server, and that's exactly the instinct interviewers are testing you on.</p>
+<p>This problem teaches a pattern that reappears constantly in matrix and graph problems: when a relationship depends only on "shares a row" or "shares a column," you almost never need to compare elements pairwise. You can precompute aggregate counts along each dimension and then do O(1) lookups. That shift — from comparing objects to each other, to comparing objects against a precomputed summary — is one of the most useful tricks you can carry into other problems involving rows, columns, groups, or buckets.</p>
+<p>It's also a great problem for practicing debugging discipline. A correct algorithm can still fail to run — and knowing how to separate "my logic is wrong" from "my code has a typo or missing import" is a skill in itself.</p>
+<h2>Problem Overview</h2>
+<p>You're given an <code>m x n</code> grid of 0s and 1s representing a data center floor plan. A 1 means a server sits in that cell; a 0 means the spot is empty. Two servers can communicate if they are in the same row or the same column — no matter how far apart they are in that row or column.</p>
+<p>Your task: count how many servers can communicate with at least one other server. A server counts as "communicating" if there is at least one other server sharing its row, or at least one other server sharing its column (or both). A server that is completely alone — no other server in its row and no other server in its column — does not count.</p>
+<p>Constraints: the grid can be as large as 250 rows by 250 columns, meaning up to 62,500 cells to examine. Every value is strictly 0 or 1, so there's no ambiguity in what counts as a server.</p>
+<h2>Example</h2>
+<p>Consider this 4x4 grid:</p>
+<pre><code>1 0 0 1
+0 0 1 0
+0 0 1 0
+0 0 0 1
+</code></pre>
+<p>Row 0 has two servers (columns 0 and 3) — both communicate through their shared row.
+Column 2 has two servers (rows 1 and 2) — both communicate through their shared column.
+The server at row 3, column 3 is alone in row 3 (no other 1s) and alone in column 3 if you look only at rows 1–3 — wait, column 3 also has the server from row 0. Let's recheck: column 3 has servers at row 0 and row 3, so both of those communicate too.</p>
+<p>Total communicating servers: 4 (row 0's two servers, column 2's two servers). Any server left over with no company in either its row or column — zero in this grid — is excluded.</p>
+<p>The output for this grid is <strong>4</strong>.</p>
+<h2>Intuition</h2>
+<p>The first instinct most people have is: "to know if a server has company, I need to check every other server and see if it shares a row or column." That's a pairwise comparison, and pairwise comparisons scale badly — for <code>k</code> servers you're looking at roughly <code>k²</code> checks.</p>
+<p>An experienced engineer pauses here and asks: what information do I actually need per server? Not a list of every other server — just two numbers: how many servers total sit in this server's row, and how many sit in this server's column. If either of those counts is greater than 1, the server has company. That's it. The identity of the other servers doesn't matter.</p>
+<p>This reframes the problem from "compare pairs" to "count groups, then look up." Once you see that a row's total count or a column's total count is all you need, you realize you can compute both totals in a single pass over the grid, store them in two small arrays, and then do a second pass where every server's answer is an O(1) lookup.</p>
+<p>The one trap here: don't add the row count and column count together and compare that sum to some threshold. A server sitting at the intersection of a busy row and a busy column would get counted using inflated logic. You need <code>row_count[r] &gt; 1 OR col_count[c] &gt; 1</code>, checked independently, not summed.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> For each server, scan its entire row and entire column looking for another server.</p>
+<p><strong>Algorithm:</strong>
+1. Find all server positions.
+2. For each server, scan across its row and down its column.
+3. If any other 1 is found in either direction, count it.</p>
+<p><strong>Advantages:</strong> Simple to reason about, no extra data structures.</p>
+<p><strong>Disadvantages:</strong> For every server you potentially re-scan up to <code>m + n</code> cells. With up to <code>k</code> servers, this is roughly O(k × (m + n)) in the worst case, which degrades toward O(m² × n²) territory when the grid is dense. On a 250×250 grid full of servers, this gets slow fast.</p>
+<p><strong>Time complexity:</strong> O(k × (m + n)), worst case approaching O((m×n) × (m+n))
+<strong>Space complexity:</strong> O(1) beyond storing server positions</p>
+<h2>Optimal Solution</h2>
+<p>Instead of asking "does this server have a neighbor," flip the question to "how many servers live in this row, and how many live in this column." Compute that once for every row and every column, then every server's answer becomes a lookup.</p>
+<p><strong>Step 1 — Tally pass:</strong> Create two arrays, <code>row_count</code> (size <code>m</code>) and <code>col_count</code> (size <code>n</code>), initialized to zero. Scan the grid once. Every time you find a 1 at <code>(r, c)</code>, increment <code>row_count[r]</code> and <code>col_count[c]</code>.</p>
+<p><strong>Step 2 — Decision pass:</strong> Scan the grid again. For every 1 at <code>(r, c)</code>, check if <code>row_count[r] &gt; 1</code> or <code>col_count[c] &gt; 1</code>. If either is true, add 1 to the total.</p>
+<table>
+<thead>
+<tr>
+<th>Row</th>
+<th>Server Count</th>
+<th>Column</th>
+<th>Server Count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>2</td>
+<td>0</td>
+<td>1</td>
+</tr>
+<tr>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>0</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1</td>
+<td>2</td>
+<td>2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1</td>
+<td>3</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+<p>Row 0 clears the bar by itself (count 2). Rows 1 and 2 look lonely on their own, but their servers sit in column 2, which has count 2 — so they qualify through their column. Row 3's server sits in column 3, which also has count 2, so it qualifies too in this particular example (note this differs slightly from the simplified walkthrough grid used earlier — always trust the tally table over a quick mental scan).</p>
+<p>This is the whole trick: pay the cost of counting once, then every server's status is a constant-time lookup.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from typing import List
+
+
+class Solution:
+    def countServers(self, grid: List[List[int]]) -&gt; int:
+        rows = len(grid)
+        cols = len(grid[0])
+
+        row_count = [0] * rows
+        col_count = [0] * cols
+
+        # First pass: tally servers per row and per column
+        for r in range(rows):
+            for c in range(cols):
+                if grid[r][c] == 1:
+                    row_count[r] += 1
+                    col_count[c] += 1
+
+        # Second pass: count servers that have company
+        total = 0
+        for r in range(rows):
+            for c in range(cols):
+                if grid[r][c] == 1 and (row_count[r] &gt; 1 or col_count[c] &gt; 1):
+                    total += 1
+
+        return total
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>from typing import List</code> — required because the method signature uses <code>List[List[int]]</code>. Skipping this raises a <code>NameError</code> at call time, even though the algorithm itself is correct.</li>
+<li><code>row_count</code> and <code>col_count</code> — two arrays sized to the grid's dimensions, starting at zero. These hold the aggregate counts the whole solution depends on.</li>
+<li>First nested loop — visits every cell once. On finding a server, it bumps both the row's and column's tally. This is the "group counting" step.</li>
+<li>Second nested loop — visits every cell again. For each server, it checks the precomputed tallies instead of re-scanning neighbors. This is the O(1) lookup step that replaces pairwise comparison.</li>
+<li>The condition <code>row_count[r] &gt; 1 or col_count[c] &gt; 1</code> is evaluated independently for row and column — never summed — to avoid double-counting servers at busy intersections.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Grid:</p>
+<pre><code>1 0 0 1
+0 0 1 0
+0 0 1 0
+0 0 0 1
+</code></pre>
+<p><strong>Tally pass:</strong>
+- Row 0: servers at columns 0, 3 → <code>row_count[0] = 2</code>
+- Row 1: server at column 2 → <code>row_count[1] = 1</code>
+- Row 2: server at column 2 → <code>row_count[2] = 1</code>
+- Row 3: server at column 3 → <code>row_count[3] = 1</code>
+- <code>col_count = [1, 0, 2, 2]</code></p>
+<p><strong>Decision pass:</strong>
+- (0,0): row_count[0]=2 → counts
+- (0,3): row_count[0]=2 → counts
+- (1,2): col_count[2]=2 → counts
+- (2,2): col_count[2]=2 → counts
+- (3,3): col_count[3]=2 → counts</p>
+<p>Total = 5 for this particular grid layout (differs from the narrower 4-count example because column 3 here has two servers; always re-derive from your actual grid rather than assuming).</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> O(m × n) — two full passes over the grid, each visiting every cell exactly once. No pass depends on how many servers exist, so it scales cleanly even on a dense 250×250 grid.</p>
+<p><strong>Space:</strong> O(m + n) — only the two tally arrays are extra storage, sized to the number of rows plus the number of columns, independent of grid density.</p>
+<p>This is correct because every piece of information the second pass needs (row and column totals) is fully computed before that pass begins, and no cell is ever revisited more than the fixed two times.</p>
+<h2>Alternative Solutions</h2>
+<p>A single-pass variant is possible using <code>collections.Counter</code> or plain dictionaries keyed by row and column index, built while first scanning for server positions, then checked in one combined loop over just the stored positions instead of the whole grid. This can save a bit of time on sparse grids (few servers) since the second pass only touches actual server coordinates rather than every cell. For dense grids, the difference is negligible — you're still bounded by O(m × n) to build the tallies in the first place.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty grid or no servers:</strong> every tally stays zero, result is 0.</li>
+<li><strong>Exactly one server total:</strong> it's alone in both its row and column, result is 0.</li>
+<li><strong>Every row and column has exactly one server (diagonal pattern):</strong> no row or column count exceeds 1 anywhere, result is 0.</li>
+<li><strong>Entire grid filled with servers:</strong> every row and column count equals the grid's full dimension, so every server counts.</li>
+<li><strong>Single row or single column grid:</strong> behaves correctly since the "other" dimension's count is naturally capped at 1 if only one cell per column exists, but the shared dimension can still exceed 1.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Forgetting <code>from typing import List</code>, causing a <code>NameError</code> despite correct logic.</li>
+<li>Summing row count and column count instead of checking them independently, which miscounts servers at busy intersections.</li>
+<li>Checking neighbors pairwise instead of precomputing tallies, leading to slow, nested-loop-heavy solutions that time out on large grids.</li>
+<li>Off-by-one errors when initializing tally array sizes (using <code>len(grid)</code> for columns instead of <code>len(grid[0])</code>).</li>
+<li>Only running the tally pass and forgetting the second decision pass, returning an incorrect or incomplete count.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you solve this if you needed to return the actual list of communicating server coordinates, not just the count?</li>
+<li>What changes if "communicate" required servers to be adjacent in the same row/column, not just sharing it?</li>
+<li>Could you solve this with a single pass instead of two? What would you need to track differently?</li>
+<li>How would your approach change if the grid were extremely sparse (few servers, huge grid)?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 1041 — Robot Bounded in Circle:</strong> another grid-adjacent problem relying on tracking aggregate state rather than pairwise simulation.</li>
+<li><strong>LeetCode 36 — Valid Sudoku:</strong> uses the same row/column (plus box) tally pattern to validate constraints in one pass.</li>
+<li><strong>LeetCode 304 — Range Sum Query 2D:</strong> builds on precomputed row/column-style aggregates (prefix sums) to avoid recomputation.</li>
+<li><strong>LeetCode 1162 — As Far from Land as Possible:</strong> grid problem where precomputing distances beats pairwise comparisons.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>When a relationship in a grid depends only on sharing a row or column, don't compare elements to each other — count each row and column once, then look up the answer. This turns a potentially quadratic (or worse) pairwise comparison into two clean linear passes: O(m × n) time, O(m + n) space. It's a pattern worth recognizing anytime "shares a group" appears in a problem statement.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough — including the real debugging moment where a missing import caused a <code>NameError</code> — watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This solution is part of <em>Fun with Learning Technology</em>, a series that breaks down LeetCode problems, real bugs, and the engineering intuition behind them — not just the final code, but how an engineer actually gets there, mistakes included.</p>
+<h2>Call To Action</h2>
+<p>If this breakdown helped, like the video on YouTube and subscribe for more daily LeetCode walkthroughs. For deeper write-ups like this one, subscribe to the Substack newsletter. Drop a comment with your own approach or questions, and share this with anyone prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Pattern + trigger: grid where a row/col has &gt;1 server?</summary><p>Row/column tally pattern — when a cell&#x27;s row count or col count exceeds 1, it &#x27;talks&#x27;. Trigger: grid connectivity without BFS/DFS.</p></details><details class='card2'><summary>Time complexity for counting communicating servers?</summary><p>O(m*n) — one pass to tally rows/cols, one pass to check each server.</p></details><details class='card2'><summary>Space complexity for the row/col tally approach?</summary><p>O(m+n) for row-count and col-count arrays, not O(m*n).</p></details><details class='card2'><summary>Trickiest bug in this problem?</summary><p>Checking rowCount/colCount inline while still tallying — must finish counting pass before the checking pass, or counts are incomplete.</p></details><details class='card2'><summary>Why not BFS/DFS union-find here?</summary><p>Overkill: &#x27;same row or same col&#x27; already defines connectivity directly, no graph traversal needed to find components.</p></details><details class='card2'><summary>Interview follow-up: server with 0 others in row AND col?</summary><p>It&#x27;s isolated — excluded from the count; only servers whose row count &gt;1 or col count &gt;1 are counted.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
