@@ -8,6 +8,199 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
-<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>n8n Lesson 32: Split In Batches + Wait Node = No More 429s</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><p>Learn why n8n keeps slamming into the 429 Wall and how two built-in nodes — Split In Batches and Wait — fix it for good. You&#x27;ll build a real batching and pacing strategy, watch the throttle work live,</p></article>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>n8n Lesson 32: Split In Batches + Wait Node = No More 429s</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every automation engineer eventually builds the same workflow: pull a list of items, hit an API once per item, move on. It works perfectly in testing. Five items, ten items — every call succeeds, and it feels done.</p>
+<p>Then it goes to production with five hundred items, and somewhere around item forty-seven, the API stops cooperating. Requests start coming back with a 429 status code — "Too Many Requests" — and depending on how the workflow is built, the rest of the run can collapse entirely.</p>
+<p>This is one of the most common failure modes in low-code automation, and it's worth understanding deeply, because the underlying problem isn't specific to n8n. It shows up anywhere a program calls an external service faster than that service is willing to accept: Python scripts hitting REST APIs, serverless functions fanning out, even naive <code>for</code> loops in a backend job. The pattern you'll learn here — group work into batches, pace it with a deliberate delay, and retry failures intelligently — is a general-purpose engineering technique, not a workaround specific to one tool.</p>
+<p>For anyone preparing for backend or infrastructure interviews, rate limiting is also a recurring topic. Interviewers want to know if you understand why unthrottled clients break shared resources, and whether you reach for the right level of complexity to fix it — not every throttling problem needs a message queue or a distributed rate limiter. Sometimes it needs exactly two nodes.</p>
+<h2>Problem Overview</h2>
+<p>Here's the situation in plain terms: you have a workflow that reads a list of items — say, 500 records — and for each one, calls an external API. There's no batching logic, no delay between calls, nothing moderating the speed. n8n (or any workflow engine, or any script) will process each item as fast as the engine can push it through.</p>
+<p>The API, however, has a hard requirement: something like ten requests per second, enforced server-side. This limit is invisible to your workflow. Nothing in n8n inspects the API's documentation or negotiates a safe pace automatically. The engine just sends requests as quickly as it can, and the API has to defend itself the moment that rate is exceeded — which it does by rejecting calls with a 429 status code instead of queuing them politely.</p>
+<p>The failure is deterministic once you cross the threshold. On 5 test items you probably never hit the ceiling, so everything looks fine. On 500 items, you blow past it almost immediately, and depending on how your workflow handles failures, either a chunk of items gets dropped, or the entire execution halts.</p>
+<p>The fix has two parts that have to work together:</p>
+<ol>
+<li><strong>Group items into batches</strong> instead of sending them one at a time, unthrottled.</li>
+<li><strong>Pause between batches</strong> long enough that you stay under the API's actual rate ceiling.</li>
+</ol>
+<p>Neither alone solves the problem. Batching without pacing just sends bursts faster. Pacing without batching (a wait after every single item) works but is usually slower and harder to reason about than it needs to be.</p>
+<h2>Example</h2>
+<p>Imagine you're syncing 500 user records to a CRM's API, and the CRM enforces 10 requests per second.</p>
+<p><strong>Without batching or pacing:</strong>
+- Items 1–46 succeed because the burst hasn't yet exceeded the server's tolerance.
+- Item 47 onward: the CRM starts returning <code>429 Too Many Requests</code>.
+- Depending on error handling, the remaining ~453 items either fail outright or the whole execution stops.</p>
+<p><strong>With batching (10 items) and a 2-second wait between batches:</strong>
+- Batch 1 (items 1–10) fires, all succeed.
+- Wait node pauses 2 seconds.
+- Batch 2 (items 11–20) fires, all succeed.
+- This repeats 50 times until all 500 items are processed.
+- Effective rate: 10 requests every ~2 seconds, comfortably under the 10-requests-per-second ceiling.
+- Result: zero 429 errors, full completion.</p>
+<p>The key output to notice here isn't just "it works" — it's that the throughput is now a number you <em>chose</em>, rather than a number the server enforced on you reactively through failures.</p>
+<h2>Intuition</h2>
+<p>The instinct many engineers have when they first see a 429 error is to reach for something heavy: exponential backoff with jitter, a message queue, a token-bucket rate limiter, maybe even a dedicated throttling service. That instinct comes from experience with systems where <em>many independent clients</em> hammer one API concurrently — a fleet of microservices, a swarm of background workers, thousands of browser clients. In that world, jitter exists specifically to stop multiple callers from retrying in lockstep and re-causing the exact spike that triggered the failure.</p>
+<p>But look closely at what's actually happening in this workflow: it's <strong>one execution, calling the endpoint serially</strong>. There's no fleet. There's no concurrency to desynchronize. The entire "rate limiting problem" reduces to a much simpler one: <em>don't send requests faster than the server accepts them, from this single thread of execution.</em></p>
+<p>Once you see it that way, the solution almost writes itself: process in small groups, and insert a deliberate pause between groups so the average rate stays under the ceiling. No queue, no broker, no distributed coordination — because there's nothing to coordinate between. This is the kind of simplification experienced engineers look for before reaching for infrastructure: match the solution's complexity to the actual shape of the problem, not to the scariest version of the problem you've seen before.</p>
+<p>The remaining question is tactical: how big should each batch be, and how long should the pause be? Start conservative — well under the documented limit — and tighten it once you've watched the real behavior, ideally by reading the rate-limit headers the API sends back.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Send every request as fast as possible, no batching, no waiting. This is the default behavior if you build the workflow naively.</p>
+<p><strong>Algorithm:</strong>
+1. Fetch all items.
+2. For each item, call the API immediately.
+3. Move to the next item with no delay.</p>
+<p><strong>Advantages:</strong>
+- Simplest possible workflow — no extra nodes.
+- Fastest possible completion time, assuming no limit existed.</p>
+<p><strong>Disadvantages:</strong>
+- Breaks the moment item count × calls-per-second exceeds the API's real ceiling.
+- Failure is partial and unpredictable — succeeds on small test sets, fails in production.
+- No mechanism to recover from transient errors (timeouts, network blips) either.</p>
+<p><strong>Time complexity:</strong> O(n) calls, but with a hidden failure mode once <code>n</code> is large enough to cross the rate ceiling.
+<strong>Space complexity:</strong> O(1) beyond the item list — nothing is batched or held in memory longer than one item at a time.</p>
+<p>This "solution" is really the bug report, not a fix — but it's worth stating explicitly because it's what nearly every first-draft integration looks like.</p>
+<h2>Optimal Solution</h2>
+<p>The fix is a three-part pattern: <strong>batch, pace, retry.</strong></p>
+<p><strong>Step 1 — Batch.</strong> A <code>Split In Batches</code> node sits right after the data source. Instead of 500 items flowing individually into the next node, they're grouped — for example, into chunks of 10. Ten is a reasonable starting point because it's comfortably under most APIs' per-second limits; raise it once you've confirmed the real ceiling.</p>
+<p><strong>Step 2 — Pace.</strong> A <code>Wait</code> node follows the API call. Critically, its output loops <em>back</em> to the <code>Split In Batches</code> node rather than continuing straight ahead. This loop is the entire mechanism:</p>
+<table>
+<thead>
+<tr>
+<th>Without the loop</th>
+<th>With the loop</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Batch 1 processes, Wait fires once, then every remaining batch fires immediately</td>
+<td>Batch 1 processes → wait → Batch 2 processes → wait → ... until done</td>
+</tr>
+<tr>
+<td>Still hits the rate wall</td>
+<td>Rate stays capped the whole run</td>
+</tr>
+</tbody>
+</table>
+<p>Skipping the loop is the single most common mistake in building this pattern — it looks correct on a one-batch test and only reveals the bug at scale, exactly like the original problem.</p>
+<p><strong>Step 3 — Retry.</strong> Batching and pacing solve the <em>rate limit</em> problem, but not reliability. A single network blip in batch 30 — unrelated to rate limiting — can still kill the entire execution if the API-call node has no error handling. Turning on <code>Retry On Fail</code> gives that one request a couple more attempts instead of taking down the run. Set the retry delay to a few seconds, not zero — retrying instantly just hits the same overloaded or glitching server again. If the API returns a <code>Retry-After</code> header, use that exact value instead of guessing.</p>
+<pre><code>[Data Source] → [Split In Batches] → [API Call w/ Retry On Fail] → [Wait] ─┐
+                        ▲                                                  │
+                        └──────────────────────────────────────────────────┘
+</code></pre>
+<h2>Python Code</h2>
+<p>While this workflow is built visually in n8n, the identical pattern in Python makes the mechanics explicit — useful both for understanding and for anyone automating similar logic outside a low-code tool.</p>
+<pre><code class="language-python">import time
+import requests
+from requests.exceptions import RequestException
+
+BATCH_SIZE = 10
+WAIT_SECONDS = 2
+MAX_RETRIES = 3
+RETRY_DELAY_SECONDS = 3
+
+
+def call_api_with_retry(item, session, max_retries=MAX_RETRIES):
+    &quot;&quot;&quot;Call the API for one item, retrying on transient failures.&quot;&quot;&quot;
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = session.post(&quot;https://api.example.com/sync&quot;, json=item)
+            response.raise_for_status()
+            return response.json()
+        except RequestException:
+            if attempt == max_retries:
+                raise
+            time.sleep(RETRY_DELAY_SECONDS)
+
+
+def process_in_batches(items, batch_size=BATCH_SIZE, wait_seconds=WAIT_SECONDS):
+    &quot;&quot;&quot;Process items in rate-limit-safe batches with a pause between groups.&quot;&quot;&quot;
+    session = requests.Session()
+    results = []
+
+    for start in range(0, len(items), batch_size):
+        batch = items[start:start + batch_size]
+
+        for item in batch:
+            results.append(call_api_with_retry(item, session))
+
+        if start + batch_size &lt; len(items):
+            time.sleep(wait_seconds)
+
+    return results
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>BATCH_SIZE = 10</code> mirrors the <code>Split In Batches</code> node's batch size setting — the number of items sent before pausing.</li>
+<li><code>WAIT_SECONDS = 2</code> mirrors the <code>Wait</code> node's delay — the pacing control that keeps the average request rate under the API's ceiling.</li>
+<li><code>call_api_with_retry</code> is the Python equivalent of enabling <code>Retry On Fail</code> on the API-call node: it retries a failed request a bounded number of times, with a real delay between attempts (never zero), exactly as the video stresses.</li>
+<li><code>process_in_batches</code> is the loop that replaces the Split-In-Batches-to-Wait-back-to-Split-In-Batches cycle: slice the list into chunks, fully process one chunk, sleep, move to the next chunk.</li>
+<li>The <code>if start + batch_size &lt; len(items)</code> guard avoids an unnecessary final sleep after the last batch — a small but real detail, since waiting after the work is done wastes time for no benefit.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Take 25 items with <code>BATCH_SIZE = 10</code> and <code>WAIT_SECONDS = 2</code>:</p>
+<ol>
+<li><code>start = 0</code>: batch = items[0:10] (10 items). All 10 processed via <code>call_api_with_retry</code>. <code>start + batch_size (10) &lt; 25</code> → sleep 2s.</li>
+<li><code>start = 10</code>: batch = items[10:20] (10 items). All processed. <code>20 &lt; 25</code> → sleep 2s.</li>
+<li><code>start = 20</code>: batch = items[20:25] (5 items, the final partial batch). All processed. <code>30 &lt; 25</code> is false → no sleep.</li>
+<li>Loop ends. 25 items processed in 3 batches with 2 pauses, instead of 25 unthrottled calls fired back-to-back.</li>
+</ol>
+<p>If item 15 times out on its first attempt, <code>call_api_with_retry</code> catches the exception, sleeps <code>RETRY_DELAY_SECONDS</code>, and retries — up to <code>MAX_RETRIES</code> times — before giving up. The rest of batch 2 and all of batch 3 are unaffected either way.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> O(n) API calls total, same as the brute-force version — batching doesn't change <em>how many</em> calls happen, only <em>how fast</em>. The added wall-clock time is <code>(n / batch_size) * wait_seconds</code>, which is the deliberate cost of staying under the rate limit.</li>
+<li><strong>Space:</strong> O(batch_size) held in memory per batch, plus O(n) for the accumulated <code>results</code> list — no different from processing the full list at once, since nothing is persisted to disk or an external queue.</li>
+<li>These bounds are correct because batching and waiting are purely about <em>scheduling</em> the existing n calls, not about doing additional work per item.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p><strong>Exponential backoff with jitter</strong> is the classic alternative, and it's the wrong tool here. It's designed for <em>many independent clients</em> retrying against a shared resource, where jitter prevents them from retrying in sync and re-triggering the same spike. A single serial execution has no concurrency to desynchronize — applying backoff-with-jitter here adds complexity without solving a problem that exists.</p>
+<p><strong>A dedicated queue or message broker</strong> (e.g., a job queue with rate-limited workers) is appropriate when multiple independent processes need to share one API's rate budget. For a single workflow run, it's substantial infrastructure for a problem two nodes already solve.</p>
+<p><strong>Adaptive pacing</strong>, where the wait time is read dynamically from the API's <code>Retry-After</code> or custom rate-limit headers rather than hardcoded, is a genuine improvement worth adopting once you're past the "stop the 429s" stage — it turns a guess into a measured value.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty item list:</strong> the loop body never executes; no batches, no waits, no calls. Should be a no-op, not an error.</li>
+<li><strong>Fewer items than one batch size:</strong> a single partial batch runs, no wait is needed afterward — handled by the <code>start + batch_size &lt; len(items)</code> check.</li>
+<li><strong>Every item in a batch fails:</strong> without <code>Retry On Fail</code> / <code>call_api_with_retry</code>, this would silently or loudly kill the run; with retries, each failing item gets bounded extra attempts before truly failing.</li>
+<li><strong>API returns a <code>Retry-After</code> value longer than your hardcoded wait:</strong> respect the header, not your constant — ignoring it just produces the same 429 again.</li>
+<li><strong>Rate limit changes over time</strong> (API tightens or loosens its ceiling): a static batch size and wait will eventually be wrong in one direction; this is a maintenance edge case, not a bug, but worth monitoring.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Forgetting the loop-back connection</strong> from <code>Wait</code> to <code>Split In Batches</code> — the workflow runs once, pauses once, then fires every remaining batch unthrottled.</li>
+<li><strong>Setting the retry delay to zero</strong> — the retry fires instantly into the same overloaded or glitching server and fails again for the same reason.</li>
+<li><strong>Reaching for exponential backoff with jitter</strong> on a single serial execution — unnecessary complexity for a problem that doesn't involve concurrent callers.</li>
+<li><strong>Testing only on a small sample</strong> (5–10 items) and assuming correctness — the rate ceiling is never crossed at that scale, so the bug is invisible until production volume.</li>
+<li><strong>Hardcoding a wait time and never revisiting it</strong> against the API's actual documented limit or <code>Retry-After</code> header — guessing instead of measuring.</li>
+<li><strong>Treating every failure as a rate-limit failure</strong> — a timeout in batch 30 can be a plain network blip, unrelated to pacing, and needs its own retry handling, not a bigger wait.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you design a system that calls a third-party API with a strict rate limit, from a single process?</li>
+<li>What's the difference between client-side throttling and server-side rate limiting, and why do you need to respect the server's limit even if your client is "fast enough"?</li>
+<li>When is exponential backoff with jitter the right tool, and when is it overkill?</li>
+<li>How would you make the wait time adaptive instead of a fixed constant?</li>
+<li>How do you distinguish a rate-limit failure from a transient network failure in your retry logic, and should they be retried the same way?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 1114 (Print in Order)</strong> — synchronizing execution order across concurrent units, conceptually related to pacing and sequencing.</li>
+<li><strong>LeetCode 1116 (Print Zero Even Odd)</strong> — another ordering/synchronization problem that builds intuition for controlled, turn-based execution, similar to batch-then-wait.</li>
+<li><strong>Designing a rate limiter (common system design question)</strong> — token bucket / leaky bucket algorithms are the "bigger" version of the same idea this workflow solves with two nodes.</li>
+<li><strong>Producer-consumer problems</strong> — relevant once you outgrow a single serial execution and need multiple workers sharing one rate budget.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<ul>
+<li>A 429 error means the server is defending a rate limit your client doesn't know about — the fix is to make the client respect it, not to retry harder.</li>
+<li>Batching plus a looped wait is enough to pace a single serial execution; you don't need a queue or broker for this shape of problem.</li>
+<li>The loop-back connection between <code>Wait</code> and <code>Split In Batches</code> is the entire mechanism — without it, you only throttle once.</li>
+<li>Exponential backoff with jitter solves a different problem (many concurrent clients), not this one.</li>
+<li><code>Retry On Fail</code> with a non-zero delay handles the <em>other</em> kind of failure — transient errors unrelated to rate limiting — that pacing alone won't fix.</li>
+<li>Match the complexity of your fix to the actual shape of the problem. That's the engineering judgment call, not the node count.</li>
+</ul>
+<h2>Watch the Video</h2>
+<p>This entire pattern is built live, batch by batch, with the 429 wall shown failing and then fixed in real time. Watch it here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This lesson is part of <strong>Fun with Learning Technology</strong>, a series that walks through practical automation, backend, and software engineering problems the way you'd actually encounter them at work — starting from a real failure, not a textbook definition, and building the fix piece by piece until it's production-solid.</p>
+<h2>Call To Action</h2>
+<p>If this saved you from debugging your own 429 wall at 2am, like the video on YouTube and subscribe — it's how the channel decides what to cover next. Subscribe to the Substack for the written breakdowns like this one, and drop a comment with the API or workflow you're currently fighting with; comments genuinely shape what gets built next. Share this with anyone on your team who's about to run their first big batch job.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Why does n8n hit a 429 wall on bulk API calls?</summary><p>It fires requests as fast as the loop allows, ignoring the API&#x27;s rate limit — no built-in pacing.</p></details><details class='card2'><summary>Which two built-in nodes fix API rate limiting?</summary><p>Split In Batches (chunk items) + Wait (pause between chunks) — batch size and delay match the API&#x27;s limit.</p></details><details class='card2'><summary>Split In Batches vs sending all items at once?</summary><p>Split In Batches loops a fixed-size subset through the workflow, resetting state each pass — avoids bursting past the limit.</p></details><details class='card2'><summary>Common bug: workflow still gets banned despite batching?</summary><p>No retry/backoff on individual failed requests — one bad item throws the whole batch instead of retrying with delay.</p></details><details class='card2'><summary>How to stop guessing the Wait duration?</summary><p>Read the API&#x27;s rate-limit headers (e.g. Retry-After) and set Wait dynamically instead of a hardcoded fixed delay.</p></details><details class='card2'><summary>Interview: how do Retry On Fail + Wait combine for resilience?</summary><p>Retry On Fail retries a single failed node with backoff; Wait throttles pace between batches — together they survive transient errors without bans.</p></details></div>
 <div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
 </div></body></html>
