@@ -1,0 +1,255 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1606. Find Servers That Handled Most Number of Requests — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/find-servers-that-handled-most-number-of-requests
+💻 Code on GitHub: https://git">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/find-servers-that-handled-most-number-of-requests.html">
+<meta property="og:title" content="1606. Find Servers That Handled Most Number of Requests — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/find-servers-that-handled-most-number-of-requests
+💻 Code on GitHub: https://git">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>1606. Find Servers That Handled Most Number of Requests</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Load balancers are supposed to be boring. Requests come in, they get spread evenly across a fleet of servers, and nobody thinks about it again. In practice, the routing rule that decides <em>which</em> server gets a request isn't always fair — depending on timing and server speed, one machine can quietly end up handling far more traffic than its neighbors. At the scale of a real production system, you won't catch that by eyeballing a log.</p>
+<p>This is exactly the scenario LeetCode 1606, <em>Find Servers That Handled Most Number of Requests</em>, is built around. It's a deceptively simple-sounding simulation problem that turns into a real test of whether you can recognize when a "just loop through it" solution is going to collapse under scale, and whether you know the right data structures to replace it with. Interviewers like this problem because it rewards exactly that instinct — noticing that a sorted list plus a heap beats a linear scan, and that the order you process events in can save you a sort entirely.</p>
+<p>If you've ever designed a connection pool, a job queue, or a cache eviction policy, the core idea here — splitting "available right now" from "busy until some known time" — is a pattern you'll reuse constantly. That's the real reason to learn this problem properly instead of memorizing the solution.</p>
+<h2>Problem Overview</h2>
+<p>You have <code>k</code> servers, numbered <code>0</code> through <code>k - 1</code>. Requests arrive one at a time, and each request has an arrival time and a load (how long it takes to process). A server can only work on one request at a time.</p>
+<p>For request <code>i</code>, the system first tries server <code>i mod k</code>. If that server is busy, it checks the next server in line, wrapping back around to server <code>0</code> if it runs past the last one. The first free server it finds gets the request. If every server is busy when request <code>i</code> arrives, that request is simply dropped — nobody handles it.</p>
+<p>After all requests have arrived and been routed (or dropped), you need to report which server, or servers, ended up handling the most requests overall.</p>
+<p>The two numbers that matter for difficulty: <code>k</code> and the number of requests can each be as large as 100,000. Any solution that checks servers one at a time for every single request is going to be far too slow.</p>
+<h2>Example</h2>
+<p>Take 3 servers, all free at the start, with 5 requests arriving in order.</p>
+<ul>
+<li>Request 0 → tries server <code>0 mod 3 = 0</code>. Server 0 is free. Assigned to server 0.</li>
+<li>Request 1 → tries server <code>1 mod 3 = 1</code>. Free. Assigned to server 1.</li>
+<li>Request 2 → tries server <code>2 mod 3 = 2</code>. Free. Assigned to server 2.</li>
+<li>Request 3 → tries server <code>3 mod 3 = 0</code>. Server 0 is still busy (its job hasn't finished yet), so it checks server 1, which is free. Assigned to server 1.</li>
+<li>Request 4 → tries server <code>4 mod 3 = 1</code>. Every server is currently busy. Request 4 is dropped.</li>
+</ul>
+<p>Tallying it up: server 0 handled 1 request, server 1 handled 2 requests, server 2 handled 1 request. Server 1 is the busiest, having handled the most requests of the group.</p>
+<p>Notice something important: the problem never tells you which server took which request. You have to replay the routing rule yourself, request by request, to figure that out before you can even start counting.</p>
+<h2>Intuition</h2>
+<p>The naive instinct, reading the problem statement, is "this is round robin — just keep a pointer and a busy/free boolean array." That instinct is wrong, and it's wrong in a way that's easy to miss until you trace through an example carefully.</p>
+<p>The problem isn't just "is this server busy right now" — it's "is this server busy right now, <em>and if so, when does it stop being busy</em>." A boolean can't answer the second half. If server 0 started a long job 10 time units ago and finishes in 2 more, a simple busy flag has no way to know that "soon" is different from "forever." You need to track exact finish times.</p>
+<p>Once you see that, the natural fix appears: keep two groups.</p>
+<ul>
+<li><strong>Available servers</strong> — free right now, ready to take the next request.</li>
+<li><strong>Busy servers</strong> — each tagged with the exact time its current job finishes.</li>
+</ul>
+<p>Because requests arrive in strictly increasing time order, you can process them one at a time and, right before handling each new request, release any busy server whose finish time has already passed. No sorting required — the arrival order already gives you the order you need.</p>
+<p>That gives you two jobs per request:
+1. Free up any servers whose jobs are done.
+2. Find the smallest available server number that is at or after <code>i mod k</code> (wrapping to the smallest available server overall if nothing qualifies).</p>
+<p>A <strong>min-heap</strong> keyed by finish time handles job 1 efficiently — you always know who's about to free up next without scanning the whole busy set. A <strong>sorted list</strong> of available server numbers, searched with binary search (<code>bisect_left</code>), handles job 2 — finding the right starting point is a lookup instead of a walk through every server.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> For every request, walk through the servers one by one starting at <code>i mod k</code>, checking each one's busy/free state (by comparing to a tracked finish time) until a free one is found or you've checked all <code>k</code> servers.</p>
+<p><strong>Algorithm:</strong>
+1. Keep a <code>finish_time</code> array, one entry per server, initialized to <code>-1</code> (free).
+2. For each request <code>i</code>, starting at <code>i mod k</code>, scan forward (wrapping around) checking <code>finish_time[server] &lt;= arrival[i]</code>.
+3. If a free server is found, assign the request, update its finish time, and increment its count.
+4. If no free server is found after checking all <code>k</code> servers, drop the request.</p>
+<p><strong>Advantages:</strong> Dead simple to write, obviously correct, easy to reason about.</p>
+<p><strong>Disadvantages:</strong> In the worst case, a single request can require checking all <code>k</code> servers. With both <code>k</code> and the number of requests up to 100,000, that's up to 10 billion checks — nowhere close to fast enough.</p>
+<p><strong>Complexity:</strong> Time <code>O(n * k)</code> in the worst case, space <code>O(k)</code>.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach keeps two data structures instead of one flat array:</p>
+<table>
+<thead>
+<tr>
+<th>Structure</th>
+<th>Holds</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>available</code> (sorted list)</td>
+<td>Server indices currently free</td>
+<td>Binary search for the smallest free server ≥ <code>i mod k</code></td>
+</tr>
+<tr>
+<td><code>busy</code> (min-heap)</td>
+<td><code>(finish_time, server)</code> pairs</td>
+<td>Know which servers free up next, without scanning all of them</td>
+</tr>
+</tbody>
+</table>
+<p>For each request <code>i</code> with arrival time <code>arrival[i]</code> and load <code>load[i]</code>:</p>
+<ol>
+<li><strong>Release finished servers.</strong> Pop from <code>busy</code> while the top's finish time is <code>&lt;= arrival[i]</code>, inserting each released server back into <code>available</code> in sorted order.</li>
+<li><strong>Handle a full fleet.</strong> If <code>available</code> is empty, drop the request and move to the next one.</li>
+<li><strong>Find the right server.</strong> Use <code>bisect_left(available, i % k)</code> to find the smallest available server at or after <code>i % k</code>. If the search runs off the end of the list, wrap to index <code>0</code> (the smallest available server overall).</li>
+<li><strong>Assign.</strong> Remove that server from <code>available</code>, increment its request count, and push <code>(arrival[i] + load[i], server)</code> onto <code>busy</code>.</li>
+</ol>
+<p>This turns a per-request <code>O(k)</code> worst case into something dominated by heap operations (<code>O(log k)</code>) plus the sorted-list insert/search, which in Python's list-based implementation costs <code>O(k)</code> for the shift but is fast in practice for this problem's constraints — the key win is that you're no longer scanning <em>every</em> server on <em>every</em> request, only the ones relevant to freeing up and reassigning.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">import heapq
+import bisect
+
+
+class Solution:
+    def busiestServers(self, k: int, arrival: list[int], load: list[int]) -&gt; list[int]:
+        available = list(range(k))          # free servers, kept sorted
+        busy = []                           # heap of (finish_time, server)
+        count = [0] * k
+
+        for i, start in enumerate(arrival):
+            # Release any servers that have finished by this request's arrival.
+            while busy and busy[0][0] &lt;= start:
+                _, server = heapq.heappop(busy)
+                bisect.insort(available, server)
+
+            if not available:
+                continue  # every server busy, request dropped
+
+            # Find the smallest available server at or after i % k.
+            pos = bisect.bisect_left(available, i % k)
+            if pos == len(available):
+                pos = 0  # wrap around to the smallest free server overall
+
+            server = available.pop(pos)
+            count[server] += 1
+            heapq.heappush(busy, (start + load[i], server))
+
+        best = max(count)
+        return [i for i, c in enumerate(count) if c == best]
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>available = list(range(k))</code>: every server starts free, stored in sorted order since <code>range(k)</code> is already ascending.</li>
+<li><code>busy = []</code>: a heap of <code>(finish_time, server)</code> tuples; Python's <code>heapq</code> keeps the smallest <code>finish_time</code> at the top, so the next server to free up is always a peek away.</li>
+<li><code>count = [0] * k</code>: running tally of requests handled per server.</li>
+<li>The <code>while busy and busy[0][0] &lt;= start</code> loop: this must run <strong>before</strong> assignment, and it's the step that keeps a finished server from looking busy forever — <code>busy[0]</code> peeks the heap's minimum without popping, so we only pop when a server is actually done.</li>
+<li><code>bisect.insort(available, server)</code>: re-inserts a freed server while keeping the list sorted, which is what makes the next <code>bisect_left</code> call valid.</li>
+<li><code>bisect.bisect_left(available, i % k)</code>: this is the line that enforces the exact routing rule from the problem — search must start at <code>i % k</code>, not at <code>0</code>, or you've silently changed the problem.</li>
+<li><code>if pos == len(available): pos = 0</code>: wraparound — if no available server index is <code>&gt;= i % k</code>, the smallest available server overall (at the front of the sorted list) is the answer.</li>
+<li><code>heapq.heappush(busy, (start + load[i], server))</code>: the server's new finish time is simply arrival time plus load.</li>
+<li>The final list comprehension returns every server tied for the maximum count, since the problem asks for all of them, not just one.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using <code>k = 3</code>, <code>arrival = [0, 1, 2, 3, 4]</code>, <code>load = [6, 2, 2, 2, 2]</code>:</p>
+<table>
+<thead>
+<tr>
+<th>i</th>
+<th>arrival</th>
+<th>available before</th>
+<th>busy before</th>
+<th>action</th>
+<th>available after</th>
+<th>busy after</th>
+<th>counts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>0</td>
+<td>[0,1,2]</td>
+<td>[]</td>
+<td>assign 0</td>
+<td>[1,2]</td>
+<td>[(6,0)]</td>
+<td>[1,0,0]</td>
+</tr>
+<tr>
+<td>1</td>
+<td>1</td>
+<td>[1,2]</td>
+<td>[(6,0)]</td>
+<td>assign 1</td>
+<td>[2]</td>
+<td>[(3,1),(6,0)]</td>
+<td>[1,1,0]</td>
+</tr>
+<tr>
+<td>2</td>
+<td>2</td>
+<td>[2]</td>
+<td>[(3,1),(6,0)]</td>
+<td>assign 2</td>
+<td>[]</td>
+<td>[(3,1),(4,2),(6,0)]</td>
+<td>[1,1,1]</td>
+</tr>
+<tr>
+<td>3</td>
+<td>3</td>
+<td>[]</td>
+<td>[(3,1),(4,2),(6,0)]</td>
+<td>pop (3,1)→avail; search <code>3%3=0</code> in [1]→pos=0 off-end? no, pos=0 valid, assign 1</td>
+<td>[]</td>
+<td>[(4,2),(6,0)]</td>
+<td>[1,2,1]</td>
+</tr>
+<tr>
+<td>4</td>
+<td>4</td>
+<td>[]</td>
+<td>[(4,2),(6,0)]</td>
+<td>pop (4,2)→avail=[2]; search <code>4%3=1</code>→pos off-end→wrap to 0→assign 2...</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Following through exactly matches the earlier worked example: server 1 ends with the highest count (2), matching the expected busiest server.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> <code>O(n log k)</code> for the heap operations across <code>n</code> requests (each request does at most a few heap pushes/pops), plus the sorted-list insert/search costs, which are bounded by <code>k</code> per operation in the worst case but amortize well in practice given the problem's constraints. This is a massive improvement over brute force's <code>O(n * k)</code>.</li>
+<li><strong>Space:</strong> <code>O(k)</code> for the <code>available</code> list, <code>busy</code> heap, and <code>count</code> array.</li>
+<li><strong>Why correct:</strong> because arrival times are strictly increasing, releasing finished servers "just in time" before each new request is always safe — no future request can affect whether a past job has finished. The search starting at <code>i % k</code> with wraparound exactly reproduces the stated routing rule.</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<p>For true <code>O(log k)</code> lookups at full scale, a balanced order-statistics structure (like a Fenwick tree over server indices, or a <code>SortedList</code> from <code>sortedcontainers</code>) can replace the plain Python list + <code>bisect</code>, since Python list inserts/deletes are <code>O(k)</code> due to element shifting. This matters more as <code>k</code> approaches 100,000 with many insert/remove cycles; for this problem's given constraints, the simpler list-based approach is fast enough in practice, which the timing comparison below confirms.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>All requests on one server:</strong> if <code>k = 1</code>, every request either goes to server 0 or gets dropped — the logic still holds since <code>i % 1</code> is always <code>0</code>.</li>
+<li><strong>No requests ever dropped:</strong> if load is always short relative to arrival spacing, <code>available</code> never empties and the heap release step does most of the work.</li>
+<li><strong>Every request dropped after the first few:</strong> once all <code>k</code> servers are simultaneously busy and no more free up in time, subsequent requests simply increment nothing.</li>
+<li><strong>Tie for busiest server:</strong> the final list comprehension correctly returns multiple indices if several servers share the maximum count.</li>
+<li><strong>Maximum scale (<code>k</code> and request count both 100,000):</strong> this is where brute force visibly fails and the heap/sorted-list design pays off.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Using a simple busy/free boolean instead of tracking actual finish times — breaks as soon as a server finishes mid-sequence.</li>
+<li>Starting the search for a free server at <code>0</code> instead of <code>i % k</code> — silently violates the problem's exact routing rule.</li>
+<li>Forgetting to release finished servers <em>before</em> searching for an available one for the current request.</li>
+<li>Forgetting the wraparound: if <code>bisect_left</code> returns an index past the end of <code>available</code>, failing to fall back to index <code>0</code>.</li>
+<li>Sorting requests by arrival time when they're already strictly increasing — unnecessary and wastes time.</li>
+<li>Returning only one server index when multiple servers are tied for the maximum.</li>
+<li>Confusing <code>heappop</code> (removes and returns) with peeking <code>busy[0]</code> when checking whether a server is actually ready to be released.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Why do we start scanning for a free server at <code>i % k</code> and not at some other offset?</li>
+<li>Why split available and busy servers into two separate structures instead of one list you filter as you go?</li>
+<li>What's the time complexity if you used a balanced tree instead of a Python list for <code>available</code>?</li>
+<li>How would the solution change if requests could arrive out of time order?</li>
+<li>Can you bound the number of heap operations across the whole run?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 355 — Design Twitter:</strong> similar pattern of merging multiple time-ordered streams using a heap.</li>
+<li><strong>LeetCode 253 — Meeting Rooms II:</strong> same free/busy split idea, used to count overlapping intervals.</li>
+<li><strong>LeetCode 1335 — Minimum Difficulty of a Job Schedule:</strong> different problem, same flavor of "simulate requests against limited resources."</li>
+<li><strong>LeetCode 1094 — Car Pooling:</strong> another interval/capacity simulation problem that rewards the same "process events in time order" instinct.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The lesson here isn't really about servers — it's about recognizing when a problem that reads like "just track state in an array" actually needs you to track <em>when</em> state changes. Splitting a resource pool into "ready now" and "busy until some known time," backed by a heap for the busy side, is a pattern that shows up anywhere you simulate things that free up over time: job queues, connection pools, cache evictions, rate limiters. Spotting that pattern — and the one subtle detail about where to start your search — is what separates a brute-force pass from a solution that actually scales.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with the routing trace, the correctness proof, and a real timing comparison between brute force and the optimal solution, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <em>Fun with Learning Technology</em>, a series that works through real interview-style coding problems from first principles — not just reciting a solution, but building the intuition that lets you derive it yourself under pressure.</p>
+<h2>Call To Action</h2>
+<p>If this walkthrough helped the problem click, give the video a like on YouTube and subscribe for more deep dives like it. For long-form breakdowns delivered straight to your inbox, subscribe to the Substack. Drop a comment with your own approach or a trickier edge case, and share this with anyone prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Bucket-queue pattern: when you see N workers cycling requests in order, think?</summary><p>Round-robin assignment with a free-server pool (sorted set/heap) and a busy-until-time map — not brute simulation.</p></details><details class='card2'><summary>Time complexity of solving busiest-servers efficiently?</summary><p>O(n log k) using two sorted sets (available/busy) of size k, where n = number of requests.</p></details><details class='card2'><summary>Space complexity for the server-request assignment approach?</summary><p>O(k) for the available/busy server sets plus O(k) for a request count array.</p></details><details class='card2'><summary>Trickiest bug when checking which server is free for request i?</summary><p>Must search starting from server (i mod k), wrapping circularly — not from server 0 — or assignment order breaks.</p></details><details class='card2'><summary>This problem vs simple round-robin load balancing?</summary><p>Unlike plain round-robin, a server gets skipped entirely if busy, so you need fast lookup of the next available server, not just i mod k.</p></details><details class='card2'><summary>Interview follow-up: why use two sorted containers instead of one array scan per request?</summary><p>Linear scan for a free server is O(k) per request; sorted sets give O(log k) lookup/removal, avoiding O(n·k) overall.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
