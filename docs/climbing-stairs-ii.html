@@ -1,0 +1,179 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3693. Climbing Stairs II | LeetCode Daily Python Solution (why the biggest jump can cost you more) — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/climbing-stairs-ii
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/lee">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/climbing-stairs-ii.html">
+<meta property="og:title" content="3693. Climbing Stairs II | LeetCode Daily Python Solution (why the biggest jump can cost you more) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/climbing-stairs-ii
+💻 Code on GitHub: https://github.com/timepasshub2539-hue/lee">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>3693. Climbing Stairs II | LeetCode Daily Python Solution (why the biggest jump can cost you more)</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Every so often a LeetCode problem looks like one you've already solved, and that's exactly where it gets you. Climbing Stairs II (LeetCode 3693) borrows its skeleton from the classic "count the ways to climb stairs" question, but swaps counting for cost. Suddenly the instinct that worked before — take the biggest jump, cover more ground, finish faster — actively works against you.</p>
+<p>Interviewers like this family of problems because it tests something more specific than "do you know dynamic programming." It tests whether you notice when a greedy shortcut <em>looks</em> correct but silently breaks under a cost function. That's a skill you use constantly in real engineering: caching strategies, routing decisions, resource allocation — anywhere "fewer steps" gets confused with "cheaper."</p>
+<p>Learning this problem properly gives you two things: a reusable DP pattern (answer at step <code>j</code> depends only on a fixed, small window of previous steps), and a sharper intuition for when greedy reasoning quietly fails.</p>
+<h2>Problem Overview</h2>
+<p>Picture a staircase with steps numbered <code>0</code> through <code>n</code>. You start standing on step <code>0</code>, having spent nothing. From any step <code>i</code>, you're allowed to jump forward to <code>i + 1</code>, <code>i + 2</code>, or <code>i + 3</code> — but never further, and never past step <code>n</code>.</p>
+<p>Every step <code>j</code> (except step <code>0</code>) has its own fixed cost, given in an array <code>cost</code>. When you jump and land on step <code>j</code>, you pay <code>cost[j]</code> plus the <strong>square</strong> of the distance you just jumped. So a 1-step jump adds <code>1</code>, a 2-step jump adds <code>4</code>, and a 3-step jump adds <code>9</code> — on top of whatever that landing step already costs.</p>
+<p>Your job: find the minimum total cost to go from step <code>0</code> to step <code>n</code>.</p>
+<p>The squared penalty is the whole story here. It means the "fastest" route (fewest jumps, biggest strides) isn't automatically the cheapest one — a cluster of small, careful jumps can easily beat one dramatic leap.</p>
+<h2>Example</h2>
+<p>Let's use <code>n = 4</code> with <code>cost = [_, 1, 2, 3, 4]</code> (step <code>0</code> has no cost since you start there for free).</p>
+<p>One possible path: <code>0 → 1 → 2 → 4</code></p>
+<ul>
+<li>Step <code>0 → 1</code>: jump distance 1, so cost = <code>cost[1] + 1² = 1 + 1 = 2</code>. Running total: <strong>2</strong></li>
+<li>Step <code>1 → 2</code>: jump distance 1, cost = <code>cost[2] + 1² = 2 + 1 = 3</code>. Running total: <strong>5</strong></li>
+<li>Step <code>2 → 4</code>: jump distance 2, cost = <code>cost[4] + 2² = 4 + 4 = 8</code>. Running total: <strong>13</strong></li>
+</ul>
+<p>Final answer: <strong>13</strong>.</p>
+<p>Why does this beat the "obviously faster" plan of always jumping 3 steps? Because on this staircase, a single 3-step jump from <code>0</code> to <code>3</code> costs <code>cost[3] + 9 = 12</code>, and you still need another jump from there to finish — the squared penalty eats the time you saved. We'll quantify this properly in the Intuition section.</p>
+<h2>Intuition</h2>
+<p>The first temptation, for almost everyone, is to grab the farthest jump available every time. Fewer jumps feels like it should mean less total cost, since you're adding fewer <code>cost[j]</code> terms into the sum.</p>
+<p>But look at what a 3-step jump actually costs <em>before</em> the landing step's own price even counts: <code>3² = 9</code>. Compare that to two separate 1-step jumps, which only cost <code>1² + 1² = 2</code> combined in penalties. The squared term grows much faster than the linear savings from skipping steps.</p>
+<p>Concretely, on our example staircase, always jumping as far as possible (<code>0 → 3 → 4</code>) costs <code>(cost[3] + 9) + (cost[4] + 1) = 12 + 5 = 17</code>. Two balanced 2-step jumps (<code>0 → 2 → 4</code>) cost <code>(cost[2] + 4) + (cost[4] + 4) = 6 + 8 = 14</code>. And the mixed path we walked through above still wins at <code>13</code>. Greedy loses on every count.</p>
+<p>Once you accept that greedy is out, the next observation unlocks the whole problem: whatever the cheapest cost to reach step <code>j</code> is, it can only have arrived via a jump from <code>j-1</code>, <code>j-2</code>, or <code>j-3</code> — there's no other way to land on <code>j</code>. That means the cheapest cost to reach <code>j</code> is simply:</p>
+<pre><code>best(j) = min(
+    best(j-1) + cost[j] + 1²,   # jumped 1 step
+    best(j-2) + cost[j] + 2²,   # jumped 2 steps
+    best(j-3) + cost[j] + 3²,   # jumped 3 steps
+)
+</code></pre>
+<p>restricted to whichever of those previous steps actually exist. This is the same recurrence shape as the unweighted "tribonacci" stair-counting problem — just with a price tag bolted onto every hop.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Recursively try every legal jump from every reachable step, and take the minimum total cost across all complete paths to <code>n</code>.</p>
+<p><strong>Algorithm:</strong>
+1. Define <code>solve(j)</code> = cheapest cost to reach step <code>j</code> from step <code>0</code>.
+2. Base case: <code>solve(0) = 0</code>.
+3. Recursive case: <code>solve(j) = min(solve(j-k) + cost[j] + k²)</code> for each valid <code>k</code> in <code>{1, 2, 3}</code> where <code>j-k &gt;= 0</code>.
+4. Return <code>solve(n)</code>.</p>
+<p><strong>Advantages:</strong> Trivial to reason about correctness; directly mirrors the problem statement.</p>
+<p><strong>Disadvantages:</strong> Without memoization, the same step gets recomputed from scratch along many overlapping paths, causing exponential blowup.</p>
+<p><strong>Complexity:</strong> Time is roughly <code>O(3^n)</code> in the naive recursive form (each call branches into up to 3 more). Space is <code>O(n)</code> for the recursion stack.</p>
+<h2>Optimal Solution</h2>
+<p>The recurrence above only ever looks at three neighbors behind the current step, and those sub-answers never change once computed. That's the textbook signal for bottom-up dynamic programming: build a table of size <code>n + 1</code>, fill it left to right, and never recompute anything.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Looks back to</th>
+<th>Formula</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>— (base case)</td>
+<td><code>dp[0] = 0</code></td>
+</tr>
+<tr>
+<td>1</td>
+<td>0</td>
+<td><code>dp[1] = dp[0] + cost[1] + 1</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>0, 1</td>
+<td><code>dp[2] = min(dp[1] + cost[2] + 1, dp[0] + cost[2] + 4)</code></td>
+</tr>
+<tr>
+<td>j ≥ 3</td>
+<td>j-1, j-2, j-3</td>
+<td><code>dp[j] = min(dp[j-1]+cost[j]+1, dp[j-2]+cost[j]+4, dp[j-3]+cost[j]+9)</code></td>
+</tr>
+</tbody>
+</table>
+<p>Initialize <code>dp[0] = 0</code> and every other slot to infinity. Walking forward, for each step <code>j</code>, check the three possible launch points behind it, and only consider ones that actually exist (<code>j - k &gt;= 0</code>). This naturally handles tiny staircases: when <code>n = 1</code>, a 2-step or 3-step jump would require a negative step index, so the existence check silently skips those options — no special-casing needed.</p>
+<p>By the time the loop reaches <code>dp[n]</code>, that slot holds the answer.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from typing import List
+
+
+def min_cost_climbing_stairs(n: int, cost: List[int]) -&gt; int:
+    &quot;&quot;&quot;Cheapest cost to climb from step 0 to step n, cost[0] unused.&quot;&quot;&quot;
+    dp = [float(&quot;inf&quot;)] * (n + 1)
+    dp[0] = 0
+
+    for j in range(1, n + 1):
+        for k in (1, 2, 3):
+            prev = j - k
+            if prev &gt;= 0:
+                dp[j] = min(dp[j], dp[prev] + cost[j] + k * k)
+
+    return dp[n]
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>dp = [float("inf")] * (n + 1)</code> — one slot per step, all starting "unreachable" except the step we already know.</li>
+<li><code>dp[0] = 0</code> — the starting step costs nothing because we begin there.</li>
+<li><code>for j in range(1, n + 1)</code> — fill the table left to right; every step only needs steps already computed before it.</li>
+<li><code>for k in (1, 2, 3)</code> — the only three jump lengths allowed by the problem.</li>
+<li><code>if prev &gt;= 0</code> — guards against jumping in from before step <code>0</code>; this is what makes tiny staircases (<code>n = 1</code> or <code>n = 2</code>) work without extra branches.</li>
+<li><code>dp[j] = min(dp[j], dp[prev] + cost[j] + k * k)</code> — compare the current best for <code>j</code> against arriving via this particular jump, keep the cheaper one.</li>
+<li><code>return dp[n]</code> — after the loop, the last slot holds the minimum cost for the whole staircase.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using <code>n = 4</code>, <code>cost = [0, 1, 2, 3, 4]</code>:</p>
+<ul>
+<li><code>dp = [0, inf, inf, inf, inf]</code></li>
+<li><code>j = 1</code>: only <code>k=1</code> valid (<code>prev = 0</code>). <code>dp[1] = dp[0] + cost[1] + 1 = 0 + 1 + 1 = 2</code></li>
+<li><code>j = 2</code>: <code>k=1</code> (<code>prev=1</code>): <code>dp[1] + cost[2] + 1 = 2 + 2 + 1 = 5</code>. <code>k=2</code> (<code>prev=0</code>): <code>dp[0] + cost[2] + 4 = 0 + 2 + 4 = 6</code>. Minimum is <code>5</code>. <code>dp[2] = 5</code></li>
+<li><code>j = 3</code>: <code>k=1</code> (<code>prev=2</code>): <code>5 + 3 + 1 = 9</code>. <code>k=2</code> (<code>prev=1</code>): <code>2 + 3 + 4 = 9</code>. <code>k=3</code> (<code>prev=0</code>): <code>0 + 3 + 9 = 12</code>. Minimum is <code>9</code>. <code>dp[3] = 9</code></li>
+<li><code>j = 4</code>: <code>k=1</code> (<code>prev=3</code>): <code>9 + 4 + 1 = 14</code>. <code>k=2</code> (<code>prev=2</code>): <code>5 + 4 + 4 = 13</code>. <code>k=3</code> (<code>prev=1</code>): <code>2 + 4 + 9 = 15</code>. Minimum is <code>13</code>. <code>dp[4] = 13</code></li>
+</ul>
+<p>Final answer: <code>dp[4] = 13</code>, matching the path <code>0 → 1 → 2 → 4</code> worked out earlier.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> <code>O(n)</code>. Each of the <code>n</code> steps checks exactly 3 fixed neighbors, so total work scales linearly with the staircase length — no step is ever revisited.</p>
+<p><strong>Space:</strong> <code>O(n)</code> for the <code>dp</code> array. This can be trimmed to <code>O(1)</code> by keeping only the last three computed values instead of the full table, since nothing further back is ever needed.</p>
+<p>Both bounds are tight: you must touch every step at least once to know its cost, and (in the array version) you need to retain enough history to look back three steps.</p>
+<h2>Alternative Solutions</h2>
+<p>A rolling-window variant keeps just three variables (<code>a</code>, <code>b</code>, <code>c</code> representing <code>dp[j-1]</code>, <code>dp[j-2]</code>, <code>dp[j-3]</code>) instead of a full array, dropping space to <code>O(1)</code> while keeping the same <code>O(n)</code> time. It's a worthwhile follow-up once the array version is solid, since interviewers often ask for the space optimization as a second pass.</p>
+<p>A top-down memoized recursion (same recurrence, cached with a dictionary or <code>functools.lru_cache</code>) is equivalent in complexity to the bottom-up table and can feel more natural to write first, but it adds recursion-depth risk for large <code>n</code> (up to 100,000 per the constraints) unless you raise Python's recursion limit — the iterative version avoids that risk entirely.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong><code>n = 1</code>:</strong> Only a 1-step jump is possible; 2- and 3-step jumps would require a negative index and get filtered out automatically by the <code>prev &gt;= 0</code> check.</li>
+<li><strong><code>n = 2</code>:</strong> Both 1-step and 2-step paths are valid; the DP correctly compares <code>dp[1] + cost[2] + 1</code> against <code>dp[0] + cost[2] + 4</code>.</li>
+<li><strong>All costs equal:</strong> Still worth testing — it isolates whether the jump-distance penalty alone (not varying step costs) drives the chosen path.</li>
+<li><strong>Strictly increasing or decreasing costs:</strong> Checks that the algorithm doesn't assume any particular cost pattern.</li>
+<li><strong>Large <code>n</code> (close to 100,000):</strong> Validates the <code>O(n)</code> solution actually runs fast; this is where the brute-force recursive version would time out.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Always jumping the maximum distance</strong>, assuming fewer jumps means lower cost — the squared penalty breaks that assumption.</li>
+<li><strong>Forgetting the bounds check</strong> on <code>j - k &gt;= 0</code>, causing an <code>IndexError</code> or incorrectly reading <code>cost[-1]</code> for small <code>n</code>.</li>
+<li><strong>Initializing <code>dp[0]</code> to something other than <code>0</code></strong>, which skews every downstream calculation.</li>
+<li><strong>Confusing this problem with the unweighted "count the ways" variant</strong> and summing counts instead of minimizing costs.</li>
+<li><strong>Recomputing <code>k * k</code> incorrectly as <code>k * 2</code></strong> instead of squaring, silently producing wrong answers that are hard to spot by eye.</li>
+<li><strong>Not initializing unreached slots to infinity</strong>, which can make <code>min()</code> pick a stale default value like <code>0</code> instead of a genuinely unreachable state.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>How would you reduce the space complexity from <code>O(n)</code> to <code>O(1)</code>?</li>
+<li>What changes if jumps of 4 or more steps were allowed?</li>
+<li>Can you prove, rather than just demonstrate with an example, that greedy fails here?</li>
+<li>How would you modify the solution to also return the actual sequence of jumps, not just the minimum cost?</li>
+<li>What if some steps had negative cost — does the same DP still work?</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 70, Climbing Stairs</strong> — the unweighted ancestor of this problem; same recurrence shape without the cost function.</li>
+<li><strong>LeetCode 746, Min Cost Climbing Stairs</strong> — nearly identical idea with only 1- and 2-step jumps, a good warm-up before this one.</li>
+<li><strong>LeetCode 1137, N-th Tribonacci Number</strong> — the pure numeric recurrence this problem's cost-free skeleton reduces to.</li>
+<li><strong>LeetCode 64, Minimum Path Sum</strong> — different shape (grid instead of a line), but the same "cheapest cost depends only on nearby predecessors" DP principle.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>Dynamic programming earns its keep exactly when a step's best answer depends only on a small, fixed set of earlier answers — build that answer forward once, instead of replaying every path from scratch. And greedy reasoning needs to be checked against the actual cost function, not just the apparent goal: fewer jumps is not the same thing as lower cost once a squared penalty enters the picture.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough — including a timed brute-force-versus-optimal run and two quiz rounds to lock in the intuition — watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series that works through LeetCode's daily challenge and core interview topics with a focus on building real intuition before ever touching code — because the fastest way to remember a solution is to understand why it has to be that way.</p>
+<h2>Call To Action</h2>
+<p>If this breakdown helped the cost table click, leave a like on the video and subscribe for daily LeetCode walkthroughs. For the deeper written version of each problem, subscribe to the Substack newsletter. Drop a comment with your own approach or a problem you'd like covered next, and share this with anyone prepping for coding interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>What pattern signals a problem like Climbing Stairs II with variable jump sizes?</summary><p>Linear DP / bottom-up tabulation — when each state depends on a small fixed set of prior states (prior steps), build answer from the base up.</p></details><details class='card2'><summary>Time complexity of the climbing-stairs-with-jump-costs DP?</summary><p>O(n*k) where n is steps and k is max jump size, since each cell checks up to k prior entries.</p></details><details class='card2'><summary>Space complexity of the costs table approach?</summary><p>O(n) — one array holding the best cost to reach each step; can often shrink to O(k) with a sliding window.</p></details><details class='card2'><summary>What&#x27;s the trickiest bug when filling in the costs table?</summary><p>Off-by-one on step 0 vs step 1 indexing, or forgetting that jumping far isn&#x27;t always cheaper — must check all valid jump sizes, not just the max.</p></details><details class='card2'><summary>Why can jumping farther backfire in this problem?</summary><p>A bigger jump may skip over a step with a much cheaper cumulative cost, so greedy max-jump isn&#x27;t optimal — full DP comparison is required.</p></details><details class='card2'><summary>Interview follow-up: how would you reconstruct the actual path taken?</summary><p>Store a parent/choice array alongside costs, then backtrack from the final step to step 0 following recorded choices.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
