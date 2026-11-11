@@ -1,0 +1,182 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3789. Minimum Cost to Acquire Required Items — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/minimum-cost-to-acquire-required-items
+💻 Code on GitHub: https://github.com/tim">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/minimum-cost-to-acquire-required-items.html">
+<meta property="og:title" content="3789. Minimum Cost to Acquire Required Items — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/minimum-cost-to-acquire-required-items
+💻 Code on GitHub: https://github.com/tim">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>3789. Minimum Cost to Acquire Required Items</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>8. Introduction</h2>
+<p>Most people meet this kind of problem at the grocery store before they ever meet it in an interview. You need a few things from two different aisles, and the store is running a combo deal that covers one item from each aisle at a lower combined price. Do you take the deal, and if so, how much of it?</p>
+<p>LeetCode 3789, <em>Minimum Cost to Acquire Required Items</em>, turns that everyday question into a clean algorithmic puzzle. On the surface it looks like a simple cost-comparison problem — buy the cheap thing, skip the expensive thing. But the moment you try to write the "obvious" greedy rule, it quietly produces the wrong answer on the problem's own sample input. That gap between what feels right and what's actually correct is exactly what interviewers are probing for.</p>
+<p>This problem is worth learning for three reasons. First, it's a great lesson in why "greedy that sounds right" is not the same as "greedy that is right" — you have to prove the greedy rule, not just trust your gut. Second, it's a strong example of a recurring technique: when a search space is too large to brute-force, look for a small, provably sufficient set of candidate answers instead of scanning everything. Third, the exact same shape — single-purpose prices plus a combined discount — shows up constantly in real systems: checkout bundle deals, cloud pricing tiers, coupon stacking, bulk discounts. Once you've internalized this pattern, you'll start recognizing it everywhere.</p>
+<h2>9. Problem Overview</h2>
+<p>Here's the problem in plain terms, no transcript copy-paste.</p>
+<p>You have two separate requirements — call them <strong>requirement 1</strong> and <strong>requirement 2</strong> — and you need to acquire at least <code>need1</code> units toward the first and at least <code>need2</code> units toward the second.</p>
+<p>There are three ways to acquire units:</p>
+<ul>
+<li><strong>Type 1 item</strong>: costs <code>cost1</code> each, counts only toward requirement 1.</li>
+<li><strong>Type 2 item</strong>: costs <code>cost2</code> each, counts only toward requirement 2.</li>
+<li><strong>Combined item</strong>: costs <code>costBoth</code> each, counts toward <em>both</em> requirements simultaneously — one combined item reduces what's still owed on requirement 1 by one, and what's still owed on requirement 2 by one, at the same time.</li>
+</ul>
+<p>You want the cheapest total spend that satisfies both requirements. You can buy any non-negative integer quantity of each type, and you're allowed to overbuy — buying more combined items than you strictly need for one requirement is fine if it's still cheaper overall.</p>
+<p>Constraints keep the individual prices small (up to 1,000,000) but let the requirements themselves run enormous — up to 1,000,000,000. That last detail is the whole game: you cannot loop over "how many combined items should I buy" one at a time, because that loop alone could run a billion iterations. Whatever algorithm you use has to be independent of how large <code>need1</code> and <code>need2</code> are — effectively constant time.</p>
+<h2>10. Example</h2>
+<p>Let's use the problem's own numbers:</p>
+<ul>
+<li><code>cost1 = 3</code>, <code>cost2 = 2</code>, <code>costBoth = 1</code></li>
+<li><code>need1 = 3</code>, <code>need2 = 2</code></li>
+</ul>
+<p><strong>Option A — buy only single-type items.</strong>
+3 type-1 items (3 × 3 = 9) + 2 type-2 items (2 × 2 = 4) = <strong>13</strong>. Expensive, ignores the discount entirely.</p>
+<p><strong>Option B — buy combined items only up to the smaller requirement, then top up.</strong>
+<code>need2 = 2</code> is smaller, so buy 2 combined items (2 × 1 = 2), covering requirement 2 fully and knocking requirement 1 down to 1 remaining. Top up with 1 type-1 item (1 × 3 = 3).
+Total: 2 + 3 = <strong>5</strong>.</p>
+<p><strong>Option C — buy combined items all the way up to the larger requirement.</strong>
+<code>need1 = 3</code> is larger, so buy 3 combined items (3 × 1 = 3). Requirement 1 is fully covered (3 of 3). Requirement 2 needed only 2, but you've bought 3 — that's one "wasted" combined unit, except it isn't wasted, because you never paid for a type-2 item at all.
+Total: 3 × 1 = <strong>3</strong>.</p>
+<p>Option C wins. Every unit of the overbuy (3 → 2) still beat paying <code>cost2</code> for a type-2 item, because <code>costBoth (1) &lt; cost2 (2)</code>. That's the whole trap in one example: stopping at the smaller requirement looks like "efficient use of the discount," but it's actually leaving cheaper combined units on the table.</p>
+<h2>11. Intuition</h2>
+<p>Start from the instinct almost everyone reaches for first: buy combined items only for the <em>overlap</em> between the two requirements — that is, <code>min(need1, need2)</code> — then fill in whatever's left of the larger requirement with single-type purchases. It feels tidy: you're using the combo deal exactly as far as it applies to both sides, and nothing more.</p>
+<p>The example above shows this instinct is wrong, and it's wrong for a specific, generalizable reason: a combined item's value doesn't vanish the moment one requirement is satisfied. It only stops being useful when its price is no longer competitive with buying the remaining need the "normal" way. You keep buying combined items past the smaller requirement precisely when <code>costBoth</code> is still cheaper than <code>cost1</code> (or <code>cost2</code>) per unit — you're just not "using" the half of that unit that goes toward an already-satisfied requirement. You're not paying extra for it; you're simply not benefiting from it on that side, which is fine, because you weren't going to pay for a separate item on that side anyway.</p>
+<p>So the real question isn't "how much overlap is there" — it's "at what point does buying one more combined item stop being a good trade against the alternative?" There are exactly two points where this trade-off could flip: the moment you've covered <code>need2</code> (the smaller requirement, where you'd otherwise switch to type-1 purchases) and the moment you've covered <code>need1</code> (the larger requirement, where you'd otherwise switch to type-2 purchases, or where buying combined items simply stops making sense because both requirements are already met).</p>
+<p>That gives you three meaningful quantities of combined items to ever try buying: <strong>zero</strong> (don't use the deal at all), <strong>the smaller requirement</strong>, and <strong>the larger requirement</strong>. Nothing between these points can be better than the best of its neighbors, because the cost function is piecewise linear and only changes slope at these breakpoints — a fact we'll lean on rather than prove formally here, but it's the same idea behind why you only check the corners of a feasible region in linear optimization.</p>
+<h2>12. Brute Force Solution</h2>
+<p><strong>Idea:</strong> Try every possible quantity of combined items from <code>0</code> up to <code>max(need1, need2)</code>, price each one out, and keep the cheapest.</p>
+<p><strong>Algorithm:</strong>
+1. For <code>x</code> from <code>0</code> to <code>max(need1, need2)</code>:
+   - Remaining type-1 units needed: <code>max(0, need1 - x)</code>
+   - Remaining type-2 units needed: <code>max(0, need2 - x)</code>
+   - Total cost: <code>x * costBoth + remaining1 * cost1 + remaining2 * cost2</code>
+2. Return the minimum total cost found.</p>
+<p><strong>Advantages:</strong> Trivially correct — it checks literally every option, so there's no risk of missing the optimum. Easy to reason about and easy to verify against.</p>
+<p><strong>Disadvantages:</strong> <code>need1</code> and <code>need2</code> can be up to 1,000,000,000. A loop of a billion iterations will not finish in any reasonable time limit. This approach is correct but unusable at the given constraints — it exists only as a mental baseline and a correctness oracle for testing the fast solution on small inputs.</p>
+<p><strong>Complexity:</strong> Time <code>O(max(need1, need2))</code>, space <code>O(1)</code>. The time bound is the disqualifying factor.</p>
+<h2>13. Optimal Solution</h2>
+<p>The key realization from the intuition section is that the cost function, as a function of <code>x</code> (how many combined items you buy), is <strong>piecewise linear</strong> with at most two breakpoints. Here's why.</p>
+<p>Define <code>cost(x) = x * costBoth + max(0, need1 - x) * cost1 + max(0, need2 - x) * cost2</code>.</p>
+<p>As <code>x</code> increases from 0:
+- While <code>x &lt; min(need1, need2)</code>, every extra combined item removes one unit of <em>both</em> remaining requirements. The slope of <code>cost(x)</code> here is <code>costBoth - cost1 - cost2</code>.
+- Once <code>x</code> passes the smaller requirement (say <code>need2</code>), that side is saturated — extra combined items no longer reduce <code>max(0, need2 - x)</code> below zero. Now only the larger requirement's remaining amount shrinks. The slope changes to <code>costBoth - cost1</code> (if <code>need1</code> is larger) or <code>costBoth - cost2</code> (if <code>need2</code> is larger).
+- Once <code>x</code> passes the larger requirement too, both remaining terms are pinned at zero, and every extra combined item is pure waste. The slope becomes <code>costBoth</code>, which is always positive — so buying beyond the larger requirement is never worth it.</p>
+<table>
+<thead>
+<tr>
+<th>Region</th>
+<th>Which requirements still "active"</th>
+<th>Slope of cost(x)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0 ≤ x ≤ min(need1, need2)</code></td>
+<td>both</td>
+<td><code>costBoth - cost1 - cost2</code></td>
+</tr>
+<tr>
+<td><code>min(need1,need2) &lt; x ≤ max(need1,need2)</code></td>
+<td>larger only</td>
+<td><code>costBoth - cost1</code> or <code>costBoth - cost2</code></td>
+</tr>
+<tr>
+<td><code>x &gt; max(need1, need2)</code></td>
+<td>none</td>
+<td><code>costBoth</code> (always rising)</td>
+</tr>
+</tbody>
+</table>
+<p>A piecewise-linear function's minimum over an interval always occurs either at the interval's boundary, or at one of the points where the slope changes. That's exactly <code>x = 0</code>, <code>x = min(need1, need2)</code>, and <code>x = max(need1, need2)</code>. Nothing past the larger requirement can help, since the slope there is strictly positive. So we only ever need to evaluate <code>cost(x)</code> at three values of <code>x</code>: <code>0</code>, <code>min(need1, need2)</code>, and <code>max(need1, need2)</code>.</p>
+<p>That's the entire trick: three candidates, one shared pricing formula, no dependence on how large the requirements get.</p>
+<h2>14. Python Code</h2>
+<pre><code class="language-python">def min_cost_to_acquire(cost1: int, cost2: int, cost_both: int,
+                         need1: int, need2: int) -&gt; int:
+    &quot;&quot;&quot;Minimum cost to satisfy both requirements using single-type
+    items and a combined item, by checking only the three candidate
+    quantities of combined items where the cost function can bend.
+    &quot;&quot;&quot;
+
+    def price(num_combined: int) -&gt; int:
+        remaining1 = max(0, need1 - num_combined)
+        remaining2 = max(0, need2 - num_combined)
+        return num_combined * cost_both + remaining1 * cost1 + remaining2 * cost2
+
+    smaller_need = min(need1, need2)
+    larger_need = max(need1, need2)
+
+    candidates = (0, smaller_need, larger_need)
+    return min(price(x) for x in candidates)
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<ul>
+<li><code>price(num_combined)</code> is the shared pricing formula: given a chosen number of combined items, it computes what's still owed on each requirement (<code>max(0, need - num_combined)</code> so a satisfied requirement never goes negative), and adds up the total spend across all three item types.</li>
+<li><code>smaller_need</code> / <code>larger_need</code> pin down the two breakpoints identified in the optimal-solution analysis — the two points where the cost function's slope can change.</li>
+<li><code>candidates = (0, smaller_need, larger_need)</code> is the entire search space. No loop over the actual requirement sizes, no recursion, no DP table — just three fixed points.</li>
+<li><code>min(price(x) for x in candidates)</code> prices all three and keeps the cheapest. Each call to <code>price</code> is <code>O(1)</code>, so the whole function runs in constant time regardless of how large <code>need1</code> and <code>need2</code> are.</li>
+</ul>
+<h2>16. Dry Run</h2>
+<p>Using <code>cost1 = 3</code>, <code>cost2 = 2</code>, <code>cost_both = 1</code>, <code>need1 = 3</code>, <code>need2 = 2</code>:</p>
+<ul>
+<li><code>smaller_need = 2</code>, <code>larger_need = 3</code></li>
+<li><code>price(0)</code>: remaining1 = 3, remaining2 = 2 → <code>0*1 + 3*3 + 2*2 = 0 + 9 + 4 = 13</code></li>
+<li><code>price(2)</code>: remaining1 = 1, remaining2 = 0 → <code>2*1 + 1*3 + 0*2 = 2 + 3 + 0 = 5</code></li>
+<li><code>price(3)</code>: remaining1 = 0, remaining2 = 0 → <code>3*1 + 0*3 + 0*2 = 3 + 0 + 0 = 3</code></li>
+</ul>
+<p><code>min(13, 5, 3) = 3</code> — matching the expected answer, and confirming that the "buy up to the larger requirement" candidate is the one that actually wins here.</p>
+<h2>17. Complexity Analysis</h2>
+<p><strong>Time:</strong> <code>O(1)</code>. The function evaluates <code>price()</code> exactly three times, and each evaluation does a fixed number of arithmetic operations — no loop that scales with <code>need1</code>, <code>need2</code>, or any of the costs.</p>
+<p><strong>Space:</strong> <code>O(1)</code>. Only a handful of integer variables are held at once; no auxiliary data structures grow with input size.</p>
+<p><strong>Why this is correct, not just fast:</strong> correctness rests on the piecewise-linear argument from the optimal-solution section — the cost function's slope can only change at <code>min(need1, need2)</code> and <code>max(need1, need2)</code>, and is strictly increasing past the larger requirement. A piecewise-linear function restricted to <code>x ≥ 0</code> attains its minimum at one of its slope-change points or at its left boundary (<code>x = 0</code>), which is precisely the three candidates checked. Nothing outside that set can beat the best of those three.</p>
+<h2>18. Alternative Solutions</h2>
+<p>A ternary-search approach is sometimes suggested for "minimize a convex-looking function over a range" problems, but it doesn't apply cleanly here: the cost function is piecewise linear, not strictly convex in the way ternary search needs (it has flat or near-flat stretches depending on the cost relationships), and it would add <code>O(log(max(need1, need2)))</code> complexity for no benefit over simply checking the three provably sufficient points directly. Binary search on the answer value is also unnecessary — there's no monotonic "is this total achievable" predicate to search over; the problem is a direct cost minimization, not a feasibility threshold. The three-candidate check is strictly simpler and strictly faster than either alternative, which is why it's the solution worth learning rather than a shortcut to memorize.</p>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong><code>costBoth</code> more expensive than buying separately</strong> (<code>costBoth &gt;= cost1 + cost2</code>): the combined item is never worth buying at all. <code>price(0)</code> will correctly win since the other two candidates only add cost without benefit.</li>
+<li><strong>One requirement is zero</strong>: say <code>need2 = 0</code>. Then <code>smaller_need = 0</code>, so <code>price(0)</code> and <code>price(smaller_need)</code> are identical, and the real contest is between buying nothing combined and buying <code>need1</code> combined items. The formula handles this without special-casing because <code>max(0, 0 - x)</code> is always zero.</li>
+<li><strong>Both requirements equal</strong> (<code>need1 == need2</code>): <code>smaller_need == larger_need</code>, so two of the three candidates collapse into the same value — harmless, just a redundant evaluation.</li>
+<li><strong>Maximum requirement values</strong> (<code>need1 = need2 = 1,000,000,000</code>): the arithmetic still fits comfortably in Python's arbitrary-precision integers, and the algorithm's runtime is unaffected since it never loops over the requirement magnitude.</li>
+<li><strong><code>costBoth</code> equal to zero</strong>: buying unlimited combined items is free, so both breakpoints (especially <code>larger_need</code>) will dominate and the answer should come out to <code>larger_need * 0 = 0</code> plus nothing else — correctly reflecting that the requirements are satisfied for free.</li>
+</ul>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Capping combined purchases at <code>min(need1, need2)</code> and never checking further.</strong> This is the exact trap the example demonstrates — it silently produces a suboptimal (but plausible-looking) answer.</li>
+<li><strong>Forgetting to clamp remaining need at zero.</strong> Without <code>max(0, need - x)</code>, overbuying combined items can make the "remaining" count negative, which would incorrectly subtract cost instead of just contributing zero.</li>
+<li><strong>Looping over every possible <code>x</code> from 0 to <code>max(need1, need2)</code>.</strong> This passes on small test cases and silently times out or is simply infeasible at the real constraints (up to a billion).</li>
+<li><strong>Only checking two candidates (<code>0</code> and <code>min(need1, need2)</code>) instead of three.</strong> This misses the case where buying all the way up to the larger requirement wins, which is precisely the scenario in the worked example.</li>
+<li><strong>Mixing up which requirement is "smaller" vs. "larger" when the two needs are compared</strong>, leading to evaluating the wrong breakpoint or evaluating the same point twice while skipping the other.</li>
+<li><strong>Assuming the combined item is always better (or always worse) without checking the actual numbers.</strong> Whether buying past the smaller requirement helps depends entirely on how <code>costBoth</code> compares to <code>cost1</code> and <code>cost2</code> — there's no universal rule, which is exactly why all three candidates must be priced out rather than reasoned about qualitatively.</li>
+</ol>
+<h2>21. Interview Questions</h2>
+<ul>
+<li>"Why is it safe to only check three values of <code>x</code> instead of searching the whole range?" — Expect a piecewise-linear / breakpoint argument, not just "I tried it and it worked."</li>
+<li>"What would change if there were three requirements instead of two, with combined items covering different pairs?" — Tests whether the candidate can generalize the breakpoint intuition rather than having memorized a fixed three-candidate formula.</li>
+<li>"How would you prove formally that checking the slope-change points is sufficient?" — A chance to walk through convexity/piecewise-linearity reasoning explicitly.</li>
+<li>"What's the time and space complexity, and why doesn't it depend on <code>need1</code> or <code>need2</code>?" — Checks that the candidate understands <em>why</em> the solution is constant time, not just that it is.</li>
+<li>"If prices could be negative (as a modeling trick, e.g., a rebate), would this approach still work?" — Probes whether they understand the assumptions baked into the slope analysis.</li>
+</ul>
+<h2>22. Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 2558 – Take Gifts From the Richest Pile</strong> — different mechanics, but shares the "don't simulate every step when the numbers are huge" lesson via a heap instead of a closed-form formula.</li>
+<li><strong>LeetCode 1898 – Maximum Number of Removable Characters</strong> — uses binary search on a monotonic feasibility function, a close cousin to the "find the right breakpoint instead of scanning" theme here.</li>
+<li><strong>LeetCode 2731 – Movement of Robots</strong> — another problem where brute simulation is impossible at scale and a closed-form/sorted-pairs trick replaces it.</li>
+<li><strong>LeetCode 1055 – Shortest Way to Form String</strong> — not pricing-related, but shares the pattern of reducing a huge search space to a small number of meaningful candidate checkpoints.</li>
+<li><strong>Classic "buy one get one" / tiered pricing problems</strong> on other platforms — directly reuse the piecewise-linear breakpoint technique from this problem.</li>
+</ul>
+<h2>23. Key Takeaways</h2>
+<p>The headline lesson isn't really about pencils, notebooks, or LeetCode 3789 specifically — it's about recognizing when a cost function is piecewise linear and exploiting that structure instead of brute-forcing. The "obvious" greedy cap at the smaller requirement feels intuitive but is provably incomplete; the fix is to identify every point where the function's behavior can change — here, exactly two breakpoints plus the starting point — and check only those. That turns an algorithm that would need up to a billion iterations into one that runs in constant time with three arithmetic evaluations. This same move — find the handful of breakpoints, ignore everything between them — is a technique worth keeping in your back pocket for any pricing, tiering, or threshold-based optimization problem you'll meet again.</p>
+<h2>24. Watch the Video</h2>
+<p>If you'd rather see this traced out visually — the real example, the greedy instinct breaking live, and the three-candidate fix built up step by step — the full walkthrough is embedded here: {LINK}</p>
+<h2>25. About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series dedicated to making coding interview problems actually make sense — not just memorized, but understood from first principles. Every episode walks through a real problem, shows where the natural-but-wrong instinct breaks, and builds up to the correct, provable solution the way an experienced engineer would actually discover it at a whiteboard.</p>
+<h2>26. Call To Action</h2>
+<p>If this walkthrough helped the trick click, give the video a like on YouTube and subscribe for more problems broken down the same way — intuition first, code second. Subscribe to the Substack newsletter for article versions like this one delivered straight to your inbox, drop a comment with the problem you want covered next, and share this with anyone prepping for interviews who still thinks greedy "feels right" is the same as greedy "is right."</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Minimum cost with discounts on required items — what pattern?</summary><p>Greedy/DP over cost-reduction choices: when buying X unlocks a discount on Y, think knapsack-style decision per item, not pure greedy.</p></details><details class='card2'><summary>Time complexity for this min-cost acquisition problem?</summary><p>O(n log n) or O(n*k) depending on how many discount pairs you check per item — sort + pass, not brute force O(2^n).</p></details><details class='card2'><summary>Space complexity typically used here?</summary><p>O(n) for tracking per-item best cost or discount eligibility; O(1) extra if done in-place on sorted array.</p></details><details class='card2'><summary>Trickiest bug when solving this problem?</summary><p>Assuming the greedy &#x27;buy cheapest first&#x27; always works — breaks when a discount depends on buying a MORE expensive item first.</p></details><details class='card2'><summary>Why does the first greedy instinct break here?</summary><p>Picking lowest-cost items early can forfeit a discount that only triggers after buying a specific pricier required item.</p></details><details class='card2'><summary>Real trick to solve &#x27;Minimum Cost to Acquire Required Items&#x27;?</summary><p>Evaluate cost per item as min(buy directly, buy via qualifying purchase that unlocks discount) — compare both paths, don&#x27;t assume one wins.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
