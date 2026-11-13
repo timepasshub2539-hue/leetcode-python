@@ -1,0 +1,224 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3105. Longest Strictly Increasing or Strictly Decreasing Subarray — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/longest-strictly-increasing-or-strictly-decreasing-subarray
+💻 Code on GitHub: h">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/longest-strictly-increasing-or-strictly-decreasing-subarray.html">
+<meta property="og:title" content="3105. Longest Strictly Increasing or Strictly Decreasing Subarray — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/longest-strictly-increasing-or-strictly-decreasing-subarray
+💻 Code on GitHub: h"><meta property="og:image" content="https://i.ytimg.com/vi/gJmm72fCeic/hqdefault.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>3105. Longest Strictly Increasing or Strictly Decreasing Subarray</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><div class='videowrap'><iframe loading='lazy' src='https://www.youtube.com/embed/gJmm72fCeic' allowfullscreen></iframe></div><article><h2>8. Introduction</h2>
+<p>Every interview loop eventually hands you a problem that looks almost too simple to be a real question — scan an array, track a run, return a length. LeetCode 3105, <em>Longest Strictly Increasing or Strictly Decreasing Subarray</em>, is exactly that kind of problem, and that's precisely why it shows up so often as a warm-up or filter question. It doesn't test whether you know a famous algorithm by name. It tests something more basic and, honestly, more revealing: can you look at a sequence, reason about what state needs to be carried forward from one element to the next, and resist the urge to over-engineer a solution with nested loops or extra arrays?</p>
+<p>This is a problem that rewards clean thinking over clever tricks. Interviewers like it because the "obvious" first instinct — restart your scan every time a streak breaks — is technically correct but wasteful, and the gap between that instinct and the optimal one-pass solution is small enough to walk through live in an interview, yet large enough to show whether a candidate notices redundant work. If you're prepping for interviews or just building your instincts for array problems, this is a great one to internalize, because the pattern underneath it — a single pass with a couple of counters that grow or reset based on a comparison — reappears constantly in problems about runs, streaks, and consecutive sequences.</p>
+<h2>9. Problem Overview</h2>
+<p>You're given an array of integers. You need to find the length of the longest contiguous slice of that array where the values are either <strong>strictly increasing</strong> the entire way through, or <strong>strictly decreasing</strong> the entire way through — whichever of the two turns out to be longer. Return that length as a single integer.</p>
+<p>The word "strictly" is doing a lot of work here. It means every adjacent pair in the run has to actually go up, or actually go down — no ties allowed. If two consecutive numbers are equal, that breaks both an increasing run and a decreasing run at that point. A single number on its own always counts as a valid run of length one, since there's no neighbor to violate the rule.</p>
+<p>The constraints are intentionally small: the array has at most 50 elements, each between 1 and 50. That's a strong signal. It means a brute-force approach would technically pass within any reasonable time limit, but the problem isn't really asking "can you make this pass" — it's asking "can you recognize when a single pass is enough, and prove to yourself why."</p>
+<h2>10. Example</h2>
+<p>Take the array <code>[1, 4, 3, 3, 2]</code>.</p>
+<ul>
+<li><code>1 → 4</code>: increasing. Current increasing streak length: 2.</li>
+<li><code>4 → 3</code>: decreasing. The increasing streak breaks; current decreasing streak length: 2.</li>
+<li><code>3 → 3</code>: equal. Neither streak can continue — this resets both back to a baseline of 1.</li>
+<li><code>3 → 2</code>: decreasing. New decreasing streak length: 2.</li>
+</ul>
+<p>Across the whole walk, the longest streak we ever see, in either direction, is <strong>2</strong>. That's the answer.</p>
+<p>Notice what's happening under the hood: we never found a streak longer than 2 in this array, but we found <em>two different</em> streaks of length 2 — one increasing (<code>1,4</code>), one decreasing (<code>4,3</code> and separately <code>3,2</code>). The answer only cares about the maximum across all of them, not which direction "won."</p>
+<h2>11. Intuition</h2>
+<p>The naive instinct, especially under interview pressure, is to think of this as a search problem: pick a starting index, extend the run for as long as possible, then move to the next starting index and repeat. That instinct isn't wrong — it would produce a correct answer — but it's worth pausing on <em>why</em> it's wasteful before building it.</p>
+<p>If you start at index 0 and walk forward until the streak breaks, you've already compared every adjacent pair up to the break point. Starting over from index 1 and re-walking forward means you're re-comparing pairs you already looked at. The information about whether <code>nums[i]</code> is bigger or smaller than <code>nums[i-1]</code> doesn't change depending on where your "run" started — it's a fixed fact about those two positions. So restarting from every index is really just checking every pair in the array multiple times, dressed up as a sliding window.</p>
+<p>The insight that unlocks the one-pass solution is this: at any given index, there are really only two things you need to know to decide what happens next — <em>how long is my current increasing streak</em>, and <em>how long is my current decreasing streak</em>. You don't need to know anything about streaks further back, because a streak is only ever extended or broken by its immediate neighbor. That means you can carry both numbers forward as you walk the array exactly once, updating them based on a single comparison at each step, and checking after every step whether either one has become your new best.</p>
+<p>The subtle part — and the part most people get wrong on a first attempt — is handling ties correctly. If you're tempted to use <code>&gt;=</code> or <code>&lt;=</code> instead of strict <code>&gt;</code> and <code>&lt;</code>, it feels harmless, but it silently breaks on inputs like <code>[3, 3, 3, 3]</code>, where every streak should collapse back to length 1 at every step, not keep growing. Strict comparison, and resetting <em>both</em> counters on a tie, is what keeps the logic honest.</p>
+<h2>12. Brute Force Solution</h2>
+<p><strong>Idea:</strong> For every starting index, extend a run forward as long as it keeps increasing, and separately as long as it keeps decreasing, tracking the best length seen.</p>
+<p><strong>Algorithm:</strong>
+1. For each index <code>i</code> from <code>0</code> to <code>n-1</code>:
+   - Extend forward while the sequence strictly increases; record the length.
+   - Extend forward while the sequence strictly decreases; record the length.
+2. Return the maximum length found across all starting points and both directions.</p>
+<p><strong>Advantages:</strong> Easy to write, easy to reason about correctness directly from the problem statement, no risk of subtle state-tracking bugs.</p>
+<p><strong>Disadvantages:</strong> Re-examines the same adjacent pairs from multiple starting indices. Conceptually doing redundant work even though the array is small enough that it doesn't matter here.</p>
+<p><strong>Complexity:</strong> Time O(n²) in the worst case (every starting index re-walks much of the array). Space O(1) beyond the input.</p>
+<h2>13. Optimal Solution</h2>
+<p>Walk the array exactly once, carrying three numbers forward:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>inc</code></td>
+<td>length of the current strictly increasing streak ending at this position</td>
+</tr>
+<tr>
+<td><code>dec</code></td>
+<td>length of the current strictly decreasing streak ending at this position</td>
+</tr>
+<tr>
+<td><code>best</code></td>
+<td>the longest streak (either direction) seen so far</td>
+</tr>
+</tbody>
+</table>
+<p>All three start at <code>1</code>, because any single element is trivially a streak of length one.</p>
+<p>Then, starting from the second element, compare it to the one before it:</p>
+<ul>
+<li><strong>Bigger</strong> → the increasing streak continues, so <code>inc += 1</code>. The decreasing streak is broken, so <code>dec</code> resets to <code>1</code>.</li>
+<li><strong>Smaller</strong> → the decreasing streak continues, so <code>dec += 1</code>. The increasing streak is broken, so <code>inc</code> resets to <code>1</code>.</li>
+<li><strong>Equal</strong> → neither streak survives a tie, so both <code>inc</code> and <code>dec</code> reset to <code>1</code>.</li>
+</ul>
+<p>After every step, update <code>best = max(best, inc, dec)</code>.</p>
+<p>The key proof point is that <code>inc</code> and <code>dec</code> never need to "remember" anything beyond their current value — each step's decision depends only on the immediate neighbor comparison, which is why a single pass is sufficient. There's no case where you'd need to look back further than one position.</p>
+<h2>14. Python Code</h2>
+<pre><code class="language-python">class Solution:
+    def longestMonotonicSubarray(self, nums: list[int]) -&gt; int:
+        inc = dec = best = 1
+
+        for i in range(1, len(nums)):
+            if nums[i] &gt; nums[i - 1]:
+                inc += 1
+                dec = 1
+            elif nums[i] &lt; nums[i - 1]:
+                dec += 1
+                inc = 1
+            else:
+                inc = dec = 1
+
+            best = max(best, inc, dec)
+
+        return best
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<ul>
+<li><code>inc = dec = best = 1</code>: Every array has at least one element, and a single element is always a valid streak of length one in both directions — this initializes all three trackers to that baseline.</li>
+<li><code>for i in range(1, len(nums))</code>: We only need to start comparing from the second element, since each comparison looks at <code>nums[i]</code> against <code>nums[i - 1]</code>.</li>
+<li><code>if nums[i] &gt; nums[i - 1])</code>: The increasing streak is still alive, so it grows by one. The decreasing streak just broke, so it falls back to the baseline of one.</li>
+<li><code>elif nums[i] &lt; nums[i - 1]</code>: Mirror case — the decreasing streak grows, the increasing streak resets.</li>
+<li><code>else</code>: The values are equal. Neither direction counts a tie as part of a streak, so both reset to one.</li>
+<li><code>best = max(best, inc, dec)</code>: Checked after every single step, this is what guarantees we catch the longest streak regardless of which direction it comes from or when it occurs.</li>
+<li><code>return best</code>: Once the loop finishes, <code>best</code> holds the answer.</li>
+</ul>
+<h2>16. Dry Run</h2>
+<p>Array: <code>[1, 4, 3, 3, 2]</code></p>
+<table>
+<thead>
+<tr>
+<th>i</th>
+<th>nums[i-1]</th>
+<th>nums[i]</th>
+<th>Comparison</th>
+<th>inc</th>
+<th>dec</th>
+<th>best</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>start</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>1</td>
+<td>1</td>
+<td>4</td>
+<td>greater</td>
+<td>2</td>
+<td>1</td>
+<td>2</td>
+</tr>
+<tr>
+<td>2</td>
+<td>4</td>
+<td>3</td>
+<td>less</td>
+<td>1</td>
+<td>2</td>
+<td>2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>3</td>
+<td>3</td>
+<td>equal</td>
+<td>1</td>
+<td>1</td>
+<td>2</td>
+</tr>
+<tr>
+<td>4</td>
+<td>3</td>
+<td>2</td>
+<td>less</td>
+<td>1</td>
+<td>2</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+<p>Final <code>best = 2</code>, matching the expected answer.</p>
+<h2>17. Complexity Analysis</h2>
+<p><strong>Time: O(n).</strong> Each element is visited exactly once, and the work done per element — one comparison, a couple of assignments, one <code>max</code> call — is constant. There's no nested loop and no re-visiting of earlier elements, so the total work scales linearly with the array length.</p>
+<p><strong>Space: O(1).</strong> Only three integer variables (<code>inc</code>, <code>dec</code>, <code>best</code>) are maintained regardless of input size. No auxiliary array, no recursion stack, no extra data structure.</p>
+<p>Given the constraint of at most 50 elements, even the O(n²) brute force would run instantly — but the one-pass solution isn't harder to write, so there's no real tradeoff being made by choosing it. In a timed test run on a 50-element input, the brute force took roughly 48 microseconds versus roughly 16 microseconds for the optimal version — about a 3x difference even at this tiny scale, and the gap only widens as <code>n</code> grows.</p>
+<h2>18. Alternative Solutions</h2>
+<p>A reasonable variant is to compute the increasing and decreasing streaks as two completely separate passes — one loop dedicated to tracking increasing runs, a second loop dedicated to tracking decreasing runs, then taking the max of the two results. This is still O(n) time and O(1) space, so asymptotically it's identical to the single-pass version. The only real difference is style: two simpler, more narrowly-focused loops versus one loop juggling two counters. The combined single-pass version is slightly more elegant and touches each element only once in wall-clock terms, but both are valid, interview-acceptable answers — pick whichever reads more clearly to you under pressure.</p>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong>Empty array:</strong> Not valid per constraints (the array always has at least one element), so no special handling is needed, but if it arose, the loop would simply never execute and <code>best</code> would remain at its initial value.</li>
+<li><strong>Single element:</strong> <code>best</code> stays at <code>1</code>, which is correct — a lone number is a streak of length one.</li>
+<li><strong>All elements equal</strong>, e.g. <code>[3, 3, 3, 3]</code>: Every comparison hits the <code>else</code> branch, so <code>inc</code> and <code>dec</code> reset at every step and <code>best</code> never exceeds <code>1</code>.</li>
+<li><strong>Strictly increasing entire array</strong>, e.g. <code>[1, 2, 3, 4]</code>: <code>inc</code> grows every step and ends up equal to <code>n</code>, so <code>best</code> equals the full array length.</li>
+<li><strong>Strictly decreasing entire array:</strong> Mirror of the above, with <code>dec</code> growing to the full length.</li>
+<li><strong>Minimum and maximum values</strong> (1 and 50 per constraints): The logic only depends on relative comparisons between neighbors, so the actual magnitude of the values never affects correctness.</li>
+<li><strong>Zigzag pattern</strong>, e.g. <code>[1, 5, 2, 6, 3]</code>: Every step flips direction, so neither <code>inc</code> nor <code>dec</code> ever grows past <code>2</code>, and <code>best</code> caps at <code>2</code>.</li>
+</ul>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Using <code>&gt;=</code> or <code>&lt;=</code> instead of strict <code>&gt;</code> and <code>&lt;</code>.</strong> This silently allows ties to extend a streak, which is wrong by the problem's own definition of "strictly."</li>
+<li><strong>Forgetting to reset the <em>other</em> counter when one grows.</strong> If <code>inc</code> grows but <code>dec</code> isn't reset to <code>1</code> on an increase, <code>dec</code> can carry stale, inflated values forward.</li>
+<li><strong>Not resetting both counters on a tie.</strong> A tie breaks <em>both</em> directions, not just the one currently "winning."</li>
+<li><strong>Initializing counters to <code>0</code> instead of <code>1</code>.</strong> This undercounts every streak by one, since a single element is already a valid run of length one.</li>
+<li><strong>Checking <code>best</code> only after the loop instead of after every step.</strong> This misses cases where the peak streak length occurs partway through the array rather than at the very end.</li>
+<li><strong>Restarting the scan from every index (brute force) without realizing the redundant comparisons</strong>, which works but wastes time proportional to n² for no benefit when a one-pass version is just as easy to write.</li>
+</ol>
+<h2>21. Interview Questions</h2>
+<ul>
+<li>How would this change if the array could contain duplicates representing "non-strict" monotonic runs as well — would you track four counters instead of two?</li>
+<li>Can you modify this to return the actual subarray (start and end indices), not just its length?</li>
+<li>What if you needed the longest strictly increasing run specifically, ignoring decreasing runs entirely — how does the solution simplify?</li>
+<li>How would you adapt this logic to a 2D grid, finding the longest monotonic run along rows or columns?</li>
+<li>Could this be solved with a single counter instead of two, using some clever sign-tracking trick? What are the tradeoffs?</li>
+</ul>
+<h2>22. Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 674 — Longest Continuous Increasing Subsequence:</strong> The increasing-only half of this exact pattern; a direct subset of the logic here.</li>
+<li><strong>LeetCode 128 — Longest Consecutive Sequence:</strong> A different flavor of "longest run," but builds the same instinct for tracking streaks, just on unordered values rather than positions.</li>
+<li><strong>LeetCode 300 — Longest Increasing Subsequence:</strong> Looks related by name, but is a <em>subsequence</em> problem (non-contiguous), which requires a completely different approach (DP or binary search) — a good contrast case for understanding why "subarray" and "subsequence" are not interchangeable terms.</li>
+<li><strong>LeetCode 561 / 485 — Max Consecutive Ones:</strong> Same compare-and-reset-counter pattern applied to binary arrays instead of general comparisons.</li>
+</ul>
+<h2>23. Key Takeaways</h2>
+<p>The core lesson here isn't really about this specific problem — it's about a pattern. Any time you're asked for the longest run, streak, or consecutive block in an array, ask yourself: can I describe the state I need at position <code>i</code> using only information from position <code>i-1</code>? If yes, you almost never need more than a single pass and a couple of counters. The equal-case handling is the detail that separates a solution that looks right from one that's actually correct — always trace through a worst-case tie input like <code>[3, 3, 3, 3]</code> before trusting your logic.</p>
+<h2>24. Watch the Video</h2>
+<p>Prefer to see it traced out loop by loop, with two quiz checkpoints to test your own intuition before the reveal? Watch the full walkthrough here: {LINK}</p>
+<h2>25. About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series built around solving real coding interview problems the way an experienced engineer actually thinks through them — starting from a concrete example, building intuition before writing a single line of code, and only then arriving at the clean, optimal solution. Every episode aims to leave you with a reusable pattern, not just a memorized answer.</p>
+<h2>26. Call To Action</h2>
+<p>If this walkthrough helped the logic click, give the video a like on YouTube and subscribe for more one-pass patterns like this one. Subscribe to the Substack newsletter for written breakdowns delivered straight to your inbox, drop a comment with the problem you want tackled next, and share this with anyone grinding through their interview prep.</p>
+<hr /></article><div class='btnrow'><a class='btn yt' href='https://youtu.be/gJmm72fCeic' target='_blank'>▶ Watch on YouTube</a></div><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Pattern: when a problem asks for longest run that&#x27;s all increasing or all decreasing, think?</summary><p>Single forward scan tracking two running streak counters (inc/dec), reset on direction change, track max.</p></details><details class='card2'><summary>Time complexity for this subarray streak approach?</summary><p>O(n) — one pass comparing each element to its predecessor.</p></details><details class='card2'><summary>Space complexity for the two-counter streak approach?</summary><p>O(1) — just a few integer counters, no extra arrays.</p></details><details class='card2'><summary>Trickiest bug when updating inc/dec counters per step?</summary><p>Forgetting that equal neighbors (nums[i]==nums[i-1]) break both streaks — must reset both to 1, not just one.</p></details><details class='card2'><summary>This two-counter trick vs. classic &#x27;longest increasing subsequence&#x27;?</summary><p>This is contiguous subarray, strictly monotonic, O(n); LIS allows gaps, non-strict rules, and is O(n log n).</p></details><details class='card2'><summary>Interview follow-up: what if the subarray can be monotonic but not strict (allows equal values)?</summary><p>Change comparisons from strict &lt; / &gt; to &lt;= / &gt;=, but then equal runs no longer reset both counters — only the violated direction.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>

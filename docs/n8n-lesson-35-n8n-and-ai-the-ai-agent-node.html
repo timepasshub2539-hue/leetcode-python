@@ -1,0 +1,201 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>n8n Lesson 35: It Forgot After 3 Messages. Here&#x27;s the Fix — Python LeetCode Solution</title><meta name="description" content="Learn what&#x27;s actually inside n8n&#x27;s AI Agent node and why a plain LLM call can only talk, not act. We wire in a model, give it real tools to call so the model itself decides what runs, and add short-te">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/n8n-lesson-35-n8n-and-ai-the-ai-agent-node.html">
+<meta property="og:title" content="n8n Lesson 35: It Forgot After 3 Messages. Here&#x27;s the Fix — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="Learn what&#x27;s actually inside n8n&#x27;s AI Agent node and why a plain LLM call can only talk, not act. We wire in a model, give it real tools to call so the model itself decides what runs, and add short-te">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>n8n Lesson 35: It Forgot After 3 Messages. Here&#x27;s the Fix</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span><article><h2>Introduction</h2>
+<p>Every "AI agent" demo you've seen — the one where someone types a sentence into a chat box and a calendar event moves, an email goes out, or a ticket gets created — is built from the same three parts. No exceptions. Once you can name those three parts and know exactly what each one does, you stop treating the n8n AI Agent node as a black box and start treating it as a wiring diagram you control.</p>
+<p>This matters for more than just n8n users. The pattern — a reasoning model, a set of callable tools, and a memory store — is the exact same pattern behind LangChain agents, OpenAI's function calling, and every "AI assistant" product shipping right now. If you're a developer who wants to understand agentic systems, or you're prepping for interviews where "design an AI agent" shows up as a system design question, this is the mental model to have before you touch any framework.</p>
+<p>The reason this is worth a full breakdown rather than a quick tip is that the failure modes are subtle. An agent that "forgets after three messages" doesn't look like a bug — it looks like the AI being dumb. An agent that "ignores your tool" doesn't look like a config error — it looks like the model being unreliable. Both are fixable in about thirty seconds once you know where to look.</p>
+<h2>Problem Overview</h2>
+<p>Here's the situation in plain terms: you drop a single LLM node into a workflow and send it a message. It replies in text. Ask it to check your calendar, and it answers confidently — and wrong — because it has no way to actually look at your calendar. It's a text predictor with no hands and no notepad.</p>
+<p>Separately, even if you fix the "no hands" problem by giving it a tool, a second issue shows up a few messages later: you mention your flight time once, and two messages later the agent has no idea what you're talking about. It isn't being forgetful in a human sense — it's stateless. Every execution is a fresh start unless something explicitly carries context forward.</p>
+<p>So the real problem is: <strong>how do you take a stateless, text-only model and turn it into something that can act in the real world and hold a coherent conversation?</strong> The answer in n8n is three attachable nodes wired into one AI Agent node: a chat model, one or more tools, and a memory node.</p>
+<h2>Example</h2>
+<p>Say you're automating flight-rescheduling requests through a chat interface.</p>
+<p><strong>Message 1:</strong> "My flight is at 3pm today."
+<strong>Agent:</strong> "Got it, I'll remember that."</p>
+<p><strong>Message 2:</strong> "What's the weather like?"
+<strong>Agent:</strong> (calls a weather tool) "Clear skies, 72°F."</p>
+<p><strong>Message 3:</strong> "Can you reschedule it to tomorrow?"</p>
+<p>Without a memory node, the agent at message 3 has no idea what "it" refers to — the flight was mentioned two turns ago and nothing carried it forward. It will either hallucinate a flight, ask you to repeat yourself, or fail the tool call outright.</p>
+<p>With a Window Buffer Memory node attached and set to retain, say, 10 prior turns, message 3 works correctly: the agent re-reads the buffered conversation, finds "flight at 3pm" from message 1, and calls the calendar tool with the right event identified.</p>
+<p>That's the entire bug and the entire fix, in one example.</p>
+<h2>Intuition</h2>
+<p>Here's how an engineer actually arrives at this architecture, rather than memorizing it.</p>
+<p>Start from the constraint: an LLM is a function. Text in, text out. It has no side effects, no access to your systems, and no memory between calls — each API call is independent. If you accept that constraint fully, three gaps become obvious:</p>
+<ol>
+<li>
+<p><strong>It can't do anything, only describe things.</strong> To close this gap, you need some mechanism where the model's text output can trigger a real action, and the result of that action can be fed back in. That's a tool — a function the model can request be called, with a description good enough for the model to know <em>when</em> to request it.</p>
+</li>
+<li>
+<p><strong>It can't remember past calls.</strong> Each invocation is isolated. To make a conversation feel continuous, something outside the model has to store prior turns and re-inject them into every new call. That's memory — not a property of the model, but an external buffer that gets prepended to context.</p>
+</li>
+<li>
+<p><strong>Something has to orchestrate the loop.</strong> The model decides it needs a tool, the system runs the tool, the result goes back to the model, the model decides what's next. This loop — read request, maybe call tool, read result, maybe call another tool, finally answer — is what the "agent" actually is. It's not a smarter model; it's a control loop wrapped around a plain model.</p>
+</li>
+</ol>
+<p>Once you see it this way, the n8n AI Agent node is just a UI for this control loop, and the three plug-in slots (model, tool, memory) map directly onto the three gaps above. You're not learning n8n-specific magic — you're learning the generic shape of every LLM agent.</p>
+<p>One subtlety worth internalizing early: a tool's <em>output</em> comes back to the agent through the reasoning loop in the same execution, not through memory. Memory only governs what persists across separate messages. People commonly attach a Simple Memory node expecting it to help the agent use tool results — it doesn't need to, because that data is already in-flight. Memory's job is purely cross-turn continuity.</p>
+<h2>Brute Force Solution</h2>
+<p>The "brute force" here is the naive first attempt most people make: a single LLM node, no tools, no memory, and a system prompt that just says "you are a helpful assistant that manages calendars."</p>
+<p><strong>Idea:</strong> Trust the model to answer from its own knowledge and pretend it has access to live data.</p>
+<p><strong>Algorithm:</strong>
+1. Receive user message.
+2. Send it to the LLM with a system prompt describing its role.
+3. Return the LLM's text response.</p>
+<p><strong>Advantages:</strong>
+- Trivial to build — one node, one prompt.
+- Fast, cheap, no external calls.
+- Fine for pure Q&amp;A with no real-world grounding needed.</p>
+<p><strong>Disadvantages:</strong>
+- Cannot perform real actions — it can only generate plausible-sounding text, including confident fabrications about calendar events that don't exist.
+- No continuity — every message is answered in isolation, so follow-ups referencing earlier context silently fail.
+- Looks correct in a demo with one message, then breaks immediately in any real multi-turn, action-requiring conversation.</p>
+<p><strong>Complexity:</strong> O(1) per call in terms of orchestration — there's no loop, no state. That simplicity is exactly why it's insufficient: there's nothing to maintain state or branch on tool results.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal structure is the three-node wiring, assembled in dependency order:</p>
+<pre><code>┌─────────────────┐
+│   Chat Model      │  → gives the agent a brain (e.g., Claude)
+│   (reasoning)      │
+└────────┬─────────┘
+         │
+┌────────▼─────────┐
+│   AI Agent Node    │  → owns the loop: call model → maybe call tool → repeat → answer
+└───┬──────────┬────┘
+    │          │
+┌───▼───┐  ┌───▼────────┐
+│ Tool(s) │  │  Memory     │  → hands to act          → notepad to remember
+│(Calendar)│  │(Window Buf) │
+└─────────┘  └────────────┘
+</code></pre>
+<p><strong>Step 1 — Attach the chat model.</strong> This is the only piece required for the agent to respond at all, even with zero tools or memory attached. Pick your provider (Claude, in this case), select the credential and model, and wire it into the agent's model input. Without this, nothing downstream works.</p>
+<p><strong>Step 2 — Attach a tool.</strong> Take an action node (Calendar, in this case) and switch it into tool mode rather than leaving it as a direct workflow action. The description field on that tool is not documentation — it's the only signal the model uses to decide when the tool is relevant. A vague description causes two failure patterns in practice: the agent ignores the tool entirely, or, with more than one tool attached, it grabs the wrong one. Write the description the way you'd explain the tool's purpose to a new teammate in one sentence.</p>
+<p><strong>Step 3 — Attach memory.</strong> A Window Buffer Memory node holds the last N conversation turns and feeds them back into every new model call. The size of N is a tuning knob, not a correctness parameter: too small and context like "my flight is at 3pm" falls out of the window after a few turns; too large and every call drags unnecessary tokens (and cost) along for the ride. Ten or so turns is a reasonable default for short, task-focused conversations.</p>
+<p><strong>The resulting execution, per message:</strong> the agent reads the request → decides if a tool is needed → if yes, calls it and reads the result → decides if another tool is needed or if it's ready to answer → returns a final answer, with the full exchange appended to memory for the next turn.</p>
+<h2>Python Code</h2>
+<p>n8n is low-code, but the underlying control loop is just a few lines of Python if you were wiring it yourself — useful to see once, because it demystifies what the node is doing internally.</p>
+<pre><code class="language-python">from dataclasses import dataclass, field
+
+
+@dataclass
+class Memory:
+    &quot;&quot;&quot;Fixed-size window buffer of (role, content) turns.&quot;&quot;&quot;
+    max_turns: int = 10
+    turns: list = field(default_factory=list)
+
+    def add(self, role: str, content: str) -&gt; None:
+        self.turns.append((role, content))
+        self.turns = self.turns[-self.max_turns:]
+
+    def as_context(self) -&gt; list:
+        return [{&quot;role&quot;: role, &quot;content&quot;: content} for role, content in self.turns]
+
+
+def run_agent(user_message: str, memory: Memory, tools: dict, call_model) -&gt; str:
+    &quot;&quot;&quot;
+    One agent turn: reasoning loop over model calls and tool calls.
+    `call_model` is a function(messages, tools) -&gt; model response.
+    `tools` maps tool name -&gt; callable.
+    &quot;&quot;&quot;
+    memory.add(&quot;user&quot;, user_message)
+    messages = memory.as_context()
+
+    while True:
+        response = call_model(messages, tools=list(tools.keys()))
+
+        if response.get(&quot;tool_call&quot;) is None:
+            memory.add(&quot;assistant&quot;, response[&quot;text&quot;])
+            return response[&quot;text&quot;]
+
+        tool_name = response[&quot;tool_call&quot;][&quot;name&quot;]
+        tool_args = response[&quot;tool_call&quot;][&quot;args&quot;]
+        tool_result = tools[tool_name](**tool_args)
+
+        # Tool result feeds back into THIS execution's loop, not into memory directly.
+        messages.append({&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: f&quot;called {tool_name}&quot;})
+        messages.append({&quot;role&quot;: &quot;tool&quot;, &quot;content&quot;: str(tool_result)})
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><strong><code>Memory</code></strong> is the Window Buffer Memory node in code form: a fixed-size list of turns, with <code>add</code> trimming to <code>max_turns</code> so old context ages out instead of growing unbounded.</li>
+<li><strong><code>as_context</code></strong> is what gets prepended to every new model call — this is literally how "remembering the flight time two messages later" works. Nothing fancier than re-sending recent history.</li>
+<li><strong><code>run_agent</code></strong> is the AI Agent node's control loop. It adds the new user message to memory, then enters a loop: ask the model, check if it requested a tool, and if so, run that tool and feed the result back in as additional context <em>within the same loop</em> — not through memory. The loop only exits when the model returns plain text instead of a tool call.</li>
+<li><strong><code>tools</code></strong> is a dict of name → function, standing in for attaching a Calendar node (or any node) in tool mode. The model picks a name; your code (or n8n) executes the matching function.</li>
+<li>Note what's <em>not</em> in this code: there's no special handling for "remembering the tool result." That's the point the transcript makes — tool output is already live in <code>messages</code> for this turn. Memory's job starts and ends at carrying conversation turns across separate calls to <code>run_agent</code>.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using the flight example, with <code>max_turns=10</code>:</p>
+<p><strong>Turn 1:</strong> <code>user_message = "My flight is at 3pm today."</code>
+- <code>memory.add("user", ...)</code> → turns = <code>[("user", "My flight is at 3pm today.")]</code>
+- Model sees this, has no tool to call, responds "Got it."
+- <code>memory.add("assistant", "Got it.")</code> → turns now has 2 entries.</p>
+<p><strong>Turn 2:</strong> <code>user_message = "What's the weather like?"</code>
+- <code>memory.as_context()</code> returns both prior turns plus this one.
+- Model requests <code>weather_tool()</code>. Loop executes it, result ("Clear, 72°F") appended to <code>messages</code> for this turn only.
+- Model responds "Clear skies, 72°F." Memory now has 4 entries.</p>
+<p><strong>Turn 3:</strong> <code>user_message = "Can you reschedule it to tomorrow?"</code>
+- <code>memory.as_context()</code> includes turn 1 — "My flight is at 3pm today." is still inside the 10-turn window.
+- Model resolves "it" to the flight, requests <code>calendar_tool(event="flight", new_time="tomorrow")</code>.
+- Loop executes it, gets a confirmation, model responds with the reschedule confirmation.</p>
+<p>Without the memory buffer, turn 3's <code>messages</code> would contain only the current message, "it" would have no referent, and the model would either ask for clarification or guess wrong.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Time:</strong> Each agent turn costs O(k) model calls, where k is the number of tool calls needed before a final answer (typically 1–3 in practice). Each call's cost scales with context length, which is bounded by <code>max_turns</code> — so time per turn is O(max_turns + k).</li>
+<li><strong>Space:</strong> Memory storage is O(max_turns), since the buffer is capped and old turns are evicted. This is why windowing matters — unbounded memory would make space (and per-call cost) grow linearly with conversation length forever.</li>
+<li><strong>Why these are correct:</strong> the cap on <code>max_turns</code> is a deliberate trade, not an oversight — it bounds both token cost and latency at the price of a hard recall limit. For short task-oriented conversations (the common case for automation agents), this trade is correct; for long-running conversations needing full recall, you'd swap the window buffer for a retrieval-based memory (see below).</li>
+</ul>
+<h2>Alternative Solutions</h2>
+<ul>
+<li><strong>Summarization memory</strong> instead of a raw window: instead of storing the last N turns verbatim, periodically summarize older turns into a condensed note. This trades some fidelity for a much longer effective memory span at the same token cost — useful if conversations regularly run past 10–15 turns.</li>
+<li><strong>Vector-store / retrieval memory</strong>: store all turns, embed them, and retrieve only the ones relevant to the current message. This scales to arbitrarily long conversations but adds latency (an embedding + search step) and complexity that's overkill for most short automation workflows.</li>
+<li><strong>No memory, full context replay</strong>: send the entire conversation history every time. Simple, but cost grows unbounded with conversation length — the window buffer exists specifically to avoid this.</li>
+</ul>
+<p>For the flight-rescheduling use case, the window buffer is the right call: conversations are short, and the added complexity of retrieval memory buys nothing.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty input</strong> — an agent invoked with no message or empty string should short-circuit rather than call the model; otherwise you're burning a model call on nothing.</li>
+<li><strong>Tool returns an error</strong> — if the Calendar API fails, the agent needs that failure surfaced as a tool result (not silently swallowed), so the model can inform the user rather than hallucinate success.</li>
+<li><strong>Multiple tools with overlapping purposes</strong> — two tools with similar descriptions (e.g., "Calendar" and "Scheduler") will cause the model to pick inconsistently; descriptions must be distinct enough to disambiguate.</li>
+<li><strong>Memory window exactly at the boundary</strong> — information mentioned exactly <code>max_turns</code> turns ago will be evicted on the next turn; if a workflow regularly needs longer recall, the window size is undersized for that workflow, not a bug in the mechanism.</li>
+<li><strong>Concurrent sessions sharing one memory node</strong> — if the memory isn't keyed per conversation/session ID, two different users' conversations will bleed into each other's context.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Attaching Simple Memory and expecting it to carry tool results within a turn</strong> — it doesn't need to; that's already handled by the in-execution reasoning loop.</li>
+<li><strong>Leaving a tool's description vague or generic</strong> ("handles calendar stuff") — the model has nothing else to go on when deciding relevance, and will misfire with multiple tools attached.</li>
+<li><strong>Setting the memory window too large "to be safe"</strong> — it inflates token cost and latency on every single call for no benefit in short conversations.</li>
+<li><strong>Forgetting the chat model node entirely</strong> and wondering why the agent doesn't respond at all — the model is the one truly mandatory piece; tools and memory are optional add-ons on top of it.</li>
+<li><strong>Assuming the agent "understood" something after one tool call</strong> without testing a multi-turn follow-up — memory bugs only show up two or three messages later, so single-message testing hides them completely.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>"How would you design memory for a conversational agent that needs to scale to thousands of concurrent users?" (keying memory per session, eviction policy, storage backend)</li>
+<li>"What's the difference between a tool result and conversational memory, and why does that distinction matter?"</li>
+<li>"How do you prevent an agent from calling the wrong tool when several are available?" (description quality, tool naming, possibly a routing step before the agent)</li>
+<li>"What happens to cost and latency as conversation length grows, and how do you bound it?"</li>
+<li>"Design a fallback for when a tool call fails mid-conversation — what should the agent do?"</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LRU Cache (LeetCode 146)</strong> — same core data structure problem as the window buffer memory: fixed capacity, evict the oldest entry when full.</li>
+<li><strong>Design a Rate Limiter</strong> — another "bounded sliding window" problem, structurally similar to capping memory turns.</li>
+<li><strong>Design Chat/Message History systems</strong> — the broader systems-design version of the memory node: pagination, storage, and retrieval of conversational history at scale.</li>
+<li><strong>Function-calling / Tool-use design in any LLM SDK</strong> (OpenAI, Anthropic) — the exact same model-decides-when-to-call-a-function pattern underlying the n8n tool node.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>An AI agent is not a smarter model — it's a plain model wrapped in three attachments: a <strong>chat model</strong> to reason, <strong>tools</strong> to act on the real world, and <strong>memory</strong> to stay coherent across turns. Tool results flow back into the model within the same execution; memory's only job is carrying context across separate messages. Get the tool description specific and the memory window sized to the conversation length you actually expect, and this exact three-part wiring handles any agent you build next — just swap the model, the tool, or both.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough — wiring the chat model, switching the Calendar node into tool mode, and watching the execution log step through model-call → tool-call → final-answer in real time — watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This is part of <strong>Fun with Learning Technology</strong>, a series breaking down the ideas behind modern developer tools — LeetCode problems, AI agent architectures, and the automation platforms reshaping how software gets built — one concrete, no-fluff lesson at a time. No jargon for its own sake, just the mechanism underneath the buzzword.</p>
+<h2>Call To Action</h2>
+<p>If this cleared up what's actually happening inside an n8n AI Agent, do three things: like the video on YouTube so more people doing agent work see it, subscribe to the channel for the next lesson in the series, and subscribe to the Substack newsletter for the written breakdowns like this one. Drop a comment with the agent you're building — tool access, memory limits, and all the weird edge cases included — I read every one.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>n8n AI Agent node: what three things does it wire together?</summary><p>LLM (brain), tools (hands), and memory (notepad) — combined into one agentic automation node.</p></details><details class='card2'><summary>Why can&#x27;t a plain LLM node take real actions?</summary><p>It can only generate text/talk; it has no way to call an external action — needs a tool connected to actually do something.</p></details><details class='card2'><summary>Who decides which tool to call and when, in an AI Agent setup?</summary><p>The model decides; n8n just executes whatever action the model chooses to call.</p></details><details class='card2'><summary>Common bug: agent &#x27;forgot&#x27; something said 3 messages ago. Cause?</summary><p>No memory node wired in — without it, each run has no conversation history, so context is lost between messages.</p></details><details class='card2'><summary>Setting up an AI Agent node: what&#x27;s step one vs step two?</summary><p>Step one: wire in a model (the LLM connection). Step two: add tool(s) the model can call to act.</p></details><details class='card2'><summary>AI Agent node vs plain LLM/Chat node — key difference?</summary><p>Plain LLM only replies with text; AI Agent can reason, pick a tool, call it, and use memory for context across turns.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
