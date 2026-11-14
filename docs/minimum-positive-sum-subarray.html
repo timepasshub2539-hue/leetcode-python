@@ -1,0 +1,214 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3364. Minimum Positive Sum Subarray — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/minimum-positive-sum-subarray
+💻 Code on GitHub: https://github.com/timepasshub2">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/minimum-positive-sum-subarray.html">
+<meta property="og:title" content="3364. Minimum Positive Sum Subarray — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/minimum-positive-sum-subarray
+💻 Code on GitHub: https://github.com/timepasshub2">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>3364. Minimum Positive Sum Subarray</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Subarray sum problems show up constantly in coding interviews because they test something deeper than syntax — they test whether you actually understand how sums accumulate and cancel. <strong>Minimum Positive Sum Subarray</strong> (LeetCode 3364) looks simple on the surface: find a contiguous slice of an array, within a length range, whose sum is the smallest positive number possible. But the moment you try to solve it efficiently, it exposes a classic trap — the instinct to reach for a sliding window, which quietly falls apart the second negative numbers enter the picture.</p>
+<p>This problem is worth learning not because you'll be asked this exact LeetCode number in an interview, but because the pattern underneath it — <strong>prefix sums turned into a sorted-lookup problem</strong> — appears in dozens of subarray problems. Once you see it here, you'll recognize it everywhere.</p>
+<h2>Problem Overview</h2>
+<p>You're given an integer array <code>nums</code> and two integers, <code>l</code> and <code>r</code>. You need to find a contiguous subarray whose length is somewhere between <code>l</code> and <code>r</code> (inclusive), such that its sum is strictly greater than zero, and as small as possible among all such subarrays.</p>
+<p>If no subarray in that length range has a positive sum, return <code>-1</code>.</p>
+<p>In plain terms: you're not looking for the biggest win, and you're not looking for just any win — you're looking for the <em>smallest possible</em> win, among all the window sizes you're allowed to use.</p>
+<h2>Example</h2>
+<p>Take <code>nums = [3, -2, 1, 4]</code>, <code>l = 2</code>, <code>r = 3</code>.</p>
+<p>Every valid window (length 2 or 3):</p>
+<table>
+<thead>
+<tr>
+<th>Window (indices)</th>
+<th>Elements</th>
+<th>Sum</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0–1</td>
+<td><code>[3, -2]</code></td>
+<td>1</td>
+</tr>
+<tr>
+<td>1–2</td>
+<td><code>[-2, 1]</code></td>
+<td>-1</td>
+</tr>
+<tr>
+<td>2–3</td>
+<td><code>[1, 4]</code></td>
+<td>5</td>
+</tr>
+<tr>
+<td>0–2</td>
+<td><code>[3, -2, 1]</code></td>
+<td>2</td>
+</tr>
+<tr>
+<td>1–3</td>
+<td><code>[-2, 1, 4]</code></td>
+<td>3</td>
+</tr>
+</tbody>
+</table>
+<p>Sums that qualify (strictly positive): 1, 5, 2, 3. The smallest among them is <strong>1</strong>, from the window <code>[3, -2]</code>.</p>
+<p>Notice window <code>[-2, 1]</code> sums to -1 — it's thrown out entirely, no matter how "small" the magnitude is. Only positive sums are candidates.</p>
+<h2>Intuition</h2>
+<p>The naive instinct is: "just grab the smallest positive number in the array." That fails immediately — a longer stretch can cancel down to something smaller than any single element while staying positive. So length alone doesn't tell you which subarray wins; you have to actually consider sums.</p>
+<p>The second instinct, especially if you've solved "maximum subarray" problems before, is to reach for a <strong>sliding window</strong>: grow or shrink the window and track the best sum as you go. This is where the problem quietly punishes you. Sliding window logic relies on a monotonic relationship — shrinking the window should move the sum predictably in one direction. With negative numbers in the mix, growing a window can make the sum <em>smaller</em>, not bigger, and shrinking it can make the sum worse. The monotonic assumption that makes sliding window algorithms work simply isn't true here.</p>
+<p>So we need a different lens. Build a <strong>prefix sum array</strong>: <code>prefix[i]</code> is the sum of the first <code>i</code> elements. Now any subarray sum is just one prefix value minus an earlier one: <code>sum(i..j) = prefix[j+1] - prefix[i]</code>.</p>
+<p>Reframe the goal: for each ending point, you want the <strong>largest prefix value that's still smaller than today's prefix</strong> — because that gives you the smallest positive gap. That's no longer a sliding-window problem; it's a lookup problem. And if you keep the valid prefixes sorted, finding "the closest smaller value" is a binary search, not a scan.</p>
+<p>Picture a shelf of prefix totals, sorted, where only the totals that keep your window length between <code>l</code> and <code>r</code> are allowed to sit on the shelf at any time. Each step, you add one new prefix and retire one that's aged out, then binary search the shelf for the closest value below today's prefix.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> For every starting index, try every valid ending index within the length bounds, compute the sum directly, and track the smallest positive one found.</p>
+<p><strong>Algorithm:</strong>
+1. For each start index <code>i</code>.
+2. For each length from <code>l</code> to <code>r</code> (bounded by array size).
+3. Sum the window directly (or use a running total as you extend).
+4. If the sum is positive, compare against the best found so far.</p>
+<p><strong>Advantages:</strong> Dead simple to write and reason about; no risk of subtle bugs with sorted structures or binary search bounds.</p>
+<p><strong>Disadvantages:</strong> Recomputing or extending sums for every start/length pair means you're doing roughly <code>O(n²)</code> work in the worst case — fine for <code>n ≤ 100</code> as in this problem's constraints, but it won't scale to thousands of elements.</p>
+<p><strong>Time complexity:</strong> <code>O(n²)</code> (or <code>O(n² · (r-l))</code> depending on how sums are computed).
+<strong>Space complexity:</strong> <code>O(1)</code> beyond the input.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach has three moving pieces:</p>
+<ol>
+<li><strong>Prefix sums</strong> — reduce every subarray sum to a difference of two prefix values.</li>
+<li><strong>A sorted window of valid prefixes</strong> — at each step <code>end</code>, the only prefixes allowed in the window are those that keep the subarray length between <code>l</code> and <code>r</code>. That means prefix index <code>end - r</code> through <code>end - l</code> are valid starts.</li>
+<li><strong>Binary search</strong> — instead of scanning the sorted window for the closest smaller prefix, use <code>bisect_left</code> to jump straight to the insertion point, then look at the entry just before it.</li>
+</ol>
+<p>Walking through the process for each <code>end</code> from <code>l</code> to <code>n</code>:
+- Insert the prefix that just became old enough to be a valid start (<code>prefix[end - l]</code>).
+- Remove the prefix that's now too old to be a valid start (anything representing a window longer than <code>r</code>).
+- Binary search the sorted window for where <code>prefix[end]</code> would land.
+- If there's an entry immediately before that position, <code>prefix[end] - that entry</code> is a valid candidate — keep the smallest one seen.</p>
+<p>This converts an <code>O(n)</code> scan per step into an <code>O(log n)</code> lookup per step — the part that actually makes the algorithm fast, at least for the search itself (more on insertion cost below).</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">from bisect import bisect_left, insort
+
+
+class Solution:
+    def minimumSumSubarray(self, nums: list[int], l: int, r: int) -&gt; int:
+        n = len(nums)
+
+        # prefix[i] = sum of the first i elements
+        prefix = [0] * (n + 1)
+        for i, num in enumerate(nums):
+            prefix[i + 1] = prefix[i] + num
+
+        window = []       # sorted prefixes whose window length is currently valid
+        best = -1
+
+        for end in range(l, n + 1):
+            # the earliest start that keeps the window length &gt;= l
+            insort(window, prefix[end - l])
+
+            # drop any start that would make the window longer than r
+            if end - r - 1 &gt;= 0:
+                window.remove(prefix[end - r - 1])
+
+            pos = bisect_left(window, prefix[end])
+            if pos &gt; 0:
+                candidate = prefix[end] - window[pos - 1]
+                if best == -1 or candidate &lt; best:
+                    best = candidate
+
+        return best
+
+
+def demo():
+    sol = Solution()
+    assert sol.minimumSumSubarray([3, -2, 1, 4], 2, 3) == 1
+    assert sol.minimumSumSubarray([-2, -1], 1, 2) == -1
+    assert sol.minimumSumSubarray([1, 2, 3, 4], 2, 4) == 3
+    print(&quot;all checks passed&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    demo()
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>prefix</code> is built once, in a single pass, so <code>prefix[i]</code> always means "sum of the first <code>i</code> elements of <code>nums</code>."</li>
+<li><code>window</code> holds every prefix value that's currently a legal starting point — meaning a subarray ending at <code>end</code> and starting there would have a length between <code>l</code> and <code>r</code>.</li>
+<li><code>insort(window, prefix[end - l])</code> adds the newest legal start: at length exactly <code>l</code>, start index <code>end - l</code> just became valid.</li>
+<li>The removal step retires prefixes that have aged past <code>r</code> — once a window would exceed length <code>r</code>, that start is no longer usable.</li>
+<li><code>bisect_left(window, prefix[end])</code> finds where today's prefix would sit in the sorted window. Anything before that index is strictly smaller than today's prefix.</li>
+<li><code>window[pos - 1]</code>, the entry immediately before the insertion point, is the <em>largest</em> prefix smaller than today's — exactly the gap we want to minimize.</li>
+<li><code>best</code> tracks the smallest valid positive sum found across the whole pass.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using <code>nums = [3, -2, 1, 4]</code>, <code>l = 2</code>, <code>r = 3</code>:</p>
+<p><code>prefix = [0, 3, 1, 2, 6]</code></p>
+<ul>
+<li><code>end = 2</code>: insert <code>prefix[0] = 0</code> → window <code>[0]</code>. <code>bisect_left(window, prefix[2]=1)</code> = 1. Candidate: <code>1 - 0 = 1</code>. <code>best = 1</code>.</li>
+<li><code>end = 3</code>: insert <code>prefix[1] = 3</code> → window <code>[0, 3]</code>. Nothing to remove yet (<code>end - r - 1 = -1</code>). <code>bisect_left(window, prefix[3]=2)</code> = 1. Candidate: <code>2 - 0 = 2</code>. <code>best</code> stays <code>1</code>.</li>
+<li><code>end = 4</code>: insert <code>prefix[2] = 1</code> → window <code>[0, 1, 3]</code>. Remove <code>prefix[0] = 0</code> (window would exceed length 3) → <code>[1, 3]</code>. <code>bisect_left(window, prefix[4]=6)</code> = 2. Candidate: <code>6 - 3 = 3</code>. <code>best</code> stays <code>1</code>.</li>
+</ul>
+<p>Final answer: <strong>1</strong>, matching the example.</p>
+<h2>Complexity Analysis</h2>
+<ul>
+<li><strong>Binary search lookup:</strong> <code>O(log n)</code> per step — this is correct and is the fast part.</li>
+<li><strong>Insertion/removal in a plain Python list</strong> (<code>insort</code>, <code>list.remove</code>): each is <code>O(n)</code> because the underlying array shifts elements. Across <code>n</code> steps, that's <code>O(n²)</code> in the worst case.</li>
+<li><strong>Space:</strong> <code>O(n)</code> for the prefix array and the sorted window.</li>
+</ul>
+<p>So as written, the algorithm is a correct <code>O(n²)</code>-worst-case solution dressed in an <code>O(log n)</code>-lookup pattern — fine for this problem's constraint of <code>n ≤ 100</code>, where it's comfortably fast, but not yet the full <code>O(n log n)</code> the pattern promises. To actually hit <code>O(n log n)</code>, the sorted list needs to be backed by a structure with logarithmic insert and delete — a Fenwick tree indexed over compressed prefix values, a balanced BST, or a library implementation like <code>sortedcontainers.SortedList</code>. The algorithmic idea — prefix sums plus a sorted lookup — doesn't change; only the data structure underneath it does.</p>
+<h2>Alternative Solutions</h2>
+<ul>
+<li><strong>Fenwick tree / Binary Indexed Tree over compressed prefix values</strong>: supports <code>O(log n)</code> insert, delete, and "largest value less than X" queries, giving true <code>O(n log n)</code>.</li>
+<li><strong><code>sortedcontainers.SortedList</code></strong>: a drop-in replacement for the plain list that gives <code>O(log n)</code> insertion in practice (amortized), making the swap nearly free in terms of code changes.</li>
+<li><strong>Balanced BST (e.g., a treap or AVL-backed ordered set)</strong>: conceptually the same guarantee as a Fenwick tree, more general but more code to maintain.</li>
+</ul>
+<p>For <code>n ≤ 100</code>, none of this matters in practice — the plain-list version is simpler to write correctly under interview pressure, and that's a legitimate trade-off to state out loud if asked.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Empty array or <code>l</code>/<code>r</code> exceeding array length</strong>: no valid window exists; should return <code>-1</code>.</li>
+<li><strong>All negative numbers</strong>: every window sum is negative or zero; return <code>-1</code>.</li>
+<li><strong>All sums tie at the same positive value</strong>: any of them is correct; the algorithm should return that value regardless of which window produced it.</li>
+<li><strong><code>l == r</code></strong>: window length is fixed; the sorted window only ever holds one valid start at a time.</li>
+<li><strong>Values at the extremes (-1000 to 1000)</strong>: prefix sums can swing widely; nothing breaks, since comparisons don't depend on magnitude, only relative order.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li>Reaching for a sliding window and assuming shrinking always decreases the sum — false the moment negative numbers appear.</li>
+<li>Forgetting to exclude zero — the problem asks for strictly positive sums, not non-negative ones.</li>
+<li>Off-by-one errors in the prefix array indexing, especially around <code>end - l</code> and <code>end - r - 1</code>.</li>
+<li>Removing the wrong prefix from the window — forgetting that the start being retired is tied to length <code>r</code>, not length <code>l</code>.</li>
+<li>Assuming <code>bisect_left</code> plus a plain list gives <code>O(log n)</code> end-to-end, when the insertion/removal cost is the real bottleneck.</li>
+<li>Initializing <code>best</code> to <code>0</code> instead of a sentinel like <code>-1</code>, which silently breaks the "no valid answer" case.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>"Why doesn't sliding window work here?" — be ready to explain the monotonicity argument concretely.</li>
+<li>"What's the actual time complexity of your solution, including the data structure operations, not just the binary search?"</li>
+<li>"How would you modify this to find the <em>maximum</em> sum below a limit, instead of the minimum positive sum?"</li>
+<li>"Could you solve this with a Fenwick tree instead of a sorted list? Walk through what changes."</li>
+<li>"What if <code>l</code> and <code>r</code> could be as large as 10^5 — how does your approach change?"</li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 325 — Maximum Size Subarray Sum Equals k</strong>: same prefix-sum-plus-hashmap pattern, different target condition.</li>
+<li><strong>LeetCode 209 — Minimum Size Subarray Sum</strong>: sliding window works here because all values are positive, which is exactly the condition that breaks in problem 3364.</li>
+<li><strong>LeetCode 862 — Shortest Subarray with Sum at Least K</strong>: prefix sums plus a monotonic deque, a close cousin of this problem's structure.</li>
+<li><strong>LeetCode 327 — Count of Range Sum</strong>: prefix sums plus a merge-sort or BIT-based count, reinforcing the same "prefix difference lookup" idea at a different angle.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>When a subarray-sum problem includes negative numbers, check your sliding-window assumption before writing any code — it's often wrong. Prefix sums turn subarray sums into point-to-point differences, and once you're comparing differences, a sorted structure with binary search beats a linear scan. But watch the data structure doing the sorting: a correct algorithmic idea can still be slow if the container underneath has linear-time insertion. Know the gap between "the pattern is <code>O(n log n)</code>" and "my code is <code>O(n log n)</code>."</p>
+<h2>Watch the Video</h2>
+<p>This walkthrough — including the full timing comparison between brute force and the optimized approach, and two quiz rounds to test your understanding — is available here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series where real LeetCode problems get traced from first instinct to working code — brute force first, then the reasoning that gets you to something faster, with actual runtime measurements instead of just complexity notation. The goal isn't memorizing solutions; it's building the instinct to recognize these patterns the next time they show up in a different disguise.</p>
+<h2>Call To Action</h2>
+<p>If this walkthrough helped the problem click, give the video a like on YouTube and subscribe for more problem breakdowns like this one. For deeper write-ups, dry runs, and the occasional bonus edge case that doesn't make it into the video, subscribe to the Substack. Drop a comment with how you'd have approached it, and share this with anyone prepping for interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Pattern for &#x27;min positive subarray sum&#x27; with +/- elements?</summary><p>Prefix sums + sorted search (or min-heap/multiset) to find smallest prefix[j]-prefix[i]&gt;0; triggered by subarray-sum-range queries.</p></details><details class='card2'><summary>Time complexity for prefix-sum + binary search approach?</summary><p>O(n log n): one pass to build prefix sums, each lookup via sorted structure insert/search is O(log n).</p></details><details class='card2'><summary>Space complexity of the prefix-sum approach?</summary><p>O(n) for storing prefix sums in the sorted container (e.g. sorted list or multiset).</p></details><details class='card2'><summary>Common bug when sums can be exactly zero?</summary><p>Zero isn&#x27;t positive — must require strictly &gt;0, so searching for prefix[i] you need the next value strictly greater, not equal.</p></details><details class='card2'><summary>Minimum Positive Sum Subarray vs plain max-subarray (Kadane)?</summary><p>Kadane finds max sum in O(n); this needs smallest *positive* sum, which isn&#x27;t monotonic, so Kadane&#x27;s greedy drop doesn&#x27;t apply directly.</p></details><details class='card2'><summary>Interview follow-up: why does brute force (check all subarrays) fail at scale?</summary><p>O(n²) or O(n³) pairs/sums become too slow for large n (e.g. 1e5); prefix sums + sorted lookup gets it to O(n log n).</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
