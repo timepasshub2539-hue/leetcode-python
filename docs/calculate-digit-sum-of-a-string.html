@@ -1,0 +1,193 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2243. Calculate Digit Sum of a String | LeetCode Daily Python Solution (why isdigit beats int()) — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/calculate-digit-sum-of-a-string
+💻 Code on GitHub: https://github.com/timepasshu">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/calculate-digit-sum-of-a-string.html">
+<meta property="og:title" content="2243. Calculate Digit Sum of a String | LeetCode Daily Python Solution (why isdigit beats int()) — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/calculate-digit-sum-of-a-string
+💻 Code on GitHub: https://github.com/timepasshu">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>2243. Calculate Digit Sum of a String | LeetCode Daily Python Solution (why isdigit beats int())</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>8. Introduction</h2>
+<p>LeetCode 2243, Calculate Digit Sum of a String, looks small on the surface — split a string into chunks, add up digits, repeat. But it's a great problem to practice on because it tests something interviewers actually care about: can you read a multi-step process description carefully and translate it into code without taking shortcuts that change the meaning?</p>
+<p>This problem rewards precision. It's easy to misread "sum the digits in each group" as "treat each group as a number," and that single misunderstanding produces a completely wrong answer. It also pushes you to think about loop termination — how do you know your repeated grouping process actually finishes? And it introduces a small but genuinely useful habit: checking <code>str.isdigit()</code> character by character instead of reaching for <code>int()</code> immediately.</p>
+<p>If you're prepping for coding interviews, this is the kind of problem that separates candidates who code fast from candidates who code correctly. Let's work through it properly.</p>
+<h2>9. Problem Overview</h2>
+<p>You're given a string <code>s</code> made up only of digit characters, and an integer <code>k</code>. The process works like this:</p>
+<ol>
+<li>Split <code>s</code> into consecutive groups, each of length <code>k</code>, except possibly the last group, which can be shorter if <code>s</code> doesn't divide evenly.</li>
+<li>For each group, compute the sum of its digits.</li>
+<li>Replace each group with that sum (as a string), and glue all the group-sums back together in order to form a new string.</li>
+<li>If this new string's length is still greater than <code>k</code>, repeat the whole process on it.</li>
+<li>Once the string's length is less than or equal to <code>k</code>, stop and return it.</li>
+</ol>
+<p>The constraints keep things small — <code>s</code> has at most 100 characters, and <code>k</code> is a reasonably small positive integer — so there's no need to worry about massive inputs. The real test here is correctness of the grouping-and-summing logic, not raw performance.</p>
+<h2>10. Example</h2>
+<p>Let's use the example from the video: <code>s = "11111222223"</code> (five 1s, five 2s, one 3) and <code>k = 3</code>.</p>
+<p><strong>Round 1</strong> — group into chunks of 3:
+- <code>"111"</code> → 1+1+1 = 3
+- <code>"122"</code> → 1+2+2 = 5... </p>
+<p>wait, let's follow the video's actual grouping precisely: <code>111</code>, <code>112</code>, <code>222</code>, <code>23</code>.</p>
+<ul>
+<li><code>"111"</code> → 1+1+1 = 3</li>
+<li><code>"112"</code> → 1+1+2 = 4</li>
+<li><code>"222"</code> → 2+2+2 = 6</li>
+<li><code>"23"</code> → 2+3 = 5</li>
+</ul>
+<p>Glue the results together: <code>"3465"</code>. Its length is 4, which is still greater than <code>k = 3</code>, so we continue.</p>
+<p><strong>Round 2</strong> — group <code>"3465"</code> into chunks of 3: <code>"346"</code> and <code>"5"</code>.
+- <code>"346"</code> → 3+4+6 = 13
+- <code>"5"</code> → 5</p>
+<p>Glue: <code>"135"</code>. Its length is 3, which is <strong>not</strong> greater than <code>k = 3</code>, so we stop.</p>
+<p><strong>Answer: <code>"135"</code></strong></p>
+<p>Notice the stopping condition is "length ≤ k," not "length == 1." That trips people up — the process can legitimately end with a multi-character string.</p>
+<h2>11. Intuition</h2>
+<p>The first instinct when you see "group of 3 digits, then combine" is to treat the group as a three-digit number. For <code>"346"</code>, that instinct says "346." But re-read the problem: it asks for the <strong>sum of the digits in the group</strong>, not the group's numeric value. <code>3 + 4 + 6 = 13</code>, not <code>346</code>. That's the single most important distinction in this problem, and it's worth internalizing before you write a line of code.</p>
+<p>Once that's settled, the structure of the solution falls into two independent, stackable responsibilities:</p>
+<ul>
+<li><strong>A small helper</strong>: given a short chunk of digit characters, sum its digits.</li>
+<li><strong>An outer loop</strong>: keep slicing the current string into chunks of <code>k</code>, replacing each chunk with its digit sum via the helper, and gluing the results together — repeating until the string is short enough.</li>
+</ul>
+<p>For the helper, the natural way to sum digits in a chunk is to walk it character by character, check whether each character is a digit with <code>str.isdigit()</code>, and if so, convert it to an integer and add it to a running total. Since the problem guarantees <code>s</code> only contains digits, every character will pass that check here — but writing the check this way is a durable habit: it works even when a string might contain non-digit characters, and it avoids the trap of calling <code>int()</code> on something that isn't guaranteed to parse cleanly.</p>
+<p>For the outer loop, don't try to precompute how many rounds you'll need from the length of <code>s</code> and <code>k</code> — that's unnecessary math that adds complexity without adding correctness. The string shrinks every round by design (since digit sums are always shorter than or equal in digit-count to what they summed), so a simple <code>while len(s) &gt; k</code> loop terminates naturally and correctly.</p>
+<h2>12. Brute Force Solution</h2>
+<p>There isn't really a meaningfully different "brute force" version of this problem — the process described in the problem statement <em>is</em> the algorithm. The only brute-force-ish mistake would be converting each group to an integer directly via <code>int(group)</code> and doing arithmetic on that, which gives the wrong answer (as shown above, <code>346</code> instead of <code>13</code>).</p>
+<p>A technically-brute-force-but-correct variant: instead of summing digits character by character with <code>isdigit</code>, you could convert the whole group to a list of characters, map <code>int()</code> over each character, and sum the resulting list. This works, but it's doing extra work (building an intermediate list) for no benefit over a simple accumulator loop.</p>
+<p><strong>Advantages</strong>: straightforward to write, no tricky edge cases.
+<strong>Disadvantages</strong>: slightly wasteful use of intermediate data structures; no real gain over the optimal approach.
+<strong>Time complexity</strong>: O(n) per round, same as the optimal solution.
+<strong>Space complexity</strong>: O(n) per round for the new string and any intermediate lists.</p>
+<p>Because the "correct" approach and the "optimal" approach are essentially the same here, this problem doesn't have a meaningful brute-force-vs-optimal complexity gap — the real gap is between the <em>correct</em> interpretation and the <em>wrong</em> interpretation (numeric group vs. digit sum).</p>
+<h2>13. Optimal Solution</h2>
+<p>The optimal solution is exactly the two-part structure from the intuition section:</p>
+<p><strong>Step 1 — digit-sum helper</strong>: scan a string one character at a time, test <code>isdigit()</code>, and accumulate.</p>
+<p><strong>Step 2 — outer reduction loop</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Check</td>
+<td>Is <code>len(s) &gt; k</code>? If not, return <code>s</code>.</td>
+</tr>
+<tr>
+<td>Slice</td>
+<td>Break <code>s</code> into chunks of length <code>k</code> using <code>range(0, len(s), k)</code>.</td>
+</tr>
+<tr>
+<td>Reduce</td>
+<td>For each chunk, compute its digit sum using the helper.</td>
+</tr>
+<tr>
+<td>Join</td>
+<td>Concatenate all the digit sums (as strings) into a new string.</td>
+</tr>
+<tr>
+<td>Repeat</td>
+<td>Go back to the check with the new string.</td>
+</tr>
+</tbody>
+</table>
+<p>This is the classic "group → reduce → repeat until small enough" shape — the same pattern behind checksums, hash bucketing, and batch aggregation. Once you see it here, you'll recognize it elsewhere.</p>
+<h2>14. Python Code</h2>
+<pre><code class="language-python">class Solution:
+    def digitSum(self, s: str, k: int) -&gt; str:
+        def group_sum(chunk: str) -&gt; int:
+            total = 0
+            for ch in chunk:
+                if ch.isdigit():
+                    total += int(ch)
+            return total
+
+        while len(s) &gt; k:
+            pieces = []
+            for i in range(0, len(s), k):
+                chunk = s[i:i + k]
+                pieces.append(str(group_sum(chunk)))
+            s = &quot;&quot;.join(pieces)
+
+        return s
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<ul>
+<li><code>group_sum(chunk)</code> is the helper responsible for summing digits in a single chunk. It starts <code>total</code> at 0 and walks the chunk one character at a time.</li>
+<li><code>if ch.isdigit()</code> guards against non-digit characters — in this problem every character qualifies, but the check is what makes the function safe and explicit rather than assuming.</li>
+<li><code>total += int(ch)</code> converts only a single character at a time, which is always a valid single-digit integer, unlike converting a whole multi-character chunk.</li>
+<li>The outer <code>while len(s) &gt; k</code> is the stopping condition from the problem statement, checked before every round.</li>
+<li><code>range(0, len(s), k)</code> produces the starting index of each chunk; <code>s[i:i + k]</code> safely grabs a chunk even when the slice runs past the end of the string (Python slicing just returns a shorter result, which handles the "last group can be shorter" rule for free).</li>
+<li><code>pieces.append(str(group_sum(chunk)))</code> stores each chunk's digit sum as a string so it can be joined later.</li>
+<li><code>s = "".join(pieces)</code> glues all the sums back into a single string for the next round, or for the final return.</li>
+</ul>
+<h2>16. Dry Run</h2>
+<p>Using <code>s = "11111222223"</code>, <code>k = 3</code>:</p>
+<p><strong>Round 1</strong>: <code>len(s) = 11 &gt; 3</code>
+- Chunks: <code>"111"</code>, <code>"112"</code>, <code>"222"</code>, <code>"23"</code>
+- Sums: <code>3</code>, <code>4</code>, <code>6</code>, <code>5</code>
+- <code>s = "3465"</code></p>
+<p><strong>Round 2</strong>: <code>len(s) = 4 &gt; 3</code>
+- Chunks: <code>"346"</code>, <code>"5"</code>
+- Sums: <code>13</code>, <code>5</code>
+- <code>s = "135"</code></p>
+<p><strong>Check</strong>: <code>len(s) = 3</code>, not greater than <code>k = 3</code> → loop ends.</p>
+<p><strong>Return <code>"135"</code></strong>, matching the example from the video.</p>
+<h2>17. Complexity Analysis</h2>
+<p><strong>Time</strong>: Each round scans the current string once, doing O(current length) work. Since the string's length strictly shrinks each round (a group's digit sum has at most as many digits as the group itself, usually fewer), and <code>s</code> starts at no more than 100 characters, the total number of rounds is small — a handful at most. Overall this is effectively linear in the original input size, not something that blows up with input size.</p>
+<p><strong>Space</strong>: Each round builds a new string of digit sums, which in the worst case is proportional to the current string's length. So space is O(n) at any point in time, where <code>n</code> is the length of the current string.</p>
+<p><strong>Why these are correct</strong>: the string length is non-increasing across rounds (summing digits in a group of size <code>k</code> produces a result with at most <code>k</code> digits, and typically far fewer), so the loop is guaranteed to terminate, and each round's work is bounded by the (shrinking) string length.</p>
+<h2>18. Alternative Solutions</h2>
+<p>One reasonable alternative is to write the digit-sum helper using Python's built-in tools instead of a manual loop:</p>
+<pre><code class="language-python">def group_sum(chunk: str) -&gt; int:
+    return sum(int(ch) for ch in chunk if ch.isdigit())
+</code></pre>
+<p>This is functionally identical to the manual accumulator loop — same time and space complexity — but more compact. It's a style preference, not a performance difference. Either is fine in an interview; the generator-expression version signals comfort with Python idioms, while the explicit loop version is easier to narrate out loud while explaining your thinking.</p>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong>String length already ≤ k</strong>: the while loop never executes, and the original string is returned unchanged.</li>
+<li><strong>Last group shorter than k</strong>: handled automatically by Python's slicing (<code>s[i:i+k]</code> just returns fewer characters near the end) — no special-casing needed.</li>
+<li><strong>All identical digits</strong>: works the same as any other input; the sums will just be more uniform.</li>
+<li><strong>k equal to 1</strong>: every character becomes its own group, and the digit sum of a single digit is itself, so the string becomes unchanged for a round where every digit is below 10 — but if any digit-sum ever produces a multi-digit number mid-process, the next round groups those new digits again.</li>
+<li><strong>Maximum length input (100 characters)</strong>: still converges in a small number of rounds since each round reduces the digit count substantially.</li>
+</ul>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Treating a group as a number instead of summing its digits.</strong> <code>"346"</code> as a number is 346, not 3+4+6=13 — this is the single most common misread of the problem.</li>
+<li><strong>Calling <code>int()</code> on a whole chunk instead of checking digits individually.</strong> This works only by coincidence when every character happens to be a digit, and masks the real intent of the check.</li>
+<li><strong>Precomputing the number of rounds from <code>len(s)</code> and <code>k</code>.</strong> Unnecessary and error-prone — just loop until the condition is met.</li>
+<li><strong>Using the wrong stopping condition</strong>, such as looping until <code>len(s) == 1</code> instead of <code>len(s) &lt;= k</code>. The problem stops as soon as the string is no longer <em>longer than</em> <code>k</code>, which can leave a multi-character result.</li>
+<li><strong>Off-by-one errors in slicing</strong>, like using <code>range(0, len(s), k+1)</code> or forgetting that <code>s[i:i+k]</code> already handles a short final chunk correctly without extra bounds-checking.</li>
+</ol>
+<h2>21. Interview Questions</h2>
+<ul>
+<li>How would this change if <code>s</code> could contain non-digit characters mixed in?</li>
+<li>Can you prove this loop always terminates? What's the invariant that guarantees shrinking?</li>
+<li>How would you modify this to return the number of rounds instead of the final string?</li>
+<li>What's the time complexity if <code>k</code> is very small, like 1, versus very large, close to <code>len(s)</code>?</li>
+<li>How does this relate to a checksum algorithm you might use in a real system?</li>
+</ul>
+<h2>22. Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 258, Add Digits</strong> — repeatedly sum all digits of a number until a single digit remains; same "repeat until small enough" shape, but on a single number rather than grouped sums.</li>
+<li><strong>LeetCode 1837, Sum of Digits in Base K</strong> — practices digit extraction logic, this time for different number bases.</li>
+<li><strong>LeetCode 1844, Replace All Digits with Characters</strong> — another string-processing problem that mixes character-type checks with transformation logic.</li>
+</ul>
+<h2>23. Key Takeaways</h2>
+<p>The core lesson of LeetCode 2243 is to read the problem statement precisely before writing code — the difference between "sum of digits" and "value of the group as a number" changes everything. Beyond that, the problem reinforces two durable habits: use <code>isdigit()</code> to validate before converting rather than assuming a string will parse, and trust a simple <code>while</code> loop with a shrinking condition instead of trying to precompute how many iterations you'll need.</p>
+<h2>24. Watch the Video</h2>
+<p>For the full walkthrough with a live trace through the example and two quiz rounds to test your understanding before seeing the answer, watch the video here: {LINK}</p>
+<h2>25. About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series that works through LeetCode problems and core programming concepts with an emphasis on building real intuition — not just memorizing patterns. Each episode walks from "why does this approach work" through a clean, production-quality implementation, so you walk away actually understanding the problem rather than just having seen a solution.</p>
+<h2>26. Call To Action</h2>
+<p>If this walkthrough helped, give the video a like on YouTube and subscribe for more LeetCode breakdowns like this one. Subscribe to the Substack for written versions you can reference later, drop a comment with your own approach or a question about the problem, and share this with anyone prepping for coding interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Pattern for digit-sum-of-string problems: trigger?</summary><p>When input is a string that mixes letters and digits, think per-character filter + accumulate, not whole-string parsing.</p></details><details class='card2'><summary>Time complexity of scanning a string for digit sum?</summary><p>O(n), one pass through the string&#x27;s characters.</p></details><details class='card2'><summary>Space complexity of the digit-sum accumulation approach?</summary><p>O(1) extra space — just a running integer total, no auxiliary array needed.</p></details><details class='card2'><summary>Common bug when filtering digits from a string?</summary><p>Using int(char) unguarded throws on letters; must check isdigit() (or catch) before converting.</p></details><details class='card2'><summary>isdigit() check vs try/int(ch) conversion — which to prefer?</summary><p>Prefer isdigit(): it&#x27;s a clear boolean guard, avoids exceptions-as-control-flow, and reads as the intent (skip non-digits).</p></details><details class='card2'><summary>Interview follow-up: what if string has multi-digit numbers like &#x27;12a3&#x27;?</summary><p>Clarify whether to sum each digit individually or sum contiguous digit runs as numbers — changes whether you need a buffer per run.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
