@@ -1,0 +1,195 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2911. Minimum Changes to Make K Semi-palindromes — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/minimum-changes-to-make-k-semi-palindromes
+💻 Code on GitHub: https://github.com">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/minimum-changes-to-make-k-semi-palindromes.html">
+<meta property="og:title" content="2911. Minimum Changes to Make K Semi-palindromes — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/minimum-changes-to-make-k-semi-palindromes
+💻 Code on GitHub: https://github.com">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>2911. Minimum Changes to Make K Semi-palindromes</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>Introduction</h2>
+<p>Every so often LeetCode throws out a problem that looks like a palindrome question on the surface but is actually testing something else entirely: your ability to combine two separate algorithmic ideas into one clean solution. <strong>2911. Minimum Changes to Make K Semi-Palindromes</strong> is exactly that kind of problem. It borrows the "cost to make a substring a palindrome" idea that shows up constantly in interview prep, bends the definition of palindrome into something unfamiliar, and then wraps the whole thing in a partition DP.</p>
+<p>Interviewers like this problem for a specific reason: it rewards engineers who can decompose a hard problem into two independent, well-understood pieces — a cost function and a partitioning DP — rather than trying to solve everything in one pass. If you've ever worked through "Palindrome Partitioning II" or similar splitting problems, this is the natural next step up in difficulty. Learning it sharpens a pattern you'll reuse constantly: precompute a cost table over all substrings, then run a DP over partition points on top of it.</p>
+<h2>Problem Overview</h2>
+<p>You're given a string <code>s</code> and an integer <code>k</code>. Your job is to split <code>s</code> into exactly <code>k</code> contiguous pieces. Each piece doesn't need to already be anything special — but you're allowed to change individual characters in it until it becomes what the problem calls a <strong>semi-palindrome</strong>.</p>
+<p>A semi-palindrome is defined relative to some divisor <code>d</code> that is strictly less than the string's length and evenly divides it. Once you pick <code>d</code>, you don't slice the string into blocks of size <code>d</code>. Instead, you group characters by their index modulo <code>d</code> — every index that lands in the same residue class joins the same group. Each of those groups, read on its own, must be a palindrome.</p>
+<p>Your goal: choose the split points and, for each resulting piece, the number of character changes needed to make it a valid semi-palindrome for the best possible <code>d</code>, such that the total number of changes across all <code>k</code> pieces is as small as possible.</p>
+<h2>Example</h2>
+<p>Take <code>s = "abaacaba"</code>. Group by index mod 2 (so <code>d = 2</code>):</p>
+<ul>
+<li>Group starting at index 0: positions 0, 2, 4, 6 → <code>a, a, c, b</code></li>
+<li>Group starting at index 1: positions 1, 3, 5, 7 → <code>b, a, a, a</code></li>
+</ul>
+<p>Wait — check with the actual string <code>a-b-a-a-c-a-b-a</code>. Indices 0..7: a(0) b(1) a(2) a(3) c(4) a(5) b(6) a(7).</p>
+<ul>
+<li>mod 2 == 0: indices 0,2,4,6 → a, a, c, b</li>
+<li>mod 2 == 1: indices 1,3,5,7 → b, a, a, a</li>
+</ul>
+<p>Neither group is a palindrome as written here, which is exactly why cost matters — you compute how many swaps-via-change it takes to make each group read the same forwards and backwards, by comparing each character to its mirror across the group's center. For a group like <code>b, a, a, a</code>, the first and last characters (<code>b</code> and <code>a</code>) don't match, so that's one change. The middle two (<code>a</code>, <code>a</code>) already match. That's a cost of 1 for this group at this <code>d</code>.</p>
+<p>You'd repeat this for every valid divisor of the substring's length and keep whichever <code>d</code> gives the lowest total — that's the "cost" of turning that one substring into a semi-palindrome.</p>
+<h2>Intuition</h2>
+<p>The instinct that trips most people up first is treating <code>d</code> like a chunk size — "split the string into blocks of length <code>d</code>." That's wrong, and it's wrong in a way that's easy to miss because nearly every other string-partitioning problem <em>does</em> mean contiguous blocks. Here, <code>d</code> is a stride. You're grouping indices that are congruent modulo <code>d</code>, so index 0 pairs with index <code>d</code>, which pairs with index <code>2d</code>, and so on, all living in the same group. That's the "interleaving" that makes a semi-palindrome genuinely different from a regular one.</p>
+<p>Once you internalize that <code>d</code> is a residue-class grouping rather than a slice width, the rest of the intuition falls into place in two separate layers:</p>
+<ol>
+<li><strong>Local layer — cost of one piece.</strong> For any single substring, try every valid divisor <code>d</code> of its length (where <code>d</code> is strictly less than the length), build the <code>d</code> interleaved groups, and count mismatches against each group's own reverse. Keep the cheapest <code>d</code>. This gives you one number: the minimum changes to make <em>that exact substring</em> a semi-palindrome.</li>
+<li><strong>Global layer — where to cut.</strong> Once every substring has a known cost, the problem becomes "pick <code>k - 1</code> cut points in the string to minimize the sum of the costs of the resulting <code>k</code> pieces." That's a textbook partition DP, the same shape as palindrome partitioning problems, just fed by a different cost function.</li>
+</ol>
+<p>The key insight that makes the combination efficient: each substring's cost is <strong>fixed</strong> — it doesn't depend on what the other pieces look like. So you never need to recompute it inside the DP. Compute it once per substring, store it in a table, and let the DP only worry about where to cut.</p>
+<h2>Brute Force Solution</h2>
+<p><strong>Idea:</strong> Try every way to split the string into <code>k</code> contiguous non-empty pieces, and for each piece, try every valid divisor <code>d</code> to find its true minimum semi-palindrome cost, then sum.</p>
+<p><strong>Algorithm:</strong>
+1. Enumerate every combination of <code>k - 1</code> cut points among <code>n - 1</code> possible gaps.
+2. For each resulting set of <code>k</code> pieces, compute the real cost of each piece by checking every divisor (not skipping any, not caching anything).
+3. Sum the costs for that split and track the global minimum across all splits.</p>
+<p><strong>Advantages:</strong> Trivial to reason about correctness — it's a literal transcription of the problem statement.</p>
+<p><strong>Disadvantages:</strong> The number of ways to place <code>k - 1</code> cuts among <code>n - 1</code> gaps is combinatorial, and if you don't cache substring costs, the same substring's cost often gets recomputed many times across different splits. A naive version that always assumes <code>d = 1</code> (as the earlier walkthrough in the source material shows with <code>"cac"</code>) can also silently produce wrong-but-plausible-looking answers, since <code>d = 1</code> happens to be correct on <em>some</em> substrings by luck, not by rule.</p>
+<p><strong>Time complexity:</strong> Exponential in the number of cut combinations, multiplied by the cost of recomputing each piece's cost from scratch — far too slow once <code>n</code> approaches 200.</p>
+<p><strong>Space complexity:</strong> Low if done recursively without memoization, but that's precisely what makes it slow.</p>
+<h2>Optimal Solution</h2>
+<p>The optimal approach separates the problem into exactly the two layers the intuition section described.</p>
+<p><strong>Step 1 — Build a cost table.</strong> For every pair of indices <code>(i, j)</code> with <code>i &lt;= j</code>, compute <code>cost[i][j]</code>: the minimum number of changes needed to turn <code>s[i..j]</code> into a semi-palindrome. A single character costs 0 automatically. For longer substrings, loop over every <code>d</code> from 1 to length−1, skip any <code>d</code> that doesn't evenly divide the length, build each of the <code>d</code> interleaved groups, count character mismatches against each group's own reverse, and keep the smallest total across all valid <code>d</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Substring length</th>
+<th>Valid divisors <code>d</code> tried</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>none (cost is 0)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>1, 2</td>
+</tr>
+<tr>
+<td>6</td>
+<td>1, 2, 3</td>
+</tr>
+<tr>
+<td>8</td>
+<td>1, 2, 4</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Step 2 — Partition DP on top.</strong> Define <code>dp[i][kk]</code> as the minimum total changes to split the first <code>i</code> characters of <code>s</code> into exactly <code>kk</code> pieces. The base case is <code>dp[0][0] = 0</code> — zero characters, zero pieces, zero cost. Everything else starts at infinity. Transition: for every earlier cut point <code>j</code>, <code>dp[i][kk] = min(dp[i][kk], dp[j][kk-1] + cost[j][i-1])</code> — finish <code>kk - 1</code> pieces up to <code>j</code>, then pay for one more piece spanning from <code>j</code> to <code>i - 1</code>. The final answer lives at <code>dp[n][k]</code>.</p>
+<p>This is the same "precompute, then partition" shape used in many palindrome-partitioning problems — the only thing that changed is what "cost of a piece" means.</p>
+<h2>Python Code</h2>
+<pre><code class="language-python">class Solution:
+    def minimumChanges(self, s: str, k: int) -&gt; int:
+        n = len(s)
+
+        def cost(i: int, j: int) -&gt; int:
+            &quot;&quot;&quot;Minimum changes to make s[i..j] a semi-palindrome.&quot;&quot;&quot;
+            m = j - i + 1
+            if m == 1:
+                return 0
+
+            best = m  # worst case: change every character
+            for d in range(1, m):
+                if m % d != 0:
+                    continue
+                total = 0
+                for r in range(d):
+                    group = s[i + r:j + 1:d]
+                    half = len(group) // 2
+                    for a in range(half):
+                        if group[a] != group[-(a + 1)]:
+                            total += 1
+                best = min(best, total)
+            return best
+
+        # Precompute cost of every substring once.
+        cost_table = [[0] * n for _ in range(n)]
+        for i in range(n):
+            for j in range(i, n):
+                cost_table[i][j] = cost(i, j)
+
+        INF = float(&quot;inf&quot;)
+        dp = [[INF] * (k + 1) for _ in range(n + 1)]
+        dp[0][0] = 0
+
+        for i in range(1, n + 1):
+            for kk in range(1, k + 1):
+                for j in range(kk - 1, i):
+                    if dp[j][kk - 1] == INF:
+                        continue
+                    dp[i][kk] = min(dp[i][kk], dp[j][kk - 1] + cost_table[j][i - 1])
+
+        return dp[n][k]
+</code></pre>
+<h2>Code Walkthrough</h2>
+<ul>
+<li><code>cost(i, j)</code> operates on inclusive indices and returns 0 immediately for single characters — there's nothing to compare.</li>
+<li><code>best = m</code> sets a worst-case ceiling: changing every character in the piece, used only if nothing better is found.</li>
+<li>The <code>d</code> loop only considers divisors that evenly split <code>m</code>, since every other <code>d</code> can't form complete groups.</li>
+<li><code>s[i + r:j + 1:d]</code> is the line that actually does the interleaving — starting at offset <code>r</code> from the piece's start, stepping by <code>d</code>, it pulls out exactly the characters that belong to that residue class.</li>
+<li>The mismatch count compares each character in the group to its mirror from the other end, using <code>group[-(a + 1)]</code> instead of building a separate reversed string.</li>
+<li><code>cost_table</code> is filled once, for every <code>(i, j)</code> pair, before the DP ever runs — that's the precomputation that keeps the overall algorithm fast.</li>
+<li>The <code>dp</code> table is <code>(n + 1) x (k + 1)</code>, with <code>dp[0][0] = 0</code> as the only reachable zero-cost state at the start.</li>
+<li>The triple loop tries every prefix length <code>i</code>, every piece count <code>kk</code>, and every earlier cut point <code>j</code>, and only updates <code>dp[i][kk]</code> when the predecessor state <code>dp[j][kk - 1]</code> is actually reachable.</li>
+</ul>
+<h2>Dry Run</h2>
+<p>Using <code>s = "abaacaba"</code> (length 8) conceptually with <code>k = 2</code>:</p>
+<ol>
+<li>The cost table is built first — every substring from length 1 to 8 gets its best divisor cost computed and stored.</li>
+<li>The DP then considers every single cut point <code>j</code> between 1 and 7, pairing <code>dp[j][1]</code> (cost of making the first piece a semi-palindrome) with <code>cost_table[j][7]</code> (cost of making everything after <code>j</code> a semi-palindrome).</li>
+<li><code>dp[8][2]</code> ends up holding the minimum over all of those combinations — the cheapest way to split the full string into exactly two semi-palindromic pieces.</li>
+</ol>
+<p>The important thing to see is that no substring's cost is ever recalculated mid-DP — every lookup is a table read, not a fresh computation.</p>
+<h2>Complexity Analysis</h2>
+<p><strong>Time:</strong> There are roughly <code>n²</code> substrings. Computing the cost of one substring of length <code>m</code> involves checking its divisors and, for each, scanning its characters — bounded by <code>O(m log m)</code> in practice, which collectively makes the cost table <code>O(n³)</code> in the worst case. With <code>n</code> capped at 200, that's a few million operations — fast. The DP itself is <code>O(n² * k)</code>, and since <code>k &lt;= n / 2</code>, this term is smaller than the cost table construction. Overall: <strong>O(n³)</strong>.</p>
+<p><strong>Space:</strong> The cost table is <code>O(n²)</code>, and the DP table is <code>O(n * k)</code>, so total space is <strong>O(n²)</strong>.</p>
+<p><strong>Why it's correct:</strong> The cost table captures the true minimum cost for every possible piece independent of context, so the DP's job reduces to pure combinatorial optimization over cut points — no information is lost by separating the two layers, because a piece's optimal semi-palindrome cost never depends on where its neighbors are cut.</p>
+<h2>Alternative Solutions</h2>
+<p>A memoized top-down recursion (<code>dp(i, kk)</code> as a function with <code>@lru_cache</code> instead of an explicit table) is functionally identical and sometimes easier to write correctly on a first pass, since you don't need to carefully order the loops. It costs a bit more overhead per call but can be more intuitive while debugging the recurrence. For this problem's input size, both approaches run comfortably within limits, so the choice is mostly about personal preference for iterative versus recursive DP.</p>
+<h2>Edge Cases</h2>
+<ul>
+<li><strong>Piece of length 1:</strong> Automatically costs 0 — there's no palindrome violation possible with a single character, so <code>d</code> loops are skipped entirely.</li>
+<li><strong>k equal to its maximum (n / 2):</strong> Forces every piece toward the smallest possible size, so many pieces will end up length 1 or 2 — the algorithm handles this without special-casing because the DP naturally explores all valid cut placements.</li>
+<li><strong>String with no repeated characters:</strong> Every semi-palindrome piece longer than 1 will likely cost close to its worst case, since there's nothing to pair up — the cost function still works correctly, just returns higher numbers.</li>
+<li><strong>All identical characters:</strong> Every divisor and every piece size costs 0, since any group of identical characters is already a palindrome.</li>
+<li><strong>k = 1:</strong> The DP degenerates to a single lookup: the cost of the entire string as one semi-palindrome piece, <code>cost_table[0][n-1]</code>.</li>
+</ul>
+<h2>Common Mistakes</h2>
+<ol>
+<li><strong>Treating <code>d</code> as a chunk size instead of a stride.</strong> Slicing the string into contiguous blocks of size <code>d</code> instead of grouping by index modulo <code>d</code> produces a completely different — and wrong — definition of semi-palindrome.</li>
+<li><strong>Defaulting to <code>d = 1</code> to save time.</strong> It occasionally produces the right cost by coincidence, but on most substrings a smaller divisor that groups matching characters together will beat it.</li>
+<li><strong>Recomputing substring cost inside the DP loop.</strong> This throws away the entire point of precomputing a cost table and reintroduces massive redundant work.</li>
+<li><strong>Forgetting that <code>d</code> must be strictly less than the substring's length.</strong> Allowing <code>d</code> equal to the length degenerates the "groups" into single characters each, which trivially costs 0 and silently breaks the whole cost calculation.</li>
+<li><strong>Off-by-one errors in the DP's inclusive/exclusive indexing.</strong> Mixing up whether <code>cost_table[j][i-1]</code> or <code>cost_table[j][i]</code> represents the piece from <code>j</code> to <code>i-1</code> is one of the easiest ways to get a DP that looks reasonable but returns consistently wrong answers.</li>
+</ol>
+<h2>Interview Questions</h2>
+<ul>
+<li>Can a substring of any length be split into a valid semi-palindrome for any <code>d</code>? <em>(No — the substring's length must be evenly divisible by <code>d</code>, or the groups can't be formed at all.)</em></li>
+<li>Why precompute every substring's cost instead of recalculating it inside the DP? <em>(The same substring range is reused across many different partitions, so computing it once avoids redundant work.)</em></li>
+<li>How would the solution change if pieces had to be of equal length? <em>(The DP's cut-point search would collapse to checking only cuts spaced evenly, removing most of the outer loop's freedom.)</em></li>
+<li>Could this be solved with a greedy approach instead of DP? <em>(No — the cheapest split overall doesn't always come from greedily minimizing each individual piece's cost, since piece boundaries interact.)</em></li>
+</ul>
+<h2>Similar Problems</h2>
+<ul>
+<li><strong>132. Palindrome Partitioning II</strong> — the direct ancestor of this problem's DP shape, minimizing cuts instead of changes, with ordinary (non-semi) palindromes.</li>
+<li><strong>1278. Palindrome Partitioning III</strong> — nearly identical partition DP structure, but with a simpler cost function (plain palindrome change cost).</li>
+<li><strong>5. Longest Palindromic Substring</strong> — foundational palindrome-checking intuition that underlies the mismatch-counting logic used here.</li>
+<li><strong>1216. Valid Palindrome III</strong> — another "minimum changes/removals to reach a palindrome" cost-function problem, useful for practicing the local layer in isolation.</li>
+</ul>
+<h2>Key Takeaways</h2>
+<p>The hardest part of this problem isn't the DP — it's correctly understanding what a semi-palindrome actually is, specifically that <code>d</code> defines an interleaved grouping by index modulo <code>d</code>, not a contiguous block size. Once that's clear, the problem splits cleanly into two independent, well-understood pieces: a cost function per substring, and a partition DP over cut points. That "precompute local cost, then DP the global split" pattern generalizes to a huge number of string-partitioning problems, which makes this one worth internalizing beyond just this specific LeetCode number.</p>
+<h2>Watch the Video</h2>
+<p>For the full walkthrough with a live correctness check against all of LeetCode's test cases plus extra edge cases, and a real timed comparison between the brute force and optimal versions, watch the video here: {LINK}</p>
+<h2>About the Series</h2>
+<p>This breakdown is part of <strong>Fun with Learning Technology</strong>, a series dedicated to working through real coding interview problems end to end — not just presenting a final answer, but building the intuition, the brute force baseline, and the optimized solution step by step, the way an engineer would actually reason through it in an interview.</p>
+<h2>Call To Action</h2>
+<p>If this walkthrough helped the problem click, give the video a like on YouTube and subscribe for more deep dives into tricky DP and string problems. Subscribe to the Substack for the written breakdowns delivered straight to your inbox, drop a comment with which problem you want tackled next, and share this with anyone prepping for coding interviews.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>Pattern name/tell: &#x27;split string into k parts, minimize cost per part&#x27;?</summary><p>Partition DP — define dp[i][k] = min cost of splitting first i chars into k valid parts.</p></details><details class='card2'><summary>Time complexity for Minimum Changes to Make K Semi-palindromes?</summary><p>O(n^2 log n) roughly: O(n^2) substring costs (each costs O(sqrt(len)) divisors) plus O(n*k*n) DP transitions.</p></details><details class='card2'><summary>Space complexity used by the DP + cost table?</summary><p>O(n^2) for the precomputed cost[i][j] table, plus O(n*k) for the DP array.</p></details><details class='card2'><summary>Trickiest edge case when computing a substring&#x27;s semi-palindrome cost?</summary><p>Must try every divisor d of length (not just d=1 or len/2) and take the minimum mismatch cost across groups mod d.</p></details><details class='card2'><summary>Semi-palindrome vs regular palindrome — key difference?</summary><p>Semi-palindrome only requires each residue-class subsequence (indices same mod d) to be a palindrome, not the whole string.</p></details><details class='card2'><summary>Interview follow-up: why can&#x27;t greedy picking equal-size parts work?</summary><p>Optimal split sizes vary per segment; only DP over all split points guarantees the true minimum total cost.</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
