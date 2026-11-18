@@ -1,0 +1,235 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2914. Minimum Number of Changes to Make Binary String Beautiful — Python LeetCode Solution</title><meta name="description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/minimum-number-of-changes-to-make-binary-string-beautiful
+💻 Code on GitHub: htt">
+<meta name="google-site-verification" content="hZbXCsQvg3eyioIrq8tkOXuNZeVeRKU46KQOmbbxiEI" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E"><link rel="canonical" href="https://timepasshub2539-hue.github.io/leetcode-python/minimum-number-of-changes-to-make-binary-string-beautiful.html">
+<meta property="og:title" content="2914. Minimum Number of Changes to Make Binary String Beautiful — Python LeetCode Solution"><meta property="og:type" content="website">
+<meta property="og:description" content="✅ Runtime tested — the solution passes every example case.
+
+📄 Full written solution: https://interview-kit-fe.vercel.app/minimum-number-of-changes-to-make-binary-string-beautiful
+💻 Code on GitHub: htt">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar"><div class="in"><a class="brand" href="index.html">Fun with Learning <b>Technology</b></a></div></div>
+<div class="wrap"><p style='margin-top:24px'><a class='back' href='index.html'>← All problems</a></p><h1 class='ph1'>2914. Minimum Number of Changes to Make Binary String Beautiful</h1><span class='badge' style='background:#4f9cf922;color:#4f9cf9'> General</span> <span class='tick'>✓ Runtime tested</span><article><h2>8. Introduction</h2>
+<p>Binary string problems show up constantly in coding interviews because they look deceptively simple and hide a trap: the instinct to reach for dynamic programming when none is needed. LeetCode 2914 — Minimum Number of Changes to Make Binary String Beautiful — is a textbook example. The moment you see "binary string" and "minimum changes," your brain wants to start tracking state across the whole string. That instinct is exactly what this problem is testing, and resisting it is the whole lesson.</p>
+<p>Interviewers like this problem because it rewards a specific skill: recognizing when a problem decomposes into independent subproblems. That recognition is more valuable than knowing DP patterns by heart, because it tells you when <em>not</em> to use them. If you're prepping for interviews or building intuition for greedy-vs-DP decisions, this is a clean, fast problem to internalize that skill on.</p>
+<h2>9. Problem Overview</h2>
+<p>You're given a binary string (only <code>0</code>s and <code>1</code>s) whose length is always even. A string is called "beautiful" if you can split it into consecutive blocks, where:</p>
+<ul>
+<li>every block has even length, and</li>
+<li>every character inside a block is identical (all <code>0</code>s or all <code>1</code>s).</li>
+</ul>
+<p>You're allowed to flip any character in the string (turn a <code>0</code> into a <code>1</code> or vice versa) to force this structure. The question: what's the minimum number of flips required to make the string beautiful?</p>
+<p>Note that you don't need to decide the final block boundaries yourself — you just need there to <em>exist</em> some valid way to split the flipped string into these all-matching even blocks.</p>
+<h2>10. Example</h2>
+<p>Take the string <code>1001</code>.</p>
+<ul>
+<li>Flip index 1: <code>1</code> → <code>1101</code>... wait, let's trace it properly. Flip index 1 (<code>0</code> → <code>1</code>): string becomes <code>1101</code>.</li>
+<li>Flip index 3 (<code>1</code> → <code>0</code>): string becomes <code>1100</code>.</li>
+</ul>
+<p>Now <code>1100</code> splits cleanly into <code>11</code> and <code>00</code> — both even length, both single repeated characters. Two flips were used, and that matches the expected answer for this input.</p>
+<p>Why two and not fewer? Because <code>1001</code> has two mismatched adjacent pairs — <code>10</code> and <code>01</code> — and each mismatched pair costs exactly one flip to resolve. There's no way to fix a mismatched pair for free, and no overlap that lets one flip fix two pairs at once.</p>
+<h2>11. Intuition</h2>
+<p>The two constraints that matter most are:</p>
+<ol>
+<li>The string length is <strong>always even</strong>.</li>
+<li>The string can be up to <strong>100,000 characters</strong> long.</li>
+</ol>
+<p>The even-length guarantee is the first clue. It means you can walk through the string two characters at a time — positions <code>(0,1)</code>, <code>(2,3)</code>, <code>(4,5)</code>, and so on — with no leftover character at the end. That's not incidental; it's the structural hint for the whole solution.</p>
+<p>The length constraint (up to 100,000) is the second clue. Trying every combination of flips is exponential — for a string of length 20 alone, that's over a million possibilities. Anything that scales to 100,000 characters has to be linear: one pass, no backtracking.</p>
+<p>So before reaching for dynamic programming, ask one question: <strong>does fixing one pair change what any other pair needs?</strong></p>
+<p>Look at what "beautiful" actually requires. Each pair just needs its own two characters to match. Fixing pair <code>(0,1)</code> doesn't touch pair <code>(2,3)</code>'s characters, and doesn't change whether that pair already matches or not. There's no shared state between pairs — no running total of 1s versus 0s, no carried-over imbalance, nothing that leaks from one pair into the next.</p>
+<p>That's the entire insight: <strong>when subproblems don't affect each other, you don't need DP — you just score each one independently and sum the results.</strong></p>
+<p>It's worth naming the trap explicitly. Problems like "minimum swaps to group all 1s together" train you to track counts of 1s and 0s, or to think in terms of runs and windows. That's solving a different kind of problem — one where global counts matter. Here, each pair stands completely alone. Importing that pattern-matching instinct from a similar-looking problem is the most common way to overcomplicate this one.</p>
+<h2>12. Brute Force Solution</h2>
+<p><strong>Idea:</strong> Try every possible subset of flips, check if the resulting string can be split into valid beautiful blocks, and track the minimum number of flips across all valid combinations.</p>
+<p><strong>Algorithm:</strong>
+1. Generate every possible flip combination (2^n subsets for a string of length n).
+2. For each resulting string, check whether it can be partitioned into even-length, single-character blocks.
+3. Track the minimum flip count among all valid combinations.</p>
+<p><strong>Advantages:</strong>
+- Conceptually simple — no insight required, just exhaustive search.
+- Guaranteed correct, since it checks every possibility.</p>
+<p><strong>Disadvantages:</strong>
+- Exponential time complexity makes it unusable beyond small inputs.
+- Doesn't exploit the independence between pairs at all — all the structure of the problem goes to waste.</p>
+<p><strong>Time complexity:</strong> O(2^n · n) — 2^n flip combinations, each requiring an O(n) check.
+<strong>Space complexity:</strong> O(n) per generated string.</p>
+<p>For n up to 100,000, this is not just slow — it's computationally impossible. This is the solution space the O(n) approach completely sidesteps.</p>
+<h2>13. Optimal Solution</h2>
+<p>Since each pair <code>(2i, 2i+1)</code> is independent, the minimum number of flips for the whole string is just the sum of the minimum flips needed for each pair.</p>
+<p>For any single pair:</p>
+<table>
+<thead>
+<tr>
+<th>Pair contents</th>
+<th>Already matching?</th>
+<th>Flips needed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>00</code></td>
+<td>Yes</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>11</code></td>
+<td>Yes</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>01</code></td>
+<td>No</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>10</code></td>
+<td>No</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p>A mismatched pair always costs exactly 1 flip — change either character to match the other. There's never a case where a pair needs more than one flip, and never a case where you can avoid the flip if the characters differ.</p>
+<p>So the algorithm reduces to: <strong>walk through the string two characters at a time, and count how many pairs don't match.</strong> That count is the answer.</p>
+<p>Visually, for <code>1001</code>:</p>
+<pre><code>Index:   0  1  2  3
+Char:    1  0  0  1
+Pairs:   (1,0)   (0,1)
+Match?    No       No
+Cost:      1        1
+</code></pre>
+<p>Total cost: 2 — exactly the two flips from the example.</p>
+<h2>14. Python Code</h2>
+<pre><code class="language-python">def min_changes(s: str) -&gt; int:
+    &quot;&quot;&quot;
+    Return the minimum number of flips needed to make the binary
+    string `s` beautiful (splittable into even-length, single-
+    character blocks).
+    &quot;&quot;&quot;
+    changes = 0
+    for i in range(0, len(s), 2):
+        if s[i] != s[i + 1]:
+            changes += 1
+    return changes
+
+
+def demo() -&gt; None:
+    assert min_changes(&quot;1001&quot;) == 2
+    assert min_changes(&quot;10&quot;) == 1
+    assert min_changes(&quot;0000&quot;) == 0
+    assert min_changes(&quot;11&quot;) == 0
+    assert min_changes(&quot;0011&quot;) == 0
+    assert min_changes(&quot;0101&quot;) == 2
+    print(&quot;All checks passed.&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    demo()
+</code></pre>
+<h2>15. Code Walkthrough</h2>
+<ul>
+<li><code>for i in range(0, len(s), 2):</code> strides through the string two characters at a time, landing exactly on each pair's starting index (<code>0</code>, <code>2</code>, <code>4</code>, ...). The even-length guarantee is what makes this safe — there's never a dangling single character at the end.</li>
+<li><code>if s[i] != s[i + 1]:</code> checks whether the two characters in the current pair already match.</li>
+<li><code>changes += 1</code> adds one flip whenever they don't — this is the only cost a mismatched pair can ever incur.</li>
+<li>The function returns <code>changes</code> once every pair has been checked — no state is carried between iterations beyond this single counter.</li>
+</ul>
+<h2>16. Dry Run</h2>
+<p>String: <code>"1001"</code></p>
+<table>
+<thead>
+<tr>
+<th>Iteration</th>
+<th>i</th>
+<th>Pair</th>
+<th>s[i], s[i+1]</th>
+<th>Match?</th>
+<th>changes after</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>0</td>
+<td>(0,1)</td>
+<td><code>1</code>, <code>0</code></td>
+<td>No</td>
+<td>1</td>
+</tr>
+<tr>
+<td>2</td>
+<td>2</td>
+<td>(2,3)</td>
+<td><code>0</code>, <code>1</code></td>
+<td>No</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+<p>Loop ends (i would be 4, which is <code>len(s)</code>). Final <code>changes = 2</code>, which matches the expected output.</p>
+<h2>17. Complexity Analysis</h2>
+<p><strong>Time complexity:</strong> O(n), where n is the length of the string. The loop visits each character exactly once (in pairs), doing constant work per pair. No nested loops, no re-scanning.</p>
+<p><strong>Space complexity:</strong> O(1). Only a single integer counter (<code>changes</code>) is used regardless of input size — no auxiliary arrays, no recursion stack, no memoization table.</p>
+<p>Both bounds are tight: you cannot determine the answer without inspecting every character at least once (so O(n) time is necessary), and there's no information that needs to persist beyond the running count (so O(1) space is sufficient).</p>
+<h2>18. Alternative Solutions</h2>
+<p>A reasonable alternative is to count mismatches using Python's built-in slicing and comparison instead of an explicit index loop:</p>
+<pre><code class="language-python">def min_changes_pythonic(s: str) -&gt; int:
+    evens = s[0::2]
+    odds = s[1::2]
+    return sum(a != b for a, b in zip(evens, odds))
+</code></pre>
+<p>This produces the identical result and the same O(n) time / O(n) extra space (the slices themselves copy characters), trading a small amount of memory for more idiomatic Python. For very large strings where every byte of memory matters, the index-based loop from section 14 is marginally more efficient since it avoids creating the two sliced copies. For everyday code, either is acceptable — the slicing version is arguably more readable.</p>
+<h2>19. Edge Cases</h2>
+<ul>
+<li><strong>Minimum length string (<code>"00"</code> or <code>"01"</code>):</strong> A single pair. Returns <code>0</code> or <code>1</code> respectively — handled correctly since the loop always runs at least once for a non-empty even-length string.</li>
+<li><strong>All identical characters (<code>"0000"</code>, <code>"1111"</code>):</strong> Every pair already matches, so the function correctly returns <code>0</code>.</li>
+<li><strong>Maximally mismatched string (<code>"0101"</code>, alternating):</strong> Every pair is mismatched, so the result equals half the string's length — the maximum possible flips.</li>
+<li><strong>Maximum length input (100,000 characters):</strong> The O(n) loop handles this in a single linear pass with no risk of timeout or stack issues, since there's no recursion involved.</li>
+<li><strong>String already beautiful:</strong> Returns <code>0</code> immediately — no flips are wasted checking anything beyond what's needed.</li>
+</ul>
+<h2>20. Common Mistakes</h2>
+<ol>
+<li><strong>Reaching for dynamic programming by default.</strong> Nothing here depends on prior state — adding a DP table is wasted complexity for a problem that's just a sum over independent pieces.</li>
+<li><strong>Pairing the wrong indices</strong>, such as grouping <code>(1,2)</code> and <code>(3,4)</code> instead of <code>(0,1)</code> and <code>(2,3)</code>. Only even-start pairing guarantees every block has even length as the problem requires.</li>
+<li><strong>Importing logic from "group all 1s together" style problems</strong> — tracking running counts of 0s and 1s, or prefix sums, solves a different problem and gives the wrong answer here.</li>
+<li><strong>Off-by-one errors in the stride</strong>, such as using <code>range(0, len(s))</code> instead of <code>range(0, len(s), 2)</code>, which double-counts or misaligns pairs.</li>
+<li><strong>Assuming a mismatched pair could cost more than one flip</strong> — some engineers overthink this and try to validate block boundaries beyond the pair, when a single flip always suffices for a 2-character pair.</li>
+<li><strong>Not trusting the even-length guarantee</strong>, and adding unnecessary bounds checks or padding logic for an odd leftover character that the constraints rule out entirely.</li>
+</ol>
+<h2>21. Interview Questions</h2>
+<ul>
+<li>Why does pairing index <code>0</code> with <code>1</code>, <code>2</code> with <code>3</code>, and so on work, instead of any other adjacent grouping?</li>
+<li>What is the time and space complexity of this solution, and why is each bound tight?</li>
+<li>How would the solution change if blocks were allowed to have odd length?</li>
+<li>Can you prove that a mismatched pair never requires more than one flip?</li>
+<li>How would you modify this solution if the string could contain a third character (like <code>'?'</code> representing a wildcard)?</li>
+<li>What is the key property that lets you avoid dynamic programming here, and how do you recognize that property in other problems?</li>
+</ul>
+<h2>22. Similar Problems</h2>
+<ul>
+<li><strong>LeetCode 1864 — Minimum Number of Swaps to Make the Binary String Alternating</strong>: Looks similar on the surface (binary string, minimum operations) but requires tracking counts and comparing two possible target patterns — a good contrast problem for seeing when global state <em>does</em> matter.</li>
+<li><strong>LeetCode 926 — Flip String to Monotone Increasing</strong>: Also about minimum flips in a binary string, but here the blocks aren't fixed-size, which forces a different (prefix-count-based) approach.</li>
+<li><strong>LeetCode 1288 — Remove Covered Intervals</strong> (indirectly related via the "independent pieces" pattern): Reinforces the broader lesson of recognizing when a problem decomposes cleanly.</li>
+<li><strong>LeetCode 1646 / simple array partition problems</strong>: Any problem that asks you to split an array or string into fixed-size, non-overlapping chunks and score each chunk independently follows the same pattern as this one.</li>
+</ul>
+<h2>23. Key Takeaways</h2>
+<ul>
+<li>A binary string problem doesn't automatically require dynamic programming — check whether subproblems are actually dependent before reaching for a DP table.</li>
+<li>The even-length constraint was the structural hint pointing directly at fixed-pair decomposition.</li>
+<li>Each pair costs at most one flip, and that cost is completely local — fixing one pair never changes what another pair needs.</li>
+<li>The final algorithm is a single O(n) pass with O(1) space: count the mismatched pairs, and that count is the answer.</li>
+<li>The broader lesson transfers far beyond this problem: whenever a problem breaks into pieces that don't affect each other, score each piece independently and sum.</li>
+</ul>
+<h2>24. Watch the Video</h2>
+<p>This breakdown, including a full trace through the real examples and two quick quizzes to test your understanding, is also available as a video walkthrough: {LINK}. Watching it alongside this article is a good way to reinforce the pair-independence intuition before you try the problem yourself.</p>
+<h2>25. About the Series</h2>
+<p>This article is part of the <strong>Fun with Learning Technology</strong> series, where LeetCode problems are broken down step by step with a focus on building real intuition — not memorizing patterns. Each episode walks through why naive approaches fail, how to spot the structural hint that unlocks the efficient solution, and how to write clean, interview-ready Python for it.</p>
+<h2>26. Call To Action</h2>
+<p>If this breakdown helped the problem click, the video version has the full walkthrough plus two interactive quizzes — give it a watch and a like on YouTube, and subscribe for more problems broken down the same way. For deeper dives and written breakdowns like this one delivered straight to your inbox, subscribe to the Substack. Drop a comment with the pattern you found trickiest, and share this with anyone prepping for interviews who gets stuck second-guessing DP versus greedy.</p>
+<hr /></article><h2 class='ph1' style='font-size:1.4rem'>📇 Flashcards</h2><div class='cards'><details class='card2'><summary>When should you suspect a greedy-pairing trick like LC2914 Beautiful String?</summary><p>String must split into equal even halves, each half uniform chars — think flip-at-boundary pairs, not brute force.</p></details><details class='card2'><summary>Time complexity of the optimal Beautiful String solution?</summary><p>O(n) — one pass counting flips per adjacent 0-1 or 1-0 pair across the string.</p></details><details class='card2'><summary>Space complexity of the pair-counting approach?</summary><p>O(1) — just a running counter, no extra arrays or recursion stack needed.</p></details><details class='card2'><summary>Trickiest bug when counting flips for Beautiful String?</summary><p>Forgetting pairs must align on even indices (0-1, 2-3,...); scanning with wrong stride double-counts or skips boundaries.</p></details><details class='card2'><summary>Why does trying every flip combination fail here?</summary><p>2^n combos explode exponentially; the structure (even-length uniform blocks) lets greedy local pair-checks replace global search.</p></details><details class='card2'><summary>Interview follow-up: how would you extend this to k-length uniform blocks?</summary><p>Generalize pair check to compare each block of k chars against the next block, counting mismatches to flip, still O(n).</p></details></div>
+<div class="foot">Free, interview-ready Python solutions — new problems added regularly.</div>
+</div></body></html>
